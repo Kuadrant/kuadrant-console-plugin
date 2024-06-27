@@ -8,13 +8,21 @@
     }
   },
   {
+    "type": "console.navigation/section",
+    "properties": {
+      "id": "connectivity-link-section",
+      "name": "%plugin__console-plugin-template~Connectivity Link%",
+      "perspective": "dev"
+    }
+  },
+  {
     "type": "console.navigation/href",
     "properties": {
       "id": "example",
-      "name": "%plugin__console-plugin-template~Plugin Example%",
+      "name": "%plugin__console-plugin-template~Dashboard%",
       "href": "/example",
-      "perspective": "admin",
-      "section": "home"
+      "perspective": "dev",
+      "section": "connectivity-link-section"
     }
   }
 ]
