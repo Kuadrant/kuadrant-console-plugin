@@ -1,3 +1,13 @@
+# RHCL Console Plugin
+
+See below for setup requirements.
+
+## Running:
+
+- Target a running OCP
+- `yarn run start` # start webpack
+- `yarn run start-console` # start local ocp console + proxy
+
 # OpenShift Console Plugin Template
 
 This project is a minimal template for writing a new OpenShift Console dynamic

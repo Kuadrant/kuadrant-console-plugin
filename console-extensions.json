@@ -3,8 +3,16 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/example",
-      "component": { "$codeRef": "ExamplePage" }
+      "path": "/k8s/ns/:ns/rhcl",
+      "component": { "$codeRef": "RHCLDashboardPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/all-namespaces/rhcl",
+      "component": { "$codeRef": "RHCLDashboardPage" }
     }
   },
   {
@@ -18,9 +26,9 @@
   {
     "type": "console.navigation/href",
     "properties": {
-      "id": "example",
+      "id": "rhcl",
       "name": "%plugin__console-plugin-template~Dashboard%",
-      "href": "/example",
+      "href": "/k8s/all-namespaces/rhcl",
       "perspective": "dev",
       "section": "connectivity-link-section"
     }
