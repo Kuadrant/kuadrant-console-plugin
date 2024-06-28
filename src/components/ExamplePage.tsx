@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams, useHistory, useLocation } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import Helmet from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 import {
@@ -15,7 +15,7 @@ import {
   Td,
   Tbody,
 } from '@patternfly/react-table';
-import { useK8sWatchResource, K8sResourceCommon, NamespaceBar } from '@openshift-console/dynamic-plugin-sdk';
+import { useK8sWatchResource, K8sResourceCommon, ResourceLink, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
 import './example.css';
 
 interface Resource {
@@ -47,34 +47,14 @@ const resources: Resource[] = [
 const ExamplePage: React.FC = () => {
   const { t } = useTranslation('plugin__console-plugin-template');
   const { ns } = useParams<{ ns: string }>();
-  const history = useHistory();
-  const location = useLocation();
-  const [namespace, setNamespace] = React.useState<string>(ns || '');
-
-  // Inline function to extract namespace from URL
-  const useNamespaceFromURL = (): string => {
-    const match = location.pathname.match(/\/k8s\/ns\/([^/]+)/);
-    return match ? match[1] : '';
-  };
+  const [activeNamespace, setActiveNamespace] = useActiveNamespace();
 
   React.useEffect(() => {
-    const extractedNamespace = useNamespaceFromURL();
-    if (extractedNamespace && extractedNamespace !== namespace) {
-      setNamespace(extractedNamespace);
+    if (ns && ns !== activeNamespace) {
+      setActiveNamespace(ns);
     }
-    console.log(`Initial namespace: ${namespace}`);
-  }, [location.pathname]);
-
-  const handleNamespaceChange = (newNamespace: string) => {
-    console.log(`Namespace changed to: ${newNamespace}`);
-    setNamespace(newNamespace);
-    const url = newNamespace === '#ALL_NS#' ? '/k8s/all-namespaces/example' : `/k8s/ns/${newNamespace}/example`;
-    history.push(url);
-  };
-
-  React.useEffect(() => {
-    console.log(`Namespace updated: ${namespace}`);
-  }, [namespace]);
+    console.log(`Initial namespace: ${activeNamespace}`);
+  }, [ns, activeNamespace, setActiveNamespace]);
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -100,8 +80,12 @@ const ExamplePage: React.FC = () => {
           <Tbody>
             {data.map((item) => (
               <Tr key={item.metadata.uid}>
-                <Td dataLabel={t('Name')}>{item.metadata.name}</Td>
-                <Td dataLabel={t('Namespace')}>{item.metadata.namespace}</Td>
+                <Td dataLabel={t('Name')}>
+                  <ResourceLink groupVersionKind={resource.gvk} namespace={item.metadata.namespace}  name={item.metadata.name} title={item.metadata.uid} />
+                </Td>
+                <Td dataLabel={t('Namespace')}>
+                  <ResourceLink groupVersionKind={{group: resource.gvk.group, version: resource.gvk.version, kind: "Namespace"}} name={item.metadata.namespace} title={item.metadata.namespace} />
+                </Td>
                 <Td dataLabel={t('Age')}>{formatTimestamp(item.metadata.creationTimestamp)}</Td>
                 {resource.name === 'Gateways' && (
                   <Td dataLabel={t('Address')}>
@@ -123,7 +107,6 @@ const ExamplePage: React.FC = () => {
       <Helmet>
         <title data-test="example-page-title">{t('Connectivity Link')}</title>
       </Helmet>
-      {!document.querySelector('.co-namespace-bar') && <NamespaceBar onNamespaceChange={handleNamespaceChange} />}
       <Page>
         <PageSection variant="light">
           <Title headingLevel="h1">{t('Connectivity Link')}</Title>
@@ -132,18 +115,18 @@ const ExamplePage: React.FC = () => {
           const { group, version, kind } = resource.gvk;
           const [data, loaded, loadError] = useK8sWatchResource<ExtendedK8sResourceCommon[]>({
             groupVersionKind: { group, version, kind },
-            namespace: namespace === '#ALL_NS#' ? undefined : namespace,
+            namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
             isList: true,
           });
 
           // Adding logs for debugging
           React.useEffect(() => {
             console.log(`Resource: ${resource.name}`);
-            console.log(`Namespace: ${namespace}`);
+            console.log(`Namespace: ${activeNamespace}`);
             console.log(`Data:`, data);
             console.log(`Loaded:`, loaded);
             console.log(`Load Error:`, loadError);
-          }, [data, loaded, loadError, namespace, resource.name]);
+          }, [data, loaded, loadError, activeNamespace, resource.name]);
 
           return renderTable(resource, data, loaded, loadError);
         })}
