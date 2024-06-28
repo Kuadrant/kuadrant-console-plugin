@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useHistory, useLocation } from 'react-router-dom';
 import Helmet from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 import {
@@ -15,7 +15,7 @@ import {
   Td,
   Tbody,
 } from '@patternfly/react-table';
-import { useK8sWatchResource, K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
+import { useK8sWatchResource, K8sResourceCommon, NamespaceBar } from '@openshift-console/dynamic-plugin-sdk';
 import './example.css';
 
 interface Resource {
@@ -27,38 +27,54 @@ interface Resource {
   };
 }
 
+interface ExtendedK8sResourceCommon extends K8sResourceCommon {
+  status?: {
+    addresses?: { value: string }[];
+  };
+}
+
+const resources: Resource[] = [
+  { name: 'Gateways', gvk: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' } },
+  { name: 'AuthPolicies', gvk: { group: 'kuadrant.io', version: 'v1beta2', kind: 'AuthPolicy' } },
+  { name: 'DNSPolicies', gvk: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'DNSPolicy' } },
+  { name: 'DNSRecords', gvk: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'DNSRecord' } },
+  { name: 'Kuadrants', gvk: { group: 'kuadrant.io', version: 'v1beta1', kind: 'Kuadrant' } },
+  { name: 'ManagedZones', gvk: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'ManagedZone' } },
+  { name: 'RateLimitPolicies', gvk: { group: 'kuadrant.io', version: 'v1beta2', kind: 'RateLimitPolicy' } },
+  { name: 'TLSPolicies', gvk: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'TLSPolicy' } },
+];
+
 const ExamplePage: React.FC = () => {
   const { t } = useTranslation('plugin__console-plugin-template');
   const { ns } = useParams<{ ns: string }>();
+  const history = useHistory();
+  const location = useLocation();
+  const [namespace, setNamespace] = React.useState<string>(ns || '');
 
-  const resources: Resource[] = [
-    { name: 'Gateways', gvk: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' } },
-    { name: 'AuthPolicies', gvk: { group: 'kuadrant.io', version: 'v1beta2', kind: 'AuthPolicy' } },
-    { name: 'DNSPolicies', gvk: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'DNSPolicy' } },
-    { name: 'DNSRecords', gvk: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'DNSRecord' } },
-    { name: 'Kuadrants', gvk: { group: 'kuadrant.io', version: 'v1beta1', kind: 'Kuadrant' } },
-    { name: 'ManagedZones', gvk: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'ManagedZone' } },
-    { name: 'RateLimitPolicies', gvk: { group: 'kuadrant.io', version: 'v1beta2', kind: 'RateLimitPolicy' } },
-    { name: 'TLSPolicies', gvk: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'TLSPolicy' } },
-  ];
+  // Inline function to extract namespace from URL
+  const useNamespaceFromURL = (): string => {
+    const match = location.pathname.match(/\/k8s\/ns\/([^/]+)/);
+    return match ? match[1] : '';
+  };
 
-  const [data, setData] = React.useState<{ [key: string]: K8sResourceCommon[] }>({});
-  const [loaded, setLoaded] = React.useState<{ [key: string]: boolean }>({});
-  const [loadError, setLoadError] = React.useState<{ [key: string]: any }>({});
+  React.useEffect(() => {
+    const extractedNamespace = useNamespaceFromURL();
+    if (extractedNamespace && extractedNamespace !== namespace) {
+      setNamespace(extractedNamespace);
+    }
+    console.log(`Initial namespace: ${namespace}`);
+  }, [location.pathname]);
 
-  resources.forEach((resource) => {
-    const [resData, resLoaded, resLoadError] = useK8sWatchResource<K8sResourceCommon[]>({
-      groupVersionKind: resource.gvk,
-      namespace: ns || undefined,
-      isList: true,
-    });
+  const handleNamespaceChange = (newNamespace: string) => {
+    console.log(`Namespace changed to: ${newNamespace}`);
+    setNamespace(newNamespace);
+    const url = newNamespace === '#ALL_NS#' ? '/k8s/all-namespaces/example' : `/k8s/ns/${newNamespace}/example`;
+    history.push(url);
+  };
 
-    React.useEffect(() => {
-      setData((prevData) => ({ ...prevData, [resource.name]: resData }));
-      setLoaded((prevLoaded) => ({ ...prevLoaded, [resource.name]: resLoaded }));
-      setLoadError((prevLoadError) => ({ ...prevLoadError, [resource.name]: resLoadError }));
-    }, [resData, resLoaded, resLoadError, resource.name]);
-  });
+  React.useEffect(() => {
+    console.log(`Namespace updated: ${namespace}`);
+  }, [namespace]);
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -68,26 +84,30 @@ const ExamplePage: React.FC = () => {
     return diffDays > 0 ? `${diffDays}d` : 'Today';
   };
 
-  const renderTable = (resourceName: string, columns: string[]) => (
-    <PageSection variant="light" key={resourceName}>
-      <Title headingLevel="h1">{t(resourceName)}</Title>
-      {loaded[resourceName] && !loadError[resourceName] ? (
-        <Table aria-label={`${resourceName} List`}>
+  const renderTable = (resource: Resource, data: ExtendedK8sResourceCommon[], loaded: boolean, loadError: any) => (
+    <PageSection variant="light" key={resource.name}>
+      <Title headingLevel="h1">{resource.name}</Title>
+      {loaded && !loadError ? (
+        <Table aria-label={`${resource.name} List`}>
           <Thead>
             <Tr>
-              {columns.map((col) => (
-                <Th key={col}>{col}</Th>
-              ))}
+              <Th>{t('Name')}</Th>
+              <Th>{t('Namespace')}</Th>
+              <Th>{t('Age')}</Th>
+              {resource.name === 'Gateways' && <Th>{t('Address')}</Th>}
             </Tr>
           </Thead>
           <Tbody>
-            {data[resourceName]?.map((item) => (
-              <Tr key={item.metadata.name}>
-                {columns.map((col) => (
-                  <Td key={col} dataLabel={col}>
-                    {col === 'Age' ? formatTimestamp(item.metadata.creationTimestamp) : item.metadata[col.toLowerCase()] || 'N/A'}
+            {data.map((item) => (
+              <Tr key={item.metadata.uid}>
+                <Td dataLabel={t('Name')}>{item.metadata.name}</Td>
+                <Td dataLabel={t('Namespace')}>{item.metadata.namespace}</Td>
+                <Td dataLabel={t('Age')}>{formatTimestamp(item.metadata.creationTimestamp)}</Td>
+                {resource.name === 'Gateways' && (
+                  <Td dataLabel={t('Address')}>
+                    {item.status?.addresses?.length ? item.status.addresses.map((address) => address.value).join(', ') : 'N/A'}
                   </Td>
-                ))}
+                )}
               </Tr>
             ))}
           </Tbody>
@@ -103,13 +123,30 @@ const ExamplePage: React.FC = () => {
       <Helmet>
         <title data-test="example-page-title">{t('Connectivity Link')}</title>
       </Helmet>
+      {!document.querySelector('.co-namespace-bar') && <NamespaceBar onNamespaceChange={handleNamespaceChange} />}
       <Page>
         <PageSection variant="light">
           <Title headingLevel="h1">{t('Connectivity Link')}</Title>
         </PageSection>
-        {resources.map((resource) =>
-          renderTable(resource.name, ['Name', 'Namespace', 'Age', 'Address'].slice(0, resource.name === 'Gateways' ? 4 : 3))
-        )}
+        {resources.map((resource) => {
+          const { group, version, kind } = resource.gvk;
+          const [data, loaded, loadError] = useK8sWatchResource<ExtendedK8sResourceCommon[]>({
+            groupVersionKind: { group, version, kind },
+            namespace: namespace === '#ALL_NS#' ? undefined : namespace,
+            isList: true,
+          });
+
+          // Adding logs for debugging
+          React.useEffect(() => {
+            console.log(`Resource: ${resource.name}`);
+            console.log(`Namespace: ${namespace}`);
+            console.log(`Data:`, data);
+            console.log(`Loaded:`, loaded);
+            console.log(`Load Error:`, loadError);
+          }, [data, loaded, loadError, namespace, resource.name]);
+
+          return renderTable(resource, data, loaded, loadError);
+        })}
       </Page>
     </>
   );

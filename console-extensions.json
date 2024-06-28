@@ -3,7 +3,15 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/example",
+      "path": "/k8s/ns/:ns/example",
+      "component": { "$codeRef": "ExamplePage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/all-namespaces/example",
       "component": { "$codeRef": "ExamplePage" }
     }
   },
@@ -20,7 +28,7 @@
     "properties": {
       "id": "example",
       "name": "%plugin__console-plugin-template~Dashboard%",
-      "href": "/example",
+      "href": "/k8s/ns/default/example",  // Use 'default' or another existing namespace
       "perspective": "dev",
       "section": "connectivity-link-section"
     }

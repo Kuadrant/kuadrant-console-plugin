@@ -9,5 +9,10 @@
   "Success!": "Success!",
   "This is a custom page contributed by the console plugin template. The extension that adds the page is declared in console-extensions.json in the project root along with the corresponding nav item. Update console-extensions.json to change or add extensions. Code references in console-extensions.json must have a corresponding property": "This is a custom page contributed by the console plugin template. The extension that adds the page is declared in console-extensions.json in the project root along with the corresponding nav item. Update console-extensions.json to change or add extensions. Code references in console-extensions.json must have a corresponding property",
   "Your plugin is working.": "Your plugin is working.",
-  "Loading...": "Loading..."
+  "Loading...": "Loading...",
+  "Age": "Age",
+  "Name": "Name",
+  "Namespace": "Namespace",
+  "Address": "Address",
+  "Dashboard": "Dashboard"
 }
