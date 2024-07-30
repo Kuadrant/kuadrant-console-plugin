@@ -74,7 +74,7 @@
     "displayName": "OpenShift Console Plugin Template",
     "description": "Template project for OpenShift Console plugins. Edit package.json to change this message and the plugin name.",
     "exposedModules": {
-      "RHCLDashboardPage": "./components/RHCLDashboardPage"
+      "KuadrantDashboardPage": "./components/KuadrantDashboardPage"
     },
     "dependencies": {
       "@console/pluginAPI": "*"

@@ -4,7 +4,7 @@
     "properties": {
       "exact": true,
       "path": "/k8s/ns/:ns/rhcl",
-      "component": { "$codeRef": "RHCLDashboardPage" }
+      "component": { "$codeRef": "KuadrantDashboardPage" }
     }
   },
   {
@@ -12,14 +12,14 @@
     "properties": {
       "exact": true,
       "path": "/k8s/all-namespaces/rhcl",
-      "component": { "$codeRef": "RHCLDashboardPage" }
+      "component": { "$codeRef": "KuadrantDashboardPage" }
     }
   },
   {
     "type": "console.navigation/section",
     "properties": {
-      "id": "connectivity-link-section",
-      "name": "%plugin__console-plugin-template~Connectivity Link%",
+      "id": "kuadrant-section",
+      "name": "%plugin__console-plugin-template~Kuadrant%",
       "perspective": "dev"
     }
   },
@@ -30,7 +30,7 @@
       "name": "%plugin__console-plugin-template~Dashboard%",
       "href": "/k8s/all-namespaces/rhcl",
       "perspective": "dev",
-      "section": "connectivity-link-section"
+      "section": "kuadrant-section"
     }
   }
 ]

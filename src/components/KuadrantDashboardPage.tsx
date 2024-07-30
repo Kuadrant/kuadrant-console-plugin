@@ -44,7 +44,7 @@ const resources: Resource[] = [
   { name: 'TLSPolicies', gvk: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'TLSPolicy' } },
 ];
 
-const RHCLDashboardPage: React.FC = () => {
+const KuadrantDashboardPage: React.FC = () => {
   const { t } = useTranslation('plugin__console-plugin-template');
   const { ns } = useParams<{ ns: string }>();
   const [activeNamespace, setActiveNamespace] = useActiveNamespace();
@@ -105,11 +105,11 @@ const RHCLDashboardPage: React.FC = () => {
   return (
     <>
       <Helmet>
-        <title data-test="example-page-title">{t('Connectivity Link')}</title>
+        <title data-test="example-page-title">{t('Kuadrant')}</title>
       </Helmet>
       <Page>
         <PageSection variant="light">
-          <Title headingLevel="h1">{t('Connectivity Link')}</Title>
+          <Title headingLevel="h1">{t('Kuadrant')}</Title>
         </PageSection>
         {resources.map((resource) => {
           const { group, version, kind } = resource.gvk;
@@ -126,4 +126,4 @@ const RHCLDashboardPage: React.FC = () => {
   );
 };
 
-export default RHCLDashboardPage;
+export default KuadrantDashboardPage;
