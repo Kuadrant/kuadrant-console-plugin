@@ -1,4 +1,4 @@
-# RHCL Console Plugin
+# OpenShift Console Plugin
 
 See below for setup requirements.
 
