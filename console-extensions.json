@@ -3,7 +3,7 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/k8s/ns/:ns/rhcl",
+      "path": "/k8s/ns/:ns/rhcl/dashboard",
       "component": { "$codeRef": "KuadrantDashboardPage" }
     }
   },
@@ -11,14 +11,85 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/k8s/all-namespaces/rhcl",
+      "path": "/k8s/all-namespaces/rhcl/dashboard",
+      "component": { "$codeRef": "KuadrantDashboardPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/ns/:ns/rhcl/policies",
+      "component": { "$codeRef": "KuadrantDashboardPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/all-namespaces/rhcl/policies",
+      "component": { "$codeRef": "KuadrantDashboardPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/ns/:ns/rhcl/policy-topology",
+      "component": { "$codeRef": "KuadrantDashboardPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/all-namespaces/rhcl/policy-topology",
       "component": { "$codeRef": "KuadrantDashboardPage" }
     }
   },
   {
     "type": "console.navigation/section",
     "properties": {
-      "id": "kuadrant-section",
+      "id": "kuadrant-section-admin",
+      "name": "%plugin__console-plugin-template~Kuadrant%",
+      "perspective": "admin"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "rhcl-dashboard-admin",
+      "name": "%plugin__console-plugin-template~Dashboard%",
+      "href": "/k8s/all-namespaces/rhcl/dashboard",
+      "perspective": "admin",
+      "section": "kuadrant-section-admin"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "rhcl-policies-admin",
+      "name": "%plugin__console-plugin-template~Policies%",
+      "href": "/k8s/all-namespaces/rhcl/policies",
+      "perspective": "admin",
+      "section": "kuadrant-section-admin"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "rhcl-policy-topology-admin",
+      "name": "%plugin__console-plugin-template~Policy Topology%",
+      "href": "/k8s/all-namespaces/rhcl/policy-topology",
+      "perspective": "admin",
+      "section": "kuadrant-section-admin",
+      "badge": "dev"
+    }
+  },
+  {
+    "type": "console.navigation/section",
+    "properties": {
+      "id": "kuadrant-section-dev",
       "name": "%plugin__console-plugin-template~Kuadrant%",
       "perspective": "dev"
     }
@@ -26,11 +97,32 @@
   {
     "type": "console.navigation/href",
     "properties": {
-      "id": "rhcl",
+      "id": "rhcl-dashboard-dev",
       "name": "%plugin__console-plugin-template~Dashboard%",
-      "href": "/k8s/all-namespaces/rhcl",
+      "href": "/k8s/all-namespaces/rhcl/dashboard",
       "perspective": "dev",
-      "section": "kuadrant-section"
+      "section": "kuadrant-section-dev"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "rhcl-policies-dev",
+      "name": "%plugin__console-plugin-template~Policies%",
+      "href": "/k8s/all-namespaces/rhcl/policies",
+      "perspective": "dev",
+      "section": "kuadrant-section-dev"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "rhcl-policy-topology-dev",
+      "name": "%plugin__console-plugin-template~Policy Topology%",
+      "href": "/k8s/all-namespaces/rhcl/policy-topology",
+      "perspective": "dev",
+      "section": "kuadrant-section-dev",
+      "badge": "dev"
     }
   }
 ]
