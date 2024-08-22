@@ -36,7 +36,7 @@
     "properties": {
       "exact": true,
       "path": "/k8s/ns/:ns/rhcl/policy-topology",
-      "component": { "$codeRef": "KuadrantDashboardPage" }
+      "component": { "$codeRef": "PolicyTopologyPage" }
     }
   },
   {
@@ -44,7 +44,7 @@
     "properties": {
       "exact": true,
       "path": "/k8s/all-namespaces/rhcl/policy-topology",
-      "component": { "$codeRef": "KuadrantDashboardPage" }
+      "component": { "$codeRef": "PolicyTopologyPage" }
     }
   },
   {

@@ -15,5 +15,7 @@
   "Name": "Name",
   "Namespace": "Namespace",
   "Address": "Address",
-  "Dashboard": "Dashboard"
+  "Dashboard": "Dashboard",
+  "Policies": "Policies",
+  "Policy Topology": "Policy Topology"
 }

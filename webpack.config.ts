@@ -29,8 +29,20 @@ const config: Configuration = {
   module: {
     rules: [
       {
-        test: /\.(jsx?|tsx?)$/,
-        exclude: /\/node_modules\//,
+        test: /\.(js|jsx)$/,
+        exclude: /node_modules\/(?!(react-policy-topology\/|some-other-library\/)).*/,
+        use: [
+          {
+            loader: 'babel-loader',
+            options: {
+              presets: ['@babel/preset-env', '@babel/preset-react'],
+            },
+          },
+        ],
+      },
+      {
+        test: /\.(ts|tsx)$/,
+        exclude: /node_modules/,
         use: [
           {
             loader: 'ts-loader',
