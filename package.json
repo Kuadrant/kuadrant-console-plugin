@@ -75,7 +75,8 @@
     "description": "Template project for OpenShift Console plugins. Edit package.json to change this message and the plugin name.",
     "exposedModules": {
       "KuadrantDashboardPage": "./components/KuadrantDashboardPage",
-      "PolicyTopologyPage": "./components/PolicyTopologyPage"
+      "PolicyTopologyPage": "./components/PolicyTopologyPage",
+      "KuadrantPoliciesPage": "./components/KuadrantPoliciesPage"
     },
     "dependencies": {
       "@console/pluginAPI": "*"
