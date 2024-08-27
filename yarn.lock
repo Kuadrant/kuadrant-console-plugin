@@ -12104,10 +12104,10 @@ react-is@^18.0.0:
   resolved "https://registry.npmjs.org/react-is/-/react-is-18.3.1.tgz"
   integrity sha512-/LLMVyas0ljjAtoYiPqYiL8VWXzUUdThrmU5+n20DZv+a+ClRoevUzw5JxU+Ieh5/c87ytoTBV9G1FiKfNJdmg==
 
-react-policy-topology@^0.1.8:
-  version "0.1.8"
-  resolved "https://registry.yarnpkg.com/react-policy-topology/-/react-policy-topology-0.1.8.tgz#04c45a0583126ffc3f344e8e4b1affc36e24117b"
-  integrity sha512-kx8gZ/KJhGTHAnMuCiFUOMyzAXmd/XFWBF/+AJGWdJAWbFu2LGhfom7tjJqMCSL1wCQ6Z4/AgT6AWYNQD6vNYw==
+react-policy-topology@^0.1.9:
+  version "0.1.9"
+  resolved "https://registry.yarnpkg.com/react-policy-topology/-/react-policy-topology-0.1.9.tgz#c45097928195921f6737f44498f463492fda53cd"
+  integrity sha512-F9EQM+q86htynQRcr2wGlDVfNOWgLpt1oHDbLjje3GPRR4X6Nt9oPto3mjWsN8lDh6PHSuG+gyTBig2qtkT6gA==
   dependencies:
     "@patternfly/patternfly" "^4.224.5"
     "@patternfly/react-core" "^4.278.1"
