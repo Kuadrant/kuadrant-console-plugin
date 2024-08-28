@@ -35,15 +35,7 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/k8s/ns/:ns/rhcl/policy-topology",
-      "component": { "$codeRef": "PolicyTopologyPage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "exact": true,
-      "path": "/k8s/all-namespaces/rhcl/policy-topology",
+      "path": "/rhcl/policy-topology",
       "component": { "$codeRef": "PolicyTopologyPage" }
     }
   },
@@ -80,7 +72,7 @@
     "properties": {
       "id": "rhcl-policy-topology-admin",
       "name": "%plugin__console-plugin-template~Policy Topology%",
-      "href": "/k8s/all-namespaces/rhcl/policy-topology",
+      "href": "/rhcl/policy-topology",
       "perspective": "admin",
       "section": "kuadrant-section-admin",
       "badge": "dev"
@@ -119,7 +111,7 @@
     "properties": {
       "id": "rhcl-policy-topology-dev",
       "name": "%plugin__console-plugin-template~Policy Topology%",
-      "href": "/k8s/all-namespaces/rhcl/policy-topology",
+      "href": "/rhcl/policy-topology",
       "perspective": "dev",
       "section": "kuadrant-section-dev",
       "badge": "dev"
