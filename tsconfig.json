@@ -8,7 +8,10 @@
     "jsx": "react",
     "allowJs": true,
     "strict": false,
-    "noUnusedLocals": true
+    "noUnusedLocals": true,
+    "paths": {
+      "react": [ "./node_modules/@types/react" ]
+    }
   },
   "include": ["src"],
   "exclude": ["node_modules"],

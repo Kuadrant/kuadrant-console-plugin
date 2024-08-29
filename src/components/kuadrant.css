@@ -14,3 +14,15 @@
 .policy-topology-container {
   height: 500px;
 }
+
+.kuadrant-page-title {
+  padding: 1.5rem;
+}
+
+.kuadrant-alert-group {
+  padding-top: 1rem;
+}
+
+.co-m-nav-title--row .co-m-primary-action {
+  padding-top: 1rem;
+}

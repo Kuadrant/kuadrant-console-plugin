@@ -18,17 +18,15 @@
   {
     "type": "console.page/route",
     "properties": {
-      "exact": true,
-      "path": "/k8s/ns/:ns/kuadrant/policies",
-      "component": { "$codeRef": "KuadrantDashboardPage" }
+      "path": "/kuadrant/all-namespaces/policies",
+      "component": { "$codeRef": "KuadrantPoliciesPage" }
     }
   },
   {
     "type": "console.page/route",
     "properties": {
-      "exact": true,
-      "path": "/k8s/all-namespaces/kuadrant/policies",
-      "component": { "$codeRef": "KuadrantDashboardPage" }
+      "path": "/kuadrant/ns/:ns/policies",
+      "component": { "$codeRef": "KuadrantPoliciesPage" }
     }
   },
   {
@@ -62,7 +60,7 @@
     "properties": {
       "id": "rhcl-policies-admin",
       "name": "%plugin__console-plugin-template~Policies%",
-      "href": "/k8s/all-namespaces/kuadrant/policies",
+      "href": "/kuadrant/all-namespaces/policies",
       "perspective": "admin",
       "section": "kuadrant-section-admin"
     }
@@ -101,7 +99,7 @@
     "properties": {
       "id": "rhcl-policies-dev",
       "name": "%plugin__console-plugin-template~Policies%",
-      "href": "/k8s/all-namespaces/kuadrant/policies",
+      "href": "/kuadrant/all-namespaces/policies",
       "perspective": "dev",
       "section": "kuadrant-section-dev"
     }
