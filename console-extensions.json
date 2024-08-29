@@ -3,7 +3,7 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/k8s/ns/:ns/rhcl/dashboard",
+      "path": "/k8s/ns/:ns/kuadrant/dashboard",
       "component": { "$codeRef": "KuadrantDashboardPage" }
     }
   },
@@ -11,7 +11,7 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/k8s/all-namespaces/rhcl/dashboard",
+      "path": "/k8s/all-namespaces/kuadrant/dashboard",
       "component": { "$codeRef": "KuadrantDashboardPage" }
     }
   },
@@ -19,7 +19,7 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/k8s/ns/:ns/rhcl/policies",
+      "path": "/k8s/ns/:ns/kuadrant/policies",
       "component": { "$codeRef": "KuadrantDashboardPage" }
     }
   },
@@ -27,7 +27,7 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/k8s/all-namespaces/rhcl/policies",
+      "path": "/k8s/all-namespaces/kuadrant/policies",
       "component": { "$codeRef": "KuadrantDashboardPage" }
     }
   },
@@ -35,16 +35,8 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/k8s/ns/:ns/rhcl/policy-topology",
-      "component": { "$codeRef": "KuadrantDashboardPage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "exact": true,
-      "path": "/k8s/all-namespaces/rhcl/policy-topology",
-      "component": { "$codeRef": "KuadrantDashboardPage" }
+      "path": "/kuadrant/policy-topology",
+      "component": { "$codeRef": "PolicyTopologyPage" }
     }
   },
   {
@@ -60,7 +52,7 @@
     "properties": {
       "id": "rhcl-dashboard-admin",
       "name": "%plugin__console-plugin-template~Dashboard%",
-      "href": "/k8s/all-namespaces/rhcl/dashboard",
+      "href": "/k8s/all-namespaces/kuadrant/dashboard",
       "perspective": "admin",
       "section": "kuadrant-section-admin"
     }
@@ -70,7 +62,7 @@
     "properties": {
       "id": "rhcl-policies-admin",
       "name": "%plugin__console-plugin-template~Policies%",
-      "href": "/k8s/all-namespaces/rhcl/policies",
+      "href": "/k8s/all-namespaces/kuadrant/policies",
       "perspective": "admin",
       "section": "kuadrant-section-admin"
     }
@@ -80,7 +72,7 @@
     "properties": {
       "id": "rhcl-policy-topology-admin",
       "name": "%plugin__console-plugin-template~Policy Topology%",
-      "href": "/k8s/all-namespaces/rhcl/policy-topology",
+      "href": "/kuadrant/policy-topology",
       "perspective": "admin",
       "section": "kuadrant-section-admin",
       "badge": "dev"
@@ -99,7 +91,7 @@
     "properties": {
       "id": "rhcl-dashboard-dev",
       "name": "%plugin__console-plugin-template~Dashboard%",
-      "href": "/k8s/all-namespaces/rhcl/dashboard",
+      "href": "/k8s/all-namespaces/kuadrant/dashboard",
       "perspective": "dev",
       "section": "kuadrant-section-dev"
     }
@@ -109,7 +101,7 @@
     "properties": {
       "id": "rhcl-policies-dev",
       "name": "%plugin__console-plugin-template~Policies%",
-      "href": "/k8s/all-namespaces/rhcl/policies",
+      "href": "/k8s/all-namespaces/kuadrant/policies",
       "perspective": "dev",
       "section": "kuadrant-section-dev"
     }
@@ -119,7 +111,7 @@
     "properties": {
       "id": "rhcl-policy-topology-dev",
       "name": "%plugin__console-plugin-template~Policy Topology%",
-      "href": "/k8s/all-namespaces/rhcl/policy-topology",
+      "href": "/kuadrant/policy-topology",
       "perspective": "dev",
       "section": "kuadrant-section-dev",
       "badge": "dev"

@@ -5,3 +5,12 @@
    * https://patternfly-react-main.surge.sh/developer-resources/global-css-variables */
   color: var(--pf-global--palette--blue-400);
 }
+
+.policy-topology-container svg text {
+  font-family: RedHatText, helvetica, arial, sans-serif;
+  font-size: 0.7em;
+}
+
+.policy-topology-container {
+  height: 500px;
+}

@@ -16,7 +16,7 @@ import {
   Tbody,
 } from '@patternfly/react-table';
 import { useK8sWatchResource, K8sResourceCommon, ResourceLink, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
-import './example.css';
+import './kuadrant.css';
 
 interface Resource {
   name: string;
