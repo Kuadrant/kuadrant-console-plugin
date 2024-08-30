@@ -76,7 +76,8 @@
     "exposedModules": {
       "KuadrantDashboardPage": "./components/KuadrantDashboardPage",
       "PolicyTopologyPage": "./components/PolicyTopologyPage",
-      "KuadrantPoliciesPage": "./components/KuadrantPoliciesPage"
+      "KuadrantPoliciesPage": "./components/KuadrantPoliciesPage",
+      "KuadrantDNSPolicyCreatePage": "./components/KuadrantDNSPolicyCreatePage"
     },
     "dependencies": {
       "@console/pluginAPI": "*"

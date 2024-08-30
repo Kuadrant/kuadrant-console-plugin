@@ -32,6 +32,13 @@
   {
     "type": "console.page/route",
     "properties": {
+      "path": "/kuadrant/dnspolicy/new",
+      "component": { "$codeRef": "KuadrantDNSPolicyCreatePage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
       "exact": true,
       "path": "/kuadrant/policy-topology",
       "component": { "$codeRef": "PolicyTopologyPage" }
