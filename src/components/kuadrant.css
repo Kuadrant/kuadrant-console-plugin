@@ -116,3 +116,23 @@
 .kuadrant-limits-button, .pf-v5-c-label-group {
   margin: 1rem;
 }
+.namespaceSelectWrapper {
+  display: flex;
+  align-items: center;
+  border: 1px solid #ccc;
+  padding-left: 4px;
+}
+
+.namespaceBadge {
+  background-color: green;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 70%; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 24px; 
+  height: 24px; 
+}
+
+

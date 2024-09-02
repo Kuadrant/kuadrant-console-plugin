@@ -88,5 +88,16 @@
   "API Designer": "API Designer",
   "cert-manager Operator": "cert-manager Operator",
   "APIs / HTTPRoutes": "APIs / HTTPRoutes",
-  "Hide for session": "Hide for session"
+  "Hide for session": "Hide for session",
+  "Targets Gateway API networking resources Gateways to provide tls for gateway listeners by managing the lifecycle of tls certificates using CertManager": "Targets Gateway API networking resources Gateways to provide tls for gateway listeners by managing the lifecycle of tls certificates using CertManager",
+  "Create TLS Policy":"Create TLS Policy",
+  "Configure via":"Configure via",
+  "Unique name of the TLSPolicy.":"Unique name of the TLSPolicy.",
+  "Reference to a Kubernetes resource that the policy attaches to. To create an additional gateway got to":"Reference to a Kubernetes resource that the policy attaches to. To create an additional gateway got to",
+  "CertIssuer Issuer Reference":"CertIssuer Issuer Reference",
+  "Reference to the issuer for the created certificate. To create an additional Issuer got to":"Reference to the issuer for the created certificate. To create an additional Issuer got to",
+  "Issuer API Target Reference":"Issuer API Target Reference",
+  "You can view and create Issuers":"You can view and create Issuers",
+  "ClusterIssuer API Target Reference":"ClusterIssuer API Target Reference",
+  "You can view and create ClusterIssuers":"You can view and create ClusterIssuers"
 }

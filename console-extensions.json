@@ -52,6 +52,17 @@
     }
   },
   {
+    "type": "console.resource/create",
+    "properties": {
+      "model": {
+        "group": "kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "TLSPolicy"
+      },
+      "component": { "$codeRef": "KuadrantTLSPage" }
+    }
+  },
+  {
     "type": "console.navigation/section",
     "properties": {
       "id": "kuadrant-section-admin",
