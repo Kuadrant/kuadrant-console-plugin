@@ -45,73 +45,107 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
     setSelectedNamespace(event.currentTarget.value);
   };
 
+  const [selectedGateway, setSelectedGateway] = React.useState('');
+  const [gateways, setGateways] = React.useState([]);
+
+  const gatewayResource = {
+    groupVersionKind: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' },
+    isList: true
+  };
+
+  const [gatewayData, gatewayLoaded, gatewayError] = useK8sWatchResource(gatewayResource);
+
+  React.useEffect(() => {
+    if (gatewayLoaded && !gatewayError && Array.isArray(gatewayData)) {
+      setGateways(gatewayData.map((ns) => ns.metadata.name));
+    }
+  }, [gatewayData, gatewayLoaded, gatewayError]);
+
+  const handleGatewayChange = (event) => {
+    setSelectedGateway(event.currentTarget.value);
+  };
+
   return (
     <>
       <Helmet>
-        <title data-test="example-page-title">{t('Kuadrant')}</title>
+        <title data-test="example-page-title">{t('Create DNS Policy')}</title>
       </Helmet>
       <Page>
         <PageSection variant="light">
-          <Title headingLevel="h1">{t('Kuadrant')}</Title>
+          <Title headingLevel="h1">{t('Create DNS Policy')}</Title>
+          <div>description</div>
         </PageSection>
-        <div>create dns policy</div>
-        <div>description</div>
-        <div>create via [] form [] yaml</div>
-        <Form>
-          <FormGroup label="Policy Name" isRequired fieldId="policy-name">
-            <TextInput
-              isRequired
-              type="text"
-              id="policy-name"
-              name="policy-name"
-              value={policy}
-              onChange={handlePolicyChange}
-            />
-            <FormHelperText>
-              <HelperText>
-                <HelperTextItem>Unique name of the DNS Policy.</HelperTextItem>
-              </HelperText>
-            </FormHelperText>
-          </FormGroup>
-          <FormGroup label="Select Namespace" fieldId="namespace-select">
-            <FormSelect
-              id="namespace-select"
-              value={selectedNamespace}
-              onChange={handleNamespaceChange}
-              aria-label="Select Namespace"
-            >
-              <FormSelectOption key="placeholder" value="" label="Select a namespace" isPlaceholder />
-              {namespaces.map((namespace, index) => (
-                <FormSelectOption key={index} value={namespace} label={namespace} />
-              ))}
-            </FormSelect>
-          </FormGroup>
-        </Form>
-        <div>namespace * ?</div>
-        <input/>
-        <div>gateway api target reference *</div>
-        <input/>
-        <div>description here, to create an additional Gateway go to <a>here</a></div>
-        <div>routing strategy *</div>
-        <div>routing strategy to use * ?</div>
-        <div>[] simple [] load-balanced</div>
-        <div>[] default</div>
-        <div>[] custom weights</div>
-        <div>custom weight * ?</div>
-        <input/>
-        <div>health check</div>
-        <div>description of this section</div>
-        <div>Endpoint * ?</div>
-        <input/>
-        <div>Endpoint is the path to append to the host to reach the expected health check</div>
-        <div>Port * ?</div>
-        <input/>
-        <div>Endpoint is the path to append to the host to reach the expected health check</div>
-        <div>Protocol * ?</div>
-        <div>[] default</div>
-        <div>[] custom weights</div>
-        <button>create</button>
-        <button>cancel</button>
+        <PageSection>
+          <div>create via [] form [] yaml</div>
+          <Form>
+            <FormGroup label="Policy Name" isRequired fieldId="policy-name">
+              <TextInput
+                isRequired
+                type="text"
+                id="policy-name"
+                name="policy-name"
+                value={policy}
+                onChange={handlePolicyChange}
+              />
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem>Unique name of the DNS Policy.</HelperTextItem>
+                </HelperText>
+              </FormHelperText>
+            </FormGroup>
+            <FormGroup label="Namespace" isRequired fieldId="namespace-select">
+              <FormSelect
+                id="namespace-select"
+                value={selectedNamespace}
+                onChange={handleNamespaceChange}
+                aria-label="Select Namespace"
+              >
+                <FormSelectOption key="placeholder" value="" label="Select a namespace" isPlaceholder />
+                {namespaces.map((namespace, index) => (
+                  <FormSelectOption key={index} value={namespace} label={namespace} />
+                ))}
+              </FormSelect>
+            </FormGroup>
+            <FormGroup label="Gateway API Target Reference" isRequired fieldId="gateway-select">
+              <FormSelect
+                id="gateway-select"
+                value={selectedGateway}
+                onChange={handleGatewayChange}
+                aria-label="Select Gateway"
+              >
+                <FormSelectOption key="placeholder" value="" label="Select a gateway" isPlaceholder />
+                {gateways.map((gateway, index) => (
+                  <FormSelectOption key={index} value={gateway} label={gateway} />
+                ))}
+              </FormSelect>
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem>Description here, to create an additional Gateway go to <a>here</a></HelperTextItem>
+                </HelperText>
+              </FormHelperText>
+            </FormGroup>
+          </Form>
+          <div>routing strategy *</div>
+          <div>routing strategy to use * ?</div>
+          <div>[] simple [] load-balanced</div>
+          <div>[] default</div>
+          <div>[] custom weights</div>
+          <div>custom weight * ?</div>
+          <input/>
+          <div>health check</div>
+          <div>description of this section</div>
+          <div>Endpoint * ?</div>
+          <input/>
+          <div>Endpoint is the path to append to the host to reach the expected health check</div>
+          <div>Port * ?</div>
+          <input/>
+          <div>Endpoint is the path to append to the host to reach the expected health check</div>
+          <div>Protocol * ?</div>
+          <div>[] default</div>
+          <div>[] custom weights</div>
+          <button>create</button>
+          <button>cancel</button>
+        </PageSection>
       </Page>
     </>
   );
