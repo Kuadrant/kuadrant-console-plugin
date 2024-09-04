@@ -1,9 +1,13 @@
+# See the OWNERS docs: https://git.k8s.io/community/contributors/guide/owners.md
+
 approvers:
-  - christianvogt
-  - florkbr
-  - spadgett
-  - vojtechszocs
-  - jhadvig
-  - TheRealJon
-  - rhamilto
-component: Management Console
+- david-martin
+- maleck13
+- jasonmadigan
+- R-Lawton
+
+reviewers:
+- david-martin
+- maleck13
+- jasonmadigan
+- R-Lawton
