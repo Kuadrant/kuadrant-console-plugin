@@ -168,6 +168,7 @@ const AllPoliciesTable: React.FC<AllPoliciesTableProps> = ({ data, unfilteredDat
 };
 
 const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
+  const { t } = useTranslation('plugin__console-plugin-template');
   const [isOpen, setIsOpen] = React.useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
 
@@ -242,10 +243,10 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
       >
         <DropdownList>
           <DropdownItem value="edit" key="edit">
-            Edit
+            {t('Edit')}
           </DropdownItem>
           <DropdownItem value="delete" key="delete">
-            Delete
+          {t('Delete')}
           </DropdownItem>
         </DropdownList>
       </Dropdown>
@@ -255,10 +256,11 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
         onClose={() => setIsDeleteModalOpen(false)}
         aria-labelledby="delete-modal-title"
         aria-describedby="delete-modal-body"
+        variant="medium"
       >
         <ModalHeader title="Confirm Delete" />
         <ModalBody>
-          Are you sure you want to delete the resource {obj.metadata.name}?
+          {t("Are you sure you want to delete the policy")}: <b>{obj.metadata.name}</b>?
         </ModalBody>
         <ModalFooter>
           <Button key="confirm" variant={ButtonVariant.danger} onClick={onDeleteConfirm}>
@@ -425,7 +427,7 @@ const KuadrantPoliciesPage: React.FC = () => {
   let pages = [
     {
       href: '',
-      name: 'All Policies',
+      name: t('All Policies'),
       component: All
     }
   ];
@@ -438,12 +440,12 @@ const KuadrantPoliciesPage: React.FC = () => {
       ...pages,
       {
         href: 'dns',
-        name: 'DNS',
+        name: t('DNS'),
         component: DNS
       },
       {
         href: 'tls',
-        name: 'TLS',
+        name: t('TLS'),
         component: TLS
       }
     ];
@@ -452,12 +454,12 @@ const KuadrantPoliciesPage: React.FC = () => {
     ...pages,
     {
       href: 'auth',
-      name: 'Auth',
+      name: t('Auth'),
       component: Auth
     },
     {
       href: 'ratelimit',
-      name: 'RateLimit',
+      name: t('RateLimit'),
       component: RateLimit
     }
   ];
