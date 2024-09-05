@@ -15,7 +15,13 @@ import {
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
-import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
+import { ResourceYAMLEditor, useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
+import { SyncedEditor } from '../../copiedFromConsole/shared/src/components/synced-editor';
+import { EditorType } from '../../copiedFromConsole/shared/src/components/synced-editor/editor-toggle';
+// import { AsyncResourceYAMLEditor } from '../../copiedFromConsole/internal/components/AsyncResourceYAMLEditor';
+// import { safeYAMLToJS } from '../../copiedFromConsole/shared/src/utils/yaml';
+
+const LAST_VIEWED_EDITOR_TYPE_USERSETTING_KEY = 'console.createDNSPolicy.editor.lastView';
 
 const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__console-plugin-template');
@@ -65,6 +71,124 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
     setSelectedGateway(event.currentTarget.value);
   };
 
+  const DNSPolicyForm: React.FC = () => {
+    return (
+    <>
+      <Form>
+        <FormGroup label="Policy Name" isRequired fieldId="policy-name">
+          <TextInput
+            isRequired
+            type="text"
+            id="policy-name"
+            name="policy-name"
+            value={policy}
+            onChange={handlePolicyChange}
+          />
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem>Unique name of the DNS Policy.</HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        </FormGroup>
+        <FormGroup label="Namespace" isRequired fieldId="namespace-select">
+          <FormSelect
+            id="namespace-select"
+            value={selectedNamespace}
+            onChange={handleNamespaceChange}
+            aria-label="Select Namespace"
+          >
+            <FormSelectOption key="placeholder" value="" label="Select a namespace" isPlaceholder />
+            {namespaces.map((namespace, index) => (
+              <FormSelectOption key={index} value={namespace} label={namespace} />
+            ))}
+          </FormSelect>
+        </FormGroup>
+        <FormGroup label="Gateway API Target Reference" isRequired fieldId="gateway-select">
+          <FormSelect
+            id="gateway-select"
+            value={selectedGateway}
+            onChange={handleGatewayChange}
+            aria-label="Select Gateway"
+          >
+            <FormSelectOption key="placeholder" value="" label="Select a gateway" isPlaceholder />
+            {gateways.map((gateway, index) => (
+              <FormSelectOption key={index} value={gateway} label={gateway} />
+            ))}
+          </FormSelect>
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem>Description here, to create an additional Gateway go to <a>here</a></HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        </FormGroup>
+      </Form>
+      <div>routing strategy *</div>
+      <div>routing strategy to use * ?</div>
+      <div>[] simple [] load-balanced</div>
+      <div>[] default</div>
+      <div>[] custom weights</div>
+      <div>custom weight * ?</div>
+      <input/>
+      <div>health check</div>
+      <div>description of this section</div>
+      <div>Endpoint * ?</div>
+      <input/>
+      <div>Endpoint is the path to append to the host to reach the expected health check</div>
+      <div>Port * ?</div>
+      <input/>
+      <div>Endpoint is the path to append to the host to reach the expected health check</div>
+      <div>Protocol * ?</div>
+      <div>[] default</div>
+      <div>[] custom weights</div>
+      <button>create</button>
+      <button>cancel</button>
+    </>
+    );
+  }
+
+  const formHelpText = t('Create by completing the form.');
+  const yamlHelpText = t(
+    'Create by manually entering YAML or JSON definitions, or by dragging and dropping a file into the editor.',
+  );
+
+  const [helpText, setHelpText] = React.useState(formHelpText);
+
+  // TODO: pass in DNSPolicyKind
+  const checkDNSPolicyValidForForm = (obj: any) => {
+    // TODO: implement - see create-network-policy.tsx
+  };
+
+  const updateResource = (obj: any) => {
+    // TODO: implement - see create-network-policy.tsx
+  };
+
+  type YAMLEditorProps = {
+    initialYAML?: string;
+    onChange?: (yaml: string) => void;
+  };
+
+  /*
+        <AsyncResourceYAMLEditor
+        create
+        hideHeader
+        initialResource={safeYAMLToJS(initialYAML)}
+        onChange={onChange}
+      />
+      */
+     // TODO: <React.Suspense fallback={<LoadingBox />}>
+  const YAMLEditor: React.FC<YAMLEditorProps> = ({ onChange, initialYAML = '' }) => {
+    return (
+
+      <React.Suspense fallback={<div>loading</div>}>
+        <ResourceYAMLEditor
+          initialResource={ '' }
+          header="Create DNSPolicy"
+          onSave={(content) => updateResource(content)}
+        />
+      </React.Suspense>
+    );
+  };
+
   return (
     <>
       <Helmet>
@@ -73,78 +197,26 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       <Page>
         <PageSection variant="light">
           <Title headingLevel="h1">{t('Create DNS Policy')}</Title>
-          <div>description</div>
+          <div>{helpText}</div>
         </PageSection>
         <PageSection>
           <div>create via [] form [] yaml</div>
-          <Form>
-            <FormGroup label="Policy Name" isRequired fieldId="policy-name">
-              <TextInput
-                isRequired
-                type="text"
-                id="policy-name"
-                name="policy-name"
-                value={policy}
-                onChange={handlePolicyChange}
-              />
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>Unique name of the DNS Policy.</HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-            <FormGroup label="Namespace" isRequired fieldId="namespace-select">
-              <FormSelect
-                id="namespace-select"
-                value={selectedNamespace}
-                onChange={handleNamespaceChange}
-                aria-label="Select Namespace"
-              >
-                <FormSelectOption key="placeholder" value="" label="Select a namespace" isPlaceholder />
-                {namespaces.map((namespace, index) => (
-                  <FormSelectOption key={index} value={namespace} label={namespace} />
-                ))}
-              </FormSelect>
-            </FormGroup>
-            <FormGroup label="Gateway API Target Reference" isRequired fieldId="gateway-select">
-              <FormSelect
-                id="gateway-select"
-                value={selectedGateway}
-                onChange={handleGatewayChange}
-                aria-label="Select Gateway"
-              >
-                <FormSelectOption key="placeholder" value="" label="Select a gateway" isPlaceholder />
-                {gateways.map((gateway, index) => (
-                  <FormSelectOption key={index} value={gateway} label={gateway} />
-                ))}
-              </FormSelect>
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>Description here, to create an additional Gateway go to <a>here</a></HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-          </Form>
-          <div>routing strategy *</div>
-          <div>routing strategy to use * ?</div>
-          <div>[] simple [] load-balanced</div>
-          <div>[] default</div>
-          <div>[] custom weights</div>
-          <div>custom weight * ?</div>
-          <input/>
-          <div>health check</div>
-          <div>description of this section</div>
-          <div>Endpoint * ?</div>
-          <input/>
-          <div>Endpoint is the path to append to the host to reach the expected health check</div>
-          <div>Port * ?</div>
-          <input/>
-          <div>Endpoint is the path to append to the host to reach the expected health check</div>
-          <div>Protocol * ?</div>
-          <div>[] default</div>
-          <div>[] custom weights</div>
-          <button>create</button>
-          <button>cancel</button>
+          <SyncedEditor
+            context={{
+              formContext: {},
+              yamlContext: {},
+            }}
+            FormEditor={DNSPolicyForm}
+            initialData={''}
+            initialType={EditorType.Form}
+            onChangeEditorType={(type) =>
+              setHelpText(type === EditorType.Form ? formHelpText : yamlHelpText)
+            }
+            onChange={checkDNSPolicyValidForForm}
+            YAMLEditor={YAMLEditor}
+            lastViewUserSettingKey={LAST_VIEWED_EDITOR_TYPE_USERSETTING_KEY}
+            displayConversionError
+          />
         </PageSection>
       </Page>
     </>
