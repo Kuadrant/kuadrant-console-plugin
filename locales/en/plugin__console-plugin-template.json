@@ -17,5 +17,13 @@
   "Address": "Address",
   "Dashboard": "Dashboard",
   "Policies": "Policies",
-  "Policy Topology": "Policy Topology"
+  "Policy Topology": "Policy Topology",
+  "TLS": "TLS",
+  "Are you sure you want to delete the policy": "Are you sure you want to delete the policy",
+  "All Policies": "All Policies",
+  "DNS": "DNS",
+  "Auth": "Auth",
+  "RateLimit": "RateLimit",
+  "Edit": "Edit",
+  "Delete": "Delete"
 }
