@@ -29,7 +29,7 @@ import { Gateway } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
 import { ModalHeader, ModalBody, ModalFooter } from '@patternfly/react-core/next';
 import NamespaceSelect from './namespace/NamespaceSelect';
-import { removeUndefinedFields, convertMatchLabelsArrayToObject, convertMatchLabelsObjectToArray } from '../utils/dnsPolicy';
+import { removeUndefinedFields, convertMatchLabelsArrayToObject, convertMatchLabelsObjectToArray } from '../utils/modelUtils';
 
 const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__console-plugin-template');
