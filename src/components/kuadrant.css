@@ -46,3 +46,65 @@
   overflow-y: auto;
   padding: 1rem;
 }
+
+.kuadrant-dashboard-learning {
+  color: #1F0066;
+}
+
+@media (prefers-color-scheme: light) {
+  .kuadrant-dashboard-learning {
+    color: #1F0066;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .kuadrant-dashboard-learning  {
+    color: #9c90b9;
+  }
+}
+
+
+
+
+.kuadrant-dashboard-feature-highlights {
+  color: #0066CC;
+}
+
+.kuadrant-dashboard-enhance {
+  color: #D38940;
+}
+
+.kuadrant-dashboard-learning, .kuadrant-dashboard-feature-highlights, .kuadrant-dashboard-enhance  {
+  margin-bottom: 0.5em;
+}
+
+.kuadrant-dashboard-resource-link {
+  text-decoration: none;
+  color: black;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+@media (prefers-color-scheme: light) {
+  .kuadrant-dashboard-resource-link{
+    color: black;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .kuadrant-dashboard-resource-link {
+    color: white;
+  }
+}
+
+.kuadrant-dashboard-resource-link:hover {
+  text-decoration: underline;
+  color: #0066cc;
+}
+
+.kuadrant-reading-time {
+  font-size: 0.8rem;
+  color: grey;
+  margin-left: 1rem;
+  margin-right: 1rem
+}

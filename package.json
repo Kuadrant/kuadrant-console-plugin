@@ -28,7 +28,7 @@
     "@openshift-console/dynamic-plugin-sdk": "^1.6.0",
     "@openshift-console/dynamic-plugin-sdk-webpack": "^1.2.0",
     "@patternfly/react-core": "^5.3.3",
-    "@patternfly/react-icons": "^5.1.1",
+    "@patternfly/react-icons": "^5.4.0",
     "@patternfly/react-styles": "^5.1.1",
     "@types/node": "^18.0.0",
     "@types/react": "^17.0.37",
@@ -74,7 +74,7 @@
     "displayName": "OpenShift Console Plugin Template",
     "description": "Template project for OpenShift Console plugins. Edit package.json to change this message and the plugin name.",
     "exposedModules": {
-      "KuadrantDashboardPage": "./components/KuadrantDashboardPage",
+      "KuadrantOverviewPage": "./components/KuadrantOverviewPage",
       "PolicyTopologyPage": "./components/PolicyTopologyPage",
       "KuadrantPoliciesPage": "./components/KuadrantPoliciesPage",
       "KuadrantDNSPolicyCreatePage": "./components/KuadrantDNSPolicyCreatePage",
