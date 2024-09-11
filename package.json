@@ -87,7 +87,7 @@
     "@babel/preset-env": "^7.25.3",
     "@babel/preset-react": "^7.24.7",
     "@patternfly/react-table": "^5.3.3",
-    "babel-loader": "^9.1.3",
+    "babel-loader": "^8.2.0",
     "graphlib": "^2.1.8",
     "graphlib-dot": "^0.6.4",
     "react-policy-topology": "^0.1.10"
