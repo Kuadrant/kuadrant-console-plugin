@@ -13,7 +13,6 @@ import {
   Button,
   ButtonVariant,
 } from '@patternfly/react-core';
-import { K8sModel } from '@openshift-console/dynamic-plugin-sdk/lib/api/common-types';
 import { sortable } from '@patternfly/react-table';
 import { EllipsisVIcon } from '@patternfly/react-icons';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-core/next';
@@ -38,6 +37,7 @@ import {
   useActivePerspective,
 } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
+import getModelFromResource from '../utils/getModelFromResource';
 
 
 interface Resource {
@@ -174,26 +174,6 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
 
   const onToggleClick = () => {
     setIsOpen(!isOpen);
-  };
-
-  const getModelFromResource = (obj: K8sResourceCommon): K8sModel => {
-    const pluralizeKind = (kind: string) => {
-      if (kind.endsWith('y')) {
-        return `${kind.slice(0, -1)}ies`.toLowerCase();
-      }
-      return `${kind.toLowerCase()}s`;
-    };
-
-    return {
-      apiGroup: obj.apiVersion.split('/')[0],
-      apiVersion: obj.apiVersion.split('/')[1],
-      kind: obj.kind,
-      plural: pluralizeKind(obj.kind),
-      namespaced: !!obj.metadata.namespace,
-      abbr: obj.kind.charAt(0),
-      label: obj.kind,
-      labelPlural: pluralizeKind(obj.kind),
-    };
   };
 
   const onDeleteConfirm = async () => {

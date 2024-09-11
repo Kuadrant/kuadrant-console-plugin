@@ -26,3 +26,16 @@
 .co-m-nav-title--row .co-m-primary-action {
   padding-top: 1rem;
 }
+
+.kuadrant-editor-toggle {
+  display: flex;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+  border-bottom: var(--pf-v5-global--BorderWidth--sm) solid var(--pf-v5-global--BorderColor--100);
+  border-top: var(--pf-v5-global--BorderWidth--sm) solid var(--pf-v5-global--BorderColor--100);
+  padding: var(--pf-v5-global--spacer--sm) var(--pf-v5-global--spacer--lg);
+}
+
+.kuadrant-editor-toggle .pf-v5-c-radio {
+  padding: 0 0 0 1rem;
+}

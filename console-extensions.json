@@ -30,6 +30,17 @@
     }
   },
   {
+    "type": "console.resource/create",
+    "properties": {
+      "model": {
+        "group": "kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "DNSPolicy"
+      },
+      "component": { "$codeRef": "KuadrantDNSPolicyCreatePage" }
+    }
+  },
+  {
     "type": "console.page/route",
     "properties": {
       "exact": true,
