@@ -77,7 +77,8 @@
       "KuadrantDashboardPage": "./components/KuadrantDashboardPage",
       "PolicyTopologyPage": "./components/PolicyTopologyPage",
       "KuadrantPoliciesPage": "./components/KuadrantPoliciesPage",
-      "KuadrantDNSPolicyCreatePage": "./components/KuadrantDNSPolicyCreatePage"
+      "KuadrantDNSPolicyCreatePage": "./components/KuadrantDNSPolicyCreatePage",
+      "KuadrantAuthPolicyCreatePage": "./components/KuadrantAuthPolicyCreatePage"
     },
     "dependencies": {
       "@console/pluginAPI": "*"

@@ -125,5 +125,16 @@
       "section": "kuadrant-section-dev",
       "badge": "dev"
     }
+  },
+  {
+    "type": "console.resource/create",
+    "properties": {
+      "model": {
+        "group": "kuadrant.io",
+        "version": "v1beta2",
+        "kind": "AuthPolicy"
+      },
+      "component": { "$codeRef": "KuadrantAuthPolicyCreatePage" }
+    }
   }
 ]
