@@ -39,3 +39,10 @@
 .kuadrant-editor-toggle .pf-v5-c-radio {
   padding: 0 0 0 1rem;
 }
+
+.kuadrant-modal-dynamic-height {
+  min-height: auto;
+  max-height: 450px;
+  overflow-y: auto;
+  padding: 1rem;
+}
