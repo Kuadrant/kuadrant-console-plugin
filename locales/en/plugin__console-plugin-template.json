@@ -68,5 +68,6 @@
   "Configured Limits": "Configured Limits",
   "Target reference type": "Target reference type",
   "Unique name of the RateLimitPolicy": "Unique name of the RateLimitPolicy",
-  "RateLimitPolicy enables rate limiting for service workloads in a Gateway API network": "RateLimitPolicy enables rate limiting for service workloads in a Gateway API network"
+  "RateLimitPolicy enables rate limiting for service workloads in a Gateway API network": "RateLimitPolicy enables rate limiting for service workloads in a Gateway API network",
+  "To set defaults, overrides, and more complex limits, use the YAML view.": "To set defaults, overrides, and more complex limits, use the YAML view."
 }

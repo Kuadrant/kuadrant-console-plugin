@@ -1,6 +1,5 @@
 import * as React from 'react';
 import Helmet from 'react-helmet';
-import yaml from 'js-yaml';
 import {
   PageSection,
   Title,
@@ -14,8 +13,10 @@ import {
   Button,
   ExpandableSection,
   ButtonVariant,
-  Modal,
   ActionGroup,
+  AlertVariant,
+  Alert,
+  AlertGroup,
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
@@ -27,9 +28,8 @@ import HealthCheckField from './dnspolicy/HealthCheckField';
 import getModelFromResource from '../utils/getModelFromResource';
 import { Gateway } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
-import { ModalHeader, ModalBody, ModalFooter } from '@patternfly/react-core/next';
 import NamespaceSelect from './namespace/NamespaceSelect';
-import { removeUndefinedFields, convertMatchLabelsArrayToObject, convertMatchLabelsObjectToArray } from '../utils/modelUtils';
+import { removeUndefinedFields, convertMatchLabelsArrayToObject } from '../utils/modelUtils';
 
 const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__console-plugin-template');
@@ -48,6 +48,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
     port: null,
     protocol: 'HTTP',
   });
+  const [isCreateButtonDisabled, setIsCreateButtonDisabled] = React.useState(true);
 
   // Initialize the YAML resource object based on form state
   const [yamlResource, setYamlResource] = React.useState(() => {
@@ -107,12 +108,15 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         healthCheck: healthCheck.endpoint ? healthCheck : undefined,
       },
     };
-  
-    setYamlResource(removeUndefinedFields(updatedYamlResource)); // Clean undefined values
-  }, [policy, selectedNamespace, selectedGateway, routingStrategy, loadBalancing, healthCheck]);  
 
-  const [isErrorModalOpen, setIsErrorModalOpen] = React.useState(false);
-  const [errorModalMsg, setErrorModalMsg] = React.useState('')
+    setYamlResource(removeUndefinedFields(updatedYamlResource)); // Clean undefined values
+
+    // Check if the Create button should be enabled
+    const isFormValid = policy && selectedNamespace && selectedGateway.name;
+    setIsCreateButtonDisabled(!isFormValid); // Update the button state
+  }, [policy, selectedNamespace, selectedGateway, routingStrategy, loadBalancing, healthCheck]);
+
+  const [errorAlertMsg, setErrorAlertMsg] = React.useState('')
 
   const handleCreateViewChange = (value: 'form' | 'yaml') => {
     setCreateView(value);
@@ -122,39 +126,10 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
     setPolicy(policy);
   };
 
-  const handleYamlSave = (content: string) => {
-    try {
-      const parsedYaml = yaml.load(content) as DNSPolicy;
-      if (parsedYaml) {
-        setPolicy(parsedYaml.metadata.name || '');
-        setSelectedNamespace(parsedYaml.metadata.namespace || '');
-        setRoutingStrategy(parsedYaml.spec.routingStrategy);
-        setSelectedGateway(parsedYaml.spec.targetRef);
-        setLoadBalancing({
-          ...parsedYaml.spec.loadBalancing,
-          weighted: {
-            ...parsedYaml.spec.loadBalancing?.weighted,
-            custom: parsedYaml.spec.loadBalancing?.weighted?.custom?.map((customWeight) => ({
-              ...customWeight,
-              selector: {
-                ...customWeight.selector,
-                // Convert map back to array for form rendering
-                matchLabels: convertMatchLabelsObjectToArray(
-                  (typeof customWeight.selector.matchLabels === 'object' ? customWeight.selector.matchLabels : {}) as { [key: string]: string }
-                ),
-                },
-            })),
-          },
-        });
-        setHealthCheck(parsedYaml.spec.healthCheck || healthCheck);
-      }
-    } catch (error) {
-      console.error('Error parsing YAML:', error);
-    }
-    handleSubmit();
-  };
-
   const handleSubmit = async () => {
+    if (isCreateButtonDisabled) return; // Early return if form is not valid
+    setErrorAlertMsg('')
+
     const isHealthCheckValid =
       healthCheck.endpoint &&
       healthCheck.failureThreshold > 0 &&
@@ -216,9 +191,8 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       });
       history.push('/kuadrant/all-namespaces/policies/dns'); // Navigate after successful creation
     } catch (error) {
-      console.error(t('Error creating DNSPolicy'), error);
-      setErrorModalMsg(error)
-      setIsErrorModalOpen(true)
+      console.error(t('Error creating DNSPolicy'), { error });
+      setErrorAlertMsg(error.message)
     }
   };
 
@@ -290,8 +264,16 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
               </ExpandableSection>
             </div>
 
+            {errorAlertMsg != '' && (
+              <AlertGroup className="kuadrant-alert-group">
+                <Alert title={t('Error creating DNSPolicy')} variant={AlertVariant.danger} isInline>
+                  {errorAlertMsg}
+                </Alert>
+              </AlertGroup>
+            )}
+
             <ActionGroup>
-              <Button variant={ButtonVariant.primary} onClick={handleSubmit}>
+              <Button variant={ButtonVariant.primary} onClick={handleSubmit} isDisabled={isCreateButtonDisabled}>
                 {t('Create DNSPolicy')}
               </Button>
               <Button variant={ButtonVariant.secondary} onClick={handleCancel}>
@@ -301,25 +283,8 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
           </Form>
         </PageSection>
       ) : (
-        <ResourceYAMLEditor initialResource={yamlResource} onSave={handleYamlSave} create />
+        <ResourceYAMLEditor initialResource={yamlResource} create />
       )}
-      <Modal
-        isOpen={isErrorModalOpen}
-        onClose={() => setIsErrorModalOpen(false)}
-        aria-labelledby="error-modal-title"
-        aria-describedby="error-modal-body"
-        variant="medium"
-      >
-        <ModalHeader title={t('Error creating DNSPolicy')} />
-        <ModalBody>
-          <b>{errorModalMsg}</b>
-        </ModalBody>
-        <ModalFooter>
-          <Button key="ok" variant={ButtonVariant.link} onClick={() => setIsErrorModalOpen(false)}>
-            OK
-          </Button>
-        </ModalFooter>
-      </Modal>
     </>
   );
 };

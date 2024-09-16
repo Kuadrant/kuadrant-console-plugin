@@ -30,7 +30,7 @@ const NamespaceSelect: React.FC<NamespaceSelectProps> = ({ selectedNamespace, on
     onChange(event.currentTarget.value);
   };
   return (
-    <FormGroup label={t('Namespace')} fieldId="namespace-select">
+    <FormGroup label={t('Namespace')} fieldId="namespace-select" isRequired>
       <FormSelect
         id="namespace-select"
         value={selectedNamespace}
