@@ -93,7 +93,6 @@
     "babel-loader": "^8.2.0",
     "graphlib": "^2.1.8",
     "graphlib-dot": "^0.6.4",
-    "js-yaml": "^4.1.0",
     "react-policy-topology": "^0.1.10"
   }
 }

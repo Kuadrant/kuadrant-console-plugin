@@ -19,6 +19,8 @@ import {
   Flex,
   FlexItem,
   Alert,
+  AlertGroup,
+  AlertVariant,
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
@@ -28,7 +30,6 @@ import { LimitConfig, RateLimitPolicy } from './ratelimitpolicy/types'
 import getModelFromResource from '../utils/getModelFromResource';
 import { Gateway } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
-import { ModalHeader, ModalBody, ModalFooter } from '@patternfly/react-core/next';
 import NamespaceSelect from './namespace/NamespaceSelect';
 import HTTPRouteSelect from './httproute/HTTPRouteSelect';
 import { HTTPRoute } from './httproute/types';
@@ -54,6 +55,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
     rates: [{ duration: 60, limit: 100, unit: 'minute' }]
   });
   const [rateName, setRateName] = React.useState<string>('');
+  const [isCreateButtonDisabled, setIsCreateButtonDisabled] = React.useState(true);
 
   const handleOpenModal = () => {
     // Reset temporary state when opening modal for new entry
@@ -110,30 +112,6 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
     };
   });
 
-  React.useEffect(() => {
-    const newTargetRef = targetType === 'gateway'
-      ? {
-        group: 'gateway.networking.k8s.io',
-        kind: 'Gateway',
-        name: selectedGateway.name,
-        namespace: selectedGateway.namespace,
-      }
-      : {
-        group: 'gateway.networking.k8s.io',
-        kind: 'HTTPRoute',
-        name: selectedHTTPRoute.name,
-        namespace: selectedHTTPRoute.namespace,
-      };
-    setYamlResource((prevResource) => ({
-      ...prevResource,
-      spec: {
-        ...prevResource.spec,
-        targetRef: newTargetRef,
-        limits,
-      },
-    }));
-  }, [targetType, selectedGateway, selectedHTTPRoute]);
-
   const history = useHistory();
 
   React.useEffect(() => {
@@ -145,21 +123,31 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
         namespace: selectedNamespace,
       },
       spec: {
-        targetRef: {
+        targetRef: targetType === 'gateway'
+        ? {
           group: 'gateway.networking.k8s.io',
           kind: 'Gateway',
           name: selectedGateway.name,
           namespace: selectedGateway.namespace,
+        }
+        : {
+          group: 'gateway.networking.k8s.io',
+          kind: 'HTTPRoute',
+          name: selectedHTTPRoute.name,
+          namespace: selectedHTTPRoute.namespace,
         },
         limits: { ...limits },
       },
     };
 
     setYamlResource(updatedYamlResource);
-  }, [policy, selectedNamespace, selectedGateway, limits]);
 
-  const [isErrorModalOpen, setIsErrorModalOpen] = React.useState(false);
-  const [errorModalMsg, setErrorModalMsg] = React.useState('')
+    // Check if the Create button should be enabled
+    const isFormValid = policy && selectedNamespace && (selectedGateway.name || selectedHTTPRoute.name);
+    setIsCreateButtonDisabled(!isFormValid); // Update the button state    
+  }, [policy, selectedNamespace, targetType, selectedGateway, selectedHTTPRoute, limits]);
+
+  const [errorAlertMsg, setErrorAlertMsg] = React.useState('')
 
   const handleCreateViewChange = (value: 'form' | 'yaml') => {
     setCreateView(value);
@@ -170,6 +158,8 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    if (isCreateButtonDisabled) return; // Early return if form is not valid
+    setErrorAlertMsg('')
     const ratelimitPolicy: RateLimitPolicy = {
       apiVersion: 'kuadrant.io/v1beta2',
       kind: 'RateLimitPolicy',
@@ -178,12 +168,19 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
         namespace: selectedNamespace,
       },
       spec: {
-        targetRef: {
-          group: 'gateway.networking.k8s.io',
-          kind: 'Gateway',
-          name: selectedGateway.name,
-          namespace: selectedGateway.namespace
-        },
+        targetRef: targetType === 'gateway'
+          ? {
+            group: 'gateway.networking.k8s.io',
+            kind: 'Gateway',
+            name: selectedGateway.name,
+            namespace: selectedGateway.namespace,
+          }
+          : {
+            group: 'gateway.networking.k8s.io',
+            kind: 'HTTPRoute',
+            name: selectedHTTPRoute.name,
+            namespace: selectedHTTPRoute.namespace,
+          },
       },
     };
 
@@ -196,8 +193,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
       history.push('/kuadrant/all-namespaces/policies/ratelimit'); // Navigate after successful creation
     } catch (error) {
       console.error(t('Error creating RateLimitPolicy'), error);
-      setErrorModalMsg(error)
-      setIsErrorModalOpen(true)
+      setErrorAlertMsg(error.message)
     }
   };
 
@@ -316,13 +312,22 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
                 </Button>
               </Modal>
             </div>
-            <Alert
-              variant="info"
-              isInline
-              title="To set defaults, overrides, and more complex limits, use the YAML view."
-            />
+            <AlertGroup className="kuadrant-alert-group">
+              <Alert
+                variant="info"
+                isInline
+                title={t('To set defaults, overrides, and more complex limits, use the YAML view.')}
+              />
+
+              {errorAlertMsg != '' && (
+                <Alert title={t('Error creating RateLimitPolicy')} variant={AlertVariant.danger} isInline>
+                  {errorAlertMsg}
+                </Alert>
+              )}
+            </AlertGroup>
+
             <ActionGroup>
-              <Button variant={ButtonVariant.primary} onClick={handleSubmit}>
+              <Button variant={ButtonVariant.primary} onClick={handleSubmit} isDisabled={isCreateButtonDisabled}>
                 {t('Create RateLimitPolicy')}
               </Button>
               <Button variant={ButtonVariant.secondary} onClick={handleCancel}>
@@ -334,23 +339,6 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
       ) : (
         <ResourceYAMLEditor initialResource={yamlResource} create />
       )}
-      <Modal
-        isOpen={isErrorModalOpen}
-        onClose={() => setIsErrorModalOpen(false)}
-        aria-labelledby="error-modal-title"
-        aria-describedby="error-modal-body"
-        variant="medium"
-      >
-        <ModalHeader title={t('Error creating RateLimitPolicy')} />
-        <ModalBody>
-          <b>{errorModalMsg}</b>
-        </ModalBody>
-        <ModalFooter>
-          <Button key="ok" variant={ButtonVariant.link} onClick={() => setIsErrorModalOpen(false)}>
-            {t('OK')}
-          </Button>
-        </ModalFooter>
-      </Modal>
     </>
   );
 };
