@@ -1,4 +1,4 @@
-import { FormGroup, Title, List, ListItem, Flex, FlexItem, Button, Modal } from "@patternfly/react-core";
+import { FormGroup, Title, Button, Modal, Label, LabelGroup } from "@patternfly/react-core";
 import * as React from "react";
 import AddLimitModal from "./AddLimitModal";
 import { LimitConfig } from "./types";
@@ -13,37 +13,33 @@ const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
   const { t } = useTranslation('plugin__console-plugin-template');
   const [isAddLimitModalOpen, setIsAddLimitModalOpen] = React.useState(false);
   const [isLimitNameAlertModalOpen, setIsLimitNameAlertModalOpen] = React.useState(false);
-  // State to hold the temporary limit being added
   const [newLimit, setNewLimit] = React.useState<LimitConfig>({
     rates: [{ duration: 60, limit: 100, unit: 'minute' }]
   });
   const [rateName, setRateName] = React.useState<string>('');
+
   const handleOpenModal = () => {
-    // Reset temporary state when opening modal for new entry
     setNewLimit({ rates: [{ duration: 60, limit: 100, unit: 'minute' }] });
     setRateName('');
     setIsAddLimitModalOpen(true);
   };
+
   const handleCloseModal = () => setIsAddLimitModalOpen(false);
 
   const onAddLimit = () => {
     if (!rateName) {
-      // Show alert modal if rateName is empty
       setIsLimitNameAlertModalOpen(true);
       return;
     }
 
-    // Append the new limit to the list of limits
     setLimits((prevLimits) => ({
       ...prevLimits,
       [rateName]: newLimit,
     }));
 
-    // Close the modal after saving
     handleCloseModal();
   };
 
-  // Handle removing a limit by name
   const handleRemoveLimit = (name: string) => {
     setLimits((prevLimits) => {
       const updatedLimits = { ...prevLimits };
@@ -55,29 +51,23 @@ const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
   return (
     <>
       <FormGroup>
-        <Title headingLevel="h2" size="lg" style={{ marginTop: '20px' }}>{t('Configured Limits')}</Title>
-        <List>
+        <Title headingLevel="h2" size="lg" className="kuadrant-limits-header">{t('Configured Limits')}</Title>
+        <LabelGroup numLabels={5}>
           {Object.keys(limits).length > 0 ? (
             Object.entries(limits).map(([name, limitConfig], index) => (
-              <ListItem key={index}>
-                <Flex>
-                  <FlexItem>
-                    <strong>{name}</strong>: {limitConfig.rates?.[0]?.limit} requests per {limitConfig.rates?.[0]?.duration} {limitConfig.rates?.[0]?.unit}(s)
-                  </FlexItem>
-                  <FlexItem>
-                    {/* Button to remove a limit */}
-                    <Button variant="danger" onClick={() => handleRemoveLimit(name)}>
-                      {t('Remove Limit')}
-                    </Button>
-                  </FlexItem>
-                </Flex>
-              </ListItem>
+              <Label
+                key={index}
+                color="blue"
+                onClose={() => handleRemoveLimit(name)}
+              >
+                <strong>{name}</strong>: {limitConfig.rates?.[0]?.limit} requests per {limitConfig.rates?.[0]?.duration} {limitConfig.rates?.[0]?.unit}(s)
+              </Label>
             ))
           ) : (
-            <ListItem>{t('No limits configured yet')}</ListItem>
+            <p>{t('No limits configured yet')}</p>
           )}
-        </List>
-        <Button variant="primary" onClick={handleOpenModal}>
+        </LabelGroup>
+        <Button variant="primary" onClick={handleOpenModal} className="kuadrant-limits-button">
           {t('Add Limit')}
         </Button>
       </FormGroup>

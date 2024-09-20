@@ -108,3 +108,11 @@
   margin-left: 1rem;
   margin-right: 1rem
 }
+
+.kuadrant-limits-header {
+  margin: 1rem 0 0;
+}
+
+.kuadrant-limits-button, .pf-v5-c-label-group {
+  margin: 1rem;
+}
