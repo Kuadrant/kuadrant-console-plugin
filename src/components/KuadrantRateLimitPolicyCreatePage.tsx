@@ -12,12 +12,7 @@ import {
   Radio,
   Button,
   ButtonVariant,
-  Modal,
   ActionGroup,
-  List,
-  ListItem,
-  Flex,
-  FlexItem,
   Alert,
   AlertGroup,
   AlertVariant,
@@ -33,7 +28,7 @@ import GatewaySelect from './gateway/GatewaySelect';
 import NamespaceSelect from './namespace/NamespaceSelect';
 import HTTPRouteSelect from './httproute/HTTPRouteSelect';
 import { HTTPRoute } from './httproute/types';
-import AddLimitModal from './ratelimitpolicy/AddLimitModal';
+import LimitSelect from './ratelimitpolicy/LimitSelect';
 
 const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__console-plugin-template');
@@ -44,52 +39,10 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   const [selectedHTTPRoute, setSelectedHTTPRoute] = React.useState<HTTPRoute>({ name: '', namespace: '' });
   const [targetType, setTargetType] = React.useState<'gateway' | 'httproute'>('gateway');
 
-  const [isAddLimitModalOpen, setIsAddLimitModalOpen] = React.useState(false);
-  const [isLimitNameAlertModalOpen, setIsLimitNameAlertModalOpen] = React.useState(false);
-
   // State to hold all limit configurations
   const [limits, setLimits] = React.useState<Record<string, LimitConfig>>({});
 
-  // State to hold the temporary limit being added
-  const [newLimit, setNewLimit] = React.useState<LimitConfig>({
-    rates: [{ duration: 60, limit: 100, unit: 'minute' }]
-  });
-  const [rateName, setRateName] = React.useState<string>('');
   const [isCreateButtonDisabled, setIsCreateButtonDisabled] = React.useState(true);
-
-  const handleOpenModal = () => {
-    // Reset temporary state when opening modal for new entry
-    setNewLimit({ rates: [{ duration: 60, limit: 100, unit: 'minute' }] });
-    setRateName('');
-    setIsAddLimitModalOpen(true);
-  };
-  const handleCloseModal = () => setIsAddLimitModalOpen(false);
-  const handleSave = () => {
-    if (!rateName) {
-      // Show alert modal if rateName is empty
-      setIsLimitNameAlertModalOpen(true);
-      return;
-    }
-
-    // Append the new limit to the list of limits
-    setLimits((prevLimits) => ({
-      ...prevLimits,
-      [rateName]: newLimit,
-    }));
-
-    // Close the modal after saving
-    handleCloseModal();
-  };
-
-
-  // Handle removing a limit by name
-  const handleRemoveLimit = (name: string) => {
-    setLimits((prevLimits) => {
-      const updatedLimits = { ...prevLimits };
-      delete updatedLimits[name];
-      return updatedLimits;
-    });
-  };
 
   // Initialize the YAML resource object based on form state
   const [yamlResource, setYamlResource] = React.useState(() => {
@@ -124,18 +77,18 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
       },
       spec: {
         targetRef: targetType === 'gateway'
-        ? {
-          group: 'gateway.networking.k8s.io',
-          kind: 'Gateway',
-          name: selectedGateway.name,
-          namespace: selectedGateway.namespace,
-        }
-        : {
-          group: 'gateway.networking.k8s.io',
-          kind: 'HTTPRoute',
-          name: selectedHTTPRoute.name,
-          namespace: selectedHTTPRoute.namespace,
-        },
+          ? {
+            group: 'gateway.networking.k8s.io',
+            kind: 'Gateway',
+            name: selectedGateway.name,
+            namespace: selectedGateway.namespace,
+          }
+          : {
+            group: 'gateway.networking.k8s.io',
+            kind: 'HTTPRoute',
+            name: selectedHTTPRoute.name,
+            namespace: selectedHTTPRoute.namespace,
+          },
         limits: { ...limits },
       },
     };
@@ -181,6 +134,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
             name: selectedHTTPRoute.name,
             namespace: selectedHTTPRoute.namespace,
           },
+        limits: { ...limits },
       },
     };
 
@@ -261,56 +215,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
                   <HTTPRouteSelect selectedHTTPRoute={selectedHTTPRoute} onChange={setSelectedHTTPRoute} />
                 )}
               </div>
-              {/* Display the list of added limits */}
-              <FormGroup>
-                <Title headingLevel="h2" size="lg" style={{ marginTop: '20px' }}>{t('Configured Limits')}</Title>
-                <List>
-                  {Object.keys(limits).length > 0 ? (
-                    Object.entries(limits).map(([name, limitConfig], index) => (
-                      <ListItem key={index}>
-                        <Flex>
-                          <FlexItem>
-                            <strong>{name}</strong>: {limitConfig.rates?.[0]?.limit} requests per {limitConfig.rates?.[0]?.duration} {limitConfig.rates?.[0]?.unit}(s)
-                          </FlexItem>
-                          <FlexItem>
-                            {/* Button to remove a limit */}
-                            <Button variant="danger" onClick={() => handleRemoveLimit(name)}>
-                              {t('Remove Limit')}
-                            </Button>
-                          </FlexItem>
-                        </Flex>
-                      </ListItem>
-                    ))
-                  ) : (
-                    <ListItem>{t('No limits configured yet')}</ListItem>
-                  )}
-                </List>
-                <Button variant="primary" onClick={handleOpenModal}>
-                  {t('Add Limit')}
-                </Button>
-              </FormGroup>
-              {/* Modal to add a new limit */}
-              <AddLimitModal
-                isOpen={isAddLimitModalOpen}
-                onClose={handleCloseModal}
-                newLimit={newLimit}
-                setNewLimit={setNewLimit}
-                rateName={rateName}
-                setRateName={setRateName}
-                handleSave={handleSave}
-              />
-              <Modal
-                title="Validation Error"
-                isOpen={isLimitNameAlertModalOpen}
-                onClose={() => setIsLimitNameAlertModalOpen(false)}
-                variant="small"
-                aria-label="Rate Name is required error"
-              >
-                <p>{t('Limit Name is required!')}</p>
-                <Button variant="primary" onClick={() => setIsLimitNameAlertModalOpen(false)}>
-                  {t('OK')}
-                </Button>
-              </Modal>
+              <LimitSelect limits={limits} setLimits={setLimits} />
             </div>
             <AlertGroup className="kuadrant-alert-group">
               <Alert
