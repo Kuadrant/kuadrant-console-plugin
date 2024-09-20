@@ -30,7 +30,7 @@ const getStatusLabel = (obj: any) => {
   if (obj.kind === 'Gateway' || obj.kind === 'HTTPRoute') {
     const acceptedCondition = obj.status?.conditions?.find((cond: any) => cond.type === 'Accepted' && cond.status === 'True');
     const programmedCondition = obj.status?.conditions?.find((cond: any) => cond.type === 'Programmed' && cond.status === 'True');
-    const conflictedCondition = obj.status?.conditions?.find((cond: any) => cond.type === 'Conflicted' && cond.status === 'False');
+    const conflictedCondition = obj.status?.conditions?.find((cond: any) => cond.type === 'Conflicted' && cond.status === 'True');
     const resolvedRefsCondition = obj.status?.conditions?.find((cond: any) => cond.type === 'ResolvedRefs' && cond.status === 'True');
     
     let labelText: string;
@@ -103,7 +103,7 @@ const getStatusLabel = (obj: any) => {
     color = 'red';
     icon = <ExclamationTriangleIcon />;
   } else if (unknownCondition) {
-    labelText = 'Unknown (Not Enforced)';
+    labelText = 'Unknown (Not Accepted)';
     color = 'orange';
     icon = <ExclamationTriangleIcon />;
   } else if (acceptedConditionFalse) {
