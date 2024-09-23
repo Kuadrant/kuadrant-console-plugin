@@ -37,7 +37,7 @@ import GatewaySelect from './gateway/GatewaySelect';
 
 
 
-const KuadrantTLSPage: React.FC = () => {
+const KuadrantTLSCreatePage: React.FC = () => {
   const history = useHistory();
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace, setSelectedNamespace] = React.useState("");
@@ -137,13 +137,13 @@ const KuadrantTLSPage: React.FC = () => {
 
   // Create
   const handleCreateResource = () => {
-    handleCreate(tlsPolicyModel, tlsPolicy, selectedNamespace, "TLSPolicy", history);
+    handleCreate(tlsPolicyModel, tlsPolicy, selectedNamespace, "tls", history);
   };
 
 
   //Cancel
   const handleCancelResource = () => {
-    handleCancel(selectedNamespace, "tlsPolicy", tlsPolicy, history);
+    handleCancel(selectedNamespace, tlsPolicy, history);
   };
 
   return (
@@ -290,4 +290,4 @@ const KuadrantTLSPage: React.FC = () => {
   );
 };
 
-export default KuadrantTLSPage;
+export default KuadrantTLSCreatePage;

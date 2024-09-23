@@ -59,7 +59,7 @@
         "version": "v1alpha1",
         "kind": "TLSPolicy"
       },
-      "component": { "$codeRef": "KuadrantTLSPage" }
+      "component": { "$codeRef": "KuadrantTLSCreatePage" }
     }
   },
   {
