@@ -157,7 +157,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
 
             <Title headingLevel="h1">{t('Create TLS Policy')}</Title>
             <p className='help-block co-m-pane__heading-help-text'>
-              <div>{t(' Targets Gateway API networking resources Gateways to provide tls for gateway listeners by managing the lifecycle of tls certificates using CertManager')}</div>
+              <div>{t(' Targets Gateway API networking resources Gateways to provide TLS for gateway listeners by managing the lifecycle of TLS certificates using cert-manager')}</div>
             </p>
           </div>
         </PageSection>
@@ -221,7 +221,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
                 <FormHelperText>
                   <HelperText>
                     <HelperTextItem>
-                      {t('Reference to a Kubernetes resource that the policy attaches to. To create an additional gateway got to')}
+                      {t('Reference to a Kubernetes resource that the policy attaches to. To create an additional gateway go to')}
                       <Link to="/k8s/cluster/gateway.networking.k8s.io~v1~Gateway/~new"> here</Link>
                     </HelperTextItem>
                   </HelperText >
@@ -236,7 +236,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
                 <FormHelperText>
                   <HelperText>
                     <HelperTextItem>
-                      {t('Reference to the issuer for the created certificate. To create an additional Issuer got to')}
+                      {t('Reference to the issuer for the created certificate. To create an additional Issuer go to')}
                       <Link to="/k8s/cluster/cert-manager.io~v1~ClusterIssuer/~new"> here</Link>
                     </HelperTextItem>
                   </HelperText >
