@@ -79,7 +79,8 @@
       "KuadrantPoliciesPage": "./components/KuadrantPoliciesPage",
       "KuadrantDNSPolicyCreatePage": "./components/KuadrantDNSPolicyCreatePage",
       "KuadrantAuthPolicyCreatePage": "./components/KuadrantAuthPolicyCreatePage",
-      "KuadrantRateLimitPolicyCreatePage": "./components/KuadrantRateLimitPolicyCreatePage"
+      "KuadrantRateLimitPolicyCreatePage": "./components/KuadrantRateLimitPolicyCreatePage",
+      "KuadrantTLSCreatePage": "./components/KuadrantTLSCreatePage"
     },
     "dependencies": {
       "@console/pluginAPI": "*"
@@ -89,10 +90,12 @@
     "@babel/core": "^7.25.2",
     "@babel/preset-env": "^7.25.3",
     "@babel/preset-react": "^7.24.7",
+    "@patternfly/react-code-editor": "^5.4.0",
     "@patternfly/react-table": "^5.3.3",
     "babel-loader": "^8.2.0",
     "graphlib": "^2.1.8",
     "graphlib-dot": "^0.6.4",
     "react-policy-topology": "^0.1.10"
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }

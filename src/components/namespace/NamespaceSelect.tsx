@@ -32,10 +32,10 @@ const NamespaceSelect: React.FC<NamespaceSelectProps> = ({ selectedNamespace, on
   return (
     <FormGroup label={t('Namespace')} fieldId="namespace-select" isRequired>
       <FormSelect
-        id="namespace-select"
+id="namespace-select"
         value={selectedNamespace}
         onChange={handleNamespaceChange}
-        aria-label={t('Namespace')}
+        aria-label={t('Namespace')}    
       >
         <FormSelectOption key="placeholder" value="" label={t('Select a Namespace')} isPlaceholder />
         {namespaces.map((namespace, index) => (

@@ -72,7 +72,7 @@ const AddLimitModal: React.FC<{
       onClose={onClose}
       title={t('Add Limit')}
       width="50%"
-      hasNoBodyWrapper
+      
     >
       <div className='kuadrant-modal-dynamic-height'>
         <Wizard

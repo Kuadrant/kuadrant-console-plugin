@@ -28,7 +28,7 @@ export function handleCreate(model: K8sModel, data, namespace: string, policyTyp
             ns: namespace,
         });
         console.log('Policy created successfully', model.kind);
-        history.push(`/k8s/ns/${namespace}/kuadrant.io~v1alpha1~${policyType}/${data.metadata.name}`)
+        history.push(`/kuadrant/all-namespaces/policies/${policyType}`)
     } catch (error) {
         console.error('Failed to create Policy:', error);
     }
