@@ -122,19 +122,19 @@ push it to an image registry.
 1. Build the image:
 
    ```sh
-   docker build -t quay.io/my-repository/my-plugin:latest .
+   docker build -t quay.io/kuadrant/console-plugin:latest .
    ```
 
 2. Run the image:
 
    ```sh
-   docker run -it --rm -d -p 9001:80 quay.io/my-repository/my-plugin:latest
+   docker run -it --rm -d -p 9001:80 quay.io/kuadrant/console-plugin:latest
    ```
 
 3. Push the image:
 
    ```sh
-   docker push quay.io/my-repository/my-plugin:latest
+   docker push quay.io/kuadrant/console-plugin:latest
    ```
 
 NOTE: If you have a Mac with Apple silicon, you will need to add the flag
