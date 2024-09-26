@@ -1,12 +1,12 @@
 {
-  "name": "console-plugin-template",
-  "version": "0.0.1",
-  "description": "Template project for OpenShift Console plugins",
+  "name": "kuadrant-console",
+  "version": "0.0.2",
+  "description": "Kuadrant OpenShift Console plugin",
   "private": true,
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/openshift/console-plugin-template.git"
+    "url": "https://github.com/kuadrant/console-plugin.git"
   },
   "scripts": {
     "clean": "rm -rf dist",
@@ -19,7 +19,7 @@
     "test-cypress": "cd integration-tests && cypress open",
     "test-cypress-headless": "cd integration-tests && node --max-old-space-size=4096 ../node_modules/.bin/cypress run --browser ${BRIDGE_E2E_BROWSER_NAME:=electron}",
     "cypress-merge": "mochawesome-merge ./integration-tests/screenshots/cypress_report*.json > ./integration-tests/screenshots/cypress.json",
-    "cypress-generate": "marge -o ./integration-tests/screenshots/ -f cypress-report -t 'OpenShift Console Plugin Template Cypress Test Results' -p 'OpenShift Cypress Plugin Template Test Results' --showPassed false --assetsDir ./integration-tests/screenshots/cypress/assets ./integration-tests/screenshots/cypress.json",
+    "cypress-generate": "marge -o ./integration-tests/screenshots/ -f cypress-report -t 'Kuadrant OpenShift Console Plugin Cypress Test Results' -p 'OpenShift Cypress Plugin Template Test Results' --showPassed false --assetsDir ./integration-tests/screenshots/cypress/assets ./integration-tests/screenshots/cypress.json",
     "cypress-postreport": "yarn cypress-merge && yarn cypress-generate",
     "webpack": "node -r ts-node/register ./node_modules/.bin/webpack"
   },
@@ -69,10 +69,10 @@
     "webpack-dev-server": "^4.7.4"
   },
   "consolePlugin": {
-    "name": "console-plugin-template",
-    "version": "0.0.1",
-    "displayName": "OpenShift Console Plugin Template",
-    "description": "Template project for OpenShift Console plugins. Edit package.json to change this message and the plugin name.",
+    "name": "kuadrant-console",
+    "version": "0.0.2",
+    "displayName": "Kuadrant OpenShift Console Plugin",
+    "description": "Kuadrant OpenShift Console Plugin",
     "exposedModules": {
       "KuadrantOverviewPage": "./components/KuadrantOverviewPage",
       "PolicyTopologyPage": "./components/PolicyTopologyPage",
