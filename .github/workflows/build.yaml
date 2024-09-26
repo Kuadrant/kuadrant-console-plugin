@@ -26,18 +26,18 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Debug - Print GITHUB_SHA
-        run: echo "Commit SHA: ${{ github.sha }}"
+        run: "echo Commit SHA: ${{ github.sha }}"
 
       - name: Build Image
         id: build-image
         uses: redhat-actions/buildah-build@v2
         with:
           image: quay.io/kuadrant/console-plugin
-          tags: |
-            latest
-            ${{ github.sha }}  # Tag with the current commit SHA
-          containerfiles: |
-            ./Dockerfile
+        tags: |
+          latest
+          ${{ github.sha }}
+        containerfiles: |
+          ./Dockerfile
 
       - name: Push To Quay.io
         id: push-to-quay
