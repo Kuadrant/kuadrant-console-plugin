@@ -100,6 +100,9 @@ const KuadrantOverviewPage: React.FC = () => {
     id: 'namespace',
     sort: 'metadata.namespace',
     transforms: [sortable],
+  },  {
+    title: t('plugin__console-plugin-template~Status'),
+    id: 'Status',
   }, {
     title: '',
     id: 'kebab',

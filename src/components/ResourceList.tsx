@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { sortable } from '@patternfly/react-table';
-import { Alert, AlertGroup, Pagination } from '@patternfly/react-core';
+import { Alert, AlertGroup, Pagination, Label } from '@patternfly/react-core';
 import {
   K8sResourceCommon,
   ResourceLink,
@@ -16,15 +16,107 @@ import {
   ListPageBody,
   ListPageFilter,
 } from '@openshift-console/dynamic-plugin-sdk';
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  LayerGroupIcon,
+  UploadIcon,
+  OutlinedHourglassIcon,
+} from '@patternfly/react-icons';
 import DropdownWithKebab from './DropdownWithKebab';
 
-const statusConditionsAsString = (obj: any) => {
-  if (!obj.status || !obj.status.conditions) {
-    return '';
+const getStatusLabel = (obj: any) => {
+  // Gateway or HTTPRoute
+  if (obj.kind === 'Gateway' || obj.kind === 'HTTPRoute') {
+    const acceptedCondition = obj.status?.conditions?.find((cond: any) => cond.type === 'Accepted' && cond.status === 'True');
+    const programmedCondition = obj.status?.conditions?.find((cond: any) => cond.type === 'Programmed' && cond.status === 'True');
+    const conflictedCondition = obj.status?.conditions?.find((cond: any) => cond.type === 'Conflicted' && cond.status === 'True');
+    const resolvedRefsCondition = obj.status?.conditions?.find((cond: any) => cond.type === 'ResolvedRefs' && cond.status === 'True');
+    
+    let labelText: string;
+    let color: 'green' | 'blue' | 'red' | 'orange';
+    let icon: React.ReactNode;
+
+    if (acceptedCondition) {
+      labelText = 'Accepted';
+      color = 'green';
+      icon = <CheckCircleIcon />;
+    } else if (programmedCondition) {
+      labelText = 'Programmed';
+      color = 'blue';
+      icon = <CheckCircleIcon />;
+    } else if (conflictedCondition) {
+      labelText = 'Conflicted';
+      color = 'red';
+      icon = <ExclamationTriangleIcon />;
+    } else if (resolvedRefsCondition) {
+      labelText = 'Resolved Refs';
+      color = 'blue';
+      icon = <CheckCircleIcon />;
+    } else {
+      labelText = 'Unknown';
+      color = 'orange';
+      icon = <ExclamationTriangleIcon />;
+    }
+
+    return <Label icon={icon} color={color}>{labelText}</Label>;
   }
-  return obj.status.conditions
-    .map((condition: any) => `${condition.type}=${condition.status}`)
-    .join(',');
+
+  if (!obj.status || !obj.status.conditions || obj.status.conditions.length === 0) {
+    // No status/conditions
+    return (
+      <Label icon={<OutlinedHourglassIcon />} color="cyan">
+        Creating
+      </Label>
+    );
+  }
+  const enforcedCondition = obj.status.conditions.find((cond: any) => cond.type === 'Enforced' && cond.status === 'True');
+  const acceptedCondition = obj.status.conditions.find((cond: any) => cond.type === 'Accepted' && cond.status === 'True');
+  const acceptedConditionFalse = obj.status.conditions.find((cond: any) => cond.type === 'Accepted' && cond.status === 'False');
+  const overriddenCondition = obj.status.conditions.find((cond: any) => cond.type === 'Overridden' && cond.status === 'False');
+  const conflictedCondition = obj.status.conditions.find((cond: any) => cond.reason === 'Conflicted' && cond.status === 'False');
+  const targetNotFoundCondition = obj.status.conditions.find((cond: any) => cond.reason === 'TargetNotFound' && cond.status === 'False');
+  const unknownCondition = obj.status.conditions.find((cond: any) => cond.reason === 'Unknown' && cond.status === 'False');
+
+  let labelText: string;
+  let color: 'blue' | 'green' | 'red' | 'orange' | 'grey' | 'purple' | 'cyan';
+  let icon: React.ReactNode;
+
+  if (enforcedCondition) {
+    labelText = 'Enforced';
+    color = 'green';
+    icon = <CheckCircleIcon />;
+  } else if (overriddenCondition) {
+    labelText = 'Overridden (Not Enforced)';
+    color = 'grey';
+    icon = <LayerGroupIcon />;
+  } else if (acceptedCondition) {
+    labelText = 'Accepted (Not Enforced)';
+    color = 'purple';
+    icon = <UploadIcon />;
+  } else if (conflictedCondition) {
+    labelText = 'Conflicted (Not Accepted)';
+    color = 'red';
+    icon = <ExclamationTriangleIcon />;
+  } else if (targetNotFoundCondition) {
+    labelText = 'TargetNotFound (Not Accepted)';
+    color = 'red';
+    icon = <ExclamationTriangleIcon />;
+  } else if (unknownCondition) {
+    labelText = 'Unknown (Not Accepted)';
+    color = 'orange';
+    icon = <ExclamationTriangleIcon />;
+  } else if (acceptedConditionFalse) {
+    labelText = 'Invalid (Not Accepted)';
+    color = 'red';
+    icon = <ExclamationTriangleIcon />;
+  } else {
+    labelText = 'Unknown';
+    color = 'grey';
+    icon = <ExclamationTriangleIcon />;
+  }
+
+  return <Label icon={icon} color={color}>{labelText}</Label>;
 };
 
 type ResourceListProps = {
@@ -171,7 +263,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
             case 'Status':
               return (
                 <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                  {statusConditionsAsString(obj)}
+                  {getStatusLabel(obj)}
                 </TableData>
               );
             case 'Created':
