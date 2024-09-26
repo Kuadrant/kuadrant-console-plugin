@@ -94,10 +94,18 @@
   "Configure via": "Configure via",
   "Unique name of the TLSPolicy.": "Unique name of the TLSPolicy.",
   "Reference to a Kubernetes resource that the policy attaches to. To create an additional gateway go to": "Reference to a Kubernetes resource that the policy attaches to. To create an additional gateway go to",
-  "CertIssuer Issuer Reference":"CertIssuer Issuer Reference",
+  "CertIssuer Issuer Reference": "CertIssuer Issuer Reference",
   "Reference to the issuer for the created certificate. To create an additional Issuer go to": "Reference to the issuer for the created certificate. To create an additional Issuer go to",
   "Issuer API Target Reference": "Issuer API Target Reference",
   "You can view and create Issuers": "You can view and create Issuers",
   "ClusterIssuer API Target Reference": "ClusterIssuer API Target Reference",
-  "You can view and create ClusterIssuers": "You can view and create ClusterIssuers"
+  "You can view and create ClusterIssuers": "You can view and create ClusterIssuers",
+  "Error parsing YAM:L": "Error parsing YAML:",
+  "Edit TLS Policy": "Edit TLS Policy",
+  "Form View": "Form View",
+  "YAML View": "YAML View",
+  "Cert manager issuer type": "Cert manager issuer type",
+  "Cluster issuer": "Cluster issuer",
+  "Issuer": "Issuer",
+  "Loading..": "Loading.."
 }

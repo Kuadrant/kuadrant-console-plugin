@@ -63,6 +63,14 @@
     }
   },
   {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/ns/:ns/tlspolicy/name/:name/edit",
+      "component": { "$codeRef": "KuadrantTLSCreatePage" }
+    }
+  },
+  {
     "type": "console.navigation/section",
     "properties": {
       "id": "kuadrant-section-admin",

@@ -203,7 +203,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
                   </HelperText>
                 </FormHelperText>
               </FormGroup>
-              <NamespaceSelect selectedNamespace={selectedNamespace} onChange={setSelectedNamespace} />
+              <NamespaceSelect selectedNamespace={selectedNamespace} onChange={setSelectedNamespace} formDisabled={false} />
               <FormGroup role="radiogroup" isInline fieldId='target-type' label={t('Target reference type')} isRequired aria-labelledby="target-type-label">
                 <Radio name='target-type' label='Gateway' id='target-type-gateway' isChecked={targetType === 'gateway'} onChange={() => setTargetType('gateway')} />
                 <Radio name='target-type' label='HTTPRoute' id='target-type-httproute' isChecked={targetType === 'httproute'} onChange={() => setTargetType('httproute')} />

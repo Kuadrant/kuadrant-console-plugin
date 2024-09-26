@@ -55,7 +55,7 @@ const GatewaySelect: React.FC<GatewaySelectProps> = ({ selectedGateway, onChange
         </FormSelect>
         <FormHelperText>
           <HelperText>
-            <HelperTextItem>{t('You can view and create Gateways')} <ResourceLink
+            <HelperTextItem>{t('Gateway: Reference to a Kubernetes resource that the policy attaches to. To create an additional gateway go to')} <ResourceLink
               groupVersionKind={gvk}
               title="Create a Gateway"
               hideIcon={true}

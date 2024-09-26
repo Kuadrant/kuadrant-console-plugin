@@ -6,9 +6,10 @@ import { useTranslation } from "react-i18next";
 interface NamespaceSelectProps {
   selectedNamespace: string,
   onChange: (updated: string) => void;
+  formDisabled: boolean
 }
 
-const NamespaceSelect: React.FC<NamespaceSelectProps> = ({ selectedNamespace, onChange }) => {
+const NamespaceSelect: React.FC<NamespaceSelectProps> = ({ selectedNamespace, onChange, formDisabled }) => {
   const { t } = useTranslation('plugin__console-plugin-template');
   const [namespaces, setNamespaces] = React.useState([]);
 
@@ -36,6 +37,7 @@ id="namespace-select"
         value={selectedNamespace}
         onChange={handleNamespaceChange}
         aria-label={t('Namespace')}    
+        isDisabled={formDisabled}
       >
         <FormSelectOption key="placeholder" value="" label={t('Select a Namespace')} isPlaceholder />
         {namespaces.map((namespace, index) => (

@@ -55,7 +55,7 @@ const IssuerSelect: React.FC<IssuerSelectProps> = ({ selectedIssuer, onChange })
         </FormSelect>
         <FormHelperText>
           <HelperText>
-            <HelperTextItem>{t('You can view and create Issuers')} <ResourceLink
+            <HelperTextItem>{t('Issuer: Reference to the issuer for the created certificate. To create an additional Issuer go to')} <ResourceLink
               groupVersionKind={gvk}
               title="Create an Issuer"
               hideIcon={true}

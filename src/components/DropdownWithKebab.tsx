@@ -4,14 +4,16 @@ import { Dropdown, DropdownItem, DropdownList, MenuToggle, MenuToggleElement, Bu
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-core/next';
 import { k8sDelete, K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
 import getModelFromResource from '../utils/getModelFromResource'; // Assume you have a utility for getting the model from the resource
-
 type DropdownWithKebabProps = {
   obj: K8sResourceCommon;
 };
+import { useHistory } from 'react-router-dom';
 
 const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
+  const history = useHistory();
+  const model = getModelFromResource(obj);
 
   const onToggleClick = () => {
     setIsOpen(!isOpen);
@@ -19,7 +21,6 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
 
   const onDeleteConfirm = async () => {
     try {
-      const model = getModelFromResource(obj);
       await k8sDelete({ model, resource: obj });
       console.log('Successfully deleted', obj.metadata.name);
     } catch (error) {
@@ -29,6 +30,12 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
     }
   };
 
+
+  const onEditClick = () => {
+    history.push({
+      pathname: `/k8s/ns/${obj.metadata.namespace}/tlspolicy/name/${obj.metadata.name}/edit`,
+    })
+  }
   const onDeleteClick = () => {
     setIsDeleteModalOpen(true);
   };
@@ -60,7 +67,7 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
         shouldFocusToggleOnSelect
       >
         <DropdownList>
-          <DropdownItem value="edit" key="edit">
+          <DropdownItem value="edit" key="edit" onClick={onEditClick}>
             Edit
           </DropdownItem>
           <DropdownItem value="delete" key="delete">
@@ -68,7 +75,6 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
           </DropdownItem>
         </DropdownList>
       </Dropdown>
-
       <Modal
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
