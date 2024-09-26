@@ -3,7 +3,7 @@ name: Build and Push Image
 on:
   push:
     branches:
-      - main # only for merges/pushes to main
+      - main  # only for merges/pushes to main
 
 env:
   REGISTRY_USER: ${{ secrets.QUAY_USER }}
@@ -35,7 +35,7 @@ jobs:
           image: quay.io/kuadrant/console-plugin
           tags: |
             latest
-            ${{ github.sha }}
+            ${{ github.sha }}  # Tag with the current commit SHA
           containerfiles: |
             ./Dockerfile
 
@@ -43,8 +43,11 @@ jobs:
         id: push-to-quay
         uses: redhat-actions/push-to-registry@v2
         with:
-          image: ${{ steps.build-image.outputs.image }}
-          tags: ${{ steps.build-image.outputs.tags }}
+          registry: quay.io
+          image: kuadrant/console-plugin
+          tags: |
+            latest
+            ${{ github.sha }}
 
       - name: Print image URL
         run: echo "Image pushed to ${{ steps.push-to-quay.outputs.registry-paths }}"
