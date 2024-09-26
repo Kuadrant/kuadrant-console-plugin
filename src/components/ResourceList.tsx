@@ -73,7 +73,7 @@ const getStatusLabel = (obj: any) => {
   const enforcedCondition = obj.status.conditions.find((cond: any) => cond.type === 'Enforced' && cond.status === 'True');
   const acceptedCondition = obj.status.conditions.find((cond: any) => cond.type === 'Accepted' && cond.status === 'True');
   const acceptedConditionFalse = obj.status.conditions.find((cond: any) => cond.type === 'Accepted' && cond.status === 'False');
-  const overriddenCondition = obj.status.conditions.find((cond: any) => cond.type === 'Overridden' && cond.status === 'True');
+  const overriddenCondition = obj.status.conditions.find((cond: any) => cond.type === 'Overridden' && cond.status === 'False');
   const conflictedCondition = obj.status.conditions.find((cond: any) => cond.reason === 'Conflicted' && cond.status === 'False');
   const targetNotFoundCondition = obj.status.conditions.find((cond: any) => cond.reason === 'TargetNotFound' && cond.status === 'False');
   const unknownCondition = obj.status.conditions.find((cond: any) => cond.reason === 'Unknown' && cond.status === 'False');
