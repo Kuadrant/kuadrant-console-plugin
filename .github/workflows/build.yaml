@@ -33,11 +33,11 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           image: quay.io/kuadrant/console-plugin
-        tags: |
-          latest
-          ${{ github.sha }}
-        containerfiles: |
-          ./Dockerfile
+          tags: |
+            latest
+            ${{ github.sha }}
+          containerfiles: |
+            ./Dockerfile
 
       - name: Push To Quay.io
         id: push-to-quay
