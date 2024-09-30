@@ -1,6 +1,14 @@
 import * as React from 'react';
 import { EllipsisVIcon } from '@patternfly/react-icons';
-import { Dropdown, DropdownItem, DropdownList, MenuToggle, MenuToggleElement, Button, ButtonVariant } from '@patternfly/react-core';
+import {
+  Dropdown,
+  DropdownItem,
+  DropdownList,
+  MenuToggle,
+  MenuToggleElement,
+  Button,
+  ButtonVariant,
+} from '@patternfly/react-core';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-core/next';
 import { k8sDelete, K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
 import getModelFromResource from '../utils/getModelFromResource'; // Assume you have a utility for getting the model from the resource
@@ -33,7 +41,10 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
     setIsDeleteModalOpen(true);
   };
 
-  const onSelect = (_event: React.MouseEvent<Element, MouseEvent> | undefined, value: string | number | undefined) => {
+  const onSelect = (
+    _event: React.MouseEvent<Element, MouseEvent> | undefined,
+    value: string | number | undefined,
+  ) => {
     setIsOpen(false);
     if (value === 'delete') {
       onDeleteClick();
@@ -84,7 +95,11 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
           <Button key="confirm" variant={ButtonVariant.danger} onClick={onDeleteConfirm}>
             Delete
           </Button>
-          <Button key="cancel" variant={ButtonVariant.link} onClick={() => setIsDeleteModalOpen(false)}>
+          <Button
+            key="cancel"
+            variant={ButtonVariant.link}
+            onClick={() => setIsDeleteModalOpen(false)}
+          >
             Cancel
           </Button>
         </ModalFooter>

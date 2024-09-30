@@ -6,13 +6,30 @@
   color: var(--pf-global--palette--blue-400);
 }
 
-.policy-topology-container svg text {
-  font-family: RedHatText, helvetica, arial, sans-serif !important;
-  font-size: 0.7em !important;
+.policy-node .pf-topology__node__background {
+  stroke-dasharray: 5, 5;
+  stroke-width: 1;
+  stroke: var(--pf-topology__edge--Stroke);
+  animation: dash-animation 2s linear infinite;
+  fill: #d4f2ffa4;
 }
 
-.policy-topology-container {
-  height: 500px;
+@keyframes dash-animation {
+  to {
+    stroke-dashoffset: -10;
+  }
+}
+
+.pf-theme-light .pf-topology__node .kuadrant-topology-type-text {
+  fill: #000 !important;
+}
+
+.pf-theme-dark .pf-topology__node .kuadrant-topology-type-text {
+  fill: #fff !important;
+}
+
+.kuadrant-policy-topology .pf-topology__node__label__badge > text {
+  fill: #fff;
 }
 
 .kuadrant-page-title {
@@ -51,20 +68,13 @@
   color: #1F0066;
 }
 
-@media (prefers-color-scheme: light) {
-  .kuadrant-dashboard-learning {
-    color: #1F0066;
-  }
+.pf-theme-light  .kuadrant-dashboard-learning {
+  color: #1F0066;
 }
 
-@media (prefers-color-scheme: dark) {
-  .kuadrant-dashboard-learning  {
-    color: #9c90b9;
-  }
+.pf-theme-dark .kuadrant-dashboard-learning  {
+  color: #9c90b9;
 }
-
-
-
 
 .kuadrant-dashboard-feature-highlights {
   color: #0066CC;
@@ -85,16 +95,12 @@
   font-size: 0.9rem;
 }
 
-@media (prefers-color-scheme: light) {
-  .kuadrant-dashboard-resource-link{
-    color: black;
-  }
+.pf-theme-light .kuadrant-dashboard-resource-link {
+  color: black;
 }
 
-@media (prefers-color-scheme: dark) {
-  .kuadrant-dashboard-resource-link {
-    color: white;
-  }
+.pf-theme-dark .kuadrant-dashboard-resource-link {
+  color: white;
 }
 
 .kuadrant-dashboard-resource-link:hover {
@@ -134,5 +140,3 @@
   width: 24px; 
   height: 24px; 
 }
-
-
