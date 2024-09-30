@@ -7,8 +7,8 @@
 }
 
 .policy-topology-container svg text {
-  font-family: RedHatText, helvetica, arial, sans-serif;
-  font-size: 0.7em;
+  font-family: RedHatText, helvetica, arial, sans-serif !important;
+  font-size: 0.7em !important;
 }
 
 .policy-topology-container {
