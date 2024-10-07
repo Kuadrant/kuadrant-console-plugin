@@ -28,11 +28,19 @@ import DropdownWithKebab from './DropdownWithKebab';
 const getStatusLabel = (obj: any) => {
   // Gateway or HTTPRoute
   if (obj.kind === 'Gateway' || obj.kind === 'HTTPRoute') {
-    const acceptedCondition = obj.status?.conditions?.find((cond: any) => cond.type === 'Accepted' && cond.status === 'True');
-    const programmedCondition = obj.status?.conditions?.find((cond: any) => cond.type === 'Programmed' && cond.status === 'True');
-    const conflictedCondition = obj.status?.conditions?.find((cond: any) => cond.type === 'Conflicted' && cond.status === 'True');
-    const resolvedRefsCondition = obj.status?.conditions?.find((cond: any) => cond.type === 'ResolvedRefs' && cond.status === 'True');
-    
+    const acceptedCondition = obj.status?.conditions?.find(
+      (cond: any) => cond.type === 'Accepted' && cond.status === 'True',
+    );
+    const programmedCondition = obj.status?.conditions?.find(
+      (cond: any) => cond.type === 'Programmed' && cond.status === 'True',
+    );
+    const conflictedCondition = obj.status?.conditions?.find(
+      (cond: any) => cond.type === 'Conflicted' && cond.status === 'True',
+    );
+    const resolvedRefsCondition = obj.status?.conditions?.find(
+      (cond: any) => cond.type === 'ResolvedRefs' && cond.status === 'True',
+    );
+
     let labelText: string;
     let color: 'green' | 'blue' | 'red' | 'orange';
     let icon: React.ReactNode;
@@ -59,24 +67,42 @@ const getStatusLabel = (obj: any) => {
       icon = <ExclamationTriangleIcon />;
     }
 
-    return <Label icon={icon} color={color}>{labelText}</Label>;
+    return (
+      <Label isCompact icon={icon} color={color}>
+        {labelText}
+      </Label>
+    );
   }
 
   if (!obj.status || !obj.status.conditions || obj.status.conditions.length === 0) {
     // No status/conditions
     return (
-      <Label icon={<OutlinedHourglassIcon />} color="cyan">
+      <Label isCompact icon={<OutlinedHourglassIcon />} color="cyan">
         Creating
       </Label>
     );
   }
-  const enforcedCondition = obj.status.conditions.find((cond: any) => cond.type === 'Enforced' && cond.status === 'True');
-  const acceptedCondition = obj.status.conditions.find((cond: any) => cond.type === 'Accepted' && cond.status === 'True');
-  const acceptedConditionFalse = obj.status.conditions.find((cond: any) => cond.type === 'Accepted' && cond.status === 'False');
-  const overriddenCondition = obj.status.conditions.find((cond: any) => cond.type === 'Overridden' && cond.status === 'False');
-  const conflictedCondition = obj.status.conditions.find((cond: any) => cond.reason === 'Conflicted' && cond.status === 'False');
-  const targetNotFoundCondition = obj.status.conditions.find((cond: any) => cond.reason === 'TargetNotFound' && cond.status === 'False');
-  const unknownCondition = obj.status.conditions.find((cond: any) => cond.reason === 'Unknown' && cond.status === 'False');
+  const enforcedCondition = obj.status.conditions.find(
+    (cond: any) => cond.type === 'Enforced' && cond.status === 'True',
+  );
+  const acceptedCondition = obj.status.conditions.find(
+    (cond: any) => cond.type === 'Accepted' && cond.status === 'True',
+  );
+  const acceptedConditionFalse = obj.status.conditions.find(
+    (cond: any) => cond.type === 'Accepted' && cond.status === 'False',
+  );
+  const overriddenCondition = obj.status.conditions.find(
+    (cond: any) => cond.type === 'Overridden' && cond.status === 'False',
+  );
+  const conflictedCondition = obj.status.conditions.find(
+    (cond: any) => cond.reason === 'Conflicted' && cond.status === 'False',
+  );
+  const targetNotFoundCondition = obj.status.conditions.find(
+    (cond: any) => cond.reason === 'TargetNotFound' && cond.status === 'False',
+  );
+  const unknownCondition = obj.status.conditions.find(
+    (cond: any) => cond.reason === 'Unknown' && cond.status === 'False',
+  );
 
   let labelText: string;
   let color: 'blue' | 'green' | 'red' | 'orange' | 'grey' | 'purple' | 'cyan';
@@ -116,7 +142,11 @@ const getStatusLabel = (obj: any) => {
     icon = <ExclamationTriangleIcon />;
   }
 
-  return <Label icon={icon} color={color}>{labelText}</Label>;
+  return (
+    <Label isCompact icon={icon} color={color}>
+      {labelText}
+    </Label>
+  );
 };
 
 type ResourceListProps = {
@@ -174,34 +204,41 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
   const [data, filteredData, onFilterChange] = useListPageFilter(allData);
 
-  const defaultColumns: TableColumn<K8sResourceCommon>[] = [{
-    title: t('plugin__console-plugin-template~Name'),
-    id: 'name',
-    sort: 'metadata.name',
-    transforms: [sortable],
-  }, {
-    title: t('plugin__console-plugin-template~Type'),
-    id: 'type',
-    sort: 'kind',
-    transforms: [sortable],
-  }, {
-    title: t('plugin__console-plugin-template~Namespace'),
-    id: 'namespace',
-    sort: 'metadata.namespace',
-    transforms: [sortable],
-  }, {
-    title: t('plugin__console-plugin-template~Status'),
-    id: 'Status',
-  }, {
-    title: t('plugin__console-plugin-template~Created'),
-    id: 'Created',
-    sort: 'metadata.creationTimestamp',
-    transforms: [sortable],
-  }, {
-    title: '', // No title for the kebab column
-    id: 'kebab',
-    props: { className: 'pf-v5-c-table__action' },
-  }];
+  const defaultColumns: TableColumn<K8sResourceCommon>[] = [
+    {
+      title: t('plugin__console-plugin-template~Name'),
+      id: 'name',
+      sort: 'metadata.name',
+      transforms: [sortable],
+    },
+    {
+      title: t('plugin__console-plugin-template~Type'),
+      id: 'type',
+      sort: 'kind',
+      transforms: [sortable],
+    },
+    {
+      title: t('plugin__console-plugin-template~Namespace'),
+      id: 'namespace',
+      sort: 'metadata.namespace',
+      transforms: [sortable],
+    },
+    {
+      title: t('plugin__console-plugin-template~Status'),
+      id: 'Status',
+    },
+    {
+      title: t('plugin__console-plugin-template~Created'),
+      id: 'Created',
+      sort: 'metadata.creationTimestamp',
+      transforms: [sortable],
+    },
+    {
+      title: '', // No title for the kebab column
+      id: 'kebab',
+      props: { className: 'pf-v5-c-table__action' },
+    },
+  ];
 
   const usedColumns = columns || defaultColumns;
 
