@@ -150,3 +150,7 @@
   top: 0;
   right: 0;
 }
+
+.kuadrant-policy-list-body .co-m-pane__body {
+  padding: 0;
+}

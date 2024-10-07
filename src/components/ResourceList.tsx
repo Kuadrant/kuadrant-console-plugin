@@ -337,30 +337,32 @@ const ResourceList: React.FC<ResourceListProps> = ({
           </Alert>
         </AlertGroup>
       )}
-      <ListPageBody>
-        <ListPageFilter data={data} loaded={allLoaded} onFilterChange={onFilterChange} />
-        <VirtualizedTable<K8sResourceCommon>
-          data={paginatedData}
-          unfilteredData={data}
-          loaded={allLoaded}
-          loadError={combinedLoadError}
-          columns={usedColumns}
-          Row={ResourceRow}
-        />
-        <Pagination
-          itemCount={filteredData.length}
-          perPage={perPage}
-          page={currentPage}
-          onSetPage={onSetPage}
-          onPerPageSelect={onPerPageSelect}
-          variant="bottom"
-          perPageOptions={[
-            { title: '5', value: 5 },
-            { title: '10', value: 10 },
-            { title: '20', value: 20 },
-          ]}
-        />
-      </ListPageBody>
+      <div className="kuadrant-policy-list-body">
+        <ListPageBody>
+          <ListPageFilter data={data} loaded={allLoaded} onFilterChange={onFilterChange} />
+          <VirtualizedTable<K8sResourceCommon>
+            data={paginatedData}
+            unfilteredData={data}
+            loaded={allLoaded}
+            loadError={combinedLoadError}
+            columns={usedColumns}
+            Row={ResourceRow}
+          />
+          <Pagination
+            itemCount={filteredData.length}
+            perPage={perPage}
+            page={currentPage}
+            onSetPage={onSetPage}
+            onPerPageSelect={onPerPageSelect}
+            variant="bottom"
+            perPageOptions={[
+              { title: '5', value: 5 },
+              { title: '10', value: 10 },
+              { title: '20', value: 20 },
+            ]}
+          />
+        </ListPageBody>
+      </div>
     </>
   );
 };

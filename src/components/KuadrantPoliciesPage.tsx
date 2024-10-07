@@ -39,7 +39,7 @@ export const AllPoliciesListPage: React.FC<{
   columns?: TableColumn<K8sResourceCommon>[];
   showAlertGroup?: boolean;
   paginationLimit?: number;
-}> = ({ activeNamespace, columns, showAlertGroup = true, paginationLimit }) => {
+}> = ({ activeNamespace, columns, showAlertGroup = false, paginationLimit }) => {
   const { t } = useTranslation();
 
   return (
