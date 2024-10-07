@@ -55,7 +55,7 @@ const ClusterIssuerSelect: React.FC<ClusterIssuerSelectProps> = ({ selectedClust
         </FormSelect>
         <FormHelperText>
           <HelperText>
-            <HelperTextItem>{t('You can view and create ClusterIssuers')} <ResourceLink
+            <HelperTextItem>{t('Cluster Issuer: Reference to the cluster issuer for the created certificate. To create an additional ClusterIssuer go to')} <ResourceLink
               groupVersionKind={gvk}
               title="Create an ClusterIssuer"
               hideIcon={true}

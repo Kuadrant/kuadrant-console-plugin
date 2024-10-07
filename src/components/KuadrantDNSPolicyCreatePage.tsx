@@ -248,7 +248,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
                   </HelperText>
                 </FormHelperText>
               </FormGroup>
-              <NamespaceSelect selectedNamespace={selectedNamespace} onChange={setSelectedNamespace} />
+              <NamespaceSelect selectedNamespace={selectedNamespace} onChange={setSelectedNamespace}formDisabled={false} />
               <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
               <ExpandableSection toggleText={t('Routing Strategy')}>
                 <FormGroup role="radiogroup" isInline fieldId='routing-strategy' label={t('Routing Strategy to use')} isRequired aria-labelledby="routing-strategy-label">

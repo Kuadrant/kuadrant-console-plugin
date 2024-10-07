@@ -1,6 +1,5 @@
 export interface ClusterIssuer {
     name: string,
-    namespace: string
 }
 
 export interface Issuer {
