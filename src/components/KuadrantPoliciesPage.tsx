@@ -75,11 +75,13 @@ const PoliciesListPage: React.FC<{ resource: Resource; activeNamespace: string }
             ...
           </Alert>
         </AlertGroup>
-        <div className="co-m-nav-title--row">
+        <div className="co-m-nav-title--row kuadrant-resource-create-container">
           <ResourceList resources={[resource.gvk]} namespace={activeNamespace} />
-          <ListPageCreate groupVersionKind={resource.gvk}>
-            {t(`plugin__console-plugin-template~Create ${resource.gvk.kind}`)}
-          </ListPageCreate>
+          <div className="kuadrant-resource-create-button pf-u-mt-md">
+            <ListPageCreate groupVersionKind={resource.gvk}>
+              {t(`plugin__console-plugin-template~Create ${resource.gvk.kind}`)}
+            </ListPageCreate>
+          </div>
         </div>
       </ListPageBody>
     </>
