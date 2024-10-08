@@ -64,21 +64,16 @@ push it to an image registry.
 
 1. Build the image:
 
-   ```sh
-   docker build -t quay.io/kuadrant/console-plugin:latest .
-   ```
+```bash
+docker buildx create --use
+docker buildx build --platform linux/amd64,linux/arm64 -t quay.io/kuadrant/console-plugin:latest --push .
+```
 
 2. Run the image:
 
-   ```sh
-   docker run -it --rm -d -p 9001:80 quay.io/kuadrant/console-plugin:latest
-   ```
-
-3. Push the image:
-
-   ```sh
-   docker push quay.io/kuadrant/console-plugin:latest
-   ```
+```bash
+docker run -it --rm -d -p 9001:80 quay.io/kuadrant/console-plugin:latest
+```
 
 NOTE: If you have a Mac with Apple silicon, you will need to add the flag
 `--platform=linux/amd64` when building the image to target the correct platform

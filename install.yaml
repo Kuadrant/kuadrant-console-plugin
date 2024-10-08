@@ -36,6 +36,11 @@ spec:
         - containerPort: 9443
           protocol: TCP
         imagePullPolicy: Always
+        env:
+          - name: TOPOLOGY_CONFIGMAP_NAME
+            value: topology
+          - name: TOPOLOGY_CONFIGMAP_NAMESPACE
+            value: kuadrant-system
         volumeMounts:
         - name: plugin-serving-cert
           readOnly: true
@@ -92,6 +97,11 @@ data:
 
         location / {
           root                /usr/share/nginx/html;
+        }
+
+        # Serve config.js from /tmp
+        location /config.js {
+          root /tmp;
         }
       }
     }
