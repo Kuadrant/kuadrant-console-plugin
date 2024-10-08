@@ -205,7 +205,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       <Helmet>
         <title data-test="example-page-title">{t('Create DNSPolicy')}</title>
       </Helmet>
-      <PageSection className='pf-m-no-padding'>
+      <PageSection variant='light' className='pf-m-no-padding'>
         <div className='co-m-nav-title'>
           <Title headingLevel="h1">{t('Create DNSPolicy')}</Title>
           <p className='help-block co-m-pane__heading-help-text'>
@@ -230,7 +230,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         </FormGroup>
       </PageSection>
       {createView === 'form' ? (
-        <PageSection>
+        <PageSection variant='light'>
           <Form className='co-m-pane__form'>
             <div>
               <FormGroup label={t('Policy Name')} isRequired fieldId="policy-name">
