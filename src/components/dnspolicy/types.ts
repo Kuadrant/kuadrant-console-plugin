@@ -1,6 +1,4 @@
-export interface Geo {
-  defaultGeo: string;
-}
+
 
 export interface MatchExpression {
   key: string;
@@ -29,8 +27,9 @@ export interface Weighted {
 }
 
 export interface LoadBalancing {
-  geo: Geo;
-  weighted: Weighted;
+  geo: string;
+  weight: number;
+  defaultGeo: boolean;
 }
 
 export interface HealthCheck {
