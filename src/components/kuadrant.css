@@ -140,3 +140,17 @@
   width: 24px; 
   height: 24px; 
 }
+
+.kuadrant-resource-create-container {
+  position: relative;
+}
+
+.kuadrant-resource-create-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.kuadrant-policy-list-body .co-m-pane__body {
+  padding: 0;
+}
