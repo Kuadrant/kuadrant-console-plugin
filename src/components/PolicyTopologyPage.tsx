@@ -41,6 +41,39 @@ import * as dot from 'graphlib-dot';
 import { kindToAbbr } from '../utils/modelUtils';
 import './kuadrant.css';
 
+// Fetch the config.js file dynamically at runtime
+// Normally served from <cluster-host>/api/plugins/kuadrant-console/config.js
+const fetchConfig = async () => {
+  const defaultConfig = {
+    TOPOLOGY_CONFIGMAP_NAME: 'topology',
+    TOPOLOGY_CONFIGMAP_NAMESPACE: 'kuadrant-system',
+  };
+
+  try {
+    const response = await fetch('/api/plugins/kuadrant-console/config.js');
+    if (!response.ok) {
+      if (response.status === 404) {
+        console.warn('config.js not found (running locally perhaps). Falling back to defaults.');
+      } else {
+        throw new Error(`Failed to fetch config.js: ${response.statusText}`);
+      }
+      return defaultConfig; // Fallback on 404
+    }
+
+    const script = await response.text();
+
+    const configScript = document.createElement('script');
+    configScript.innerHTML = script;
+    document.head.appendChild(configScript);
+
+    return (window as any).kuadrant_config || defaultConfig;
+  } catch (error) {
+    console.error('Error loading config.js:', error);
+    return defaultConfig;
+  }
+};
+
+
 // TODO: need a generic way to fetch latest versions of resources based on kind + group
 const resourceGVKMapping: { [key: string]: { group: string; version: string; kind: string } } = {
   Gateway: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' },
@@ -294,18 +327,36 @@ const customComponentFactory = (kind: ModelKind, type: string) => {
 };
 
 const PolicyTopologyPage: React.FC = () => {
+  const [config, setConfig] = React.useState<any | null>(null);
   const [parseError, setParseError] = React.useState<string | null>(null);
 
-  // Watch the ConfigMap named "topology" in the "kuadrant-system" namespace
-  // TODO: lookup instance of `Kuadrant` and read topology from same NS.
-  const [configMap, loaded, loadError] = useK8sWatchResource<any>({
-    groupVersionKind: {
-      version: 'v1',
-      kind: 'ConfigMap',
-    },
-    name: 'topology',
-    namespace: 'kuadrant-system',
-  });
+  // Fetch the configuration on mount
+  React.useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const configData = await fetchConfig();
+        setConfig(configData);
+      } catch (error) {
+        console.error('Error loading config.js:', error);
+        setParseError('Failed to load configuration.');
+      }
+    };
+    loadConfig();
+  }, []);
+
+  // Watch the ConfigMap named "topology" in the namespace provided by the config.js
+  const [configMap, loaded, loadError] = useK8sWatchResource<any>(
+    config
+      ? {
+          groupVersionKind: {
+            version: 'v1',
+            kind: 'ConfigMap',
+          },
+          name: config.TOPOLOGY_CONFIGMAP_NAME,
+          namespace: config.TOPOLOGY_CONFIGMAP_NAMESPACE,
+        }
+      : null, // Only watch if config is loaded
+  );
 
   const controllerRef = React.useRef<Visualization | null>(null);
 
@@ -324,7 +375,6 @@ const PolicyTopologyPage: React.FC = () => {
       const visualization = new Visualization();
       visualization.registerLayoutFactory(customLayoutFactory);
       visualization.registerComponentFactory(customComponentFactory);
-      visualization.setRenderConstraint(false);
       visualization.fromModel(initialModel, false);
       controllerRef.current = visualization;
     }
@@ -337,7 +387,7 @@ const PolicyTopologyPage: React.FC = () => {
 
   // Handle data updates
   React.useEffect(() => {
-    if (loaded && !loadError) {
+    if (loaded && !loadError && configMap) {
       const dotString = configMap.data?.topology || '';
       if (dotString) {
         try {
@@ -371,6 +421,10 @@ const PolicyTopologyPage: React.FC = () => {
   // Memoize the controller
   const controller = controllerRef.current;
 
+  if (!config) {
+    return <div>Loading configuration...</div>;
+  }
+
   return (
     <>
       <Helmet>
@@ -392,7 +446,7 @@ const PolicyTopologyPage: React.FC = () => {
                 </Text>
               </TextContent>
               {!loaded ? (
-                <div>Loading...</div>
+                <div>Loading topology...</div>
               ) : loadError ? (
                 <div>Error loading topology: {loadError.message}</div>
               ) : parseError ? (
