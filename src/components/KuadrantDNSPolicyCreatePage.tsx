@@ -12,7 +12,6 @@ import {
   Radio,
   Button,
   ExpandableSection,
-  ButtonVariant,
   ActionGroup,
   // AlertVariant,
   // Alert,
@@ -20,7 +19,7 @@ import {
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
-import { ResourceYAMLEditor ,getGroupVersionKindForResource,useK8sModel} from '@openshift-console/dynamic-plugin-sdk';
+import { ResourceYAMLEditor, getGroupVersionKindForResource, useK8sModel } from '@openshift-console/dynamic-plugin-sdk';
 import { useHistory } from 'react-router-dom';
 import { LoadBalancing, HealthCheck } from './dnspolicy/types'
 import LoadBalancingField from './dnspolicy/LoadBalancingField';
@@ -46,7 +45,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const [loadBalancing, setLoadBalancing] = React.useState<LoadBalancing>({ geo: '', weight: 0, defaultGeo: true });
   const [healthCheck, setHealthCheck] = React.useState<HealthCheck>({ endpoint: '', failureThreshold: null, port: null, protocol: 'HTTP', });
   // const [isCreateButtonDisabled, setIsCreateButtonDisabled] = React.useState(true);
-  const [providerRefs, setProviderRefs] = React.useState('');
+  const [providerRefs, setProviderRefs] = React.useState([]);
   const createDNSPolicy = () => ({
     apiVersion: 'kuadrant.io/v1alpha1',
     kind: 'DNSPolicy',
@@ -66,15 +65,18 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         geo: loadBalancing.geo,
         defaultGeo: loadBalancing.defaultGeo,
       },
-      providerRefs: {
-        name: providerRefs
-      },
-      healthCheck: {
-        endpoint: healthCheck.endpoint,
-        failureThreshold: healthCheck.failureThreshold,
-        port: healthCheck.port,
-        protocol: healthCheck.protocol,
-      }
+      providerRefs: providerRefs.length > 0 ? [providerRefs[0]] : [],
+
+
+      ...(healthCheck.endpoint || healthCheck.failureThreshold || healthCheck.port || healthCheck.protocol ?
+        {
+          healthCheck: {
+            endpoint: healthCheck.endpoint,
+            failureThreshold: healthCheck.failureThreshold,
+            port: healthCheck.port,
+            protocol: healthCheck.protocol,
+          }
+        } : {})
     },
   })
 
@@ -123,7 +125,11 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         port,
         protocol,
       });
-      setProviderRefs(parsedYaml.spec?.providerRefs || '');
+      const providerRef = Array.isArray(parsedYaml.spec?.providerRefs) && parsedYaml.spec.providerRefs.length > 0
+        ? parsedYaml.spec.providerRefs[0] // Get the first entry
+        : { name: '' }; // Default empty object if none exists
+
+      setProviderRefs([providerRef]);
       const defaultGeo = (parsedYaml.spec?.loadBalancing.defaultGeo || '');
       const weight = (parsedYaml.spec?.loadBalancing.weight || '');
       const geo = (parsedYaml.spec?.loadBalancing.geo || '');
@@ -191,6 +197,9 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
 
   const handlePolicyChange = (_event, policy: string) => {
     setPolicyName(policy);
+  };
+  const handleProviderRefs = (_event, provider: string) => {
+    setProviderRefs([{ name: provider }]);  // Wrap the provider in an array of objects
   };
 
   const handleCancelResource = () => {
@@ -267,7 +276,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   //   }
   // };
 
-  
+
 
   return (
     <>
@@ -319,13 +328,24 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
               </FormGroup>
               <NamespaceSelect selectedNamespace={selectedNamespace} onChange={setSelectedNamespace} formDisabled={false} />
               <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
+              <FormGroup label={t('Provider Ref')} isRequired fieldId="Provider-ref">
+                <TextInput
+                  isRequired
+                  type="text"
+                  id="provider-ref"
+                  name="provider-ref"
+                  value={providerRefs.length > 0 ? providerRefs[0].name : ''}
+                  onChange={handleProviderRefs}
+                />
+              </FormGroup>
+
               {/* <ExpandableSection toggleText={t('Routing Strategy')}>
                 <FormGroup role="radiogroup" isInline fieldId='routing-strategy' label={t('Routing Strategy to use')} isRequired aria-labelledby="routing-strategy-label">
                   <Radio name='routing-strategy' label='Simple' id='routing-strategy-simple' isChecked={routingStrategy === 'simple'} onChange={() => setRoutingStrategy('simple')} />
                   <Radio name='routing-strategy' label='Load Balanced' id='routing-strategy-loadbalanced' isChecked={routingStrategy === 'loadbalanced'} onChange={() => setRoutingStrategy('loadbalanced')} />
                 </FormGroup> */}
 
-                <LoadBalancingField loadBalancing={loadBalancing} onChange={setLoadBalancing} />
+              <LoadBalancingField loadBalancing={loadBalancing} onChange={setLoadBalancing} />
 
               {/* </ExpandableSection> */}
               <ExpandableSection toggleText={t('Health Check')}>
@@ -342,7 +362,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
             )} */}
 
             <ActionGroup>
-            <KuadrantCreateUpdate model={dnsPolicyModel} resource={dnsPolicy} policyType='dns' history={history} />
+              <KuadrantCreateUpdate model={dnsPolicyModel} resource={dnsPolicy} policyType='dns' history={history} />
 
               {/* <Button variant={ButtonVariant.primary} onClick={handleSubmit} isDisabled={isCreateButtonDisabled}> */}
               {/* </Button> */}
