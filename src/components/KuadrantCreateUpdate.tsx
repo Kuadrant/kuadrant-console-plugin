@@ -30,7 +30,7 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({ model, resource, po
 
   const handleCreateUpdate = async () => {
     try {
-
+      
       if (update == true) {
         const response = await k8sUpdate({
           model: model,

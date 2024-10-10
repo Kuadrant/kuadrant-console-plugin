@@ -53,6 +53,8 @@ const KuadrantTLSCreatePage: React.FC = () => {
   const namespaceEdit = pathSplit[3]
   const [formDisabled, setFormDisabled] = React.useState(false);
   const [create, setCreate] = React.useState(true);
+  const [creationTimestamp, setCreationTimestamp] = React.useState('');
+  const [resourceVersion, setResourceVersion] = React.useState('');
 
   // Creates TLS policy object to be used for form and yaml creation of the resource
   const createTlsPolicy = () => ({
@@ -61,6 +63,9 @@ const KuadrantTLSCreatePage: React.FC = () => {
     metadata: {
       name: policyName,
       namespace: selectedNamespace,
+      ...(setCreationTimestamp && { creationTimestamp: creationTimestamp }),
+        ...(setResourceVersion && { resourceVersion: resourceVersion }),
+
     },
     spec: {
       targetRef: {
@@ -119,6 +124,8 @@ const KuadrantTLSCreatePage: React.FC = () => {
     if (tlsLoaded && !tlsError) {
       if (!Array.isArray(tlsData)) {
         const tlsPolicyUpdate = tlsData as TLSPolicyEdit;
+        setCreationTimestamp(tlsPolicyUpdate.metadata.creationTimestamp)
+        setResourceVersion(tlsPolicyUpdate.metadata.resourceVersion)
         setFormDisabled(true)
         setCreate(false)
         setPolicyName(tlsPolicyUpdate.metadata?.name || '');

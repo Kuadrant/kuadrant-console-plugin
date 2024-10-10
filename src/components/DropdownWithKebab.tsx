@@ -38,10 +38,11 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
     }
   };
 
+  let policyType = obj.kind.toLowerCase();
 
   const onEditClick = () => {
     history.push({
-      pathname: `/k8s/ns/${obj.metadata.namespace}/tlspolicy/name/${obj.metadata.name}/edit`,
+      pathname: `/k8s/ns/${obj.metadata.namespace}/${policyType}/name/${obj.metadata.name}/edit`,
     })
   }
   const onDeleteClick = () => {
