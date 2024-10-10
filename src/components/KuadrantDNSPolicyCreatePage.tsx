@@ -19,7 +19,7 @@ import {
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
-import { ResourceYAMLEditor, getGroupVersionKindForResource, useK8sModel } from '@openshift-console/dynamic-plugin-sdk';
+import { ResourceYAMLEditor, getGroupVersionKindForResource, useK8sModel, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
 import { useHistory } from 'react-router-dom';
 import { LoadBalancing, HealthCheck } from './dnspolicy/types'
 import LoadBalancingField from './dnspolicy/LoadBalancingField';
@@ -27,7 +27,6 @@ import HealthCheckField from './dnspolicy/HealthCheckField';
 // import getModelFromResource from '../utils/getModelFromResource';
 import { Gateway } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
-import NamespaceSelect from './namespace/NamespaceSelect';
 // import { removeUndefinedFields, convertMatchLabelsArrayToObject } from '../utils/modelUtils';
 import yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate'
@@ -40,7 +39,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__console-plugin-template');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
-  const [selectedNamespace, setSelectedNamespace] = React.useState('');
+  const [selectedNamespace] = useActiveNamespace();
   const [selectedGateway, setSelectedGateway] = React.useState<Gateway>({ name: '', namespace: '' });
   const [loadBalancing, setLoadBalancing] = React.useState<LoadBalancing>({ geo: '', weight: 0, defaultGeo: true });
   const [healthCheck, setHealthCheck] = React.useState<HealthCheck>({ endpoint: '', failureThreshold: null, port: null, protocol: 'HTTP', });
@@ -113,7 +112,6 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
     try {
       const parsedYaml = yaml.load(yamlInput)
       setPolicyName(parsedYaml.metadata?.name || '');
-      setSelectedNamespace(parsedYaml.metadata?.namespace || '');
       setSelectedGateway({ name: parsedYaml.spec?.targetRef?.name || '', namespace: parsedYaml.metadata?.namespace || '' });
       const endpoint = (parsedYaml.spec?.healthCheck.endpoint || '');
       const failureThreshold = (parsedYaml.spec?.healthCheck.failureThreshold || '');
@@ -326,7 +324,6 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
                   </HelperText>
                 </FormHelperText>
               </FormGroup>
-              <NamespaceSelect selectedNamespace={selectedNamespace} onChange={setSelectedNamespace} formDisabled={false} />
               <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
               <FormGroup label={t('Provider Ref')} isRequired fieldId="Provider-ref">
                 <TextInput
