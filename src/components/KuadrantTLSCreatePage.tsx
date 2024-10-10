@@ -21,12 +21,11 @@ import {
   getGroupVersionKindForResource,
   ResourceYAMLEditor,
   useK8sWatchResource,
-
+  useActiveNamespace,
 } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import { handleCancel } from '../utils/cancel';
 import { useHistory, useLocation } from 'react-router-dom';
-import NamespaceSelect from './namespace/NamespaceSelect';
 import yaml from 'js-yaml';
 import { useTranslation } from 'react-i18next';
 import ClusterIssuerSelect from './issuer/clusterIssuerSelect';
@@ -42,7 +41,7 @@ import { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
 const KuadrantTLSCreatePage: React.FC = () => {
   const history = useHistory();
   const [policyName, setPolicyName] = React.useState('');
-  const [selectedNamespace, setSelectedNamespace] = React.useState("");
+  const [selectedNamespace] = useActiveNamespace();
   const [selectedGateway, setSelectedGateway] = React.useState<Gateway>({ name: '', namespace: '' });
   const [selectedClusterIssuers, setSelectedClusterIssuers] = React.useState<ClusterIssuer>({ name: '' });
   const [selectedIssuer, setSelectedIssuers] = React.useState<Issuer>({ name: '', namespace: '' });
@@ -62,7 +61,6 @@ const KuadrantTLSCreatePage: React.FC = () => {
     metadata: {
       name: policyName,
       namespace: selectedNamespace,
-
     },
     spec: {
       targetRef: {
@@ -124,7 +122,6 @@ const KuadrantTLSCreatePage: React.FC = () => {
         setFormDisabled(true)
         setCreate(false)
         setPolicyName(tlsPolicyUpdate.metadata?.name || '');
-        setSelectedNamespace(tlsPolicyUpdate.metadata?.namespace || '');
         setSelectedGateway({ name: tlsPolicyUpdate.spec?.targetRef?.name || '', namespace: tlsPolicyUpdate.metadata?.namespace || '' });
         if (tlsPolicyUpdate.spec?.issuerRef?.kind === 'ClusterIssuer') {
           setCertIssuerType('clusterissuer');
@@ -151,7 +148,6 @@ const KuadrantTLSCreatePage: React.FC = () => {
     try {
       const parsedYaml = yaml.load(yamlInput);
       setPolicyName(parsedYaml.metadata?.name || '');
-      setSelectedNamespace(parsedYaml.metadata?.namespace || '');
       setSelectedGateway({ name: parsedYaml.spec?.targetRef?.name || '', namespace: parsedYaml.metadata?.namespace || '' });
       if (parsedYaml.spec?.issuerRef?.kind === 'ClusterIssuer') {
         setCertIssuerType('clusterissuer');
@@ -247,21 +243,13 @@ const KuadrantTLSCreatePage: React.FC = () => {
                   </HelperText>
                 </FormHelperText>
               </FormGroup>
-              <NamespaceSelect
-                selectedNamespace={selectedNamespace}
-                onChange={setSelectedNamespace}
-                formDisabled={formDisabled}
-              >
-              </NamespaceSelect>
               <FormGroup
-                label={t("Gateway API Target Reference")}
                 fieldId="gateway-select"
                 isRequired
               >
                 <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
               </FormGroup>
               <FormGroup
-                label={t("CertIssuer Issuer Reference")}
                 fieldId="certmanger-select"
                 isRequired
               >
