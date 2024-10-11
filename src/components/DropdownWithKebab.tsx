@@ -41,9 +41,15 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   let policyType = obj.kind.toLowerCase();
 
   const onEditClick = () => {
-    history.push({
-      pathname: `/k8s/ns/${obj.metadata.namespace}/${policyType}/name/${obj.metadata.name}/edit`,
-    })
+    if (obj.kind === 'AuthPolicy') {
+      history.push({
+        pathname: `/k8s/ns/${obj.metadata.namespace}/${obj.apiVersion.replace("/", "~")}~${obj.kind}/${obj.metadata.name}/yaml`,
+      })
+    } else {
+      history.push({
+        pathname: `/k8s/ns/${obj.metadata.namespace}/${policyType}/name/${obj.metadata.name}/edit`,
+      })
+    }
   }
   const onDeleteClick = () => {
     setIsDeleteModalOpen(true);

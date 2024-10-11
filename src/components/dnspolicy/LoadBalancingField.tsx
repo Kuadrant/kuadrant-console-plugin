@@ -19,8 +19,6 @@ const LoadBalancingField: React.FC<LoadBalancingProps> = ({ loadBalancing, onCha
           <HelperTextItem>{t('Load balancing options:.')}</HelperTextItem>
         </HelperText>
       </FormHelperText>
-
-
       <FormGroup label={t('Weight')} isRequired fieldId="weight">
         <TextInput
           id="weight"
@@ -32,10 +30,13 @@ const LoadBalancingField: React.FC<LoadBalancingProps> = ({ loadBalancing, onCha
             })
           }
           isRequired
+          type="number"
+          placeholder={t("0")}
+
         />
         <FormGroup label={t('Geo')} isRequired fieldId="geo">
           <TextInput
-            id="weight"
+            id="geo"
             value={loadBalancing.geo}
             onChange={(event) =>
               onChange({
@@ -44,6 +45,7 @@ const LoadBalancingField: React.FC<LoadBalancingProps> = ({ loadBalancing, onCha
               })
             }
             isRequired
+            placeholder={t("Geo")}
           />
         </FormGroup>
         <FormGroup role="radiogroup" isInline fieldId='default-geo' label={t('Default Geo')} isRequired aria-labelledby="issuer-label">

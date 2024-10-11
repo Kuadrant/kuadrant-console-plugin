@@ -20,17 +20,21 @@ interface GenericPolicyForm {
   model: K8sModel
   resource: K8sResourceCommon
   policyType: string,
-  history: History
+  history: History,
+  validation: boolean
 }
 
-const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({ model, resource, policyType, history }) => {
+const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({ model, resource, policyType, history,validation }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [errorAlertMsg, setErrorAlertMsg] = React.useState('')
   const update = !!resource.metadata.creationTimestamp
 
   const handleCreateUpdate = async () => {
+    if (!validation) return; // Early return if form is not valid
+    setErrorAlertMsg('')
+    
     try {
-      
+
       if (update == true) {
         const response = await k8sUpdate({
           model: model,
@@ -65,7 +69,7 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({ model, resource, po
           </Alert>
         </AlertGroup>
       )}
-      <Button onClick={handleCreateUpdate}>
+      <Button onClick={handleCreateUpdate} isDisabled={!validation}>
         {update ? t(`Save`) : t(`Create`)}
       </Button>
     </>

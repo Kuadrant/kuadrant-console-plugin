@@ -34,8 +34,8 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
   const [selectedGateway, setSelectedGateway] = React.useState<Gateway>({ name: '', namespace: '' });
-  const [loadBalancing, setLoadBalancing] = React.useState<LoadBalancing>({ geo: '', weight: 0, defaultGeo: true });
-  const [healthCheck, setHealthCheck] = React.useState<HealthCheck>({ endpoint: '', failureThreshold: 0, port: 0, protocol: 'HTTP', });
+  const [loadBalancing, setLoadBalancing] = React.useState<LoadBalancing>({ geo: '', weight: null, defaultGeo: true });
+  const [healthCheck, setHealthCheck] = React.useState<HealthCheck>({ endpoint: '', failureThreshold: null, port: null, protocol: null, });
   const [providerRefs, setProviderRefs] = React.useState([]);
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
   const [resourceVersion, setResourceVersion] = React.useState('');
@@ -45,6 +45,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const namespaceEdit = pathSplit[3]
   const [formDisabled, setFormDisabled] = React.useState(false);
   const [create, setCreate] = React.useState(true);
+  let isFormValid: boolean = false
 
 
   const createDNSPolicy = () => {
@@ -55,8 +56,8 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       metadata: {
         name: policyName,
         namespace: selectedNamespace,
-        ...(setCreationTimestamp && { creationTimestamp: creationTimestamp }),
-        ...(setResourceVersion && { resourceVersion: resourceVersion }),
+        ...(creationTimestamp ? { creationTimestamp } : {}),
+        ...(resourceVersion ? { resourceVersion } : {}),
       },
       spec: {
         targetRef: {
@@ -71,14 +72,14 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         },
         providerRefs: providerRefs.length > 0 ? [providerRefs[0]] : [],
 
-        ...(hasHealthCheck && { 
+        ...(hasHealthCheck ? {
           healthCheck: {
-            endpoint: healthCheck?.endpoint,
-            failureThreshold: healthCheck?.failureThreshold,
-            port: healthCheck?.port,
-            protocol: healthCheck?.protocol,
+            ...(healthCheck?.endpoint ? { endpoint: healthCheck.endpoint } : {}),
+            ...(healthCheck?.failureThreshold ? { failureThreshold: healthCheck.failureThreshold } : {}),
+            ...(healthCheck?.port ? { port: healthCheck.port } : {}),
+            ...(healthCheck?.protocol ? { protocol: healthCheck.protocol } : {}),
           }
-        })
+        } : {}),
       }
     };
   };
@@ -144,7 +145,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         setHealthCheck({
           endpoint: dnsPolicyUpdate.spec?.healthCheck?.endpoint || '',
           failureThreshold: dnsPolicyUpdate.spec?.healthCheck?.failureThreshold,
-          port: dnsPolicyUpdate.spec?.healthCheck?.port || 0,
+          port: dnsPolicyUpdate.spec?.healthCheck?.port || null,
           protocol: dnsPolicyUpdate.spec?.healthCheck?.protocol || 'HTTP',
         });
         const providerRef = Array.isArray(dnsPolicyUpdate.spec?.providerRefs) && dnsPolicyUpdate.spec.providerRefs.length > 0
@@ -167,7 +168,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       console.error('Failed to fetch the resource:', dnsError);
     }
   }, [dnsData, dnsLoaded, dnsError]);
-  
+
   const handleYAMLChange = (yamlInput: string) => {
     try {
       const parsedYaml = yaml.load(yamlInput)
@@ -215,6 +216,10 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
     handleCancel(selectedNamespace, dnsPolicy, history);
   };
 
+  if (policyName && selectedNamespace && selectedGateway.name && setProviderRefs && loadBalancing.geo && loadBalancing.weight) {
+    isFormValid = true
+  }
+
   return (
     <>
       <Helmet>
@@ -257,6 +262,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
                   value={policyName}
                   onChange={handlePolicyChange}
                   isDisabled={formDisabled}
+                  placeholder={t("Policy name")}
                 />
                 <FormHelperText>
                   <HelperText>
@@ -273,6 +279,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
                   name="provider-ref"
                   value={providerRefs.length > 0 ? providerRefs[0].name : ''}
                   onChange={handleProviderRefs}
+                  placeholder={t("Provider Ref")}
                 />
               </FormGroup>
               <LoadBalancingField loadBalancing={loadBalancing} onChange={setLoadBalancing} />
@@ -281,7 +288,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
               </ExpandableSection>
             </div>
             <ActionGroup>
-              <KuadrantCreateUpdate model={dnsPolicyModel} resource={dnsPolicy} policyType='dns' history={history} />
+              <KuadrantCreateUpdate model={dnsPolicyModel} resource={dnsPolicy} policyType='dns' history={history} validation={isFormValid} />
               <Button variant="link" onClick={handleCancelResource} >{t('Cancel')}</Button>
             </ActionGroup>
           </Form>
@@ -289,7 +296,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       ) : (
         <React.Suspense fallback={<div> {t('Loading..')}.</div>}>
           <ResourceYAMLEditor
-            initialResource={create ? yamlInput : dnsData}
+            initialResource={yamlInput}
             create={create}
             onChange={handleYAMLChange}
           >
