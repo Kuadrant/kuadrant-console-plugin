@@ -26,18 +26,20 @@ import {
 import DropdownWithKebab from './DropdownWithKebab';
 
 const getStatusLabel = (obj: any) => {
-  // Gateway or HTTPRoute
-  if (obj.kind === 'Gateway' || obj.kind === 'HTTPRoute') {
-    const acceptedCondition = obj.status?.conditions?.find(
+  // Check if status has parents and handle accordingly
+  const parentConditions = obj.status?.parents?.flatMap((parent: any) => parent.conditions) || [];
+
+  if (parentConditions.length > 0) {
+    const acceptedCondition = parentConditions.find(
       (cond: any) => cond.type === 'Accepted' && cond.status === 'True',
     );
-    const programmedCondition = obj.status?.conditions?.find(
+    const programmedCondition = parentConditions.find(
       (cond: any) => cond.type === 'Programmed' && cond.status === 'True',
     );
-    const conflictedCondition = obj.status?.conditions?.find(
+    const conflictedCondition = parentConditions.find(
       (cond: any) => cond.type === 'Conflicted' && cond.status === 'True',
     );
-    const resolvedRefsCondition = obj.status?.conditions?.find(
+    const resolvedRefsCondition = parentConditions.find(
       (cond: any) => cond.type === 'ResolvedRefs' && cond.status === 'True',
     );
 
@@ -74,14 +76,15 @@ const getStatusLabel = (obj: any) => {
     );
   }
 
+  // If no parent conditions, fallback to general condition checks
   if (!obj.status || !obj.status.conditions || obj.status.conditions.length === 0) {
-    // No status/conditions
     return (
       <Label isCompact icon={<OutlinedHourglassIcon />} color="cyan">
         Creating
       </Label>
     );
   }
+
   const enforcedCondition = obj.status.conditions.find(
     (cond: any) => cond.type === 'Enforced' && cond.status === 'True',
   );
@@ -348,19 +351,21 @@ const ResourceList: React.FC<ResourceListProps> = ({
             columns={usedColumns}
             Row={ResourceRow}
           />
-          <Pagination
-            itemCount={filteredData.length}
-            perPage={perPage}
-            page={currentPage}
-            onSetPage={onSetPage}
-            onPerPageSelect={onPerPageSelect}
-            variant="bottom"
-            perPageOptions={[
-              { title: '5', value: 5 },
-              { title: '10', value: 10 },
-              { title: '20', value: 20 },
-            ]}
-          />
+          <div className="kuadrant-pagination-left">
+            <Pagination
+              itemCount={filteredData.length}
+              perPage={perPage}
+              page={currentPage}
+              onSetPage={onSetPage}
+              onPerPageSelect={onPerPageSelect}
+              variant="bottom"
+              perPageOptions={[
+                { title: '5', value: 5 },
+                { title: '10', value: 10 },
+                { title: '20', value: 20 },
+              ]}
+            />
+          </div>
         </ListPageBody>
       </div>
     </>
