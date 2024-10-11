@@ -2,17 +2,18 @@ import * as React from 'react';
 import Helmet from 'react-helmet';
 import { Button, Modal, ModalBox, ModalBoxHeader, ModalBoxBody, ModalBoxFooter, ButtonVariant } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
-import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
+import { ResourceYAMLEditor, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
 
 const KuadrantAuthPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__console-plugin-template');
+  const [selectedNamespace] = useActiveNamespace();
 
   const yamlResource = {
     apiVersion: 'kuadrant.io/v1beta2',
     kind: 'AuthPolicy',
     metadata: {
       name: 'example-authpolicy',
-      namespace: 'default',
+      namespace: selectedNamespace,
     },
     spec: {
       rules: {

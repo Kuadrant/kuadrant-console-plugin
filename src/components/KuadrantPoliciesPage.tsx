@@ -9,7 +9,7 @@ import {
   K8sResourceCommon,
   useActiveNamespace,
   useActivePerspective,
-  ListPageCreate,
+  ListPageCreateLink,
   ListPageBody
 } from '@openshift-console/dynamic-plugin-sdk';
 
@@ -65,6 +65,7 @@ export const AllPoliciesListPage: React.FC<{
 
 const PoliciesListPage: React.FC<{ resource: Resource; activeNamespace: string }> = ({ resource, activeNamespace }) => {
   const { t } = useTranslation();
+  const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
 
   return (
     <>
@@ -78,9 +79,9 @@ const PoliciesListPage: React.FC<{ resource: Resource; activeNamespace: string }
         <div className="co-m-nav-title--row kuadrant-resource-create-container">
           <ResourceList resources={[resource.gvk]} namespace={activeNamespace} />
           <div className="kuadrant-resource-create-button pf-u-mt-md">
-            <ListPageCreate groupVersionKind={resource.gvk}>
+            <ListPageCreateLink to={`/k8s/ns/${resolvedNamespace}/${resource.gvk.group}~${resource.gvk.version}~${resource.gvk.kind}/~new`}>
               {t(`plugin__console-plugin-template~Create ${resource.gvk.kind}`)}
-            </ListPageCreate>
+            </ListPageCreateLink>
           </div>
         </div>
       </ListPageBody>

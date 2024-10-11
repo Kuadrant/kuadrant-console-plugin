@@ -19,13 +19,12 @@ import {
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
-import { k8sCreate, ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
+import { k8sCreate, ResourceYAMLEditor, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
 import { useHistory } from 'react-router-dom';
 import { LimitConfig, RateLimitPolicy } from './ratelimitpolicy/types'
 import getModelFromResource from '../utils/getModelFromResource';
 import { Gateway } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
-import NamespaceSelect from './namespace/NamespaceSelect';
 import HTTPRouteSelect from './httproute/HTTPRouteSelect';
 import { HTTPRoute } from './httproute/types';
 import LimitSelect from './ratelimitpolicy/LimitSelect';
@@ -34,7 +33,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__console-plugin-template');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policy, setPolicy] = React.useState('');
-  const [selectedNamespace, setSelectedNamespace] = React.useState('');
+  const [selectedNamespace] = useActiveNamespace();
   const [selectedGateway, setSelectedGateway] = React.useState<Gateway>({ name: '', namespace: '' });
   const [selectedHTTPRoute, setSelectedHTTPRoute] = React.useState<HTTPRoute>({ name: '', namespace: '' });
   const [targetType, setTargetType] = React.useState<'gateway' | 'httproute'>('gateway');
@@ -160,7 +159,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
       <Helmet>
         <title data-test="example-page-title">{t('Create RateLimitPolicy')}</title>
       </Helmet>
-      <PageSection className='pf-m-no-padding'>
+      <PageSection variant='light' className='pf-m-no-padding'>
         <div className='co-m-nav-title'>
           <Title headingLevel="h1">{t('Create RateLimitPolicy')}</Title>
           <p className='help-block co-m-pane__heading-help-text'>
@@ -185,7 +184,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
         </FormGroup>
       </PageSection>
       {createView === 'form' ? (
-        <PageSection>
+        <PageSection variant='light'>
           <Form className='co-m-pane__form'>
             <div>
               <FormGroup label={t('Policy Name')} isRequired fieldId="policy-name">
@@ -203,7 +202,6 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
                   </HelperText>
                 </FormHelperText>
               </FormGroup>
-              <NamespaceSelect selectedNamespace={selectedNamespace} onChange={setSelectedNamespace} formDisabled={false} />
               <FormGroup role="radiogroup" isInline fieldId='target-type' label={t('Target reference type')} isRequired aria-labelledby="target-type-label">
                 <Radio name='target-type' label='Gateway' id='target-type-gateway' isChecked={targetType === 'gateway'} onChange={() => setTargetType('gateway')} />
                 <Radio name='target-type' label='HTTPRoute' id='target-type-httproute' isChecked={targetType === 'httproute'} onChange={() => setTargetType('httproute')} />
