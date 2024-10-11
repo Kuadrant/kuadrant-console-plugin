@@ -38,11 +38,10 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
     }
   };
 
-
   const onEditClick = () => {
     history.push({
-      pathname: `/k8s/ns/${obj.metadata.namespace}/tlspolicy/name/${obj.metadata.name}/edit`,
-    })
+      pathname: `/k8s/ns/${obj.metadata.namespace}/${obj.apiVersion.replace("/", "~")}~${obj.kind}/${obj.metadata.name}/yaml`,
+    });
   }
   const onDeleteClick = () => {
     setIsDeleteModalOpen(true);
