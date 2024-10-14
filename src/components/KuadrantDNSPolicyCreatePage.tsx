@@ -197,7 +197,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    history.push('/kuadrant/all-namespaces/policies');
+    history.goBack();
   };
 
   return (
