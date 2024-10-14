@@ -41,7 +41,7 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   let policyType = obj.kind.toLowerCase();
 
   const onEditClick = () => {
-    if (obj.kind === 'AuthPolicy') {
+    if (obj.kind === 'AuthPolicy' || obj.kind === 'RateLimitPolicy') {
       history.push({
         pathname: `/k8s/ns/${obj.metadata.namespace}/${obj.apiVersion.replace("/", "~")}~${obj.kind}/${obj.metadata.name}/yaml`,
       })
@@ -51,6 +51,7 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
       })
     }
   }
+  
   const onDeleteClick = () => {
     setIsDeleteModalOpen(true);
   };
