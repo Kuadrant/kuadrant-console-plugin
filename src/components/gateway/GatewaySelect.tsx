@@ -10,7 +10,7 @@ interface GatewaySelectProps {
 }
 
 const GatewaySelect: React.FC<GatewaySelectProps> = ({ selectedGateway, onChange }) => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [gateways, setGateways] = React.useState([]);
   const gvk = { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' }
 

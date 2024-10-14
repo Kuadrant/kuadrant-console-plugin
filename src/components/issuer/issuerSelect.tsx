@@ -10,7 +10,7 @@ interface IssuerSelectProps {
 }
 
 const IssuerSelect: React.FC<IssuerSelectProps> = ({ selectedIssuer, onChange }) => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [issuers, setIssuers] = React.useState([]);
   const gvk = { group: 'cert-manager.io', version: 'v1', kind: 'Issuer' };
 

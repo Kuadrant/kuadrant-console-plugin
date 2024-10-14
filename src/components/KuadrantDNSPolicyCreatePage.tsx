@@ -32,7 +32,7 @@ import NamespaceSelect from './namespace/NamespaceSelect';
 import { removeUndefinedFields, convertMatchLabelsArrayToObject } from '../utils/modelUtils';
 
 const KuadrantDNSPolicyCreatePage: React.FC = () => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policy, setPolicy] = React.useState('');
   const [selectedNamespace, setSelectedNamespace] = React.useState('');
@@ -197,7 +197,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    history.push('/kuadrant/all-namespaces/policies');
+    history.goBack();
   };
 
   return (

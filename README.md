@@ -100,19 +100,19 @@ Install via the [`kuadrant-operator`](https://www.github.com/kuadrant/kuadrant-o
 The plugin template demonstrates how you can translate messages in with [react-i18next](https://react.i18next.com/). The i18n namespace must match
 the name of the `ConsolePlugin` resource with the `plugin__` prefix to avoid
 naming conflicts. For example, the plugin template uses the
-`plugin__console-plugin-template` namespace. You can use the `useTranslation` hook
+`plugin__kuadrant-console` namespace. You can use the `useTranslation` hook
 with this namespace as follows:
 
 ```tsx
 conster Header: React.FC = () => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   return <h1>{t('Hello, World!')}</h1>;
 };
 ```
 
 For labels in `console-extensions.json`, you can use the format
-`%plugin__console-plugin-template~My Label%`. Console will replace the value with
-the message for the current language from the `plugin__console-plugin-template`
+`%plugin__kuadrant-console-plugin~My Label%`. Console will replace the value with
+the message for the current language from the `plugin__kuadrant-console`
 namespace. For example:
 
 ```json
@@ -121,7 +121,7 @@ namespace. For example:
   "properties": {
     "id": "admin-demo-section",
     "perspective": "admin",
-    "name": "%plugin__console-plugin-template~Plugin Template%"
+    "name": "%plugin__kuadrant-console-plugin~Plugin Template%"
   }
 }
 ```

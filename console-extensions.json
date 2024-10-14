@@ -74,7 +74,7 @@
     "type": "console.navigation/section",
     "properties": {
       "id": "kuadrant-section-admin",
-      "name": "%plugin__console-plugin-template~Kuadrant%",
+      "name": "%plugin__kuadrant-console-plugin~Kuadrant%",
       "perspective": "admin"
     }
   },
@@ -82,7 +82,7 @@
     "type": "console.navigation/href",
     "properties": {
       "id": "kuadrant-overview-admin",
-      "name": "%plugin__console-plugin-template~Overview%",
+      "name": "%plugin__kuadrant-console-plugin~Overview%",
       "href": "/kuadrant/overview",
       "perspective": "admin",
       "section": "kuadrant-section-admin"
@@ -92,7 +92,7 @@
     "type": "console.navigation/href",
     "properties": {
       "id": "kuadrant-policies-admin",
-      "name": "%plugin__console-plugin-template~Policies%",
+      "name": "%plugin__kuadrant-console-plugin~Policies%",
       "href": "/kuadrant/all-namespaces/policies",
       "perspective": "admin",
       "section": "kuadrant-section-admin"
@@ -102,7 +102,7 @@
     "type": "console.navigation/href",
     "properties": {
       "id": "kuadrant-policy-topology-admin",
-      "name": "%plugin__console-plugin-template~Policy Topology%",
+      "name": "%plugin__kuadrant-console-plugin~Policy Topology%",
       "href": "/kuadrant/policy-topology",
       "perspective": "admin",
       "section": "kuadrant-section-admin",
@@ -113,7 +113,7 @@
     "type": "console.navigation/section",
     "properties": {
       "id": "kuadrant-section-dev",
-      "name": "%plugin__console-plugin-template~Kuadrant%",
+      "name": "%plugin__kuadrant-console-plugin~Kuadrant%",
       "perspective": "dev"
     }
   },
@@ -121,7 +121,7 @@
     "type": "console.navigation/href",
     "properties": {
       "id": "kuadrant-dashboard-dev",
-      "name": "%plugin__console-plugin-template~Overview%",
+      "name": "%plugin__kuadrant-console-plugin~Overview%",
       "href": "/kuadrant/overview",
       "perspective": "dev",
       "section": "kuadrant-section-dev"
@@ -131,7 +131,7 @@
     "type": "console.navigation/href",
     "properties": {
       "id": "kuadrant-policies-dev",
-      "name": "%plugin__console-plugin-template~Policies%",
+      "name": "%plugin__kuadrant-console-plugin~Policies%",
       "href": "/kuadrant/all-namespaces/policies",
       "perspective": "dev",
       "section": "kuadrant-section-dev"
@@ -141,7 +141,7 @@
     "type": "console.navigation/href",
     "properties": {
       "id": "kuadrant-policy-topology-dev",
-      "name": "%plugin__console-plugin-template~Policy Topology%",
+      "name": "%plugin__kuadrant-console-plugin~Policy Topology%",
       "href": "/kuadrant/policy-topology",
       "perspective": "dev",
       "section": "kuadrant-section-dev",

@@ -30,7 +30,7 @@ import { HTTPRoute } from './httproute/types';
 import LimitSelect from './ratelimitpolicy/LimitSelect';
 
 const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policy, setPolicy] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
@@ -151,7 +151,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   };
 
   const handleCancel = () => {
-    history.push('/kuadrant/all-namespaces/policies');
+    history.goBack();
   };
 
   return (

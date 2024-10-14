@@ -10,7 +10,7 @@ interface HealthCheckProps {
 }
 
 const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange }) => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
   return (
     <>

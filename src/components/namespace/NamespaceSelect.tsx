@@ -10,7 +10,7 @@ interface NamespaceSelectProps {
 }
 
 const NamespaceSelect: React.FC<NamespaceSelectProps> = ({ selectedNamespace, onChange, formDisabled }) => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [namespaces, setNamespaces] = React.useState([]);
 
   const namespaceResource = {
