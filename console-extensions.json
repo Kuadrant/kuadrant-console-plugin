@@ -71,6 +71,14 @@
     }
   },
   {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/ns/:ns/dnspolicy/name/:name/edit",
+      "component": { "$codeRef": "KuadrantDNSPolicyCreatePage" }
+    }
+  },
+  {
     "type": "console.navigation/section",
     "properties": {
       "id": "kuadrant-section-admin",

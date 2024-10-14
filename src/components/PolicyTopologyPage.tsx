@@ -38,7 +38,6 @@ import {
 
 import { CubesIcon, CloudUploadAltIcon, TopologyIcon, RouteIcon } from '@patternfly/react-icons';
 import * as dot from 'graphlib-dot';
-import { kindToAbbr } from '../utils/modelUtils';
 import './kuadrant.css';
 
 // Fetch the config.js file dynamically at runtime
@@ -73,6 +72,9 @@ const fetchConfig = async () => {
   }
 };
 
+export const kindToAbbr = (kind: string) => {
+  return (kind.replace(/[^A-Z]/g, '') || kind.toUpperCase()).slice(0, 4);
+};
 
 // TODO: need a generic way to fetch latest versions of resources based on kind + group
 const resourceGVKMapping: { [key: string]: { group: string; version: string; kind: string } } = {

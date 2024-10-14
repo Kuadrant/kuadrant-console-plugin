@@ -12,202 +12,222 @@ import {
   Radio,
   Button,
   ExpandableSection,
-  ButtonVariant,
   ActionGroup,
-  AlertVariant,
-  Alert,
-  AlertGroup,
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
-import { k8sCreate, ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
-import { useHistory } from 'react-router-dom';
-import { LoadBalancing, HealthCheck, DNSPolicy, WeightedCustom } from './dnspolicy/types'
+import { ResourceYAMLEditor, getGroupVersionKindForResource, useK8sModel, useK8sWatchResource, K8sResourceCommon, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
+import { useHistory, useLocation } from 'react-router-dom';
+import { LoadBalancing, HealthCheck } from './dnspolicy/types'
 import LoadBalancingField from './dnspolicy/LoadBalancingField';
 import HealthCheckField from './dnspolicy/HealthCheckField';
-import getModelFromResource from '../utils/getModelFromResource';
 import { Gateway } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
-import NamespaceSelect from './namespace/NamespaceSelect';
-import { removeUndefinedFields, convertMatchLabelsArrayToObject } from '../utils/modelUtils';
+import yaml from 'js-yaml';
+import KuadrantCreateUpdate from './KuadrantCreateUpdate'
+import { handleCancel } from '../utils/cancel';
+
 
 const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
-  const [policy, setPolicy] = React.useState('');
-  const [selectedNamespace, setSelectedNamespace] = React.useState('');
+  const [policyName, setPolicyName] = React.useState('');
+  const [selectedNamespace] = useActiveNamespace();
   const [selectedGateway, setSelectedGateway] = React.useState<Gateway>({ name: '', namespace: '' });
-  const [routingStrategy, setRoutingStrategy] = React.useState<'simple' | 'loadbalanced'>('simple');
-  const [loadBalancing, setLoadBalancing] = React.useState<LoadBalancing>({
-    geo: { defaultGeo: '' },
-    weighted: { defaultWeight: 0 }
-  });
-  const [healthCheck, setHealthCheck] = React.useState<HealthCheck>({
-    endpoint: '',
-    failureThreshold: null,
-    port: null,
-    protocol: 'HTTP',
-  });
-  const [isCreateButtonDisabled, setIsCreateButtonDisabled] = React.useState(true);
+  const [loadBalancing, setLoadBalancing] = React.useState<LoadBalancing>({ geo: '', weight: null, defaultGeo: true });
+  const [healthCheck, setHealthCheck] = React.useState<HealthCheck>({ endpoint: '', failureThreshold: null, port: null, protocol: null, });
+  const [providerRefs, setProviderRefs] = React.useState([]);
+  const [creationTimestamp, setCreationTimestamp] = React.useState('');
+  const [resourceVersion, setResourceVersion] = React.useState('');
+  const location = useLocation();
+  const pathSplit = location.pathname.split('/')
+  const nameEdit = pathSplit[6]
+  const namespaceEdit = pathSplit[3]
+  const [formDisabled, setFormDisabled] = React.useState(false);
+  const [create, setCreate] = React.useState(true);
+  let isFormValid: boolean = false
 
-  // Initialize the YAML resource object based on form state
-  const [yamlResource, setYamlResource] = React.useState(() => {
-    return removeUndefinedFields({
+
+  const createDNSPolicy = () => {
+    const hasHealthCheck = healthCheck.endpoint || healthCheck.failureThreshold || healthCheck.port || healthCheck.protocol;
+    return {
       apiVersion: 'kuadrant.io/v1alpha1',
       kind: 'DNSPolicy',
       metadata: {
-        name: policy,
+        name: policyName,
         namespace: selectedNamespace,
+        ...(creationTimestamp ? { creationTimestamp } : {}),
+        ...(resourceVersion ? { resourceVersion } : {}),
       },
       spec: {
-        routingStrategy,
         targetRef: {
           group: 'gateway.networking.k8s.io',
           kind: 'Gateway',
           name: selectedGateway.name,
-          namespace: selectedGateway.namespace,
         },
-        loadBalancing: routingStrategy === 'loadbalanced' ? loadBalancing : undefined,
-        healthCheck: healthCheck.endpoint ? healthCheck : undefined,
-      },
-    });
-  });
+        loadBalancing: {
+          weight: loadBalancing.weight,
+          geo: loadBalancing.geo,
+          defaultGeo: loadBalancing.defaultGeo,
+        },
+        providerRefs: providerRefs.length > 0 ? [providerRefs[0]] : [],
+
+        ...(hasHealthCheck ? {
+          healthCheck: {
+            ...(healthCheck?.endpoint ? { endpoint: healthCheck.endpoint } : {}),
+            ...(healthCheck?.failureThreshold ? { failureThreshold: healthCheck.failureThreshold } : {}),
+            ...(healthCheck?.port ? { port: healthCheck.port } : {}),
+            ...(healthCheck?.protocol ? { protocol: healthCheck.protocol } : {}),
+          }
+        } : {}),
+      }
+    };
+  };
+
+  const [yamlInput, setYamlInput] = React.useState(createDNSPolicy)
+  const dnsPolicy = createDNSPolicy();
+  const dnsPolicyGVK = getGroupVersionKindForResource({ apiVersion: 'kuadrant.io/v1alpha1', kind: 'DNSPolicy' });
+  const [dnsPolicyModel] = useK8sModel({ group: dnsPolicyGVK.group, version: dnsPolicyGVK.version, kind: dnsPolicyGVK.kind });
 
   const history = useHistory();
 
-  React.useEffect(() => {
-    const updatedYamlResource = {
-      apiVersion: 'kuadrant.io/v1alpha1',
-      kind: 'DNSPolicy',
-      metadata: {
-        name: policy,
-        namespace: selectedNamespace,
+  interface dnsPolicyEdit extends K8sResourceCommon {
+    spec?: {
+      targetRef?: {
+        group?: string;
+        kind?: string;
+        name?: string;
+      };
+
+      loadBalancing: {
+        weight?: number;
+        geo?: string;
+        defaultGeo?: boolean;
       },
-      spec: {
-        routingStrategy,
-        targetRef: {
-          group: 'gateway.networking.k8s.io',
-          kind: 'Gateway',
-          name: selectedGateway.name,
-          namespace: selectedGateway.namespace,
-        },
-        loadBalancing: routingStrategy === 'loadbalanced' ? {
-          ...loadBalancing,
-          weighted: {
-            ...loadBalancing.weighted,
-            custom: loadBalancing.weighted.custom?.map((customWeight) => ({
-              ...customWeight,
-              selector: {
-                ...customWeight.selector,
-                // convert array to map for yaml viewing
-                matchLabels: convertMatchLabelsArrayToObject(customWeight.selector.matchLabels || []),
-              },
-            })),
-          },
-        } : undefined,
-        healthCheck: healthCheck.endpoint ? healthCheck : undefined,
-      },
+      providerRefs?: {
+        name?: string;
+      }[];
+
+      healthCheck?: {
+        endpoint?: string;
+        failureThreshold?: number;
+        port?: number;
+        protocol?: 'HTTP' | 'HTTPS';
+      }
+    }
+
+
+  }
+
+  //Checking if the policy already exists and is to be edited or if its new and is being created
+  let dnsResource = null
+  if (nameEdit) {
+    dnsResource = {
+      groupVersionKind: dnsPolicyGVK,
+      isList: false,
+      name: nameEdit,
+      namespace: namespaceEdit
     };
+  }
 
-    setYamlResource(removeUndefinedFields(updatedYamlResource)); // Clean undefined values
+  const [dnsData, dnsLoaded, dnsError] = dnsResource ? useK8sWatchResource(dnsResource) : [null, false, null]; //Syntax allows for dnsResource to be null in the case of a create 
 
-    // Check if the Create button should be enabled
-    const isFormValid = policy && selectedNamespace && selectedGateway.name;
-    setIsCreateButtonDisabled(!isFormValid); // Update the button state
-  }, [policy, selectedNamespace, selectedGateway, routingStrategy, loadBalancing, healthCheck]);
+  React.useEffect(() => {
+    if (dnsLoaded && !dnsError) {
+      if (!Array.isArray(dnsData)) {
+        const dnsPolicyUpdate = dnsData as dnsPolicyEdit;
+        setCreationTimestamp(dnsPolicyUpdate.metadata.creationTimestamp)
+        setResourceVersion(dnsPolicyUpdate.metadata.resourceVersion)
+        setFormDisabled(true)
+        setCreate(false)
+        setPolicyName(dnsPolicyUpdate.metadata?.name || '');
+        setSelectedGateway({ name: dnsPolicyUpdate.spec?.targetRef?.name || '', namespace: dnsPolicyUpdate.metadata?.namespace || '' });
+        setHealthCheck({
+          endpoint: dnsPolicyUpdate.spec?.healthCheck?.endpoint || '',
+          failureThreshold: dnsPolicyUpdate.spec?.healthCheck?.failureThreshold,
+          port: dnsPolicyUpdate.spec?.healthCheck?.port || null,
+          protocol: dnsPolicyUpdate.spec?.healthCheck?.protocol || 'HTTP',
+        });
+        const providerRef = Array.isArray(dnsPolicyUpdate.spec?.providerRefs) && dnsPolicyUpdate.spec.providerRefs.length > 0
+          ? dnsPolicyUpdate.spec.providerRefs[0]
+          : { name: '' };
 
-  const [errorAlertMsg, setErrorAlertMsg] = React.useState('')
+        setProviderRefs([providerRef]);
+        setLoadBalancing({
+          geo: dnsPolicyUpdate.spec?.loadBalancing?.geo || '',
+          weight: dnsPolicyUpdate.spec?.loadBalancing?.weight || 0,
+          defaultGeo: dnsPolicyUpdate.spec?.loadBalancing?.defaultGeo !== undefined
+            ? dnsPolicyUpdate.spec.loadBalancing?.defaultGeo
+            : false,  // Default to false if not present
 
-  const handleCreateViewChange = (value: 'form' | 'yaml') => {
-    setCreateView(value);
+        });
+
+        console.log("Initializing dns with existing dns for update");
+      }
+    } else if (dnsError) {
+      console.error('Failed to fetch the resource:', dnsError);
+    }
+  }, [dnsData, dnsLoaded, dnsError]);
+
+  const handleYAMLChange = (yamlInput: string) => {
+    try {
+      const parsedYaml = yaml.load(yamlInput)
+      setPolicyName(parsedYaml.metadata?.name || '');
+      setSelectedGateway({ name: parsedYaml.spec?.targetRef?.name || '', namespace: parsedYaml.metadata?.namespace || '' });
+      setHealthCheck({
+        endpoint: parsedYaml.spec?.healthCheck?.endpoint || '',
+        failureThreshold: parsedYaml.spec?.healthCheck?.failureThreshold,
+        port: parsedYaml.spec?.healthCheck?.port || '',
+        protocol: parsedYaml.spec?.healthCheck?.protocol || '',
+      });
+      const providerRef = Array.isArray(parsedYaml.spec?.providerRefs) && parsedYaml.spec.providerRefs.length > 0
+        ? parsedYaml.spec.providerRefs[0]
+        : { name: '' };
+
+      setProviderRefs([providerRef]);
+
+      setLoadBalancing({
+        geo: parsedYaml.spec?.loadBalancing?.geo || '',
+        weight: parsedYaml.spec?.loadBalancing?.weight || '',
+        defaultGeo: parsedYaml.spec?.loadBalancing?.defaultGeo !== undefined
+          ? parsedYaml.spec.loadBalancing?.defaultGeo
+          : false,  // Default to false if not present
+
+      });
+
+    } catch (e) {
+      console.error(t('Error parsing YAML:'), e);
+    }
   };
+
+  React.useEffect(() => {
+    setYamlInput(dnsPolicy)
+  }, [policyName, selectedNamespace, selectedGateway, providerRefs, loadBalancing, healthCheck])
+
 
   const handlePolicyChange = (_event, policy: string) => {
-    setPolicy(policy);
+    setPolicyName(policy);
+  };
+  const handleProviderRefs = (_event, provider: string) => {
+    setProviderRefs([{ name: provider }]);  // Wrap the provider in an array of objects
   };
 
-  const handleSubmit = async () => {
-    if (isCreateButtonDisabled) return; // Early return if form is not valid
-    setErrorAlertMsg('')
-
-    const isHealthCheckValid =
-      healthCheck.endpoint &&
-      healthCheck.failureThreshold > 0 &&
-      healthCheck.port > 0 &&
-      healthCheck.protocol;
-
-    const dnsPolicy: DNSPolicy = {
-      apiVersion: 'kuadrant.io/v1alpha1',
-      kind: 'DNSPolicy',
-      metadata: {
-        name: policy,
-        namespace: selectedNamespace,
-      },
-      spec: {
-        ...(routingStrategy === 'loadbalanced' && {
-          loadBalancing: {
-            geo: loadBalancing.geo,
-            weighted: {
-              ...loadBalancing.weighted,
-              custom: loadBalancing.weighted.custom?.map((customWeight) => ({
-                ...customWeight,
-                selector: {
-                  ...customWeight.selector, // keep matchLabels as an array for now
-                },
-              })),
-            },
-          },
-        }),
-        routingStrategy,
-        targetRef: {
-          group: 'gateway.networking.k8s.io',
-          kind: 'Gateway',
-          name: selectedGateway.name,
-          namespace: selectedGateway.namespace
-        },
-        ...(isHealthCheckValid && { healthCheck }),
-      },
-    };
-
-    const policyToSubmit = JSON.parse(JSON.stringify(dnsPolicy));
-    // convert matchLabels array back to a key/value object for saving
-    if (policyToSubmit.spec.loadBalancing?.weighted?.custom) {
-      policyToSubmit.spec.loadBalancing.weighted.custom = policyToSubmit.spec.loadBalancing.weighted.custom.map(
-        (customWeight: WeightedCustom) => ({
-          ...customWeight,
-          selector: {
-            ...customWeight.selector,
-            matchLabels: convertMatchLabelsArrayToObject(customWeight.selector.matchLabels || []), // Convert to object
-          },
-        })
-      );
-    }
-
-    try {
-      await k8sCreate({
-        model: getModelFromResource(policyToSubmit),
-        data: policyToSubmit,
-        ns: selectedNamespace,
-      });
-      history.push('/kuadrant/all-namespaces/policies/dns'); // Navigate after successful creation
-    } catch (error) {
-      console.error(t('Error creating DNSPolicy'), { error });
-      setErrorAlertMsg(error.message)
-    }
+  const handleCancelResource = () => {
+    handleCancel(selectedNamespace, dnsPolicy, history);
   };
 
-  const handleCancel = () => {
-    history.goBack();
-  };
+  if (policyName && selectedNamespace && selectedGateway.name && setProviderRefs && loadBalancing.geo && loadBalancing.weight) {
+    isFormValid = true
+  }
 
   return (
     <>
       <Helmet>
-        <title data-test="example-page-title">{t('Create DNSPolicy')}</title>
+        <title data-test="example-page-title">{create ? t('Create DNS Policy') : t('Edit DNS Policy')}</title>
       </Helmet>
       <PageSection variant='light' className='pf-m-no-padding'>
         <div className='co-m-nav-title'>
-          <Title headingLevel="h1">{t('Create DNSPolicy')}</Title>
+          <Title headingLevel="h1">{create ? t('Create DNS Policy') : t('Edit DNS Policy')}</Title>
           <p className='help-block co-m-pane__heading-help-text'>
             <div>{t('DNSPolicy configures how North-South based traffic should be balanced and reach the gateways')}</div>
           </p>
@@ -218,14 +238,14 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
             label="Form"
             id="create-type-radio-form"
             isChecked={createView === 'form'}
-            onChange={() => handleCreateViewChange('form')}
+            onChange={() => setCreateView('form')}
           />
           <Radio
             name="create-type-radio"
             label="YAML"
             id="create-type-radio-yaml"
             isChecked={createView === 'yaml'}
-            onChange={() => handleCreateViewChange('yaml')}
+            onChange={() => setCreateView('yaml')}
           />
         </FormGroup>
       </PageSection>
@@ -239,8 +259,10 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
                   type="text"
                   id="policy-name"
                   name="policy-name"
-                  value={policy}
+                  value={policyName}
                   onChange={handlePolicyChange}
+                  isDisabled={formDisabled}
+                  placeholder={t("Policy name")}
                 />
                 <FormHelperText>
                   <HelperText>
@@ -248,42 +270,38 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
                   </HelperText>
                 </FormHelperText>
               </FormGroup>
-              <NamespaceSelect selectedNamespace={selectedNamespace} onChange={setSelectedNamespace}formDisabled={false} />
               <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
-              <ExpandableSection toggleText={t('Routing Strategy')}>
-                <FormGroup role="radiogroup" isInline fieldId='routing-strategy' label={t('Routing Strategy to use')} isRequired aria-labelledby="routing-strategy-label">
-                  <Radio name='routing-strategy' label='Simple' id='routing-strategy-simple' isChecked={routingStrategy === 'simple'} onChange={() => setRoutingStrategy('simple')} />
-                  <Radio name='routing-strategy' label='Load Balanced' id='routing-strategy-loadbalanced' isChecked={routingStrategy === 'loadbalanced'} onChange={() => setRoutingStrategy('loadbalanced')} />
-                </FormGroup>
-                {routingStrategy === 'loadbalanced' && (
-                  <LoadBalancingField loadBalancing={loadBalancing} onChange={setLoadBalancing} />
-                )}
-              </ExpandableSection>
+              <FormGroup label={t('Provider Ref')} isRequired fieldId="Provider-ref">
+                <TextInput
+                  isRequired
+                  type="text"
+                  id="provider-ref"
+                  name="provider-ref"
+                  value={providerRefs.length > 0 ? providerRefs[0].name : ''}
+                  onChange={handleProviderRefs}
+                  placeholder={t("Provider Ref")}
+                />
+              </FormGroup>
+              <LoadBalancingField loadBalancing={loadBalancing} onChange={setLoadBalancing} />
               <ExpandableSection toggleText={t('Health Check')}>
                 <HealthCheckField healthCheck={healthCheck} onChange={setHealthCheck} />
               </ExpandableSection>
             </div>
-
-            {errorAlertMsg != '' && (
-              <AlertGroup className="kuadrant-alert-group">
-                <Alert title={t('Error creating DNSPolicy')} variant={AlertVariant.danger} isInline>
-                  {errorAlertMsg}
-                </Alert>
-              </AlertGroup>
-            )}
-
             <ActionGroup>
-              <Button variant={ButtonVariant.primary} onClick={handleSubmit} isDisabled={isCreateButtonDisabled}>
-                {t('Create DNSPolicy')}
-              </Button>
-              <Button variant={ButtonVariant.secondary} onClick={handleCancel}>
-                {t('Cancel')}
-              </Button>
+              <KuadrantCreateUpdate model={dnsPolicyModel} resource={dnsPolicy} policyType='dns' history={history} validation={isFormValid} />
+              <Button variant="link" onClick={handleCancelResource} >{t('Cancel')}</Button>
             </ActionGroup>
           </Form>
         </PageSection>
       ) : (
-        <ResourceYAMLEditor initialResource={yamlResource} create />
+        <React.Suspense fallback={<div> {t('Loading..')}.</div>}>
+          <ResourceYAMLEditor
+            initialResource={yamlInput}
+            create={create}
+            onChange={handleYAMLChange}
+          >
+          </ResourceYAMLEditor>
+        </React.Suspense>
       )}
     </>
   );

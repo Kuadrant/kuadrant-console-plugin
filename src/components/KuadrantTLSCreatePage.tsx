@@ -53,6 +53,9 @@ const KuadrantTLSCreatePage: React.FC = () => {
   const namespaceEdit = pathSplit[3]
   const [formDisabled, setFormDisabled] = React.useState(false);
   const [create, setCreate] = React.useState(true);
+  const [creationTimestamp, setCreationTimestamp] = React.useState('');
+  const [resourceVersion, setResourceVersion] = React.useState('');
+  let isFormValid: boolean = false
 
   // Creates TLS policy object to be used for form and yaml creation of the resource
   const createTlsPolicy = () => ({
@@ -61,6 +64,9 @@ const KuadrantTLSCreatePage: React.FC = () => {
     metadata: {
       name: policyName,
       namespace: selectedNamespace,
+      ...(creationTimestamp ? { creationTimestamp } : {}),  
+      ...(resourceVersion ? { resourceVersion } : {}),
+
     },
     spec: {
       targetRef: {
@@ -119,6 +125,8 @@ const KuadrantTLSCreatePage: React.FC = () => {
     if (tlsLoaded && !tlsError) {
       if (!Array.isArray(tlsData)) {
         const tlsPolicyUpdate = tlsData as TLSPolicyEdit;
+        setCreationTimestamp(tlsPolicyUpdate.metadata.creationTimestamp)
+        setResourceVersion(tlsPolicyUpdate.metadata.resourceVersion)
         setFormDisabled(true)
         setCreate(false)
         setPolicyName(tlsPolicyUpdate.metadata?.name || '');
@@ -167,7 +175,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
   // When new changes are made to via form update the yaml view
   React.useEffect(() => {
     setYamlInput(tlsPolicy);
-  }, [policyName, selectedNamespace, selectedGateway, certIssuerType, selectedClusterIssuers, selectedIssuer, selectedGateway]);
+  }, [policyName, selectedNamespace, selectedGateway, certIssuerType, selectedClusterIssuers, selectedIssuer]);
 
   const [view, setView] = React.useState('form');
 
@@ -180,6 +188,11 @@ const KuadrantTLSCreatePage: React.FC = () => {
   const handleCancelResource = () => {
     handleCancel(selectedNamespace, tlsPolicy, history);
   };
+
+  if (policyName && selectedNamespace && selectedGateway.name && (selectedClusterIssuers.name || selectedIssuer.name)) {
+    isFormValid = true
+  }
+
   return (
     <>
       <Helmet>
@@ -282,7 +295,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
                 )}
               </FormGroup>
               <ActionGroup>
-                <KuadrantCreateUpdate model={tlsPolicyModel} resource={tlsPolicy} policyType='tls' history={history} />
+                <KuadrantCreateUpdate model={tlsPolicyModel} resource={tlsPolicy} policyType='tls' history={history} validation={isFormValid} />
                 <Button variant="link" onClick={handleCancelResource} >{t('Cancel')}</Button>
               </ActionGroup>
             </Form>
@@ -290,7 +303,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
         ) : (
           <React.Suspense fallback={<div> {t('Loading..')}.</div>}>
             <ResourceYAMLEditor
-              initialResource={create ? yamlInput : tlsData}
+              initialResource={ yamlInput }
               create={create}
               onChange={handleYAMLChange}
             >
