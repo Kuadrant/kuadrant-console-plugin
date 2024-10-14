@@ -1,6 +1,6 @@
 {
-  "name": "kuadrant-console",
-  "version": "0.0.2",
+  "name": "kuadrant-console-plugin",
+  "version": "0.0.3",
   "description": "Kuadrant OpenShift Console plugin",
   "private": true,
   "license": "Apache-2.0",
@@ -69,8 +69,8 @@
     "webpack-dev-server": "^4.7.4"
   },
   "consolePlugin": {
-    "name": "kuadrant-console",
-    "version": "0.0.2",
+    "name": "kuadrant-console-plugin",
+    "version": "0.0.3",
     "displayName": "Kuadrant OpenShift Console Plugin",
     "description": "Kuadrant OpenShift Console Plugin",
     "exposedModules": {

@@ -24,7 +24,7 @@ interface GenericPolicyForm {
 }
 
 const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({ model, resource, policyType, history }) => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [errorAlertMsg, setErrorAlertMsg] = React.useState('')
   const update = !!resource.metadata.creationTimestamp
 

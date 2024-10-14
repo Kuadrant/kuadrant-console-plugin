@@ -10,7 +10,7 @@ interface ClusterIssuerSelectProps {
 }
 
 const ClusterIssuerSelect: React.FC<ClusterIssuerSelectProps> = ({ selectedClusterIssuer, onChange }) => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [clusterIssuers, setClusterIssuers] = React.useState([]);
   const gvk = { group: 'cert-manager.io', version: 'v1', kind: 'ClusterIssuer' };
 

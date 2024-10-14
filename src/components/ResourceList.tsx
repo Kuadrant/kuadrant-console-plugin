@@ -169,7 +169,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   paginationLimit = 10,
   columns,
 }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
   const resourceDescriptors: { [key: string]: WatchK8sResource } = resources.reduce(
     (acc, resource, index) => {
@@ -209,29 +209,29 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
   const defaultColumns: TableColumn<K8sResourceCommon>[] = [
     {
-      title: t('plugin__console-plugin-template~Name'),
+      title: t('plugin__kuadrant-console-plugin~Name'),
       id: 'name',
       sort: 'metadata.name',
       transforms: [sortable],
     },
     {
-      title: t('plugin__console-plugin-template~Type'),
+      title: t('plugin__kuadrant-console-plugin~Type'),
       id: 'type',
       sort: 'kind',
       transforms: [sortable],
     },
     {
-      title: t('plugin__console-plugin-template~Namespace'),
+      title: t('plugin__kuadrant-console-plugin~Namespace'),
       id: 'namespace',
       sort: 'metadata.namespace',
       transforms: [sortable],
     },
     {
-      title: t('plugin__console-plugin-template~Status'),
+      title: t('plugin__kuadrant-console-plugin~Status'),
       id: 'Status',
     },
     {
-      title: t('plugin__console-plugin-template~Created'),
+      title: t('plugin__kuadrant-console-plugin~Created'),
       id: 'Created',
       sort: 'metadata.creationTimestamp',
       transforms: [sortable],

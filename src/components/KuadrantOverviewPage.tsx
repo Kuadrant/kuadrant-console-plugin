@@ -37,7 +37,7 @@ import { sortable } from '@patternfly/react-table';
 import { INTERNAL_LINKS, EXTERNAL_LINKS } from '../constants/links';
 
 const KuadrantOverviewPage: React.FC = () => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const { ns } = useParams<{ ns: string }>();
   const [activeNamespace, setActiveNamespace] = useActiveNamespace();
   const [isExpanded, setIsExpanded] = React.useState(true);
@@ -91,17 +91,17 @@ const KuadrantOverviewPage: React.FC = () => {
   );
 
   const columns = [{
-    title: t('plugin__console-plugin-template~Name'),
+    title: t('plugin__kuadrant-console-plugin~Name'),
     id: 'name',
     sort: 'metadata.name',
     transforms: [sortable],
   }, {
-    title: t('plugin__console-plugin-template~Namespace'),
+    title: t('plugin__kuadrant-console-plugin~Namespace'),
     id: 'namespace',
     sort: 'metadata.namespace',
     transforms: [sortable],
   },  {
-    title: t('plugin__console-plugin-template~Status'),
+    title: t('plugin__kuadrant-console-plugin~Status'),
     id: 'Status',
   }, {
     title: '',

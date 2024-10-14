@@ -10,7 +10,7 @@ interface LoadBalancingProps {
 }
 
 const LoadBalancingField: React.FC<LoadBalancingProps> = ({ loadBalancing, onChange }) => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const operatorOptions = ['In', 'NotIn', 'Exists', 'DoesNotExist'];
   const [customWeights, setCustomWeights] = React.useState<WeightedCustom[]>(loadBalancing.weighted.custom || []);
 

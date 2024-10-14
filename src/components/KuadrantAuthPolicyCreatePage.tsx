@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { ResourceYAMLEditor, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
 
 const KuadrantAuthPolicyCreatePage: React.FC = () => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [selectedNamespace] = useActiveNamespace();
 
   const yamlResource = {

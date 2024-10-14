@@ -46,7 +46,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
   const [selectedClusterIssuers, setSelectedClusterIssuers] = React.useState<ClusterIssuer>({ name: '' });
   const [selectedIssuer, setSelectedIssuers] = React.useState<Issuer>({ name: '', namespace: '' });
   const [certIssuerType, setCertIssuerType] = React.useState<'clusterissuer' | 'issuer'>('clusterissuer');
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const location = useLocation();
   const pathSplit = location.pathname.split('/')
   const nameEdit = pathSplit[6]

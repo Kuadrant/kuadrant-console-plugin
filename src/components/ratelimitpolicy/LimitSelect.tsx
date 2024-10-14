@@ -10,7 +10,7 @@ interface LimitSelectProps {
 }
 
 const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [isAddLimitModalOpen, setIsAddLimitModalOpen] = React.useState(false);
   const [isLimitNameAlertModalOpen, setIsLimitNameAlertModalOpen] = React.useState(false);
   const [newLimit, setNewLimit] = React.useState<LimitConfig>({

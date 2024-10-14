@@ -40,7 +40,7 @@ export const AllPoliciesListPage: React.FC<{
   showAlertGroup?: boolean;
   paginationLimit?: number;
 }> = ({ activeNamespace, columns, showAlertGroup = false, paginationLimit }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
   return (
     <>
@@ -64,7 +64,7 @@ export const AllPoliciesListPage: React.FC<{
 };
 
 const PoliciesListPage: React.FC<{ resource: Resource; activeNamespace: string }> = ({ resource, activeNamespace }) => {
-  const { t } = useTranslation();
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
 
   return (
@@ -80,7 +80,7 @@ const PoliciesListPage: React.FC<{ resource: Resource; activeNamespace: string }
           <ResourceList resources={[resource.gvk]} namespace={activeNamespace} />
           <div className="kuadrant-resource-create-button pf-u-mt-md">
             <ListPageCreateLink to={`/k8s/ns/${resolvedNamespace}/${resource.gvk.group}~${resource.gvk.version}~${resource.gvk.kind}/~new`}>
-              {t(`plugin__console-plugin-template~Create ${resource.gvk.kind}`)}
+              {t(`plugin__kuadrant-console-plugin~Create ${resource.gvk.kind}`)}
             </ListPageCreateLink>
           </div>
         </div>
@@ -90,7 +90,7 @@ const PoliciesListPage: React.FC<{ resource: Resource; activeNamespace: string }
 };
 
 const KuadrantPoliciesPage: React.FC = () => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const { ns } = useParams<{ ns: string }>();
   const [activeNamespace, setActiveNamespace] = useActiveNamespace();
   const [activePerspective] = useActivePerspective();
@@ -103,29 +103,29 @@ const KuadrantPoliciesPage: React.FC = () => {
 
   const defaultColumns: TableColumn<K8sResourceCommon>[] = [
     {
-      title: t('plugin__console-plugin-template~Name'),
+      title: t('plugin__kuadrant-console-plugin~Name'),
       id: 'name',
       sort: 'metadata.name',
       transforms: [sortable],
     },
     {
-      title: t('plugin__console-plugin-template~Type'),
+      title: t('plugin__kuadrant-console-plugin~Type'),
       id: 'type',
       sort: 'kind',
       transforms: [sortable],
     },
     {
-      title: t('plugin__console-plugin-template~Namespace'),
+      title: t('plugin__kuadrant-console-plugin~Namespace'),
       id: 'namespace',
       sort: 'metadata.namespace',
       transforms: [sortable],
     },
     {
-      title: t('plugin__console-plugin-template~Status'),
+      title: t('plugin__kuadrant-console-plugin~Status'),
       id: 'Status',
     },
     {
-      title: t('plugin__console-plugin-template~Created'),
+      title: t('plugin__kuadrant-console-plugin~Created'),
       id: 'Created',
       sort: 'metadata.creationTimestamp',
       transforms: [sortable],

@@ -9,7 +9,7 @@ const LimitConfigForm: React.FC<{
   rateName: string;
   setRateName: (name: string) => void;
 }> = ({ newLimit, setNewLimit, rateName, setRateName }) => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   return (
     <>
       <FormGroup label={t('Limit Name')} fieldId="limit-name">
@@ -65,7 +65,7 @@ const AddLimitModal: React.FC<{
   setRateName: (name: string) => void;
   handleSave: () => void;
 }> = ({ isOpen, onClose, newLimit, setNewLimit, rateName, setRateName, handleSave }) => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   return (
     <Modal
       isOpen={isOpen}

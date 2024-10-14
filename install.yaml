@@ -1,36 +1,36 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kuadrant-console
+  name: kuadrant-console-plugin
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: kuadrant-console
-  namespace: kuadrant-console
+  name: kuadrant-console-plugin
+  namespace: kuadrant-console-plugin
   labels:
-    app: kuadrant-console
-    app.kubernetes.io/component: kuadrant-console
-    app.kubernetes.io/instance: kuadrant-console
-    app.kubernetes.io/name: kuadrant-console
-    app.kubernetes.io/part-of: kuadrant-console
-    app.openshift.io/runtime-namespace: kuadrant-console
+    app: kuadrant-console-plugin
+    app.kubernetes.io/component: kuadrant-console-plugin
+    app.kubernetes.io/instance: kuadrant-console-plugin
+    app.kubernetes.io/name: kuadrant-console-plugin
+    app.kubernetes.io/part-of: kuadrant-console-plugin
+    app.openshift.io/runtime-namespace: kuadrant-console-plugin
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: kuadrant-console
+      app: kuadrant-console-plugin
   template:
     metadata:
       labels:
-        app: kuadrant-console
-        app.kubernetes.io/component: kuadrant-console
-        app.kubernetes.io/instance: kuadrant-console
-        app.kubernetes.io/name: kuadrant-console
-        app.kubernetes.io/part-of: kuadrant-console
+        app: kuadrant-console-plugin
+        app.kubernetes.io/component: kuadrant-console-plugin
+        app.kubernetes.io/instance: kuadrant-console-plugin
+        app.kubernetes.io/name: kuadrant-console-plugin
+        app.kubernetes.io/part-of: kuadrant-console-plugin
     spec:
       containers:
-      - name: kuadrant-console
+      - name: kuadrant-console-plugin
         image: quay.io/kuadrant/console-plugin:latest
         ports:
         - containerPort: 9443
@@ -70,13 +70,13 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: nginx-conf
-  namespace: kuadrant-console
+  namespace: kuadrant-console-plugin
   labels:
-    app: kuadrant-console
-    app.kubernetes.io/component: kuadrant-console
-    app.kubernetes.io/instance: kuadrant-console
-    app.kubernetes.io/name: kuadrant-console
-    app.kubernetes.io/part-of: kuadrant-console
+    app: kuadrant-console-plugin
+    app.kubernetes.io/component: kuadrant-console-plugin
+    app.kubernetes.io/instance: kuadrant-console-plugin
+    app.kubernetes.io/name: kuadrant-console-plugin
+    app.kubernetes.io/part-of: kuadrant-console-plugin
 data:
   nginx.conf: |
     error_log /dev/stdout;
@@ -111,14 +111,14 @@ kind: Service
 metadata:
   annotations:
     service.alpha.openshift.io/serving-cert-secret-name: plugin-serving-cert
-  name: kuadrant-console
-  namespace: kuadrant-console
+  name: kuadrant-console-plugin
+  namespace: kuadrant-console-plugin
   labels:
-    app: kuadrant-console
-    app.kubernetes.io/component: kuadrant-console
-    app.kubernetes.io/instance: kuadrant-console
-    app.kubernetes.io/name: kuadrant-console
-    app.kubernetes.io/part-of: kuadrant-console
+    app: kuadrant-console-plugin
+    app.kubernetes.io/component: kuadrant-console-plugin
+    app.kubernetes.io/instance: kuadrant-console-plugin
+    app.kubernetes.io/name: kuadrant-console-plugin
+    app.kubernetes.io/part-of: kuadrant-console-plugin
 spec:
   ports:
   - name: 9443-tcp
@@ -126,19 +126,19 @@ spec:
     port: 9443
     targetPort: 9443
   selector:
-    app: kuadrant-console
+    app: kuadrant-console-plugin
   type: ClusterIP
   sessionAffinity: None
 ---
 apiVersion: console.openshift.io/v1alpha1
 kind: ConsolePlugin
 metadata:
-  name: kuadrant-console
+  name: kuadrant-console-plugin
 spec:
   displayName: 'Kuadrant Console Plugin'
   service:
-    name: kuadrant-console
-    namespace: kuadrant-console
+    name: kuadrant-console-plugin
+    namespace: kuadrant-console-plugin
     port: 9443
     basePath: '/'
 
