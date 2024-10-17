@@ -36,6 +36,7 @@ import { Gateway } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate'
 import { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
+import resourceGVKMapping from '../utils/latest';
 
 
 const KuadrantTLSCreatePage: React.FC = () => {
@@ -59,8 +60,8 @@ const KuadrantTLSCreatePage: React.FC = () => {
 
   // Creates TLS policy object to be used for form and yaml creation of the resource
   const createTlsPolicy = () => ({
-    apiVersion: 'kuadrant.io/v1alpha1',
-    kind: 'TLSPolicy',
+    apiVersion: resourceGVKMapping['TLSPolicy'].group + '/' + resourceGVKMapping['TLSPolicy'].version,
+    kind: resourceGVKMapping['TLSPolicy'].kind,
     metadata: {
       name: policyName,
       namespace: selectedNamespace,
@@ -87,7 +88,10 @@ const KuadrantTLSCreatePage: React.FC = () => {
   })
 
   const tlsPolicy = createTlsPolicy();
-  const tlsPolicyGVK = getGroupVersionKindForResource({ apiVersion: 'kuadrant.io/v1alpha1', kind: 'TLSPolicy' });
+  const tlsPolicyGVK = getGroupVersionKindForResource({
+    apiVersion: `${resourceGVKMapping['TLSPolicy'].group}/${resourceGVKMapping['TLSPolicy'].version}`,
+    kind: resourceGVKMapping['TLSPolicy'].kind,
+  });
   const [tlsPolicyModel] = useK8sModel({ group: tlsPolicyGVK.group, version: tlsPolicyGVK.version, kind: tlsPolicyGVK.kind });
 
   // K8sResourceCommon by default does not contain spec etc which is needed for updating resource forms

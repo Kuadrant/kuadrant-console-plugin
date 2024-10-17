@@ -9,6 +9,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
 import { ResourceYAMLEditor, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
+import resourceGVKMapping from '../utils/latest';
 
 const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -17,8 +18,8 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   const [errorModalMsg] = React.useState('');
 
   const rateLimitPolicy = {
-    apiVersion: 'kuadrant.io/v1beta2',
-    kind: 'RateLimitPolicy',
+    apiVersion: resourceGVKMapping['RateLimitPolicy'].group + '/' + resourceGVKMapping['RateLimitPolicy'].version,
+    kind: resourceGVKMapping['RateLimitPolicy'].kind,
     metadata: {
       name: 'example-ratelimitpolicy',
       namespace: selectedNamespace,

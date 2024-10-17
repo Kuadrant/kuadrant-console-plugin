@@ -17,6 +17,7 @@ import { Title } from '@patternfly/react-core';
 import { Alert, AlertGroup } from '@patternfly/react-core';
 import ResourceList from './ResourceList';
 import './kuadrant.css';
+import resourceGVKMapping from '../utils/latest';
 
 interface Resource {
   name: string;
@@ -28,10 +29,10 @@ interface Resource {
 }
 
 export const resources: Resource[] = [
-  { name: 'AuthPolicies', gvk: { group: 'kuadrant.io', version: 'v1beta2', kind: 'AuthPolicy' } },
-  { name: 'DNSPolicies', gvk: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'DNSPolicy' } },
-  { name: 'RateLimitPolicies', gvk: { group: 'kuadrant.io', version: 'v1beta2', kind: 'RateLimitPolicy' } },
-  { name: 'TLSPolicies', gvk: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'TLSPolicy' } },
+  { name: 'AuthPolicies', gvk: resourceGVKMapping['AuthPolicy'] },
+  { name: 'DNSPolicies', gvk: resourceGVKMapping['DNSPolicy'] },
+  { name: 'RateLimitPolicies', gvk: resourceGVKMapping['RateLimitPolicy'] },
+  { name: 'TLSPolicies', gvk: resourceGVKMapping['TLSPolicy'] },
 ];
 
 export const AllPoliciesListPage: React.FC<{
