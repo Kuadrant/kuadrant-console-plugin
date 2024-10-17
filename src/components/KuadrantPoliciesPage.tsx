@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useParams, useHistory } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { sortable } from '@patternfly/react-table';
 import {
@@ -10,11 +11,19 @@ import {
   useActiveNamespace,
   useActivePerspective,
   ListPageCreateLink,
-  ListPageBody
+  ListPageBody,
 } from '@openshift-console/dynamic-plugin-sdk';
 
 import { Title } from '@patternfly/react-core';
-import { Alert, AlertGroup } from '@patternfly/react-core';
+import {
+  Alert,
+  AlertGroup,
+  Dropdown,
+  DropdownItem,
+  DropdownList,
+  MenuToggle,
+  MenuToggleElement,
+} from '@patternfly/react-core';
 import ResourceList from './ResourceList';
 import './kuadrant.css';
 import resourceGVKMapping from '../utils/latest';
@@ -42,6 +51,20 @@ export const AllPoliciesListPage: React.FC<{
   paginationLimit?: number;
 }> = ({ activeNamespace, columns, showAlertGroup = false, paginationLimit }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
+  const history = useHistory();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const onToggleClick = () => {
+    setIsOpen(!isOpen);
+  };
+
+  const onMenuSelect = (_event: React.MouseEvent<Element, MouseEvent>, policyType: string) => {
+    const resource = resourceGVKMapping[policyType];
+    const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
+    const targetUrl = `/k8s/ns/${resolvedNamespace}/${resource.group}~${resource.version}~${resource.kind}/~new`;
+    history.push(targetUrl);
+    setIsOpen(false); // Close the dropdown after selecting an option
+  };
 
   return (
     <>
@@ -53,18 +76,57 @@ export const AllPoliciesListPage: React.FC<{
             </Alert>
           </AlertGroup>
         )}
-        <ResourceList
-          resources={resources.map((r) => r.gvk)}
-          namespace={activeNamespace}
-          columns={columns}
-          paginationLimit={paginationLimit}
-        />
+
+        <div className="co-m-nav-title--row kuadrant-resource-create-container">
+          <ResourceList
+            resources={resources.map((r) => r.gvk)}
+            namespace={activeNamespace}
+            columns={columns}
+            paginationLimit={paginationLimit}
+          />
+
+          <div className="kuadrant-resource-create-button pf-u-mt-md">
+            <Dropdown
+              isOpen={isOpen}
+              onSelect={onMenuSelect}
+              onOpenChange={setIsOpen}
+              toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                <MenuToggle
+                  ref={toggleRef}
+                  onClick={onToggleClick}
+                  isExpanded={isOpen}
+                  variant="primary"
+                >
+                  {t('Create Policy')}
+                </MenuToggle>
+              )}
+            >
+              <DropdownList>
+                <DropdownItem value="AuthPolicy" key="auth-policy">
+                  {t('AuthPolicy')}
+                </DropdownItem>
+                <DropdownItem value="RateLimitPolicy" key="rate-limit-policy">
+                  {t('RateLimitPolicy')}
+                </DropdownItem>
+                <DropdownItem value="DNSPolicy" key="dns-policy">
+                  {t('DNSPolicy')}
+                </DropdownItem>
+                <DropdownItem value="TLSPolicy" key="tls-policy">
+                  {t('TLSPolicy')}
+                </DropdownItem>
+              </DropdownList>
+            </Dropdown>
+          </div>
+        </div>
       </ListPageBody>
     </>
   );
 };
 
-const PoliciesListPage: React.FC<{ resource: Resource; activeNamespace: string }> = ({ resource, activeNamespace }) => {
+const PoliciesListPage: React.FC<{ resource: Resource; activeNamespace: string }> = ({
+  resource,
+  activeNamespace,
+}) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
 
@@ -80,7 +142,9 @@ const PoliciesListPage: React.FC<{ resource: Resource; activeNamespace: string }
         <div className="co-m-nav-title--row kuadrant-resource-create-container">
           <ResourceList resources={[resource.gvk]} namespace={activeNamespace} />
           <div className="kuadrant-resource-create-button pf-u-mt-md">
-            <ListPageCreateLink to={`/k8s/ns/${resolvedNamespace}/${resource.gvk.group}~${resource.gvk.version}~${resource.gvk.kind}/~new`}>
+            <ListPageCreateLink
+              to={`/k8s/ns/${resolvedNamespace}/${resource.gvk.group}~${resource.gvk.version}~${resource.gvk.kind}/~new`}
+            >
               {t(`plugin__kuadrant-console-plugin~Create ${resource.gvk.kind}`)}
             </ListPageCreateLink>
           </div>

@@ -10,7 +10,7 @@ interface LoadBalancingProps {
 }
 
 const LoadBalancingField: React.FC<LoadBalancingProps> = ({ loadBalancing, onChange }) => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
   return (
     <>
