@@ -190,6 +190,7 @@ const CustomNode: React.FC<any> = ({
   onContextMenu,
   contextMenuOpen,
 }) => {
+  const excludedKinds = ['GatewayClass', 'HTTPRouteRule', 'Listener'];
   const data = element.getData();
   const { type, badge, badgeColor } = data;
 
@@ -214,6 +215,9 @@ const CustomNode: React.FC<any> = ({
     case 'GatewayClass':
       IconComponent = CubesIcon;
       break;
+    case 'HttpRouteRule':
+      IconComponent = RouteIcon;
+      break;
     default:
       IconComponent = TopologyIcon;
       break;
@@ -235,8 +239,9 @@ const CustomNode: React.FC<any> = ({
       onSelect={onSelect}
       selected={selected}
       className={isPolicyNode ? 'policy-node' : ''}
-      onContextMenu={onContextMenu}
-      contextMenuOpen={contextMenuOpen}
+      // Disable context menu for excluded kinds
+      onContextMenu={!excludedKinds.includes(type) ? onContextMenu : undefined}
+      contextMenuOpen={!excludedKinds.includes(type) && contextMenuOpen}
     >
       <g transform={`translate(${nodeWidth / 2}, ${paddingTop})`}>
         <foreignObject width={iconSize} height={iconSize} x={-iconSize / 2}>
