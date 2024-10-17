@@ -159,3 +159,7 @@
   display: flex;
   justify-content: flex-start;
 }
+
+.kuadrant-policy-list-body {
+  width: 100%;
+}
