@@ -20,7 +20,7 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
           value={healthCheck.endpoint}
           onChange={(event) => onChange({ ...healthCheck, endpoint: event.currentTarget.value })}
           isRequired
-          placeholder={t("/")}
+          placeholder="/"
         />
       </FormGroup>
       <FormGroup label={t('Failure Threshold')} isRequired fieldId="health-check-failure-threshold">
@@ -31,8 +31,7 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
           onChange={(event) => onChange({ ...healthCheck, failureThreshold: Number(event.currentTarget.value) })}
           isRequired
           min={1}
-          placeholder={t("0")}
-
+          placeholder="0"
         />
       </FormGroup>
       <FormGroup label={t('Port')} isRequired fieldId="health-check-port">
@@ -43,7 +42,7 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
           onChange={(event) => onChange({ ...healthCheck, port: Number(event.currentTarget.value) })}
           isRequired
           min={1}
-          placeholder={t("0")}
+          placeholder="0"
         />
       </FormGroup>
       <FormGroup label={t('Protocol')} isRequired fieldId="health-check-protocol">
@@ -54,7 +53,7 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
           isRequired
           aria-label={t('Select a Protocol')}
         >
-          <FormSelectOption key="placeholder" value="" label={t('Select a protocol')} isDisabled />
+          <FormSelectOption key="placeholder" value="" label={t('Select a Protocol')} isDisabled />
           <FormSelectOption key="HTTP" value="HTTP" label="HTTP" />
           <FormSelectOption key="HTTPS" value="HTTPS" label="HTTPS" />
         </FormSelect>

@@ -10,7 +10,7 @@ interface LoadBalancingProps {
 }
 
 const LoadBalancingField: React.FC<LoadBalancingProps> = ({ loadBalancing, onChange }) => {
-  const { t } = useTranslation('plugin__console-plugin-template');
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
   return (
     <>
@@ -31,7 +31,7 @@ const LoadBalancingField: React.FC<LoadBalancingProps> = ({ loadBalancing, onCha
           }
           isRequired
           type="number"
-          placeholder={t("0")}
+          placeholder="0"
 
         />
         <FormGroup label={t('Geo')} isRequired fieldId="geo">
@@ -45,7 +45,7 @@ const LoadBalancingField: React.FC<LoadBalancingProps> = ({ loadBalancing, onCha
               })
             }
             isRequired
-            placeholder={t("Geo")}
+            placeholder={t("Geography Label (e.g. 'eu')")}
           />
         </FormGroup>
         <FormGroup role="radiogroup" isInline fieldId='default-geo' label={t('Default Geo')} isRequired aria-labelledby="issuer-label">
