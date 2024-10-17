@@ -297,7 +297,7 @@ const goToResource = (resourceType: string, resourceName: string) => {
 const customLayoutFactory = (type: string, graph: any): any => {
   return new DagreLayout(graph, {
     rankdir: 'TB',
-    nodesep: 60,
+    nodesep: 0,
     ranksep: 0,
     nodeDistance: 80,
   });
