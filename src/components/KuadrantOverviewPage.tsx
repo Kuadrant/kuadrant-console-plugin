@@ -35,6 +35,7 @@ import './kuadrant.css';
 import ResourceList from './ResourceList';
 import { sortable } from '@patternfly/react-table';
 import { INTERNAL_LINKS, EXTERNAL_LINKS } from '../constants/links';
+import resourceGVKMapping from '../utils/latest';
 
 const KuadrantOverviewPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -226,10 +227,10 @@ const KuadrantOverviewPage: React.FC = () => {
                 <CardBody className="pf-u-p-0">
                   <ResourceList
                     resources={[
-                      { group: 'kuadrant.io', version: 'v1beta2', kind: 'AuthPolicy' },
-                      { group: 'kuadrant.io', version: 'v1alpha1', kind: 'DNSPolicy' },
-                      { group: 'kuadrant.io', version: 'v1beta2', kind: 'RateLimitPolicy' },
-                      { group: 'kuadrant.io', version: 'v1alpha1', kind: 'TLSPolicy' }
+                      resourceGVKMapping['AuthPolicy'],
+                      resourceGVKMapping['DNSPolicy'],
+                      resourceGVKMapping['RateLimitPolicy'],
+                      resourceGVKMapping['TLSPolicy']
                     ]}
                     columns={columns}
                     namespace='#ALL_NS#'
@@ -247,7 +248,7 @@ const KuadrantOverviewPage: React.FC = () => {
                 <CardBody className="pf-u-p-0">
                   <ResourceList
                     resources={[
-                      { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' },
+                      resourceGVKMapping['Gateway']
                     ]}
                     columns={columns}
                     namespace='#ALL_NS#'
@@ -261,7 +262,7 @@ const KuadrantOverviewPage: React.FC = () => {
                 <CardBody className="pf-u-p-0">
                   <ResourceList
                     resources={[
-                      { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'HTTPRoute' },
+                      resourceGVKMapping['HTTPRoute']
                     ]}
                     columns={columns}
                     namespace='#ALL_NS#'

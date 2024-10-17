@@ -26,6 +26,7 @@ import GatewaySelect from './gateway/GatewaySelect';
 import yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate'
 import { handleCancel } from '../utils/cancel';
+import resourceGVKMapping from '../utils/latest';
 
 
 const KuadrantDNSPolicyCreatePage: React.FC = () => {
@@ -51,8 +52,8 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const createDNSPolicy = () => {
     const hasHealthCheck = healthCheck.endpoint || healthCheck.failureThreshold || healthCheck.port || healthCheck.protocol;
     return {
-      apiVersion: 'kuadrant.io/v1alpha1',
-      kind: 'DNSPolicy',
+      apiVersion: resourceGVKMapping['DNSPolicy'].group + '/' + resourceGVKMapping['DNSPolicy'].version,
+      kind: resourceGVKMapping['DNSPolicy'].kind,
       metadata: {
         name: policyName,
         namespace: selectedNamespace,
@@ -86,8 +87,11 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
 
   const [yamlInput, setYamlInput] = React.useState(createDNSPolicy)
   const dnsPolicy = createDNSPolicy();
-  const dnsPolicyGVK = getGroupVersionKindForResource({ apiVersion: 'kuadrant.io/v1alpha1', kind: 'DNSPolicy' });
-  const [dnsPolicyModel] = useK8sModel({ group: dnsPolicyGVK.group, version: dnsPolicyGVK.version, kind: dnsPolicyGVK.kind });
+  const dnsPolicyGVK = getGroupVersionKindForResource({
+    apiVersion: `${resourceGVKMapping['DNSPolicy'].group}/${resourceGVKMapping['DNSPolicy'].version}`,
+    kind: resourceGVKMapping['DNSPolicy'].kind,
+  });
+    const [dnsPolicyModel] = useK8sModel({ group: dnsPolicyGVK.group, version: dnsPolicyGVK.version, kind: dnsPolicyGVK.kind });
 
   const history = useHistory();
 

@@ -39,6 +39,7 @@ import {
 import { CubesIcon, CloudUploadAltIcon, TopologyIcon, RouteIcon } from '@patternfly/react-icons';
 import * as dot from 'graphlib-dot';
 import './kuadrant.css';
+import resourceGVKMapping from '../utils/latest';
 
 // Fetch the config.js file dynamically at runtime
 // Normally served from <cluster-host>/api/plugins/kuadrant-console/config.js
@@ -76,19 +77,6 @@ export const kindToAbbr = (kind: string) => {
   return (kind.replace(/[^A-Z]/g, '') || kind.toUpperCase()).slice(0, 4);
 };
 
-// TODO: need a generic way to fetch latest versions of resources based on kind + group
-const resourceGVKMapping: { [key: string]: { group: string; version: string; kind: string } } = {
-  Gateway: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' },
-  HTTPRoute: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'HTTPRoute' },
-  TLSPolicy: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'TLSPolicy' },
-  DNSPolicy: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'DNSPolicy' },
-  AuthPolicy: { group: 'kuadrant.io', version: 'v1beta2', kind: 'AuthPolicy' },
-  RateLimitPolicy: { group: 'kuadrant.io', version: 'v1beta2', kind: 'RateLimitPolicy' },
-  ConfigMap: { group: '', version: 'v1', kind: 'ConfigMap' },
-  Listener: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Listener' },
-  GatewayClass: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'GatewayClass' },
-};
-
 // Convert DOT graph to PatternFly node/edge models
 const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
   try {
@@ -112,6 +100,18 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
 
     const connectedNodeIds = new Set<string>();
 
+    // Excluded resource kinds
+    const excludedKinds = ['Issuer', 'ClusterIssuer', 'WasmPlugin'];
+
+    // Define separate groups
+    const unassociatedPolicies = new Set<string>([
+      'TLSPolicy',
+      'DNSPolicy',
+      'AuthPolicy',
+      'RateLimitPolicy',
+    ]);
+    const kuadrantInternals = new Set<string>(['ConfigMap', 'WasmPlugin']);
+
     graph.edges().forEach((edge) => {
       const sourceNode = graph.node(edge.v);
       const targetNode = graph.node(edge.w);
@@ -121,9 +121,7 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       connectedNodeIds.add(edge.v);
       connectedNodeIds.add(edge.w);
 
-      const isPolicy = ['TLSPolicy', 'DNSPolicy', 'AuthPolicy', 'RateLimitPolicy'].includes(
-        sourceNode.type,
-      );
+      const isPolicy = unassociatedPolicies.has(sourceNode.type);
 
       edges.push({
         id: `edge-${edge.v}-${edge.w}`,
@@ -143,6 +141,9 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       const nodeData = graph.node(nodeId);
       const [resourceType, resourceName] = nodeData.label.split('\\n');
 
+      // Exclude Issuer and ClusterIssuer resources
+      if (excludedKinds.includes(resourceType)) return;
+
       nodes.push({
         id: nodeId,
         type: 'node',
@@ -161,14 +162,34 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       });
     });
 
-    const unconnectedNodes = nodes.filter((node) => !connectedNodeIds.has(node.id));
-    if (unconnectedNodes.length > 0) {
+    // Group unconnected resources
+    const unassociatedPolicyNodes = nodes.filter(
+      (node) => !connectedNodeIds.has(node.id) && unassociatedPolicies.has(node.resourceType),
+    );
+    if (unassociatedPolicyNodes.length > 0) {
       groups.push({
-        id: 'group-unconnected',
-        children: unconnectedNodes.map((node) => node.id),
+        id: 'group-unattached',
+        children: unassociatedPolicyNodes.map((node) => node.id),
         type: 'group',
         group: true,
-        label: 'Unassociated Policies and Resources',
+        label: 'Unattached Policies',
+        style: {
+          padding: 40,
+        },
+      });
+    }
+
+    // Group Kuadrant Internals (ConfigMap)
+    const kuadrantInternalNodes = nodes.filter(
+      (node) => !connectedNodeIds.has(node.id) && kuadrantInternals.has(node.resourceType),
+    );
+    if (kuadrantInternalNodes.length > 0) {
+      groups.push({
+        id: 'group-kuadrant-internals',
+        children: kuadrantInternalNodes.map((node) => node.id),
+        type: 'group',
+        group: true,
+        label: 'Kuadrant Internals',
         style: {
           padding: 40,
         },
@@ -190,6 +211,7 @@ const CustomNode: React.FC<any> = ({
   onContextMenu,
   contextMenuOpen,
 }) => {
+  const excludedKinds = ['GatewayClass', 'HTTPRouteRule', 'Listener'];
   const data = element.getData();
   const { type, badge, badgeColor } = data;
 
@@ -214,6 +236,9 @@ const CustomNode: React.FC<any> = ({
     case 'GatewayClass':
       IconComponent = CubesIcon;
       break;
+    case 'HttpRouteRule':
+      IconComponent = RouteIcon;
+      break;
     default:
       IconComponent = TopologyIcon;
       break;
@@ -235,8 +260,9 @@ const CustomNode: React.FC<any> = ({
       onSelect={onSelect}
       selected={selected}
       className={isPolicyNode ? 'policy-node' : ''}
-      onContextMenu={onContextMenu}
-      contextMenuOpen={contextMenuOpen}
+      // Disable context menu for excluded kinds
+      onContextMenu={!excludedKinds.includes(type) ? onContextMenu : undefined}
+      contextMenuOpen={!excludedKinds.includes(type) && contextMenuOpen}
     >
       <g transform={`translate(${nodeWidth / 2}, ${paddingTop})`}>
         <foreignObject width={iconSize} height={iconSize} x={-iconSize / 2}>
@@ -292,7 +318,7 @@ const goToResource = (resourceType: string, resourceName: string) => {
 const customLayoutFactory = (type: string, graph: any): any => {
   return new DagreLayout(graph, {
     rankdir: 'TB',
-    nodesep: 60,
+    nodesep: 0,
     ranksep: 0,
     nodeDistance: 80,
   });

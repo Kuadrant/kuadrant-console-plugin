@@ -22,11 +22,46 @@
     }
   },
   {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/policy-topology",
+      "component": { "$codeRef": "PolicyTopologyPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/ns/:ns/tlspolicy/name/:name/edit",
+      "component": { "$codeRef": "KuadrantTLSCreatePage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/ns/:ns/dnspolicy/name/:name/edit",
+      "component": { "$codeRef": "KuadrantDNSPolicyCreatePage" }
+    }
+  },
+  {
     "type": "console.resource/create",
     "properties": {
       "model": {
         "group": "kuadrant.io",
         "version": "v1alpha1",
+        "kind": "DNSPolicy"
+      },
+      "component": { "$codeRef": "KuadrantDNSPolicyCreatePage" }
+    }
+  },
+  {
+    "type": "console.resource/create",
+    "properties": {
+      "model": {
+        "group": "kuadrant.io",
+        "version": "v1",
         "kind": "DNSPolicy"
       },
       "component": { "$codeRef": "KuadrantDNSPolicyCreatePage" }
@@ -44,11 +79,14 @@
     }
   },
   {
-    "type": "console.page/route",
+    "type": "console.resource/create",
     "properties": {
-      "exact": true,
-      "path": "/kuadrant/policy-topology",
-      "component": { "$codeRef": "PolicyTopologyPage" }
+      "model": {
+        "group": "kuadrant.io",
+        "version": "v1",
+        "kind": "RateLimitPolicy"
+      },
+      "component": { "$codeRef": "KuadrantRateLimitPolicyCreatePage" }
     }
   },
   {
@@ -63,19 +101,36 @@
     }
   },
   {
-    "type": "console.page/route",
+    "type": "console.resource/create",
     "properties": {
-      "exact": true,
-      "path": "/k8s/ns/:ns/tlspolicy/name/:name/edit",
+      "model": {
+        "group": "kuadrant.io",
+        "version": "v1",
+        "kind": "TLSPolicy"
+      },
       "component": { "$codeRef": "KuadrantTLSCreatePage" }
     }
   },
   {
-    "type": "console.page/route",
+    "type": "console.resource/create",
     "properties": {
-      "exact": true,
-      "path": "/k8s/ns/:ns/dnspolicy/name/:name/edit",
-      "component": { "$codeRef": "KuadrantDNSPolicyCreatePage" }
+      "model": {
+        "group": "kuadrant.io",
+        "version": "v1beta2",
+        "kind": "AuthPolicy"
+      },
+      "component": { "$codeRef": "KuadrantAuthPolicyCreatePage" }
+    }
+  },
+  {
+    "type": "console.resource/create",
+    "properties": {
+      "model": {
+        "group": "kuadrant.io",
+        "version": "v1",
+        "kind": "AuthPolicy"
+      },
+      "component": { "$codeRef": "KuadrantAuthPolicyCreatePage" }
     }
   },
   {
@@ -154,17 +209,6 @@
       "perspective": "dev",
       "section": "kuadrant-section-dev",
       "badge": "dev"
-    }
-  },
-  {
-    "type": "console.resource/create",
-    "properties": {
-      "model": {
-        "group": "kuadrant.io",
-        "version": "v1beta2",
-        "kind": "AuthPolicy"
-      },
-      "component": { "$codeRef": "KuadrantAuthPolicyCreatePage" }
     }
   }
 ]

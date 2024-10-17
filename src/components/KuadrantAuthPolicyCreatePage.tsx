@@ -3,14 +3,15 @@ import Helmet from 'react-helmet';
 import { Button, Modal, ModalBox, ModalBoxHeader, ModalBoxBody, ModalBoxFooter, ButtonVariant } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import { ResourceYAMLEditor, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
+import resourceGVKMapping from '../utils/latest';
 
 const KuadrantAuthPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [selectedNamespace] = useActiveNamespace();
 
   const yamlResource = {
-    apiVersion: 'kuadrant.io/v1beta2',
-    kind: 'AuthPolicy',
+    apiVersion: resourceGVKMapping['AuthPolicy'].group + '/' + resourceGVKMapping['AuthPolicy'].version,
+    kind: resourceGVKMapping['AuthPolicy'].kind,
     metadata: {
       name: 'example-authpolicy',
       namespace: selectedNamespace,

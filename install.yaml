@@ -130,7 +130,7 @@ spec:
   type: ClusterIP
   sessionAffinity: None
 ---
-apiVersion: console.openshift.io/v1alpha1
+apiVersion: console.openshift.io/v1
 kind: ConsolePlugin
 metadata:
   name: kuadrant-console-plugin
