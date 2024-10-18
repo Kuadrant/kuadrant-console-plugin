@@ -1,4 +1,4 @@
 export interface HTTPRoute {
-    name: string,
-    namespace: string
+  name: string;
+  namespace: string;
 }

@@ -38,20 +38,22 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
     }
   };
 
-  let policyType = obj.kind.toLowerCase();
+  const policyType = obj.kind.toLowerCase();
 
   const onEditClick = () => {
     if (obj.kind === 'AuthPolicy' || obj.kind === 'RateLimitPolicy') {
       history.push({
-        pathname: `/k8s/ns/${obj.metadata.namespace}/${obj.apiVersion.replace("/", "~")}~${obj.kind}/${obj.metadata.name}/yaml`,
-      })
+        pathname: `/k8s/ns/${obj.metadata.namespace}/${obj.apiVersion.replace('/', '~')}~${
+          obj.kind
+        }/${obj.metadata.name}/yaml`,
+      });
     } else {
       history.push({
         pathname: `/k8s/ns/${obj.metadata.namespace}/${policyType}/name/${obj.metadata.name}/edit`,
-      })
+      });
     }
-  }
-  
+  };
+
   const onDeleteClick = () => {
     setIsDeleteModalOpen(true);
   };

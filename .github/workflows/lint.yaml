@@ -1,9 +1,9 @@
 name: Lint Check
 
 on:
-  # pull_request:
-  #   branches:
-  #     - '**'
+  pull_request:
+    branches:
+      - '**'
   workflow_dispatch:
 
 jobs:
