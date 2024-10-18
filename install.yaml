@@ -136,9 +136,10 @@ metadata:
   name: kuadrant-console-plugin
 spec:
   displayName: 'Kuadrant Console Plugin'
-  service:
-    name: kuadrant-console-plugin
-    namespace: kuadrant-console-plugin
-    port: 9443
-    basePath: '/'
-
+  backend:
+    type: Service
+    service:
+      name: kuadrant-console-plugin
+      namespace: kuadrant-console-plugin
+      port: 9443
+      basePath: '/'
