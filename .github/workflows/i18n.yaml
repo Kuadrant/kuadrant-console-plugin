@@ -1,0 +1,35 @@
+name: I18n Check
+
+on:
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+jobs:
+  i18n:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Run i18n generation
+        run: yarn i18n
+
+      - name: Check for changes
+        run: |
+          if [[ $(git status --porcelain) ]]; then
+            echo "i18n generation caused changes, failing the build."
+            exit 1
+          else
+            echo "No changes detected."
+          fi
