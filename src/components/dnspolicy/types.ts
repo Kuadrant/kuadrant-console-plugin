@@ -1,7 +1,3 @@
-
-
-
-
 export interface LoadBalancing {
   geo: string;
   weight: number;

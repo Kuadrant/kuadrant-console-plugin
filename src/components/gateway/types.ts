@@ -1,4 +1,4 @@
 export interface Gateway {
-    name: string,
-    namespace: string
+  name: string;
+  namespace: string;
 }

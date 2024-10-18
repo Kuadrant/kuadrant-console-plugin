@@ -17,7 +17,7 @@ export interface RateLimitPolicy {
       };
     };
     targetRef: TargetRef;
-  }
+  };
 }
 
 export interface LimitConfig {
@@ -34,7 +34,7 @@ export interface ContextSelector {
 
 export interface Rate {
   duration: number; // Time period for the rate limit
-  limit: number;    // Max value allowed in the time period
+  limit: number; // Max value allowed in the time period
   unit: 'second' | 'minute' | 'hour' | 'day'; // Time unit for the limit
 }
 
@@ -56,7 +56,16 @@ export interface HTTPHeaderMatch {
   type?: 'Exact' | 'RegularExpression'; // How to match the header value
 }
 
-export type HTTPMethod = 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'CONNECT' | 'OPTIONS' | 'TRACE' | 'PATCH';
+export type HTTPMethod =
+  | 'GET'
+  | 'HEAD'
+  | 'POST'
+  | 'PUT'
+  | 'DELETE'
+  | 'CONNECT'
+  | 'OPTIONS'
+  | 'TRACE'
+  | 'PATCH';
 
 export interface HTTPPathMatch {
   type: 'Exact' | 'PathPrefix' | 'RegularExpression'; // How to match the path

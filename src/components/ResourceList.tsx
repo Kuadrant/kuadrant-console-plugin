@@ -169,6 +169,7 @@ type ResourceListProps = {
     kind: string;
   }>;
   namespace?: string;
+  emtpyResourceName?: string;
   paginationLimit?: number;
   columns?: TableColumn<K8sResourceCommon>[];
 };
@@ -178,6 +179,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   namespace = '#ALL_NS#',
   paginationLimit = 10,
   columns,
+  emtpyResourceName = 'Policies',
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
@@ -357,12 +359,10 @@ const ResourceList: React.FC<ResourceListProps> = ({
             <EmptyState>
               <EmptyStateIcon icon={SearchIcon} />
               <Title headingLevel="h4" size="lg">
-                {t('plugin__kuadrant-console-plugin~No policies found')}
+                {t('No')} {emtpyResourceName} {t('found')}
               </Title>
               <EmptyStateBody>
-                {t(
-                  'plugin__kuadrant-console-plugin~There are no policies to display - please create some.',
-                )}
+                {t('There are no')} {emtpyResourceName} {t('to display - please create some.')}
               </EmptyStateBody>
             </EmptyState>
           ) : (

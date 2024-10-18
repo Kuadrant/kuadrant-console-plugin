@@ -1,11 +1,18 @@
 import { ResourceLink, useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
-import { FormGroup, FormHelperText, FormSelect, FormSelectOption, HelperText, HelperTextItem } from '@patternfly/react-core';
+import {
+  FormGroup,
+  FormHelperText,
+  FormSelect,
+  FormSelectOption,
+  HelperText,
+  HelperTextItem,
+} from '@patternfly/react-core';
 import * as React from 'react';
 import { HTTPRoute } from './types'; // You will need to define this type similarly to Gateway.
 import { useTranslation } from 'react-i18next';
 
 interface HTTPRouteSelectProps {
-  selectedHTTPRoute: HTTPRoute,
+  selectedHTTPRoute: HTTPRoute;
   onChange: (updated: HTTPRoute) => void;
 }
 
@@ -16,17 +23,19 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({ selectedHTTPRoute, on
 
   const httpRouteResource = {
     groupVersionKind: gvk,
-    isList: true
+    isList: true,
   };
 
   const [httpRouteData, httpRouteLoaded, httpRouteError] = useK8sWatchResource(httpRouteResource);
 
   React.useEffect(() => {
     if (httpRouteLoaded && !httpRouteError && Array.isArray(httpRouteData)) {
-      setHTTPRoutes(httpRouteData.map((httpRoute) => ({
-        name: httpRoute.metadata.name,
-        namespace: httpRoute.metadata.namespace,
-      })));
+      setHTTPRoutes(
+        httpRouteData.map((httpRoute) => ({
+          name: httpRoute.metadata.name,
+          namespace: httpRoute.metadata.namespace,
+        })),
+      );
     }
   }, [httpRouteData, httpRouteLoaded, httpRouteError]);
 
@@ -44,7 +53,12 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({ selectedHTTPRoute, on
           onChange={handleHTTPRouteChange}
           aria-label={t('Select HTTPRoute')}
         >
-          <FormSelectOption key="placeholder" value="" label={t('Select an HTTPRoute')} isPlaceholder />
+          <FormSelectOption
+            key="placeholder"
+            value=""
+            label={t('Select an HTTPRoute')}
+            isPlaceholder
+          />
           {httpRoutes.map((httpRoute, index) => (
             <FormSelectOption
               key={index}
@@ -55,13 +69,15 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({ selectedHTTPRoute, on
         </FormSelect>
         <FormHelperText>
           <HelperText>
-            <HelperTextItem>{t('You can view and create HTTPRoutes')} <ResourceLink
-              groupVersionKind={gvk}
-              title="Create an HTTPRoute"
-              hideIcon={true}
-              inline={true}
-              displayName="here"
-            />
+            <HelperTextItem>
+              {t('You can view and create HTTPRoutes')}{' '}
+              <ResourceLink
+                groupVersionKind={gvk}
+                title="Create an HTTPRoute"
+                hideIcon={true}
+                inline={true}
+                displayName="here"
+              />
             </HelperTextItem>
           </HelperText>
         </FormHelperText>

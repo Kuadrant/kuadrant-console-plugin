@@ -1,6 +1,13 @@
 import * as React from 'react';
 
-import {  FormGroup, TextInput, FormHelperText, HelperText, HelperTextItem, Radio } from '@patternfly/react-core';
+import {
+  FormGroup,
+  TextInput,
+  FormHelperText,
+  HelperText,
+  HelperTextItem,
+  Radio,
+} from '@patternfly/react-core';
 import { LoadBalancing } from './types';
 import { useTranslation } from 'react-i18next';
 
@@ -32,7 +39,6 @@ const LoadBalancingField: React.FC<LoadBalancingProps> = ({ loadBalancing, onCha
           isRequired
           type="number"
           placeholder="0"
-
         />
         <FormGroup label={t('Geo')} isRequired fieldId="geo">
           <TextInput
@@ -48,11 +54,18 @@ const LoadBalancingField: React.FC<LoadBalancingProps> = ({ loadBalancing, onCha
             placeholder={t("Geography Label (e.g. 'eu')")}
           />
         </FormGroup>
-        <FormGroup role="radiogroup" isInline fieldId='default-geo' label={t('Default Geo')} isRequired aria-labelledby="issuer-label">
+        <FormGroup
+          role="radiogroup"
+          isInline
+          fieldId="default-geo"
+          label={t('Default Geo')}
+          isRequired
+          aria-labelledby="issuer-label"
+        >
           <Radio
-            label={t("Enabled")}
+            label={t('Enabled')}
             isChecked={loadBalancing.defaultGeo === true}
-            onChange={(event) =>
+            onChange={() =>
               onChange({
                 ...loadBalancing,
                 defaultGeo: true,
@@ -62,9 +75,9 @@ const LoadBalancingField: React.FC<LoadBalancingProps> = ({ loadBalancing, onCha
             name="default-geo"
           />
           <Radio
-            label={t("Disabled")}
+            label={t('Disabled')}
             isChecked={loadBalancing.defaultGeo === false}
-            onChange={(event) =>
+            onChange={() =>
               onChange({
                 ...loadBalancing,
                 defaultGeo: false,
@@ -75,7 +88,6 @@ const LoadBalancingField: React.FC<LoadBalancingProps> = ({ loadBalancing, onCha
           />
         </FormGroup>
       </FormGroup>
-
     </>
   );
 };

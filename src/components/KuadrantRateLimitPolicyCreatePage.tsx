@@ -3,7 +3,11 @@ import Helmet from 'react-helmet';
 import {
   Button,
   ButtonVariant,
-  Modal, ModalBox, ModalBoxHeader, ModalBoxBody, ModalBoxFooter
+  Modal,
+  ModalBox,
+  ModalBoxHeader,
+  ModalBoxBody,
+  ModalBoxFooter,
 } from '@patternfly/react-core';
 
 import { useTranslation } from 'react-i18next';
@@ -18,7 +22,10 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   const [errorModalMsg] = React.useState('');
 
   const rateLimitPolicy = {
-    apiVersion: resourceGVKMapping['RateLimitPolicy'].group + '/' + resourceGVKMapping['RateLimitPolicy'].version,
+    apiVersion:
+      resourceGVKMapping['RateLimitPolicy'].group +
+      '/' +
+      resourceGVKMapping['RateLimitPolicy'].version,
     kind: resourceGVKMapping['RateLimitPolicy'].kind,
     metadata: {
       name: 'example-ratelimitpolicy',
@@ -31,7 +38,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
         name: 'prod-web',
       },
       limits: {
-        "toystore-api-per-username": {
+        'toystore-api-per-username': {
           rates: [
             {
               limit: 100,
@@ -42,14 +49,13 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
               limit: 1000,
               duration: 1,
               unit: 'minute',
-            }
+            },
           ],
           counters: ['auth.identity.username'],
         },
-
       },
     },
-  }
+  };
 
   return (
     <>
@@ -57,19 +63,23 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
         <title data-test="example-page-title">{t('Create RateLimit Policy')}</title>
       </Helmet>
 
-      <ResourceYAMLEditor initialResource={rateLimitPolicy} header="Create RateLimit Policy" create />
-      <Modal
-        isOpen={isErrorModalOpen}
-        onClose={() => setIsErrorModalOpen(false)}
-        variant="medium"
-      >
+      <ResourceYAMLEditor
+        initialResource={rateLimitPolicy}
+        header="Create RateLimit Policy"
+        create
+      />
+      <Modal isOpen={isErrorModalOpen} onClose={() => setIsErrorModalOpen(false)} variant="medium">
         <ModalBox aria-labelledby="error-modal-title" aria-describedby="error-modal-description">
           <ModalBoxHeader>{t('Error creating Rate Limit Policy')}</ModalBoxHeader>
           <ModalBoxBody id="error-modal-description">
             <b>{errorModalMsg}</b>
           </ModalBoxBody>
           <ModalBoxFooter>
-            <Button key="ok" variant={ButtonVariant.link} onClick={() => setIsErrorModalOpen(false)}>
+            <Button
+              key="ok"
+              variant={ButtonVariant.link}
+              onClick={() => setIsErrorModalOpen(false)}
+            >
               OK
             </Button>
           </ModalBoxFooter>

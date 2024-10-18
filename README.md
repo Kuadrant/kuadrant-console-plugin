@@ -146,6 +146,21 @@ best practice is to prefix your CSS classnames with your plugin name to avoid
 conflicts. Please don't disable these rules without understanding how they can
 break console styles!
 
+### Linting Extensions
+
+If you'd like to auto lint, install these VSCode extensions and configure formatting on save:
+
+- [Prettier](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode)
+- [Stylelint](https://marketplace.visualstudio.com/items?itemName=stylelint.vscode-stylelint)
+
+#### Format on save in VSCode:
+
+Update `settings.json` (File > Preferences > Settings):
+
+```json
+"editor.formatOnSave": true
+```
+
 ## References
 
 - [Console Plugin SDK README](https://github.com/openshift/console/tree/master/frontend/packages/console-dynamic-plugin-sdk)

@@ -101,7 +101,14 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
     const connectedNodeIds = new Set<string>();
 
     // Excluded resource kinds
-    const excludedKinds = ['Issuer', 'ClusterIssuer', 'WasmPlugin'];
+    const excludedKinds = [
+      'Issuer',
+      'ClusterIssuer',
+      'Certificate',
+      'WasmPlugin',
+      'AuthorizationPolicy',
+      'EnvoyFilter',
+    ];
 
     // Define separate groups
     const unassociatedPolicies = new Set<string>([
@@ -110,7 +117,7 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       'AuthPolicy',
       'RateLimitPolicy',
     ]);
-    const kuadrantInternals = new Set<string>(['ConfigMap', 'WasmPlugin']);
+    const kuadrantInternals = new Set<string>(['ConfigMap']);
 
     graph.edges().forEach((edge) => {
       const sourceNode = graph.node(edge.v);

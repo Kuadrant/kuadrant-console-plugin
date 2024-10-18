@@ -1,4 +1,4 @@
-name: Lint Check
+name: I18n Check
 
 on:
   pull_request:
@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  lint:
+  i18n:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,13 +22,13 @@ jobs:
       - name: Install dependencies
         run: yarn install
 
-      - name: Run lint
-        run: yarn lint
+      - name: Run i18n generation
+        run: yarn i18n
 
       - name: Check for changes
         run: |
           if [[ $(git status --porcelain) ]]; then
-            echo "Linting caused changes, failing the build."
+            echo "i18n generation caused changes, failing the build."
             exit 1
           else
             echo "No changes detected."

@@ -16,7 +16,7 @@ rules:
   # reserved by PatternFly and OpenShift console.
   selector-disallowed-list:
     - "*"
-    - /\.(pf|co)-/
+    - "/^\\.pf-(?!theme)(?!.* )/"  # Disallow naked .pf- classes but allow .pf-theme and combined .pf- classes
   # Plugins should avoid naked element selectors like `table` and `li` since
   # this can impact layout of existing pages in console.
   selector-max-type:

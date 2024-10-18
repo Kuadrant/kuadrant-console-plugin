@@ -1,7 +1,7 @@
 import * as React from 'react';
 
-import { FormGroup, TextInput, FormSelect, FormSelectOption } from "@patternfly/react-core";
-import { HealthCheck } from "./types";
+import { FormGroup, TextInput, FormSelect, FormSelectOption } from '@patternfly/react-core';
+import { HealthCheck } from './types';
 import { useTranslation } from 'react-i18next';
 
 interface HealthCheckProps {
@@ -28,7 +28,9 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
           id="health-check-failure-threshold"
           type="number"
           value={healthCheck.failureThreshold}
-          onChange={(event) => onChange({ ...healthCheck, failureThreshold: Number(event.currentTarget.value) })}
+          onChange={(event) =>
+            onChange({ ...healthCheck, failureThreshold: Number(event.currentTarget.value) })
+          }
           isRequired
           min={1}
           placeholder="0"
@@ -39,7 +41,9 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
           id="health-check-port"
           type="number"
           value={healthCheck.port}
-          onChange={(event) => onChange({ ...healthCheck, port: Number(event.currentTarget.value) })}
+          onChange={(event) =>
+            onChange({ ...healthCheck, port: Number(event.currentTarget.value) })
+          }
           isRequired
           min={1}
           placeholder="0"
@@ -49,7 +53,9 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
         <FormSelect
           id="health-check-protocol"
           value={healthCheck.protocol}
-          onChange={(event) => onChange({ ...healthCheck, protocol: event.currentTarget.value as 'HTTP' | 'HTTPS' })}
+          onChange={(event) =>
+            onChange({ ...healthCheck, protocol: event.currentTarget.value as 'HTTP' | 'HTTPS' })
+          }
           isRequired
           aria-label={t('Select a Protocol')}
         >
@@ -59,7 +65,7 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
         </FormSelect>
       </FormGroup>
     </>
-  )
+  );
 };
 
 export default HealthCheckField;

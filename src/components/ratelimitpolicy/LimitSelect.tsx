@@ -1,8 +1,8 @@
-import { FormGroup, Title, Button, Modal, Label, LabelGroup } from "@patternfly/react-core";
-import * as React from "react";
-import AddLimitModal from "./AddLimitModal";
-import { LimitConfig } from "./types";
-import { useTranslation } from "react-i18next";
+import { FormGroup, Title, Button, Modal, Label, LabelGroup } from '@patternfly/react-core';
+import * as React from 'react';
+import AddLimitModal from './AddLimitModal';
+import { LimitConfig } from './types';
+import { useTranslation } from 'react-i18next';
 
 interface LimitSelectProps {
   limits: Record<string, LimitConfig>;
@@ -14,7 +14,7 @@ const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
   const [isAddLimitModalOpen, setIsAddLimitModalOpen] = React.useState(false);
   const [isLimitNameAlertModalOpen, setIsLimitNameAlertModalOpen] = React.useState(false);
   const [newLimit, setNewLimit] = React.useState<LimitConfig>({
-    rates: [{ duration: 60, limit: 100, unit: 'minute' }]
+    rates: [{ duration: 60, limit: 100, unit: 'minute' }],
   });
   const [rateName, setRateName] = React.useState<string>('');
 
@@ -51,16 +51,15 @@ const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
   return (
     <>
       <FormGroup>
-        <Title headingLevel="h2" size="lg" className="kuadrant-limits-header">{t('Configured Limits')}</Title>
+        <Title headingLevel="h2" size="lg" className="kuadrant-limits-header">
+          {t('Configured Limits')}
+        </Title>
         <LabelGroup numLabels={5}>
           {Object.keys(limits).length > 0 ? (
             Object.entries(limits).map(([name, limitConfig], index) => (
-              <Label
-                key={index}
-                color="blue"
-                onClose={() => handleRemoveLimit(name)}
-              >
-                <strong>{name}</strong>: {limitConfig.rates?.[0]?.limit} requests per {limitConfig.rates?.[0]?.duration} {limitConfig.rates?.[0]?.unit}(s)
+              <Label key={index} color="blue" onClose={() => handleRemoveLimit(name)}>
+                <strong>{name}</strong>: {limitConfig.rates?.[0]?.limit} requests per{' '}
+                {limitConfig.rates?.[0]?.duration} {limitConfig.rates?.[0]?.unit}(s)
               </Label>
             ))
           ) : (
