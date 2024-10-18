@@ -1,7 +1,16 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { sortable } from '@patternfly/react-table';
-import { Alert, AlertGroup, Pagination, Label } from '@patternfly/react-core';
+import {
+  Alert,
+  AlertGroup,
+  Pagination,
+  Label,
+  EmptyState,
+  EmptyStateIcon,
+  EmptyStateBody,
+  Title,
+} from '@patternfly/react-core';
 import {
   K8sResourceCommon,
   ResourceLink,
@@ -16,6 +25,7 @@ import {
   ListPageBody,
   ListPageFilter,
 } from '@openshift-console/dynamic-plugin-sdk';
+import { SearchIcon } from '@patternfly/react-icons';
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
@@ -343,29 +353,46 @@ const ResourceList: React.FC<ResourceListProps> = ({
       <div className="kuadrant-policy-list-body">
         <ListPageBody>
           <ListPageFilter data={data} loaded={allLoaded} onFilterChange={onFilterChange} />
-          <VirtualizedTable<K8sResourceCommon>
-            data={paginatedData}
-            unfilteredData={data}
-            loaded={allLoaded}
-            loadError={combinedLoadError}
-            columns={usedColumns}
-            Row={ResourceRow}
-          />
-          <div className="kuadrant-pagination-left">
-            <Pagination
-              itemCount={filteredData.length}
-              perPage={perPage}
-              page={currentPage}
-              onSetPage={onSetPage}
-              onPerPageSelect={onPerPageSelect}
-              variant="bottom"
-              perPageOptions={[
-                { title: '5', value: 5 },
-                { title: '10', value: 10 },
-                { title: '20', value: 20 },
-              ]}
+          {paginatedData.length === 0 && allLoaded ? (
+            <EmptyState>
+              <EmptyStateIcon icon={SearchIcon} />
+              <Title headingLevel="h4" size="lg">
+                {t('plugin__kuadrant-console-plugin~No policies found')}
+              </Title>
+              <EmptyStateBody>
+                {t(
+                  'plugin__kuadrant-console-plugin~There are no policies to display - please create some.',
+                )}
+              </EmptyStateBody>
+            </EmptyState>
+          ) : (
+            <VirtualizedTable<K8sResourceCommon>
+              data={paginatedData}
+              unfilteredData={data}
+              loaded={allLoaded}
+              loadError={combinedLoadError}
+              columns={usedColumns}
+              Row={ResourceRow}
             />
-          </div>
+          )}
+
+          {paginatedData.length > 0 && (
+            <div className="kuadrant-pagination-left">
+              <Pagination
+                itemCount={filteredData.length}
+                perPage={perPage}
+                page={currentPage}
+                onSetPage={onSetPage}
+                onPerPageSelect={onPerPageSelect}
+                variant="bottom"
+                perPageOptions={[
+                  { title: '5', value: 5 },
+                  { title: '10', value: 10 },
+                  { title: '20', value: 20 },
+                ]}
+              />
+            </div>
+          )}
         </ListPageBody>
       </div>
     </>
