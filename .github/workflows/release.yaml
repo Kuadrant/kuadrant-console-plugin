@@ -30,7 +30,7 @@ jobs:
         with:
           image: quay.io/kuadrant/console-plugin
           tags: |
-            ${{ github.event.release.tag_name }}
+            ${{ github.event.release.name }}
           containerfiles: |
             ./Dockerfile
 
