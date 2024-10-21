@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
+      - name: Debug release name
+        run: echo "Versioned image pushed to ${{ github.event.release.name }}"
+        
       - name: Log in to Quay.io
         uses: redhat-actions/podman-login@v1
         with:
