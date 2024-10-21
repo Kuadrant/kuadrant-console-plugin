@@ -40,8 +40,9 @@ jobs:
         with:
           registry: quay.io
           image: kuadrant/console-plugin
+          # Use release name for quay tag, rather than tag_name (so we can do RCs/pre-releases)
           tags: |
-            ${{ github.event.release.tag_name }}
+            ${{ github.event.release.name }}
 
       - name: Print image URL for Release
         run: echo "Versioned image pushed to ${{ steps.push-release-to-quay.outputs.registry-paths }}"
