@@ -34,40 +34,46 @@ import { ClusterIssuer } from './issuer/types';
 import { Issuer } from './issuer/types';
 import { Gateway } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
-import KuadrantCreateUpdate from './KuadrantCreateUpdate'
+import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
 import resourceGVKMapping from '../utils/latest';
-
 
 const KuadrantTLSCreatePage: React.FC = () => {
   const history = useHistory();
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<Gateway>({ name: '', namespace: '' });
-  const [selectedClusterIssuers, setSelectedClusterIssuers] = React.useState<ClusterIssuer>({ name: '' });
+  const [selectedGateway, setSelectedGateway] = React.useState<Gateway>({
+    name: '',
+    namespace: '',
+  });
+  const [selectedClusterIssuers, setSelectedClusterIssuers] = React.useState<ClusterIssuer>({
+    name: '',
+  });
   const [selectedIssuer, setSelectedIssuers] = React.useState<Issuer>({ name: '', namespace: '' });
-  const [certIssuerType, setCertIssuerType] = React.useState<'clusterissuer' | 'issuer'>('clusterissuer');
+  const [certIssuerType, setCertIssuerType] = React.useState<'clusterissuer' | 'issuer'>(
+    'clusterissuer',
+  );
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const location = useLocation();
-  const pathSplit = location.pathname.split('/')
-  const nameEdit = pathSplit[6]
-  const namespaceEdit = pathSplit[3]
+  const pathSplit = location.pathname.split('/');
+  const nameEdit = pathSplit[6];
+  const namespaceEdit = pathSplit[3];
   const [formDisabled, setFormDisabled] = React.useState(false);
   const [create, setCreate] = React.useState(true);
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
   const [resourceVersion, setResourceVersion] = React.useState('');
-  let isFormValid: boolean = false
+  let isFormValid = false;
 
   // Creates TLS policy object to be used for form and yaml creation of the resource
   const createTlsPolicy = () => ({
-    apiVersion: resourceGVKMapping['TLSPolicy'].group + '/' + resourceGVKMapping['TLSPolicy'].version,
+    apiVersion:
+      resourceGVKMapping['TLSPolicy'].group + '/' + resourceGVKMapping['TLSPolicy'].version,
     kind: resourceGVKMapping['TLSPolicy'].kind,
     metadata: {
       name: policyName,
       namespace: selectedNamespace,
-      ...(creationTimestamp ? { creationTimestamp } : {}),  
+      ...(creationTimestamp ? { creationTimestamp } : {}),
       ...(resourceVersion ? { resourceVersion } : {}),
-
     },
     spec: {
       targetRef: {
@@ -75,24 +81,29 @@ const KuadrantTLSCreatePage: React.FC = () => {
         kind: 'Gateway',
         name: selectedGateway.name,
       },
-      issuerRef: certIssuerType === 'clusterissuer'
-        ? {
-          name: selectedClusterIssuers.name,
-          kind: 'ClusterIssuer',
-        } :
-        {
-          name: selectedIssuer.name,
-          kind: 'Issuer',
-        },
+      issuerRef:
+        certIssuerType === 'clusterissuer'
+          ? {
+              name: selectedClusterIssuers.name,
+              kind: 'ClusterIssuer',
+            }
+          : {
+              name: selectedIssuer.name,
+              kind: 'Issuer',
+            },
     },
-  })
+  });
 
   const tlsPolicy = createTlsPolicy();
   const tlsPolicyGVK = getGroupVersionKindForResource({
     apiVersion: `${resourceGVKMapping['TLSPolicy'].group}/${resourceGVKMapping['TLSPolicy'].version}`,
     kind: resourceGVKMapping['TLSPolicy'].kind,
   });
-  const [tlsPolicyModel] = useK8sModel({ group: tlsPolicyGVK.group, version: tlsPolicyGVK.version, kind: tlsPolicyGVK.kind });
+  const [tlsPolicyModel] = useK8sModel({
+    group: tlsPolicyGVK.group,
+    version: tlsPolicyGVK.version,
+    kind: tlsPolicyGVK.kind,
+  });
 
   // K8sResourceCommon by default does not contain spec etc which is needed for updating resource forms
   interface TLSPolicyEdit extends K8sResourceCommon {
@@ -110,31 +121,34 @@ const KuadrantTLSCreatePage: React.FC = () => {
   }
 
   //Checking if the policy already exists and is to be edited or if its new and is being created
-  let tlsResource = null
+  let tlsResource = null;
   if (nameEdit) {
     tlsResource = {
       groupVersionKind: tlsPolicyGVK,
       isList: false,
       name: nameEdit,
-      namespace: namespaceEdit
+      namespace: namespaceEdit,
     };
   }
 
-
-  const [tlsData, tlsLoaded, tlsError] = tlsResource ? useK8sWatchResource(tlsResource) : [null, false, null]; //Syntax allows for tlsResource to be null in the case of a create 
+  const [tlsData, tlsLoaded, tlsError] = tlsResource
+    ? useK8sWatchResource(tlsResource)
+    : [null, false, null]; //Syntax allows for tlsResource to be null in the case of a create
 
   // When a resource is being updated setting the form from the yaml it gets from useK8sWatchResource
   React.useEffect(() => {
-
     if (tlsLoaded && !tlsError) {
       if (!Array.isArray(tlsData)) {
         const tlsPolicyUpdate = tlsData as TLSPolicyEdit;
-        setCreationTimestamp(tlsPolicyUpdate.metadata.creationTimestamp)
-        setResourceVersion(tlsPolicyUpdate.metadata.resourceVersion)
-        setFormDisabled(true)
-        setCreate(false)
+        setCreationTimestamp(tlsPolicyUpdate.metadata.creationTimestamp);
+        setResourceVersion(tlsPolicyUpdate.metadata.resourceVersion);
+        setFormDisabled(true);
+        setCreate(false);
         setPolicyName(tlsPolicyUpdate.metadata?.name || '');
-        setSelectedGateway({ name: tlsPolicyUpdate.spec?.targetRef?.name || '', namespace: tlsPolicyUpdate.metadata?.namespace || '' });
+        setSelectedGateway({
+          name: tlsPolicyUpdate.spec?.targetRef?.name || '',
+          namespace: tlsPolicyUpdate.metadata?.namespace || '',
+        });
         if (tlsPolicyUpdate.spec?.issuerRef?.kind === 'ClusterIssuer') {
           setCertIssuerType('clusterissuer');
           setSelectedClusterIssuers({ name: tlsPolicyUpdate.spec?.issuerRef?.name || '' });
@@ -142,11 +156,11 @@ const KuadrantTLSCreatePage: React.FC = () => {
           setCertIssuerType('issuer');
           setSelectedIssuers({
             name: tlsPolicyUpdate.spec?.issuerRef?.name || '',
-            namespace: tlsPolicyUpdate.metadata?.namespace || ''
+            namespace: tlsPolicyUpdate.metadata?.namespace || '',
           });
         }
 
-        console.log("Initializing tls with existing TLS for update");
+        console.log('Initializing tls with existing TLS for update');
       }
     } else if (tlsError) {
       console.error('Failed to fetch the resource:', tlsError);
@@ -160,7 +174,10 @@ const KuadrantTLSCreatePage: React.FC = () => {
     try {
       const parsedYaml = yaml.load(yamlInput);
       setPolicyName(parsedYaml.metadata?.name || '');
-      setSelectedGateway({ name: parsedYaml.spec?.targetRef?.name || '', namespace: parsedYaml.metadata?.namespace || '' });
+      setSelectedGateway({
+        name: parsedYaml.spec?.targetRef?.name || '',
+        namespace: parsedYaml.metadata?.namespace || '',
+      });
       if (parsedYaml.spec?.issuerRef?.kind === 'ClusterIssuer') {
         setCertIssuerType('clusterissuer');
         setSelectedClusterIssuers({ name: parsedYaml.spec?.issuerRef?.name || '' });
@@ -171,7 +188,6 @@ const KuadrantTLSCreatePage: React.FC = () => {
           namespace: parsedYaml.metadata?.namespace || '',
         });
       }
-
     } catch (e) {
       console.error(t('Error parsing YAML:'), e);
     }
@@ -179,7 +195,14 @@ const KuadrantTLSCreatePage: React.FC = () => {
   // When new changes are made to via form update the yaml view
   React.useEffect(() => {
     setYamlInput(tlsPolicy);
-  }, [policyName, selectedNamespace, selectedGateway, certIssuerType, selectedClusterIssuers, selectedIssuer]);
+  }, [
+    policyName,
+    selectedNamespace,
+    selectedGateway,
+    certIssuerType,
+    selectedClusterIssuers,
+    selectedIssuer,
+  ]);
 
   const [view, setView] = React.useState('form');
 
@@ -193,8 +216,13 @@ const KuadrantTLSCreatePage: React.FC = () => {
     handleCancel(selectedNamespace, tlsPolicy, history);
   };
 
-  if (policyName && selectedNamespace && selectedGateway.name && (selectedClusterIssuers.name || selectedIssuer.name)) {
-    isFormValid = true
+  if (
+    policyName &&
+    selectedNamespace &&
+    selectedGateway.name &&
+    (selectedClusterIssuers.name || selectedIssuer.name)
+  ) {
+    isFormValid = true;
   }
 
   return (
@@ -205,18 +233,29 @@ const KuadrantTLSCreatePage: React.FC = () => {
         </title>
       </Helmet>
       <Page>
-        <PageSection className='pf-m-no-padding' variant="light" >
-          <div className='co-m-nav-title'>
+        <PageSection className="pf-m-no-padding" variant="light">
+          <div className="co-m-nav-title">
             <Title headingLevel="h1">{create ? 'Create TLS Policy' : 'Edit TLS Policy'}</Title>
-            <p className='help-block co-m-pane__heading-help-text'>
-              <div>{t('Targets Gateway API networking resources Gateways to provide TLS for gateway listeners by managing the lifecycle of TLS certificates using cert-manager')}</div>
+            <p className="help-block co-m-pane__heading-help-text">
+              <div>
+                {t(
+                  'Targets Gateway API networking resources Gateways to provide TLS for gateway listeners by managing the lifecycle of TLS certificates using cert-manager',
+                )}
+              </div>
             </p>
           </div>
-          <FormGroup className="kuadrant-editor-toggle" role="radiogroup" isInline hasNoPaddingTop fieldId="create-type-radio-group" label={t("Configure via")}>
+          <FormGroup
+            className="kuadrant-editor-toggle"
+            role="radiogroup"
+            isInline
+            hasNoPaddingTop
+            fieldId="create-type-radio-group"
+            label={t('Configure via')}
+          >
             <Flex alignItems={{ default: 'alignItemsCenter' }}>
               <FlexItem>
                 <Radio
-                  label={t("Form View")}
+                  label={t('Form View')}
                   isChecked={view === 'form'}
                   onChange={() => setView('form')}
                   id="form-view"
@@ -225,7 +264,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
               </FlexItem>
               <FlexItem>
                 <Radio
-                  label={t("YAML View")}
+                  label={t('YAML View')}
                   isChecked={view === 'yaml'}
                   onChange={() => setView('yaml')}
                   id="yaml-view"
@@ -237,12 +276,8 @@ const KuadrantTLSCreatePage: React.FC = () => {
         </PageSection>
         {view === 'form' ? (
           <PageSection variant="light">
-            <Form className='co-m-pane__form'>
-              <FormGroup
-                label={t("Policy name")}
-                isRequired
-                fieldId="simple-form-policy-name-01"
-              >
+            <Form className="co-m-pane__form">
+              <FormGroup label={t('Policy name')} isRequired fieldId="simple-form-policy-name-01">
                 <TextInput
                   isRequired
                   type="text"
@@ -252,7 +287,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
                   value={policyName}
                   onChange={handleNameChange}
                   isDisabled={formDisabled}
-                  placeholder={t("Policy name")}
+                  placeholder={t('Policy name')}
                 />
                 <FormHelperText>
                   <HelperText>
@@ -260,58 +295,67 @@ const KuadrantTLSCreatePage: React.FC = () => {
                   </HelperText>
                 </FormHelperText>
               </FormGroup>
-              <FormGroup
-                fieldId="gateway-select"
-                isRequired
-              >
+              <FormGroup fieldId="gateway-select" isRequired>
                 <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
               </FormGroup>
-              <FormGroup
-                fieldId="certmanger-select"
-                isRequired
-              >
-                <FormGroup role="radiogroup" isInline fieldId='cert-manager-issuer' label={t('Cert manager issuer type')} isRequired aria-labelledby="issuer-label">
+              <FormGroup fieldId="certmanger-select" isRequired>
+                <FormGroup
+                  role="radiogroup"
+                  isInline
+                  fieldId="cert-manager-issuer"
+                  label={t('Cert manager issuer type')}
+                  isRequired
+                  aria-labelledby="issuer-label"
+                >
                   <Radio
-                    label={t("Cluster issuer")}
+                    label={t('Cluster issuer')}
                     isChecked={certIssuerType === 'clusterissuer'}
                     onChange={() => {
                       setCertIssuerType('clusterissuer');
-                    }
-                    }
+                    }}
                     id="cluster-issuer"
                     name="issuer"
                   />
                   <Radio
-                    label={t("Issuer")}
+                    label={t('Issuer')}
                     isChecked={certIssuerType === 'issuer'}
                     onChange={() => {
                       setCertIssuerType('issuer');
-                    }
-                    }
+                    }}
                     id="issuer"
                     name="issuer"
                   />
                 </FormGroup>
                 {certIssuerType === 'clusterissuer' ? (
-                  <ClusterIssuerSelect selectedClusterIssuer={selectedClusterIssuers} onChange={setSelectedClusterIssuers} />
+                  <ClusterIssuerSelect
+                    selectedClusterIssuer={selectedClusterIssuers}
+                    onChange={setSelectedClusterIssuers}
+                  />
                 ) : (
                   <IssuerSelect selectedIssuer={selectedIssuer} onChange={setSelectedIssuers} />
                 )}
               </FormGroup>
               <ActionGroup>
-                <KuadrantCreateUpdate model={tlsPolicyModel} resource={tlsPolicy} policyType='tls' history={history} validation={isFormValid} />
-                <Button variant="link" onClick={handleCancelResource} >{t('Cancel')}</Button>
+                <KuadrantCreateUpdate
+                  model={tlsPolicyModel}
+                  resource={tlsPolicy}
+                  policyType="tls"
+                  history={history}
+                  validation={isFormValid}
+                />
+                <Button variant="link" onClick={handleCancelResource}>
+                  {t('Cancel')}
+                </Button>
               </ActionGroup>
             </Form>
           </PageSection>
         ) : (
           <React.Suspense fallback={<div> {t('Loading..')}.</div>}>
             <ResourceYAMLEditor
-              initialResource={ yamlInput }
+              initialResource={yamlInput}
               create={create}
               onChange={handleYAMLChange}
-            >
-            </ResourceYAMLEditor>
+            ></ResourceYAMLEditor>
           </React.Suspense>
         )}
       </Page>
@@ -320,4 +364,3 @@ const KuadrantTLSCreatePage: React.FC = () => {
 };
 
 export default KuadrantTLSCreatePage;
-

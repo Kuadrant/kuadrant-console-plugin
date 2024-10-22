@@ -1,8 +1,8 @@
 export interface ClusterIssuer {
-    name: string,
+  name: string;
 }
 
 export interface Issuer {
-    name: string,
-    namespace: string
+  name: string;
+  namespace: string;
 }
