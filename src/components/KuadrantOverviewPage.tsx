@@ -14,6 +14,7 @@ import {
   Flex,
   FlexItem,
   Text,
+  TextVariants,
   Stack,
   StackItem,
   Divider,
@@ -123,7 +124,7 @@ const KuadrantOverviewPage: React.FC = () => {
         <title data-test="example-page-title">{t('Kuadrant')}</title>
       </Helmet>
       <Page>
-        <PageSection variant="light">
+        <PageSection>
           <Title headingLevel="h1">{t('Kuadrant')} Overview</Title>
           <br />
 
@@ -142,17 +143,17 @@ const KuadrantOverviewPage: React.FC = () => {
               </CardHeader>
               <CardExpandableContent>
                 <CardBody>
-                  <Flex>
+                  <Flex className="kuadrant-overview-getting-started">
                     <FlexItem flex={{ default: 'flex_1' }}>
                       <Title headingLevel="h4" className="kuadrant-dashboard-learning">
                         <GlobeIcon /> {t('Learning Resources')}
                       </Title>
-                      <p>
+                      <Text component={TextVariants.small}>
                         {t(
                           'Learn how to create, import and use Kuadrant policies on OpenShift with step-by-step instructions and tasks.',
                         )}
-                      </p>
-                      <Stack hasGutter className="pf-u-mt-md">
+                      </Text>
+                      <Stack hasGutter className="pf-u-mt-sm">
                         <StackItem>
                           <Text
                             component="a"
@@ -196,11 +197,11 @@ const KuadrantOverviewPage: React.FC = () => {
                       <Title headingLevel="h4" className="kuadrant-dashboard-feature-highlights">
                         <OptimizeIcon /> {t('Feature Highlights')}
                       </Title>
-                      <p>
+                      <Text component={TextVariants.small}>
                         {t(
                           'Read about the latest information and key features in the Kuadrant highlights.',
                         )}
-                      </p>
+                      </Text>
                       <Stack hasGutter className="pf-u-mt-md">
                         <StackItem>
                           <Text
@@ -241,11 +242,11 @@ const KuadrantOverviewPage: React.FC = () => {
                       <Title headingLevel="h4" className="kuadrant-dashboard-enhance">
                         <ReplicatorIcon /> {t('Enhance Your Work')}
                       </Title>
-                      <p>
+                      <Text component={TextVariants.small}>
                         {t(
                           'Ease operational complexity with API management and App Connectivity by using additional Operators and tools.',
                         )}
-                      </p>
+                      </Text>
                       <Stack hasGutter className="pf-u-mt-md">
                         <StackItem>
                           <Text
@@ -288,7 +289,7 @@ const KuadrantOverviewPage: React.FC = () => {
                 <CardTitle>
                   <Title headingLevel="h2">{t('Policies')}</Title>
                 </CardTitle>
-                <CardBody className="pf-u-p-0">
+                <CardBody className="pf-u-p-10">
                   <ResourceList
                     resources={[
                       resourceGVKMapping['AuthPolicy'],
@@ -311,7 +312,7 @@ const KuadrantOverviewPage: React.FC = () => {
                 <CardTitle>
                   <Title headingLevel="h2">{t('Gateways')}</Title>
                 </CardTitle>
-                <CardBody className="pf-u-p-0">
+                <CardBody className="pf-u-p-10">
                   <ResourceList
                     resources={[resourceGVKMapping['Gateway']]}
                     columns={columns}
@@ -326,7 +327,7 @@ const KuadrantOverviewPage: React.FC = () => {
                 <CardTitle>
                   <Title headingLevel="h2">{t('APIs / HTTPRoutes')}</Title>
                 </CardTitle>
-                <CardBody className="pf-u-p-0">
+                <CardBody className="pf-u-p-10">
                   <ResourceList
                     resources={[resourceGVKMapping['HTTPRoute']]}
                     columns={columns}

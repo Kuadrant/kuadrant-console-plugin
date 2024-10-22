@@ -71,12 +71,16 @@
   margin-bottom: 0.5em;
 }
 
-.pf-theme-light  .kuadrant-dashboard-learning {
-  color: var(--pf-v5-chart-color-purple-400);
+.kuadrant-overview-getting-started small {
+  color: var(--pf-v5-global--Color--200);
+}
+
+.kuadrant-dashboard-learning {
+  color: var(--pf-global--palette--purple-700);
 }
 
 .pf-theme-dark .kuadrant-dashboard-learning  {
-  color: var(--pf-v5-chart-color-purple-200);
+  color: var(--pf-v5-global--palette--purple-200);
 }
 
 .kuadrant-dashboard-feature-highlights {
@@ -91,7 +95,7 @@
   text-decoration: none;
   color: var(--pf-global--palette--black);
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 
 .kuadrant-dashboard-resource-link:hover {
