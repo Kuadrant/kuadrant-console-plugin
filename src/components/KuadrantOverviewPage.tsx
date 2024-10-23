@@ -22,6 +22,7 @@ import {
   DropdownItem,
   DropdownList,
   MenuToggle,
+  Button,
 } from '@patternfly/react-core';
 import {
   GlobeIcon,
@@ -37,16 +38,40 @@ import ResourceList from './ResourceList';
 import { sortable } from '@patternfly/react-table';
 import { INTERNAL_LINKS, EXTERNAL_LINKS } from '../constants/links';
 import resourceGVKMapping from '../utils/latest';
+import { useHistory } from 'react-router-dom';
 
+export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
+
+interface Resource {
+  name: string;
+  gvk: {
+    group: string;
+    version: string;
+    kind: string;
+  };
+}
+export const resources: Resource[] = [
+  { name: 'AuthPolicies', gvk: resourceGVKMapping['AuthPolicy'] },
+  { name: 'DNSPolicies', gvk: resourceGVKMapping['DNSPolicy'] },
+  { name: 'RateLimitPolicies', gvk: resourceGVKMapping['RateLimitPolicy'] },
+  { name: 'TLSPolicies', gvk: resourceGVKMapping['TLSPolicy'] },
+];
 const KuadrantOverviewPage: React.FC = () => {
+  const history = useHistory();
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const { ns } = useParams<{ ns: string }>();
   const [activeNamespace, setActiveNamespace] = useActiveNamespace();
   const [isExpanded, setIsExpanded] = React.useState(true);
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   const [hideCard, setHideCard] = React.useState(
     sessionStorage.getItem('hideGettingStarted') === 'true',
   );
+  const onToggleClick = () => {
+    console.log("Hello toggle click",!isCreateOpen)
+    setIsCreateOpen(!isCreateOpen);
+  };
+
 
   React.useEffect(() => {
     if (ns && ns !== activeNamespace) {
@@ -117,6 +142,30 @@ const KuadrantOverviewPage: React.FC = () => {
       props: { className: 'pf-v5-c-table__action' },
     },
   ];
+
+  const handleCreateResource = (resource) => {
+    const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
+
+    if (resource === 'Gateway') {
+      const gateway = resourceGVKMapping['Gateway'];
+      history.push(
+        `/k8s/ns/${resolvedNamespace}/${gateway.group}~${gateway.version}~${gateway.kind}/~new`,
+      );
+    } else {
+      const httpRoute = resourceGVKMapping['HTTPRoute'];
+      history.push(
+        `/k8s/ns/${resolvedNamespace}/${httpRoute.group}~${httpRoute.version}~${httpRoute.kind}/~new`,
+      );
+    }
+  };
+
+  const onMenuSelect = (_event: React.MouseEvent<Element, MouseEvent>, policyType: string) => {
+    const resource = resourceGVKMapping[policyType];
+    const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
+    const targetUrl = `/k8s/ns/${resolvedNamespace}/${resource.group}~${resource.version}~${resource.kind}/~new`;
+    history.push(targetUrl);
+    setIsOpen(false);
+  };
 
   return (
     <>
@@ -301,6 +350,38 @@ const KuadrantOverviewPage: React.FC = () => {
                     namespace="#ALL_NS#"
                     paginationLimit={5}
                   />
+                  <div className="kuadrant-overview-create-button pf-u-mt-md">
+                    <Dropdown
+                      isOpen={isCreateOpen}
+                      onSelect={onMenuSelect}
+                      onOpenChange={setIsCreateOpen}
+                      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                        <MenuToggle
+                          ref={toggleRef}
+                          onClick={onToggleClick}
+                          isExpanded={isCreateOpen}
+                          variant="primary"
+                        >
+                          {t('Create Policy')}
+                        </MenuToggle>
+                      )}
+                    >
+                      <DropdownList>
+                        <DropdownItem value="AuthPolicy" key="auth-policy">
+                          {t('AuthPolicy')}
+                        </DropdownItem>
+                        <DropdownItem value="RateLimitPolicy" key="rate-limit-policy">
+                          {t('RateLimitPolicy')}
+                        </DropdownItem>
+                        <DropdownItem value="DNSPolicy" key="dns-policy">
+                          {t('DNSPolicy')}
+                        </DropdownItem>
+                        <DropdownItem value="TLSPolicy" key="tls-policy">
+                          {t('TLSPolicy')}
+                        </DropdownItem>
+                      </DropdownList>
+                    </Dropdown>
+                  </div>
                 </CardBody>
               </Card>
             </FlexItem>
@@ -310,7 +391,7 @@ const KuadrantOverviewPage: React.FC = () => {
             <FlexItem flex={{ default: 'flex_1' }}>
               <Card>
                 <CardTitle>
-                  <Title headingLevel="h2">{t('Gateways')}</Title>
+                  <Title headingLevel="h2">{t('Gateways test')}</Title>
                 </CardTitle>
                 <CardBody className="pf-u-p-10">
                   <ResourceList
@@ -319,6 +400,11 @@ const KuadrantOverviewPage: React.FC = () => {
                     namespace="#ALL_NS#"
                     emtpyResourceName="Gateways"
                   />
+                  <div className="kuadrant-overview-create-button pf-u-mt-md">
+                    <Button onClick={() => handleCreateResource('Gateway')}>
+                      {t(`Create Gateway`)}
+                    </Button>
+                  </div>
                 </CardBody>
               </Card>
             </FlexItem>
@@ -334,6 +420,11 @@ const KuadrantOverviewPage: React.FC = () => {
                     namespace="#ALL_NS#"
                     emtpyResourceName="HTTPRoutes"
                   />
+                  <div className="kuadrant-overview-create-button pf-u-mt-md">
+                    <Button onClick={() => handleCreateResource('HTTPRoute')}>
+                      {t(`Create HTTPRoute`)}
+                    </Button>
+                  </div>
                 </CardBody>
               </Card>
             </FlexItem>

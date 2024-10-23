@@ -140,3 +140,9 @@
 .kuadrant-policy-list-body {
   width: 100%;
 }
+
+.kuadrant-overview-create-button {
+  position: absolute;
+  top: 30px;   
+  right: 30px; 
+}
