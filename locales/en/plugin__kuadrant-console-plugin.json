@@ -109,5 +109,7 @@
   "Visit the blog": "Visit the blog",
   "Weight": "Weight",
   "YAML View": "YAML View",
-  "You can view and create HTTPRoutes": "You can view and create HTTPRoutes"
+  "You can view and create HTTPRoutes": "You can view and create HTTPRoutes",
+  "Create Gateway": "Create Gateway",
+  "Create HTTPRoute":"Create HTTPRoute"
 }

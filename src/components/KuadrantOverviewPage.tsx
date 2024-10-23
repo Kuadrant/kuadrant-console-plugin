@@ -68,10 +68,8 @@ const KuadrantOverviewPage: React.FC = () => {
     sessionStorage.getItem('hideGettingStarted') === 'true',
   );
   const onToggleClick = () => {
-    console.log("Hello toggle click",!isCreateOpen)
     setIsCreateOpen(!isCreateOpen);
   };
-
 
   React.useEffect(() => {
     if (ns && ns !== activeNamespace) {
@@ -391,7 +389,7 @@ const KuadrantOverviewPage: React.FC = () => {
             <FlexItem flex={{ default: 'flex_1' }}>
               <Card>
                 <CardTitle>
-                  <Title headingLevel="h2">{t('Gateways test')}</Title>
+                  <Title headingLevel="h2">{t('Gateways')}</Title>
                 </CardTitle>
                 <CardBody className="pf-u-p-10">
                   <ResourceList
