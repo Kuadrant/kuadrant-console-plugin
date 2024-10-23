@@ -19,6 +19,8 @@
   "Create": "Create",
   "Create AuthPolicy": "Create AuthPolicy",
   "Create DNS Policy": "Create DNS Policy",
+  "Create Gateway": "Create Gateway",
+  "Create HTTPRoute": "Create HTTPRoute",
   "Create Policies in": "Create Policies in",
   "Create Policy": "Create Policy",
   "Create RateLimit Policy": "Create RateLimit Policy",
@@ -109,7 +111,5 @@
   "Visit the blog": "Visit the blog",
   "Weight": "Weight",
   "YAML View": "YAML View",
-  "You can view and create HTTPRoutes": "You can view and create HTTPRoutes",
-  "Create Gateway": "Create Gateway",
-  "Create HTTPRoute":"Create HTTPRoute"
+  "You can view and create HTTPRoutes": "You can view and create HTTPRoutes"
 }
