@@ -21,7 +21,9 @@
     "cypress-merge": "mochawesome-merge ./integration-tests/screenshots/cypress_report*.json > ./integration-tests/screenshots/cypress.json",
     "cypress-generate": "marge -o ./integration-tests/screenshots/ -f cypress-report -t 'Kuadrant OpenShift Console Plugin Cypress Test Results' -p 'OpenShift Cypress Plugin Template Test Results' --showPassed false --assetsDir ./integration-tests/screenshots/cypress/assets ./integration-tests/screenshots/cypress.json",
     "cypress-postreport": "yarn cypress-merge && yarn cypress-generate",
-    "webpack": "node -r ts-node/register ./node_modules/.bin/webpack"
+    "webpack": "node -r ts-node/register ./node_modules/.bin/webpack",
+    "downstream-replacements": "node downstream.js && yarn i18n && yarn lint",
+    "upstream-replacements": "node downstream.js --upstream && yarn i18n && yarn lint"
   },
   "devDependencies": {
     "@cypress/webpack-preprocessor": "^5.15.5",

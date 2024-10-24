@@ -1,4 +1,4 @@
-name: Build and Push Versioned Image
+name: Build and Push Versioned Multi-Arch Image
 
 on:
   release:
@@ -11,7 +11,7 @@ env:
 
 jobs:
   release:
-    name: Build and push versioned image
+    name: Build and push versioned multi-arch image
     runs-on: ubuntu-22.04
 
     steps:
@@ -27,13 +27,16 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Build Image for Release
+      - name: Build Multi-Arch Image for Release
         id: build-release-image
         uses: redhat-actions/buildah-build@v2
         with:
           image: quay.io/kuadrant/console-plugin
           tags: |
             ${{ github.event.release.name }}
+          archs: |
+            amd64
+            arm64
           containerfiles: |
             ./Dockerfile
 
