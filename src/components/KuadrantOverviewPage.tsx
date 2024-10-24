@@ -335,6 +335,37 @@ const KuadrantOverviewPage: React.FC = () => {
               <Card>
                 <CardTitle>
                   <Title headingLevel="h2">{t('Policies')}</Title>
+                  <Dropdown
+                    isOpen={isCreateOpen}
+                    onSelect={onMenuSelect}
+                    onOpenChange={setIsCreateOpen}
+                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                      <MenuToggle
+                        ref={toggleRef}
+                        onClick={onToggleClick}
+                        isExpanded={isCreateOpen}
+                        variant="primary"
+                        className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                      >
+                        {t('Create Policy')}
+                      </MenuToggle>
+                    )}
+                  >
+                    <DropdownList class="kuadrant-overview-create-list pf-u-p-0">
+                      <DropdownItem value="AuthPolicy" key="auth-policy">
+                        {t('AuthPolicy')}
+                      </DropdownItem>
+                      <DropdownItem value="RateLimitPolicy" key="rate-limit-policy">
+                        {t('RateLimitPolicy')}
+                      </DropdownItem>
+                      <DropdownItem value="DNSPolicy" key="dns-policy">
+                        {t('DNSPolicy')}
+                      </DropdownItem>
+                      <DropdownItem value="TLSPolicy" key="tls-policy">
+                        {t('TLSPolicy')}
+                      </DropdownItem>
+                    </DropdownList>
+                  </Dropdown>
                 </CardTitle>
                 <CardBody className="pf-u-p-10">
                   <ResourceList
@@ -348,48 +379,21 @@ const KuadrantOverviewPage: React.FC = () => {
                     namespace="#ALL_NS#"
                     paginationLimit={5}
                   />
-                  <div className="kuadrant-overview-create-button pf-u-mt-md">
-                    <Dropdown
-                      isOpen={isCreateOpen}
-                      onSelect={onMenuSelect}
-                      onOpenChange={setIsCreateOpen}
-                      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                        <MenuToggle
-                          ref={toggleRef}
-                          onClick={onToggleClick}
-                          isExpanded={isCreateOpen}
-                          variant="primary"
-                        >
-                          {t('Create Policy')}
-                        </MenuToggle>
-                      )}
-                    >
-                      <DropdownList>
-                        <DropdownItem value="AuthPolicy" key="auth-policy">
-                          {t('AuthPolicy')}
-                        </DropdownItem>
-                        <DropdownItem value="RateLimitPolicy" key="rate-limit-policy">
-                          {t('RateLimitPolicy')}
-                        </DropdownItem>
-                        <DropdownItem value="DNSPolicy" key="dns-policy">
-                          {t('DNSPolicy')}
-                        </DropdownItem>
-                        <DropdownItem value="TLSPolicy" key="tls-policy">
-                          {t('TLSPolicy')}
-                        </DropdownItem>
-                      </DropdownList>
-                    </Dropdown>
-                  </div>
                 </CardBody>
               </Card>
             </FlexItem>
           </Flex>
-
           <Flex className="pf-u-mt-xl">
             <FlexItem flex={{ default: 'flex_1' }}>
               <Card>
                 <CardTitle>
                   <Title headingLevel="h2">{t('Gateways')}</Title>
+                  <Button
+                    onClick={() => handleCreateResource('Gateway')}
+                    className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                  >
+                    {t(`Create Gateway`)}
+                  </Button>
                 </CardTitle>
                 <CardBody className="pf-u-p-10">
                   <ResourceList
@@ -398,11 +402,6 @@ const KuadrantOverviewPage: React.FC = () => {
                     namespace="#ALL_NS#"
                     emtpyResourceName="Gateways"
                   />
-                  <div className="kuadrant-overview-create-button pf-u-mt-md">
-                    <Button onClick={() => handleCreateResource('Gateway')}>
-                      {t(`Create Gateway`)}
-                    </Button>
-                  </div>
                 </CardBody>
               </Card>
             </FlexItem>
@@ -410,6 +409,12 @@ const KuadrantOverviewPage: React.FC = () => {
               <Card>
                 <CardTitle>
                   <Title headingLevel="h2">{t('APIs / HTTPRoutes')}</Title>
+                  <Button
+                    onClick={() => handleCreateResource('HTTPRoute')}
+                    className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                  >
+                    {t(`Create HTTPRoute`)}
+                  </Button>
                 </CardTitle>
                 <CardBody className="pf-u-p-10">
                   <ResourceList
@@ -418,11 +423,6 @@ const KuadrantOverviewPage: React.FC = () => {
                     namespace="#ALL_NS#"
                     emtpyResourceName="HTTPRoutes"
                   />
-                  <div className="kuadrant-overview-create-button pf-u-mt-md">
-                    <Button onClick={() => handleCreateResource('HTTPRoute')}>
-                      {t(`Create HTTPRoute`)}
-                    </Button>
-                  </div>
                 </CardBody>
               </Card>
             </FlexItem>

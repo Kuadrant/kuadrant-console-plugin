@@ -143,6 +143,10 @@
 
 .kuadrant-overview-create-button {
   position: absolute;
-  top: 30px;   
-  right: 30px; 
+  top: 0;   
+  right: 0; 
 }
+
+.kuadrant-overview-create-list, .kuadrant-overview-create-button {
+  font-family: RedHatText, helvetica, arial, sans-serif;
+   }
