@@ -14,7 +14,12 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
 
   return (
     <>
-      <FormGroup label={t('Endpoint')} isRequired fieldId="health-check-endpoint">
+      <FormGroup
+        label={t('Endpoint')}
+        isRequired
+        fieldId="health-check-endpoint"
+        className="pf-u-mb-md"
+      >
         <TextInput
           id="health-check-endpoint"
           value={healthCheck.endpoint}
@@ -23,7 +28,12 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
           placeholder="/"
         />
       </FormGroup>
-      <FormGroup label={t('Failure Threshold')} isRequired fieldId="health-check-failure-threshold">
+      <FormGroup
+        label={t('Failure Threshold')}
+        isRequired
+        fieldId="health-check-failure-threshold"
+        className="pf-u-mb-md"
+      >
         <TextInput
           id="health-check-failure-threshold"
           type="number"
@@ -36,7 +46,7 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
           placeholder="0"
         />
       </FormGroup>
-      <FormGroup label={t('Port')} isRequired fieldId="health-check-port">
+      <FormGroup label={t('Port')} isRequired fieldId="health-check-port" className="pf-u-mb-md">
         <TextInput
           id="health-check-port"
           type="number"
@@ -49,7 +59,12 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
           placeholder="0"
         />
       </FormGroup>
-      <FormGroup label={t('Protocol')} isRequired fieldId="health-check-protocol">
+      <FormGroup
+        label={t('Protocol')}
+        isRequired
+        fieldId="health-check-protocol"
+        className="pf-u-mb-md"
+      >
         <FormSelect
           id="health-check-protocol"
           value={healthCheck.protocol}
@@ -59,7 +74,7 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
           isRequired
           aria-label={t('Select a Protocol')}
         >
-          <FormSelectOption key="placeholder" value="" label={t('Select a Protocol')} isDisabled />
+          <FormSelectOption key="placeholder" value="" label={t('Select a Protocol')} />
           <FormSelectOption key="HTTP" value="HTTP" label="HTTP" />
           <FormSelectOption key="HTTPS" value="HTTPS" label="HTTPS" />
         </FormSelect>
