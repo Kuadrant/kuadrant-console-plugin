@@ -19,6 +19,8 @@
   "Create": "Create",
   "Create AuthPolicy": "Create AuthPolicy",
   "Create DNS Policy": "Create DNS Policy",
+  "Create Gateway": "Create Gateway",
+  "Create HTTPRoute": "Create HTTPRoute",
   "Create Policies in": "Create Policies in",
   "Create Policy": "Create Policy",
   "Create RateLimit Policy": "Create RateLimit Policy",
