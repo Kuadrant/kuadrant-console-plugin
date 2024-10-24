@@ -16,8 +16,6 @@ import {
 
 import { Title } from '@patternfly/react-core';
 import {
-  Alert,
-  AlertGroup,
   Dropdown,
   DropdownItem,
   DropdownList,
@@ -69,14 +67,6 @@ export const AllPoliciesListPage: React.FC<{
   return (
     <>
       <ListPageBody>
-        {showAlertGroup && (
-          <AlertGroup className="kuadrant-alert-group">
-            <Alert title={t('Info about this page')} variant="info" isInline>
-              ...
-            </Alert>
-          </AlertGroup>
-        )}
-
         <div className="co-m-nav-title--row kuadrant-resource-create-container">
           <ResourceList
             resources={resources.map((r) => r.gvk)}
@@ -133,12 +123,6 @@ const PoliciesListPage: React.FC<{ resource: Resource; activeNamespace: string }
   return (
     <>
       <ListPageBody>
-        <AlertGroup className="kuadrant-alert-group">
-          <Alert title={t('Info about this page')} variant="info" isInline>
-            {/* Add any informational content here */}
-            ...
-          </Alert>
-        </AlertGroup>
         <div className="co-m-nav-title--row kuadrant-resource-create-container">
           <ResourceList resources={[resource.gvk]} namespace={activeNamespace} />
           <div className="kuadrant-resource-create-button pf-u-mt-md">
