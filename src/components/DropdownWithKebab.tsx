@@ -41,7 +41,12 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   const policyType = obj.kind.toLowerCase();
 
   const onEditClick = () => {
-    if (obj.kind === 'AuthPolicy' || obj.kind === 'RateLimitPolicy') {
+    if (
+      obj.kind === 'AuthPolicy' ||
+      obj.kind === 'RateLimitPolicy' ||
+      obj.kind === 'Gateway' ||
+      obj.kind === 'HTTPRoute'
+    ) {
       history.push({
         pathname: `/k8s/ns/${obj.metadata.namespace}/${obj.apiVersion.replace('/', '~')}~${
           obj.kind
