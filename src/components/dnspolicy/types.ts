@@ -1,12 +1,12 @@
 export interface LoadBalancing {
   geo: string;
   weight: number;
-  defaultGeo: boolean;
+  defaultGeo: boolean | '';
 }
 
 export interface HealthCheck {
   endpoint: string;
   failureThreshold: number;
   port: number;
-  protocol: 'HTTP' | 'HTTPS';
+  protocol: 'HTTP' | 'HTTPS' | '';
 }
