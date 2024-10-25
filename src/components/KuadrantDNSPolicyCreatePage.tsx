@@ -47,13 +47,13 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const [loadBalancing, setLoadBalancing] = React.useState<LoadBalancing>({
     geo: '',
     weight: null,
-    defaultGeo: true,
+    defaultGeo: '',
   });
   const [healthCheck, setHealthCheck] = React.useState<HealthCheck>({
     endpoint: '',
     failureThreshold: null,
     port: null,
-    protocol: null,
+    protocol: '',
   });
   const [providerRefs, setProviderRefs] = React.useState([]);
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
@@ -64,6 +64,9 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const namespaceEdit = pathSplit[3];
   const [formDisabled, setFormDisabled] = React.useState(false);
   const [create, setCreate] = React.useState(true);
+  const [loadBalancingExpanded, setLoadBalancingExpanded] = React.useState(false);
+  const [healthExpanded, setHealthExpanded] = React.useState(false);
+
   let isFormValid = false;
 
   const createDNSPolicy = () => {
@@ -71,7 +74,11 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       healthCheck.endpoint ||
       healthCheck.failureThreshold ||
       healthCheck.port ||
-      healthCheck.protocol;
+      healthCheck.protocol != '';
+
+    const hasLoadBalancing =
+      loadBalancing.geo || loadBalancing.defaultGeo != '' || loadBalancing.weight;
+
     return {
       apiVersion:
         resourceGVKMapping['DNSPolicy'].group + '/' + resourceGVKMapping['DNSPolicy'].version,
@@ -88,13 +95,18 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
           kind: 'Gateway',
           name: selectedGateway.name,
         },
-        loadBalancing: {
-          weight: loadBalancing.weight,
-          geo: loadBalancing.geo,
-          defaultGeo: loadBalancing.defaultGeo,
-        },
         providerRefs: providerRefs.length > 0 ? [providerRefs[0]] : [],
-
+        ...(hasLoadBalancing
+          ? {
+              loadBalancing: {
+                ...(loadBalancing?.weight ? { weight: loadBalancing.weight } : {}),
+                ...(loadBalancing?.geo ? { geo: loadBalancing.geo } : {}),
+                ...(loadBalancing.defaultGeo !== ''
+                  ? { defaultGeo: loadBalancing.defaultGeo }
+                  : {}),
+              },
+            }
+          : {}),
         ...(hasHealthCheck
           ? {
               healthCheck: {
@@ -256,17 +268,23 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const handleCancelResource = () => {
     handleCancel(selectedNamespace, dnsPolicy, history);
   };
-
-  if (
-    policyName &&
-    selectedNamespace &&
-    selectedGateway.name &&
-    setProviderRefs &&
-    loadBalancing.geo &&
-    loadBalancing.weight
-  ) {
-    isFormValid = true;
-  }
+  const formValidation = () => {
+    if (
+      policyName &&
+      selectedGateway.name &&
+      providerRefs.length > 0 &&
+      (!loadBalancingExpanded ||
+        (loadBalancing.geo && loadBalancing.weight && loadBalancing.defaultGeo !== '')) &&
+      (!healthExpanded ||
+        (healthCheck.endpoint &&
+          healthCheck.failureThreshold > 0 &&
+          healthCheck.port > 0 &&
+          healthCheck.protocol !== ''))
+    ) {
+      isFormValid = true;
+    }
+    return isFormValid;
+  };
 
   return (
     <>
@@ -313,48 +331,71 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       {createView === 'form' ? (
         <PageSection variant="light">
           <Form className="co-m-pane__form">
-            <div>
-              <FormGroup label={t('Policy Name')} isRequired fieldId="policy-name">
-                <TextInput
-                  isRequired
-                  type="text"
-                  id="policy-name"
-                  name="policy-name"
-                  value={policyName}
-                  onChange={handlePolicyChange}
-                  isDisabled={formDisabled}
-                  placeholder={t('Policy name')}
-                />
-                <FormHelperText>
-                  <HelperText>
-                    <HelperTextItem>{t('Unique name of the DNS Policy')}</HelperTextItem>
-                  </HelperText>
-                </FormHelperText>
-              </FormGroup>
-              <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
-              <FormGroup label={t('Provider Ref')} isRequired fieldId="Provider-ref">
-                <TextInput
-                  isRequired
-                  type="text"
-                  id="provider-ref"
-                  name="provider-ref"
-                  value={providerRefs.length > 0 ? providerRefs[0].name : ''}
-                  onChange={handleProviderRefs}
-                  placeholder={t('Provider Ref')}
-                />
-              </FormGroup>
-              <LoadBalancingField loadBalancing={loadBalancing} onChange={setLoadBalancing} />
-              <ExpandableSection toggleText={t('Health Check')}>
-                <HealthCheckField healthCheck={healthCheck} onChange={setHealthCheck} />
-              </ExpandableSection>
-            </div>
-            <ActionGroup>
+            <FormGroup label={t('Policy Name')} isRequired fieldId="policy-name">
+              <TextInput
+                isRequired
+                type="text"
+                id="policy-name"
+                name="policy-name"
+                value={policyName}
+                onChange={handlePolicyChange}
+                isDisabled={formDisabled}
+                placeholder={t('Policy name')}
+              />
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem>{t('Unique name of the DNS Policy')}</HelperTextItem>
+                </HelperText>
+              </FormHelperText>
+            </FormGroup>
+            <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
+            <FormGroup label={t('Provider Ref')} isRequired fieldId="Provider-ref">
+              <TextInput
+                isRequired
+                type="text"
+                id="provider-ref"
+                name="provider-ref"
+                value={providerRefs.length > 0 ? providerRefs[0].name : ''}
+                onChange={handleProviderRefs}
+                placeholder={t('Provider Ref')}
+              />
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem>
+                    {t(
+                      'Reference to an existing secret resource containing DNS provider credentials and configuration',
+                    )}
+                  </HelperTextItem>
+                </HelperText>
+              </FormHelperText>
+            </FormGroup>
+            <ExpandableSection
+              toggleText={t('LoadBalancing')}
+              className="pf-u-mb-0"
+              isExpanded={loadBalancingExpanded}
+              onToggle={() => setLoadBalancingExpanded(!loadBalancingExpanded)}
+            >
+              <LoadBalancingField
+                loadBalancing={loadBalancing}
+                onChange={setLoadBalancing}
+                formDisabled={formDisabled}
+              />
+            </ExpandableSection>
+            <ExpandableSection
+              toggleText={t('Health Check')}
+              className="pf-u-mt-0"
+              isExpanded={healthExpanded}
+              onToggle={() => setHealthExpanded(!healthExpanded)}
+            >
+              <HealthCheckField healthCheck={healthCheck} onChange={setHealthCheck} />
+            </ExpandableSection>
+            <ActionGroup className="pf-u-mt-0">
               <KuadrantCreateUpdate
                 model={dnsPolicyModel}
                 resource={dnsPolicy}
                 policyType="dns"
                 history={history}
-                validation={isFormValid}
+                validation={formValidation()}
               />
               <Button variant="link" onClick={handleCancelResource}>
                 {t('Cancel')}

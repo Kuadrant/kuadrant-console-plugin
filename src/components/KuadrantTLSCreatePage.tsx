@@ -295,47 +295,43 @@ const KuadrantTLSCreatePage: React.FC = () => {
                   </HelperText>
                 </FormHelperText>
               </FormGroup>
-              <FormGroup fieldId="gateway-select" isRequired>
-                <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
+              <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
+              <FormGroup
+                role="radiogroup"
+                isInline
+                fieldId="cert-manager-issuer"
+                label={t('Cert manager issuer type')}
+                isRequired
+                aria-labelledby="issuer-label"
+              >
+                <Radio
+                  label={t('Cluster issuer')}
+                  isChecked={certIssuerType === 'clusterissuer'}
+                  onChange={() => {
+                    setCertIssuerType('clusterissuer');
+                  }}
+                  id="cluster-issuer"
+                  name="issuer"
+                />
+                <Radio
+                  label={t('Issuer')}
+                  isChecked={certIssuerType === 'issuer'}
+                  onChange={() => {
+                    setCertIssuerType('issuer');
+                  }}
+                  id="issuer"
+                  name="issuer"
+                />
               </FormGroup>
-              <FormGroup fieldId="certmanger-select" isRequired>
-                <FormGroup
-                  role="radiogroup"
-                  isInline
-                  fieldId="cert-manager-issuer"
-                  label={t('Cert manager issuer type')}
-                  isRequired
-                  aria-labelledby="issuer-label"
-                >
-                  <Radio
-                    label={t('Cluster issuer')}
-                    isChecked={certIssuerType === 'clusterissuer'}
-                    onChange={() => {
-                      setCertIssuerType('clusterissuer');
-                    }}
-                    id="cluster-issuer"
-                    name="issuer"
-                  />
-                  <Radio
-                    label={t('Issuer')}
-                    isChecked={certIssuerType === 'issuer'}
-                    onChange={() => {
-                      setCertIssuerType('issuer');
-                    }}
-                    id="issuer"
-                    name="issuer"
-                  />
-                </FormGroup>
-                {certIssuerType === 'clusterissuer' ? (
-                  <ClusterIssuerSelect
-                    selectedClusterIssuer={selectedClusterIssuers}
-                    onChange={setSelectedClusterIssuers}
-                  />
-                ) : (
-                  <IssuerSelect selectedIssuer={selectedIssuer} onChange={setSelectedIssuers} />
-                )}
-              </FormGroup>
-              <ActionGroup>
+              {certIssuerType === 'clusterissuer' ? (
+                <ClusterIssuerSelect
+                  selectedClusterIssuer={selectedClusterIssuers}
+                  onChange={setSelectedClusterIssuers}
+                />
+              ) : (
+                <IssuerSelect selectedIssuer={selectedIssuer} onChange={setSelectedIssuers} />
+              )}
+              <ActionGroup className="pf-u-mt-0">
                 <KuadrantCreateUpdate
                   model={tlsPolicyModel}
                   resource={tlsPolicy}
