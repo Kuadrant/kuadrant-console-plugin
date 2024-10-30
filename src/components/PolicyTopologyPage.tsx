@@ -84,6 +84,7 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
     const nodes: any[] = [];
     const edges: any[] = [];
     const groups: any[] = [];
+    const connectedNodeIds = new Set<string>();
 
     const shapeMapping: { [key: string]: NodeShape } = {
       Gateway: NodeShape.rect,
@@ -94,117 +95,131 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       RateLimitPolicy: NodeShape.rect,
       ConfigMap: NodeShape.ellipse,
       Listener: NodeShape.rect,
-      GatewayClass: NodeShape.rect,
       Kuadrant: NodeShape.ellipse,
     };
 
-    const connectedNodeIds = new Set<string>();
-
-    // Excluded resource kinds
-    const excludedKinds = [
+    // excluded kinds that will be rewired if connected to other nodes
+    const excludedKinds = new Set([
       'Issuer',
       'ClusterIssuer',
       'Certificate',
       'WasmPlugin',
       'AuthorizationPolicy',
       'EnvoyFilter',
-    ];
+      'GatewayClass',
+    ]);
 
-    // Define separate groups
-    const unassociatedPolicies = new Set<string>([
+    // kinds for unassociated policies - these will be grouped
+    const unassociatedPolicies = new Set([
       'TLSPolicy',
       'DNSPolicy',
       'AuthPolicy',
       'RateLimitPolicy',
     ]);
-    const kuadrantInternals = new Set<string>(['ConfigMap']);
 
-    graph.edges().forEach((edge) => {
-      const sourceNode = graph.node(edge.v);
-      const targetNode = graph.node(edge.w);
+    // kinds for Kuadrant internals - these will be grouped also
+    const kuadrantInternals = new Set(['ConfigMap', 'Kuadrant']);
+
+    // reconnect edges for excluded, connected nodes (e.g. GatewayClass)
+    const rewireExcludedEdges = (graph, sourceNodeId, targetNodeId) => {
+      const sourceNode = graph.node(sourceNodeId);
+      const targetNode = graph.node(targetNodeId);
 
       if (!sourceNode || !targetNode) return;
 
-      connectedNodeIds.add(edge.v);
-      connectedNodeIds.add(edge.w);
+      if (excludedKinds.has(sourceNode.type)) {
+        rewireNode(sourceNodeId, targetNodeId, 'source');
+      } else if (excludedKinds.has(targetNode.type)) {
+        rewireNode(sourceNodeId, targetNodeId, 'target');
+      } else {
+        addEdge(sourceNodeId, targetNodeId, sourceNode.type);
+      }
+    };
 
-      const isPolicy = unassociatedPolicies.has(sourceNode.type);
-
-      edges.push({
-        id: `edge-${edge.v}-${edge.w}`,
-        type: 'edge',
-        source: edge.v,
-        target: edge.w,
-        edgeStyle: isPolicy ? EdgeStyle.dashedMd : EdgeStyle.default,
-        animationSpeed: isPolicy ? EdgeAnimationSpeed.medium : undefined,
-        style: {
-          strokeWidth: 2,
-          stroke: '#393F44',
-        },
+    const rewireNode = (excludedId, connectedId, position) => {
+      const connections =
+        position === 'source' ? graph.successors(excludedId) : graph.predecessors(excludedId);
+      connections?.forEach((node) => {
+        addEdge(connectedId, node, 'default');
+        connectedNodeIds.add(node);
       });
-    });
+    };
 
-    graph.nodes().forEach((nodeId: string) => {
+    const addEdge = (source, target, type) => {
+      edges.push({
+        id: `edge-${source}-${target}`,
+        type: 'edge',
+        source,
+        target,
+        edgeStyle: type === 'policy' ? EdgeStyle.dashedMd : EdgeStyle.default,
+        animationSpeed: type === 'policy' ? EdgeAnimationSpeed.medium : undefined,
+        style: { strokeWidth: 2, stroke: '#393F44' },
+      });
+      connectedNodeIds.add(source);
+      connectedNodeIds.add(target);
+    };
+
+    // process edges with excluded kinds reconnected
+    graph
+      .edges()
+      .forEach(({ v: sourceNodeId, w: targetNodeId }) =>
+        rewireExcludedEdges(graph, sourceNodeId, targetNodeId),
+      );
+
+    // create nodes while excluding specified kinds
+    graph.nodes().forEach((nodeId) => {
       const nodeData = graph.node(nodeId);
       const [resourceType, resourceName] = nodeData.label.split('\\n');
 
-      // Exclude Issuer and ClusterIssuer resources
-      if (excludedKinds.includes(resourceType)) return;
-
-      nodes.push({
-        id: nodeId,
-        type: 'node',
-        label: resourceName,
-        resourceType,
-        width: 120,
-        height: 65,
-        labelPosition: LabelPosition.bottom,
-        shape: shapeMapping[resourceType] || NodeShape.rect,
-        data: {
+      if (!excludedKinds.has(resourceType)) {
+        nodes.push({
+          id: nodeId,
+          type: 'node',
           label: resourceName,
-          type: resourceType,
-          badge: kindToAbbr(resourceType),
-          badgeColor: '#2b9af3',
-        },
-      });
+          resourceType,
+          width: 120,
+          height: 65,
+          labelPosition: LabelPosition.bottom,
+          shape: shapeMapping[resourceType] || NodeShape.rect,
+          data: {
+            label: resourceName,
+            type: resourceType,
+            badge: kindToAbbr(resourceType),
+            badgeColor: '#2b9af3',
+          },
+        });
+      }
     });
 
-    // Group unconnected resources
+    const addGroup = (id, children, label) => {
+      groups.push({
+        id,
+        children: children.map((node) => node.id),
+        type: 'group',
+        group: true,
+        label,
+        style: { padding: 40 },
+      });
+    };
+
+    // Group unassociated policies and Kuadrant resources
     const unassociatedPolicyNodes = nodes.filter(
       (node) => !connectedNodeIds.has(node.id) && unassociatedPolicies.has(node.resourceType),
     );
-    if (unassociatedPolicyNodes.length > 0) {
-      groups.push({
-        id: 'group-unattached',
-        children: unassociatedPolicyNodes.map((node) => node.id),
-        type: 'group',
-        group: true,
-        label: 'Unattached Policies',
-        style: {
-          padding: 40,
-        },
-      });
-    }
+    if (unassociatedPolicyNodes.length)
+      addGroup('group-unattached', unassociatedPolicyNodes, 'Unattached Policies');
 
-    // Group Kuadrant Internals (ConfigMap)
-    const kuadrantInternalNodes = nodes.filter(
-      (node) => !connectedNodeIds.has(node.id) && kuadrantInternals.has(node.resourceType),
+    const kuadrantInternalNodes = nodes.filter((node) => kuadrantInternals.has(node.resourceType));
+    if (kuadrantInternalNodes.length)
+      addGroup('group-kuadrant-internals', kuadrantInternalNodes, 'Kuadrant Internals');
+
+    // Filter out any remaining edges with missing nodes
+    const nodeIds = new Set(nodes.map((node) => node.id));
+    const validEdges = edges.filter(
+      ({ source, target }) => nodeIds.has(source) && nodeIds.has(target),
     );
-    if (kuadrantInternalNodes.length > 0) {
-      groups.push({
-        id: 'group-kuadrant-internals',
-        children: kuadrantInternalNodes.map((node) => node.id),
-        type: 'group',
-        group: true,
-        label: 'Kuadrant Internals',
-        style: {
-          padding: 40,
-        },
-      });
-    }
 
-    const finalNodes = [...nodes, ...groups];
-    return { nodes: finalNodes, edges };
+    return { nodes: [...nodes, ...groups], edges: validEdges };
   } catch (error) {
     console.error('Error parsing DOT string:', error);
     throw error;
