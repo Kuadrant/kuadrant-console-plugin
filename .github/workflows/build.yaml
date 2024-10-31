@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main  # only for merges/pushes to main
+  workflow_dispatch:
 
 env:
   REGISTRY_USER: ${{ secrets.QUAY_USER }}
