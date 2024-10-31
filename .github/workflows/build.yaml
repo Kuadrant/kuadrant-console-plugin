@@ -10,6 +10,7 @@ env:
   REGISTRY_USER: ${{ secrets.QUAY_USER }}
   IMAGE_REGISTRY: quay.io
   REGISTRY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
+  IMAGE_NAME: kuadrant/console-plugin
 
 jobs:
   build:
@@ -30,7 +31,7 @@ jobs:
         id: build-image
         uses: redhat-actions/buildah-build@v2
         with:
-          image: quay.io/kuadrant/console-plugin
+          image: ${{ env.IMAGE_REGISTRY }}/kuadrant/${{ env.IMAGE_NAME }}
           tags: |
             latest
             ${{ github.sha }}
@@ -43,8 +44,8 @@ jobs:
         id: push-to-quay
         uses: redhat-actions/push-to-registry@v2
         with:
-          registry: quay.io
-          image: kuadrant/console-plugin
+          registry: ${{ env.IMAGE_REGISTRY }}
+          image: ${{ env.IMAGE_NAME }}
           tags: |
             latest
             ${{ github.sha }}
