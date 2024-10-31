@@ -36,24 +36,33 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Build and Push Multi-Arch Image
-        id: build-and-push
+      - name: Build and Push Multi-Arch Image (Main)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          # Apply different tags based on event type
           tags: |
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
-            ${{ github.event.release.name && env.IMAGE_NAME + ':' + github.event.release.name }}
 
-      - name: Print image URL
+      - name: Build and Push Versioned Multi-Arch Image (Release)
         if: github.event_name == 'release' && github.event.action == 'published'
-        run: echo "Versioned image pushed to ${{ env.IMAGE_NAME }}:${{ github.event.release.name }}"
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ github.event.release.name }}
 
       - name: Print main branch image URL
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: echo "Main branch image pushed to ${{ env.IMAGE_NAME }}:latest and ${{ env.IMAGE_NAME }}:${{ github.sha }}"
+
+      - name: Print versioned image URL
+        if: github.event_name == 'release' && github.event.action == 'published'
+        run: echo "Versioned image pushed to ${{ env.IMAGE_NAME }}:${{ github.event.release.name }}"
