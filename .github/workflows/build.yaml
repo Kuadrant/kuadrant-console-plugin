@@ -34,14 +34,10 @@ jobs:
           tags: |
             latest
             ${{ github.sha }}
-          archs: |
-            amd64
-            arm64
-          containerfiles: |
-            ./Dockerfile
           platforms: |
             linux/amd64,linux/arm64
-          options: "--no-cache"
+          containerfiles: |
+            ./Dockerfile
 
       - name: Push To Quay.io
         id: push-to-quay
