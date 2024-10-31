@@ -3,7 +3,7 @@ name: Build and Push Multi-Arch Image as latest
 on:
   push:
     branches:
-      - main  # only for merges/pushes to main
+      - main
   workflow_dispatch:
 
 env:
@@ -39,6 +39,9 @@ jobs:
             arm64
           containerfiles: |
             ./Dockerfile
+          platforms: |
+            linux/amd64,linux/arm64
+          options: "--no-cache"
 
       - name: Push To Quay.io
         id: push-to-quay
