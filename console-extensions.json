@@ -61,17 +61,6 @@
     "properties": {
       "model": {
         "group": "kuadrant.io",
-        "version": "v1beta3",
-        "kind": "RateLimitPolicy"
-      },
-      "component": { "$codeRef": "KuadrantRateLimitPolicyCreatePage" }
-    }
-  },
-  {
-    "type": "console.resource/create",
-    "properties": {
-      "model": {
-        "group": "kuadrant.io",
         "version": "v1",
         "kind": "RateLimitPolicy"
       },
@@ -87,17 +76,6 @@
         "kind": "TLSPolicy"
       },
       "component": { "$codeRef": "KuadrantTLSCreatePage" }
-    }
-  },
-  {
-    "type": "console.resource/create",
-    "properties": {
-      "model": {
-        "group": "kuadrant.io",
-        "version": "v1beta3",
-        "kind": "AuthPolicy"
-      },
-      "component": { "$codeRef": "KuadrantAuthPolicyCreatePage" }
     }
   },
   {
