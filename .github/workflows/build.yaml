@@ -57,7 +57,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ github.event.release.name }}
+            v${{ env.IMAGE_NAME }}:${{ github.event.release.name }}
 
       - name: Print main branch image URL
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
