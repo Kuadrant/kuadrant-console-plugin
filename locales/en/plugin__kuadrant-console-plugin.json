@@ -55,7 +55,6 @@
   "Getting started resources": "Getting started resources",
   "Health Check": "Health Check",
   "Hide for session": "Hide for session",
-  "highlights": "highlights",
   "HTTPRoute API Target Reference": "HTTPRoute API Target Reference",
   "Issuer": "Issuer",
   "Issuer API Target Reference": "Issuer API Target Reference",
@@ -119,9 +118,7 @@
   "Unique name of the DNS Policy": "Unique name of the DNS Policy",
   "Unique name of the TLSPolicy.": "Unique name of the TLSPolicy.",
   "Unit": "Unit",
-  "View all quick starts": "View all quick starts",
   "View Documentation": "View Documentation",
-  "Visit the blog": "Visit the blog",
   "Weight value to apply to weighted endpoints default: 120": "Weight value to apply to weighted endpoints default: 120",
   "YAML View": "YAML View",
   "You can view and create HTTPRoutes": "You can view and create HTTPRoutes"
