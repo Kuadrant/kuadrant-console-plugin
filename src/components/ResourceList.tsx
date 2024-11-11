@@ -81,7 +81,11 @@ const getStatusLabel = (obj) => {
   const policiesAffected = policiesMap[kind] || [];
 
   const hasAllPoliciesEnforced = (conditions) => {
-    return policiesAffected.every((policy) =>
+    const relevantPolicies = policiesAffected.filter((policy) =>
+      conditions.some((cond) => cond.type === policy),
+    );
+
+    return relevantPolicies.every((policy) =>
       conditions.some((cond) => cond.type === policy && cond.status === 'True'),
     );
   };
