@@ -223,18 +223,18 @@ const KuadrantOverviewPage: React.FC = () => {
                           <Text
                             component="a"
                             href={EXTERNAL_LINKS.documentation}
-                            className="pf-u-display-block"
+                            className="kuadrant-dashboard-resource-link"
                           >
-                            {t('View Documentation')}
+                            {t('View Documentation')} <ExternalLinkAltIcon />
                           </Text>
                         </StackItem>
                         <StackItem>
                           <Text
                             component="a"
                             href={EXTERNAL_LINKS.quickStarts}
-                            className="pf-u-display-block"
+                            className="kuadrant-dashboard-resource-link"
                           >
-                            {t('View all quick starts')}
+                            {t('View all quick starts')} <ExternalLinkAltIcon />
                           </Text>
                         </StackItem>
                       </Stack>
@@ -257,8 +257,7 @@ const KuadrantOverviewPage: React.FC = () => {
                             href="#"
                             className="kuadrant-dashboard-resource-link"
                           >
-                            {t('Kuadrant')} {t('highlights')}&nbsp;&nbsp;
-                            <ExternalLinkAltIcon />
+                            {t('Kuadrant')} {t('highlights')} <ExternalLinkAltIcon />
                           </Text>
                         </StackItem>
                         <StackItem>
@@ -268,18 +267,16 @@ const KuadrantOverviewPage: React.FC = () => {
                             href={EXTERNAL_LINKS.releaseNotes}
                             className="kuadrant-dashboard-resource-link"
                           >
-                            {t('Kuadrant')} {t('Release Notes')}
-                            <span className="kuadrant-reading-time">{t('6 min read')}</span>
-                            <ExternalLinkAltIcon />
+                            {t('Kuadrant')} {t('Release Notes')} <ExternalLinkAltIcon />
                           </Text>
                         </StackItem>
                         <StackItem>
                           <Text
                             component="a"
                             href={EXTERNAL_LINKS.blog}
-                            className="pf-u-display-block"
+                            className="kuadrant-dashboard-resource-link"
                           >
-                            {t('Visit the blog')}
+                            {t('Visit the blog')} <ExternalLinkAltIcon />
                           </Text>
                         </StackItem>
                       </Stack>
@@ -301,7 +298,7 @@ const KuadrantOverviewPage: React.FC = () => {
                             href={INTERNAL_LINKS.apiDesigner}
                             className="kuadrant-dashboard-resource-link"
                           >
-                            {t('API Designer')} <ArrowRightIcon />
+                            {t('API Designer')} <ExternalLinkAltIcon />
                           </Text>
                         </StackItem>
                         <StackItem>
@@ -310,7 +307,7 @@ const KuadrantOverviewPage: React.FC = () => {
                             href={INTERNAL_LINKS.observabilitySetup}
                             className="kuadrant-dashboard-resource-link"
                           >
-                            Observability for {t('Kuadrant')} <ArrowRightIcon />
+                            Observability for {t('Kuadrant')} <ExternalLinkAltIcon />
                           </Text>
                         </StackItem>
                         <StackItem>
@@ -319,7 +316,7 @@ const KuadrantOverviewPage: React.FC = () => {
                             href={INTERNAL_LINKS.certManagerOperator(activeNamespace)}
                             className="kuadrant-dashboard-resource-link"
                           >
-                            {t('cert-manager Operator')} <ArrowRightIcon />
+                            {t('cert-manager Operator')} <ExternalLinkAltIcon />
                           </Text>
                         </StackItem>
                       </Stack>
