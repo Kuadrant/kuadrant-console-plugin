@@ -228,15 +228,6 @@ const KuadrantOverviewPage: React.FC = () => {
                             {t('View Documentation')} <ExternalLinkAltIcon />
                           </Text>
                         </StackItem>
-                        <StackItem>
-                          <Text
-                            component="a"
-                            href={EXTERNAL_LINKS.quickStarts}
-                            className="kuadrant-dashboard-resource-link"
-                          >
-                            {t('View all quick starts')} <ExternalLinkAltIcon />
-                          </Text>
-                        </StackItem>
                       </Stack>
                     </FlexItem>
                     <Divider orientation={{ default: 'vertical' }} />
@@ -254,29 +245,10 @@ const KuadrantOverviewPage: React.FC = () => {
                           <Text
                             target="_blank"
                             component="a"
-                            href="#"
-                            className="kuadrant-dashboard-resource-link"
-                          >
-                            {t('Kuadrant')} {t('highlights')} <ExternalLinkAltIcon />
-                          </Text>
-                        </StackItem>
-                        <StackItem>
-                          <Text
-                            target="_blank"
-                            component="a"
                             href={EXTERNAL_LINKS.releaseNotes}
                             className="kuadrant-dashboard-resource-link"
                           >
                             {t('Kuadrant')} {t('Release Notes')} <ExternalLinkAltIcon />
-                          </Text>
-                        </StackItem>
-                        <StackItem>
-                          <Text
-                            component="a"
-                            href={EXTERNAL_LINKS.blog}
-                            className="kuadrant-dashboard-resource-link"
-                          >
-                            {t('Visit the blog')} <ExternalLinkAltIcon />
                           </Text>
                         </StackItem>
                       </Stack>

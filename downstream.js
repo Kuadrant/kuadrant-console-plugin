@@ -12,17 +12,11 @@ const downstreamName = 'Connectivity Link';
 
 const upstreamDocumentation = 'https://docs.kuadrant.io';
 const upstreamReleaseNotes = 'https://github.com/Kuadrant/kuadrant-operator/releases';
-const upstreamQuickStarts =
-  'https://docs.kuadrant.io/latest/kuadrant-operator/doc/user-guides/secure-protect-connect/';
-const upstreamHighlights = 'https://kuadrant.io/blog/';
 
 const downstreamDocumentation =
   'https://docs.redhat.com/en/documentation/red_hat_connectivity_link/1.0';
 const downstreamReleaseNotes =
-  'https://docs.kuadrant.io/html-single/release_notes_for_connectivity_link_1.0/index';
-const downstreamQuickStarts =
-  'https://docs.redhat.com/latest/red-hat-connectivity-link/doc/user-guides/secure-protect-connect/'; // Example
-const downstreamHighlights = 'https://connectivity-link.io/blog/'; // Example
+  'https://docs.redhat.com/html-single/release_notes_for_connectivity_link_1.0/index';
 
 const isUpstream = process.argv.includes('--upstream');
 
@@ -32,10 +26,6 @@ const docsLinkToReplace = isUpstream ? downstreamDocumentation : upstreamDocumen
 const docsLinkToInsert = isUpstream ? upstreamDocumentation : downstreamDocumentation;
 const releaseNotesToReplace = isUpstream ? downstreamReleaseNotes : upstreamReleaseNotes;
 const releaseNotesToInsert = isUpstream ? upstreamReleaseNotes : downstreamReleaseNotes;
-const quickStartsToReplace = isUpstream ? downstreamQuickStarts : upstreamQuickStarts;
-const quickStartsToInsert = isUpstream ? upstreamQuickStarts : downstreamQuickStarts;
-const highlightsToReplace = isUpstream ? downstreamHighlights : upstreamHighlights;
-const highlightsToInsert = isUpstream ? upstreamHighlights : downstreamHighlights;
 
 function updateJsonValues(filePath, searchValue, replaceValue) {
   try {
@@ -90,8 +80,6 @@ console.log(`Updating constants.links.ts to ${isUpstream ? 'upstream' : 'downstr
 updateFileContent(constantsPath, [
   { searchValue: docsLinkToReplace, replaceValue: docsLinkToInsert },
   { searchValue: releaseNotesToReplace, replaceValue: releaseNotesToInsert },
-  { searchValue: quickStartsToReplace, replaceValue: quickStartsToInsert },
-  { searchValue: highlightsToReplace, replaceValue: highlightsToInsert },
 ]);
 
 console.log('Update complete!');
