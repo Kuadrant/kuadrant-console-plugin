@@ -107,6 +107,7 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       'AuthorizationPolicy',
       'EnvoyFilter',
       'GatewayClass',
+      'DNSRecord',
     ]);
 
     // kinds for unassociated policies - these will be grouped
@@ -118,7 +119,7 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
     ]);
 
     // kinds for Kuadrant internals - these will be grouped also
-    const kuadrantInternals = new Set(['ConfigMap', 'Kuadrant']);
+    const kuadrantInternals = new Set(['ConfigMap', 'Kuadrant', 'Limitador', 'Authorino']);
 
     // reconnect edges for excluded, connected nodes (e.g. GatewayClass)
     const rewireExcludedEdges = (graph, sourceNodeId, targetNodeId) => {
