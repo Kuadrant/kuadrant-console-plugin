@@ -9,6 +9,9 @@ const resourceGVKMapping: { [key: string]: { group: string; version: string; kin
   Listener: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Listener' },
   GatewayClass: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'GatewayClass' },
   WasmPlugin: { group: 'extensions.istio.io', version: 'v1alpha1', kind: 'WasmPlugin' },
+  Authorino: { group: 'operator.authorino.kuadrant.io', version: 'v1beta1', kind: 'Authorino' },
+  Limitador: { group: 'limitador.kuadrant.io', version: 'v1alpha1', kind: 'Limitador' },
+  Kuadrant: { group: 'kuadrant.io', version: 'v1beta1', kind: 'Kuadrant' },
 };
 
 export default resourceGVKMapping;
