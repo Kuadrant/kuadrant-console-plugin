@@ -42,16 +42,14 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
           rates: [
             {
               limit: 100,
-              duration: 1,
-              unit: 'second',
+              window: '1s',
             },
             {
               limit: 1000,
-              duration: 1,
-              unit: 'minute',
+              window: '1m',
             },
           ],
-          counters: ['auth.identity.username'],
+          counters: [{ expression: 'auth.identity.username' }],
         },
       },
     },
