@@ -12,6 +12,7 @@ const resourceGVKMapping: { [key: string]: { group: string; version: string; kin
   Authorino: { group: 'operator.authorino.kuadrant.io', version: 'v1beta1', kind: 'Authorino' },
   Limitador: { group: 'limitador.kuadrant.io', version: 'v1alpha1', kind: 'Limitador' },
   Kuadrant: { group: 'kuadrant.io', version: 'v1beta1', kind: 'Kuadrant' },
+  ConsolePlugin: { group: 'console.openshift.io', version: 'v1', kind: 'ConsolePlugin' },
 };
 
 export default resourceGVKMapping;
