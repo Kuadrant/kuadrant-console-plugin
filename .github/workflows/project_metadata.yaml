@@ -27,5 +27,5 @@ jobs:
           project-url: https://github.com/orgs/Kuadrant/projects/18
           github-token: ${{ secrets.ADD_ISSUES_TOKEN }}
           item-id: ${{ steps.add-project.outputs.itemId }}
-          field-keys: Feature,Area
-          field-values: Console Plugin,User Experience
+          field-keys: Feature,Area,Status
+          field-values: Console Plugin,User Experience,Todo
