@@ -1,9 +1,12 @@
-name: Create and/or Update edited issues to my project
+name: Add Console Plugin metadata
 
 on:
   issues:
     types:
-      - edited
+      - opened
+  pull_request:
+    types:
+      - opened
 
 jobs:
   add-and-update-project-fields:
@@ -14,15 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-
-      # Step 1: Add issue to the project
       - uses: actions/add-to-project@v0.3.0
         with:
           project-url: https://github.com/orgs/Kuadrant/projects/18
           github-token: ${{ secrets.GHPROJECT_SECRET }}
         id: add-project  # Save the step output for item-id
-
-      # Step 2: Update project fields with the item-id from the add-to-project step
       - uses: titoportas/update-project-fields@v0.1.0
         with:
           project-url: https://github.com/orgs/Kuadrant/projects/18
