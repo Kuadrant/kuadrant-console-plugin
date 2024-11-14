@@ -1,7 +1,6 @@
 // Internal Links
 export const INTERNAL_LINKS = {
   createPolicies: '/kuadrant/all-namespaces/policies',
-  apiDesigner: 'https://www.apicur.io/studio/',
   addNewGateway: (namespace: string) =>
     `/k8s/ns/${
       namespace === '#ALL_NS#' ? 'default' : namespace
