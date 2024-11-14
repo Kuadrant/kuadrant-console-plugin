@@ -49,8 +49,18 @@ export const AllPoliciesListPage: React.FC<{
   paginationLimit?: number;
 }> = ({ activeNamespace, columns, showAlertGroup = false, paginationLimit }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
+  const [activePerspective] = useActivePerspective();
   const history = useHistory();
   const [isOpen, setIsOpen] = useState(false);
+
+  let filteredResources = resources;
+
+  // Filter out DNSPolicies and TLSPolicies if active perspective is 'dev'
+  if (activePerspective === 'dev') {
+    filteredResources = resources.filter(
+      (resource) => !['DNSPolicies', 'TLSPolicies'].includes(resource.name),
+    );
+  }
 
   const onToggleClick = () => {
     setIsOpen(!isOpen);
@@ -69,7 +79,7 @@ export const AllPoliciesListPage: React.FC<{
       <ListPageBody>
         <div className="co-m-nav-title--row kuadrant-resource-create-container">
           <ResourceList
-            resources={resources.map((r) => r.gvk)}
+            resources={filteredResources.map((r) => r.gvk)}
             namespace={activeNamespace}
             columns={columns}
             paginationLimit={paginationLimit}
@@ -98,12 +108,16 @@ export const AllPoliciesListPage: React.FC<{
                 <DropdownItem value="RateLimitPolicy" key="rate-limit-policy">
                   {t('RateLimitPolicy')}
                 </DropdownItem>
-                <DropdownItem value="DNSPolicy" key="dns-policy">
-                  {t('DNSPolicy')}
-                </DropdownItem>
-                <DropdownItem value="TLSPolicy" key="tls-policy">
-                  {t('TLSPolicy')}
-                </DropdownItem>
+                {activePerspective !== 'dev' && (
+                  <>
+                    <DropdownItem value="DNSPolicy" key="dns-policy">
+                      {t('DNSPolicy')}
+                    </DropdownItem>
+                    <DropdownItem value="TLSPolicy" key="tls-policy">
+                      {t('TLSPolicy')}
+                    </DropdownItem>
+                  </>
+                )}
               </DropdownList>
             </Dropdown>
           </div>

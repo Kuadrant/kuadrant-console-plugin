@@ -32,7 +32,7 @@ import {
   ExternalLinkAltIcon,
   EllipsisVIcon,
 } from '@patternfly/react-icons';
-import { useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
+import { useActiveNamespace, useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import ResourceList from './ResourceList';
 import { sortable } from '@patternfly/react-table';
@@ -61,6 +61,7 @@ const KuadrantOverviewPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const { ns } = useParams<{ ns: string }>();
   const [activeNamespace, setActiveNamespace] = useActiveNamespace();
+  const [activePerspective] = useActivePerspective();
   const [isExpanded, setIsExpanded] = React.useState(true);
   const [isOpen, setIsOpen] = React.useState(false);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
@@ -327,27 +328,43 @@ const KuadrantOverviewPage: React.FC = () => {
                       <DropdownItem value="RateLimitPolicy" key="rate-limit-policy">
                         {t('RateLimitPolicy')}
                       </DropdownItem>
-                      <DropdownItem value="DNSPolicy" key="dns-policy">
-                        {t('DNSPolicy')}
-                      </DropdownItem>
-                      <DropdownItem value="TLSPolicy" key="tls-policy">
-                        {t('TLSPolicy')}
-                      </DropdownItem>
+                      {activePerspective !== 'dev' && (
+                        <>
+                          <DropdownItem value="DNSPolicy" key="dns-policy">
+                            {t('DNSPolicy')}
+                          </DropdownItem>
+                          <DropdownItem value="TLSPolicy" key="tls-policy">
+                            {t('TLSPolicy')}
+                          </DropdownItem>
+                        </>
+                      )}
                     </DropdownList>
                   </Dropdown>
                 </CardTitle>
                 <CardBody className="pf-u-p-10">
-                  <ResourceList
-                    resources={[
-                      resourceGVKMapping['AuthPolicy'],
-                      resourceGVKMapping['DNSPolicy'],
-                      resourceGVKMapping['RateLimitPolicy'],
-                      resourceGVKMapping['TLSPolicy'],
-                    ]}
-                    columns={columns}
-                    namespace="#ALL_NS#"
-                    paginationLimit={5}
-                  />
+                  {activePerspective !== 'dev' ? (
+                    <ResourceList
+                      resources={[
+                        resourceGVKMapping['AuthPolicy'],
+                        resourceGVKMapping['DNSPolicy'],
+                        resourceGVKMapping['RateLimitPolicy'],
+                        resourceGVKMapping['TLSPolicy'],
+                      ]}
+                      columns={columns}
+                      namespace="#ALL_NS#"
+                      paginationLimit={5}
+                    />
+                  ) : (
+                    <ResourceList
+                      resources={[
+                        resourceGVKMapping['AuthPolicy'],
+                        resourceGVKMapping['RateLimitPolicy'],
+                      ]}
+                      columns={columns}
+                      namespace="#ALL_NS#"
+                      paginationLimit={5}
+                    />
+                  )}
                 </CardBody>
               </Card>
             </FlexItem>
