@@ -1,9 +1,7 @@
 {
-  "Add a new Gateway": "Add a new Gateway",
   "Add Limit": "Add Limit",
   "All Policies": "All Policies",
   "All references for the resource have been resolved.": "All references for the resource have been resolved.",
-  "API Designer": "API Designer",
   "APIs / HTTPRoutes": "APIs / HTTPRoutes",
   "Auth": "Auth",
   "AuthPolicy": "AuthPolicy",
@@ -21,7 +19,6 @@
   "Create DNS Policy": "Create DNS Policy",
   "Create Gateway": "Create Gateway",
   "Create HTTPRoute": "Create HTTPRoute",
-  "Create Policies in": "Create Policies in",
   "Create Policy": "Create Policy",
   "Create RateLimit Policy": "Create RateLimit Policy",
   "Create TLS Policy": "Create TLS Policy",

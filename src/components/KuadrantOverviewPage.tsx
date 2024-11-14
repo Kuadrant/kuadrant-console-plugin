@@ -28,7 +28,6 @@ import {
   GlobeIcon,
   ReplicatorIcon,
   OptimizeIcon,
-  ArrowRightIcon,
   ExternalLinkAltIcon,
   EllipsisVIcon,
 } from '@patternfly/react-icons';
@@ -204,26 +203,9 @@ const KuadrantOverviewPage: React.FC = () => {
                         <StackItem>
                           <Text
                             component="a"
-                            href={INTERNAL_LINKS.createPolicies}
-                            className="kuadrant-dashboard-resource-link"
-                          >
-                            {t('Create Policies in')} {t('Kuadrant')} <ArrowRightIcon />
-                          </Text>
-                        </StackItem>
-                        <StackItem>
-                          <Text
-                            component="a"
-                            href={INTERNAL_LINKS.addNewGateway(activeNamespace)}
-                            className="kuadrant-dashboard-resource-link"
-                          >
-                            {t('Add a new Gateway')} <ArrowRightIcon />
-                          </Text>
-                        </StackItem>
-                        <StackItem>
-                          <Text
-                            component="a"
                             href={EXTERNAL_LINKS.documentation}
                             className="kuadrant-dashboard-resource-link"
+                            target="_blank"
                           >
                             {t('View Documentation')} <ExternalLinkAltIcon />
                           </Text>
@@ -267,17 +249,9 @@ const KuadrantOverviewPage: React.FC = () => {
                         <StackItem>
                           <Text
                             component="a"
-                            href={INTERNAL_LINKS.apiDesigner}
-                            className="kuadrant-dashboard-resource-link"
-                          >
-                            {t('API Designer')} <ExternalLinkAltIcon />
-                          </Text>
-                        </StackItem>
-                        <StackItem>
-                          <Text
-                            component="a"
                             href={INTERNAL_LINKS.observabilitySetup}
                             className="kuadrant-dashboard-resource-link"
+                            target="_blank"
                           >
                             Observability for {t('Kuadrant')} <ExternalLinkAltIcon />
                           </Text>
