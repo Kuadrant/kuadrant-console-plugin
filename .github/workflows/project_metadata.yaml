@@ -1,27 +1,32 @@
-name: Add Console Plugin metadata
+name: Create and/or Update edited issues to my project
 
 on:
   issues:
     types:
-      - opened
-  pull_request:
-    types:
-      - opened
+      - edited
 
 jobs:
   add-and-update-project-fields:
     # Only run jobs if the feature branch is in your repo (not in a fork)
     # OR
     # it is an issue
-    name: Add issue to project and set metadata
-    if: github.event.pull_request.head.repo.full_name == github.repository || github.event.issue.number != ''
+    name: Create/update project issue
     runs-on: ubuntu-latest
-
     steps:
-      - name: Update Project Fields
-        uses: titoportas/update-project-fields@v0.1.0
+      - uses: actions/checkout@v3
+
+      # Step 1: Add issue to the project
+      - uses: actions/add-to-project@v0.3.0
         with:
           project-url: https://github.com/orgs/Kuadrant/projects/18
-          github-token: ${{ secrets.PROJECT_METADATA_SECRET }}
+          github-token: ${{ secrets.GHPROJECT_SECRET }}
+        id: add-project  # Save the step output for item-id
+
+      # Step 2: Update project fields with the item-id from the add-to-project step
+      - uses: titoportas/update-project-fields@v0.1.0
+        with:
+          project-url: https://github.com/orgs/Kuadrant/projects/18
+          github-token: ${{ secrets.GHPROJECT_SECRET }}
+          item-id: ${{ steps.add-project.outputs.itemId }}
           field-keys: Feature,Area
           field-values: Console Plugin,User Experience
