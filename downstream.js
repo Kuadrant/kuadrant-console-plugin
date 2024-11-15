@@ -5,6 +5,7 @@ const path = require('path');
 
 const constantsPath = path.join('src', 'constants', 'links.ts');
 const localesPath = path.join('locales');
+const consoleExtensionsPath = path.join('console-extensions.json');
 const localeFile = path.join(localesPath, 'en', 'plugin__kuadrant-console-plugin.json');
 
 const upstreamName = 'Kuadrant';
@@ -72,6 +73,31 @@ function updateFileContent(filePath, replacements) {
   }
 }
 
+function updateConsoleExtensions(filePath, searchValue, replaceValue) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const jsonContent = JSON.parse(content);
+
+    let updated = false;
+
+    jsonContent.forEach((item) => {
+      if (item.properties && item.properties.name === searchValue) {
+        item.properties.name = replaceValue;
+        updated = true;
+      }
+    });
+
+    if (updated) {
+      fs.writeFileSync(filePath, JSON.stringify(jsonContent, null, 2));
+      console.log(`Updated console extensions in ${filePath}`);
+    } else {
+      console.log(`No changes made to ${filePath}`);
+    }
+  } catch (error) {
+    console.error(`Failed to update ${filePath}: ${error}`);
+  }
+}
+
 console.log(`Updating locale files to ${isUpstream ? 'upstream' : 'downstream'}...`);
 updateJsonValues(localeFile, nameToReplace, nameToInsert);
 
@@ -81,5 +107,12 @@ updateFileContent(constantsPath, [
   { searchValue: docsLinkToReplace, replaceValue: docsLinkToInsert },
   { searchValue: releaseNotesToReplace, replaceValue: releaseNotesToInsert },
 ]);
+
+console.log(`Updating console-extensions.json to ${isUpstream ? 'upstream' : 'downstream'}...`);
+updateConsoleExtensions(
+  consoleExtensionsPath,
+  `%plugin__kuadrant-console-plugin~${nameToReplace}%`,
+  nameToInsert,
+);
 
 console.log('Update complete!');
