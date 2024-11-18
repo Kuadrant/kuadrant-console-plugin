@@ -17,14 +17,12 @@ import {
   ResourceLink,
   useK8sWatchResources,
   VirtualizedTable,
-  useListPageFilter,
   Timestamp,
   TableData,
   RowProps,
   TableColumn,
   WatchK8sResource,
   ListPageBody,
-  ListPageFilter,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { SearchIcon } from '@patternfly/react-icons';
 import {
@@ -340,8 +338,12 @@ const ResourceList: React.FC<ResourceListProps> = ({
     resourceDescriptors,
   );
 
-  const allData = Object.values(watchedResources).flatMap((res) =>
-    res.loaded && !res.loadError ? (res.data as K8sResourceCommon[]) : [],
+  const allData = React.useMemo(
+    () =>
+      Object.values(watchedResources).flatMap((res) =>
+        res.loaded && !res.loadError ? (res.data as K8sResourceCommon[]) : [],
+      ),
+    [watchedResources],
   );
 
   const allLoaded = Object.values(watchedResources).every((res) => res.loaded);
@@ -353,7 +355,32 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const combinedLoadError =
     loadErrors.length > 0 ? new Error(loadErrors.map((err) => err.message).join('; ')) : null;
 
-  const [data, filteredData, onFilterChange] = useListPageFilter(allData);
+  // Implement local filter state
+  const [filters, setFilters] = React.useState<{ [key: string]: string }>({});
+  const [filteredData, setFilteredData] = React.useState<K8sResourceCommon[]>([]);
+
+  React.useEffect(() => {
+    let data = allData;
+
+    // Apply filters
+    Object.keys(filters).forEach((key) => {
+      const value = filters[key];
+      if (value) {
+        data = data.filter((item) => {
+          if (key === 'name') {
+            return item.metadata.name.toLowerCase().includes(value.toLowerCase());
+          } else if (key === 'namespace') {
+            return item.metadata.namespace?.toLowerCase().includes(value.toLowerCase());
+          } else if (key === 'type') {
+            return item.kind.toLowerCase().includes(value.toLowerCase());
+          }
+          return true;
+        });
+      }
+    });
+
+    setFilteredData(data);
+  }, [allData, filters]);
 
   const defaultColumns: TableColumn<K8sResourceCommon>[] = [
     {
@@ -442,10 +469,14 @@ const ResourceList: React.FC<ResourceListProps> = ({
             case 'namespace':
               return (
                 <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                  <ResourceLink
-                    groupVersionKind={{ version: 'v1', kind: 'Namespace' }}
-                    name={obj.metadata.namespace}
-                  />
+                  {obj.metadata.namespace ? (
+                    <ResourceLink
+                      groupVersionKind={{ version: 'v1', kind: 'Namespace' }}
+                      name={obj.metadata.namespace}
+                    />
+                  ) : (
+                    '-'
+                  )}
                 </TableData>
               );
             case 'Status':
@@ -490,7 +521,39 @@ const ResourceList: React.FC<ResourceListProps> = ({
       )}
       <div className="kuadrant-policy-list-body">
         <ListPageBody>
-          <ListPageFilter data={data} loaded={allLoaded} onFilterChange={onFilterChange} />
+          {/* Filter UI */}
+          <div className="kuadrant-filter-bar" style={{ marginBottom: '16px' }}>
+            <input
+              type="text"
+              placeholder="Filter by name"
+              value={filters.name || ''}
+              onChange={(e) => {
+                setCurrentPage(1);
+                setFilters({ ...filters, name: e.target.value });
+              }}
+              style={{ marginRight: '8px' }}
+            />
+            <input
+              type="text"
+              placeholder="Filter by namespace"
+              value={filters.namespace || ''}
+              onChange={(e) => {
+                setCurrentPage(1);
+                setFilters({ ...filters, namespace: e.target.value });
+              }}
+              style={{ marginRight: '8px' }}
+            />
+            <input
+              type="text"
+              placeholder="Filter by type"
+              value={filters.type || ''}
+              onChange={(e) => {
+                setCurrentPage(1);
+                setFilters({ ...filters, type: e.target.value });
+              }}
+            />
+          </div>
+
           {paginatedData.length === 0 && allLoaded ? (
             <EmptyState>
               <EmptyStateIcon icon={SearchIcon} />
@@ -504,7 +567,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
           ) : (
             <VirtualizedTable<K8sResourceCommon>
               data={paginatedData}
-              unfilteredData={data}
+              unfilteredData={filteredData}
               loaded={allLoaded}
               loadError={combinedLoadError}
               columns={usedColumns}
@@ -512,7 +575,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
             />
           )}
 
-          {paginatedData.length > 0 && (
+          {filteredData.length > 0 && (
             <div className="kuadrant-pagination-left">
               <Pagination
                 itemCount={filteredData.length}
