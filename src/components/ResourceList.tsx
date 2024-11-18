@@ -11,6 +11,16 @@ import {
   EmptyStateBody,
   Title,
   Tooltip,
+  ToolbarItem,
+  ToolbarGroup,
+  Select,
+  MenuToggle,
+  InputGroup,
+  TextInput,
+  MenuToggleElement,
+  SelectOption,
+  Toolbar,
+  ToolbarContent,
 } from '@patternfly/react-core';
 import {
   K8sResourceCommon,
@@ -356,29 +366,39 @@ const ResourceList: React.FC<ResourceListProps> = ({
     loadErrors.length > 0 ? new Error(loadErrors.map((err) => err.message).join('; ')) : null;
 
   // Implement local filter state
-  const [filters, setFilters] = React.useState<{ [key: string]: string }>({});
+  const [filters, setFilters] = React.useState<string>('');
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [filterSelected, setFilterSelected] = React.useState('Name');
   const [filteredData, setFilteredData] = React.useState<K8sResourceCommon[]>([]);
+
+  const onToggleClick = () => {
+    setIsOpen(!isOpen);
+  };
+
+  const onFilterSelect = (
+    _event: React.MouseEvent<Element, MouseEvent> | undefined,
+    selection: string,
+  ) => {
+    setFilterSelected(selection);
+    setIsOpen(false);
+  };
 
   React.useEffect(() => {
     let data = allData;
 
-    // Apply filters
-    Object.keys(filters).forEach((key) => {
-      const value = filters[key];
-      if (value) {
-        data = data.filter((item) => {
-          if (key === 'name') {
-            return item.metadata.name.toLowerCase().includes(value.toLowerCase());
-          } else if (key === 'namespace') {
-            return item.metadata.namespace?.toLowerCase().includes(value.toLowerCase());
-          } else if (key === 'type') {
-            return item.kind.toLowerCase().includes(value.toLowerCase());
-          }
-          return true;
-        });
-      }
-    });
-
+    if (filters) {
+      const filterValue = filters.toLowerCase();
+      data = data.filter((item) => {
+        if (filterSelected === 'Name') {
+          return item.metadata.name.toLowerCase().includes(filterValue);
+        } else if (filterSelected === 'Namespace') {
+          return item.metadata.namespace?.toLowerCase().includes(filterValue);
+        } else if (filterSelected === 'Type') {
+          return item.kind.toLowerCase().includes(filterValue);
+        }
+        return true;
+      });
+    }
     setFilteredData(data);
   }, [allData, filters]);
 
@@ -440,6 +460,11 @@ const ResourceList: React.FC<ResourceListProps> = ({
   ) => {
     setPerPage(perPageNumber);
     setCurrentPage(1);
+  };
+
+  const handleFilterChange = (value: string) => {
+    setCurrentPage(1);
+    setFilters(value);
   };
 
   const ResourceRow: React.FC<RowProps<K8sResourceCommon>> = ({ obj, activeColumnIDs }) => {
@@ -521,39 +546,43 @@ const ResourceList: React.FC<ResourceListProps> = ({
       )}
       <div className="kuadrant-policy-list-body">
         <ListPageBody>
-          {/* Filter UI */}
-          <div className="kuadrant-filter-bar" style={{ marginBottom: '16px' }}>
-            <input
-              type="text"
-              placeholder="Filter by name"
-              value={filters.name || ''}
-              onChange={(e) => {
-                setCurrentPage(1);
-                setFilters({ ...filters, name: e.target.value });
-              }}
-              style={{ marginRight: '8px' }}
-            />
-            <input
-              type="text"
-              placeholder="Filter by namespace"
-              value={filters.namespace || ''}
-              onChange={(e) => {
-                setCurrentPage(1);
-                setFilters({ ...filters, namespace: e.target.value });
-              }}
-              style={{ marginRight: '8px' }}
-            />
-            <input
-              type="text"
-              placeholder="Filter by type"
-              value={filters.type || ''}
-              onChange={(e) => {
-                setCurrentPage(1);
-                setFilters({ ...filters, type: e.target.value });
-              }}
-            />
-          </div>
+          <Toolbar>
+            <ToolbarContent>
+              <ToolbarGroup variant="filter-group">
+                <ToolbarItem>
+                  <Select
+                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                      <MenuToggle ref={toggleRef} onClick={onToggleClick} isExpanded={isOpen}>
+                        {filterSelected}
+                      </MenuToggle>
+                    )}
+                    onSelect={onFilterSelect}
+                    onOpenChange={setIsOpen}
+                    isOpen={isOpen}
+                  >
+                    {['Name', 'Namespace', 'Type'].map((option, index) => (
+                      <SelectOption key={index} value={option}>
+                        {option}
+                      </SelectOption>
+                    ))}
+                  </Select>
+                </ToolbarItem>
 
+                <ToolbarItem>
+                  <InputGroup className="pf-v5-c-input-group co-filter-group">
+                    <TextInput
+                      type="text"
+                      placeholder={t('Search by {{filterValue}}...', {
+                        filterValue: filterSelected.toLowerCase(),
+                      })}
+                      onChange={(_event, value) => handleFilterChange(value)}
+                      className="pf-v5-c-form-control co-text-filter-with-icon "
+                    />
+                  </InputGroup>
+                </ToolbarItem>
+              </ToolbarGroup>
+            </ToolbarContent>
+          </Toolbar>
           {paginatedData.length === 0 && allLoaded ? (
             <EmptyState>
               <EmptyStateIcon icon={SearchIcon} />

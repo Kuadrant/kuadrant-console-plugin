@@ -85,6 +85,7 @@
   "Reference to an existing secret resource containing DNS provider credentials and configuration": "Reference to an existing secret resource containing DNS provider credentials and configuration",
   "Release Notes": "Release Notes",
   "Save": "Save",
+  "Search by {{filterValue}}...": "Search by {{filterValue}}...",
   "Select a gateway": "Select a gateway",
   "Select a Protocol": "Select a Protocol",
   "Select an ClusterIssuer": "Select an ClusterIssuer",
