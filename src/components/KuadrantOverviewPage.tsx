@@ -211,6 +211,17 @@ const KuadrantOverviewPage: React.FC = () => {
                             {t('View Documentation')} <ExternalLinkAltIcon />
                           </Text>
                         </StackItem>
+                        <StackItem>
+                          <Text
+                            component="a"
+                            href={EXTERNAL_LINKS.secureConnectProtect}
+                            className="kuadrant-dashboard-resource-link"
+                            target="_blank"
+                          >
+                            {t('Configuring and deploying Gateway policies with Kuadrant')}{' '}
+                            <ExternalLinkAltIcon />
+                          </Text>
+                        </StackItem>
                       </Stack>
                     </FlexItem>
                     <Divider orientation={{ default: 'vertical' }} />

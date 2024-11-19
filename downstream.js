@@ -3,116 +3,169 @@
 const fs = require('fs');
 const path = require('path');
 
+// Parse command-line arguments
+const args = process.argv.slice(2);
+const dryRun = args.includes('--dry-run');
+
+// Define file paths
 const constantsPath = path.join('src', 'constants', 'links.ts');
-const localesPath = path.join('locales');
+const localesPath = path.join('locales', 'en', 'plugin__kuadrant-console-plugin.json');
 const consoleExtensionsPath = path.join('console-extensions.json');
-const localeFile = path.join(localesPath, 'en', 'plugin__kuadrant-console-plugin.json');
 
-const upstreamName = 'Kuadrant';
-const downstreamName = 'Connectivity Link';
+// Replacement mappings
+const replacements = {
+  // Direct string replacements for links.ts
+  [constantsPath]: {
+    type: 'simple',
+    mappings: {
+      // Order matters: specific URLs first to prevent partial matches
+      'https://docs.kuadrant.io/latest/kuadrant-operator/doc/user-guides/secure-protect-connect-single-multi-cluster/':
+        'https://docs.redhat.com/en/documentation/red_hat_connectivity_link/1.0/html-single/configuring_and_deploying_gateway_policies_with_connectivity_link/index',
+      'https://docs.kuadrant.io/latest/kuadrant-operator/doc/observability/examples/':
+        'https://docs.redhat.com/en/documentation/red_hat_connectivity_link/1.0/html-single/connectivity_link_observability_guide/index',
+      'https://docs.kuadrant.io':
+        'https://docs.redhat.com/en/documentation/red_hat_connectivity_link/1.0/',
+      'https://github.com/Kuadrant/kuadrant-operator/releases':
+        'https://docs.redhat.com/en/documentation/red_hat_connectivity_link/1.0/html-single/release_notes_for_connectivity_link_1.0/index',
+      Kuadrant: 'Connectivity Link',
+    },
+  },
 
-const upstreamDocumentation = 'https://docs.kuadrant.io';
-const upstreamReleaseNotes = 'https://github.com/Kuadrant/kuadrant-operator/releases';
+  // Regex-based replacements for console-extensions.json
+  [consoleExtensionsPath]: {
+    type: 'regex',
+    patterns: [
+      {
+        search: /%plugin__kuadrant-console-plugin~Kuadrant%/g,
+        replace: 'Connectivity Link',
+      },
+    ],
+  },
 
-const downstreamDocumentation =
-  'https://docs.redhat.com/en/documentation/red_hat_connectivity_link/1.0';
-const downstreamReleaseNotes =
-  'https://docs.redhat.com/html-single/release_notes_for_connectivity_link_1.0/index';
+  // Value-only replacements for plugin__kuadrant-console-plugin.json
+  [localesPath]: {
+    type: 'value',
+    replaceValue: 'Connectivity Link', // Replace "Kuadrant" with "Connectivity Link" in values only
+  },
+};
 
-const isUpstream = process.argv.includes('--upstream');
-
-const nameToReplace = isUpstream ? downstreamName : upstreamName;
-const nameToInsert = isUpstream ? upstreamName : downstreamName;
-const docsLinkToReplace = isUpstream ? downstreamDocumentation : upstreamDocumentation;
-const docsLinkToInsert = isUpstream ? upstreamDocumentation : downstreamDocumentation;
-const releaseNotesToReplace = isUpstream ? downstreamReleaseNotes : upstreamReleaseNotes;
-const releaseNotesToInsert = isUpstream ? upstreamReleaseNotes : downstreamReleaseNotes;
-
-function updateJsonValues(filePath, searchValue, replaceValue) {
-  try {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const jsonContent = JSON.parse(content);
-
-    let updated = false;
-
-    Object.keys(jsonContent).forEach((key) => {
-      if (jsonContent[key].includes(searchValue)) {
-        jsonContent[key] = jsonContent[key].replace(new RegExp(searchValue, 'g'), replaceValue);
-        updated = true;
-      }
-    });
-
-    if (updated) {
-      fs.writeFileSync(filePath, JSON.stringify(jsonContent, null, 2));
-      console.log(`Updated values in ${filePath}`);
-    } else {
-      console.log(`No changes made to ${filePath}`);
-    }
-  } catch (error) {
-    console.error(`Failed to update ${filePath}: ${error}`);
-  }
-}
-
-function updateFileContent(filePath, replacements) {
+function replaceSimpleStrings(filePath, mappings) {
   try {
     let content = fs.readFileSync(filePath, 'utf-8');
     let updatedContent = content;
+    let changesMade = false;
 
-    replacements.forEach(({ searchValue, replaceValue }) => {
-      updatedContent = updatedContent.replace(new RegExp(searchValue, 'g'), replaceValue);
-    });
-
-    if (content !== updatedContent) {
-      fs.writeFileSync(filePath, updatedContent);
-      console.log(`Updated content in ${filePath}`);
-    } else {
-      console.log(`No changes made to ${filePath}`);
-    }
-  } catch (error) {
-    console.error(`Failed to update ${filePath}: ${error}`);
-  }
-}
-
-function updateConsoleExtensions(filePath, searchValue, replaceValue) {
-  try {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const jsonContent = JSON.parse(content);
-
-    let updated = false;
-
-    jsonContent.forEach((item) => {
-      if (item.properties && item.properties.name === searchValue) {
-        item.properties.name = replaceValue;
-        updated = true;
+    Object.entries(mappings).forEach(([search, replace]) => {
+      if (content.includes(search)) {
+        console.log(`Replacing '${search}' with '${replace}' in ${filePath}`);
+        updatedContent = updatedContent.split(search).join(replace);
+        changesMade = true;
       }
     });
 
-    if (updated) {
-      fs.writeFileSync(filePath, JSON.stringify(jsonContent, null, 2));
-      console.log(`Updated console extensions in ${filePath}`);
+    if (changesMade) {
+      if (!dryRun) {
+        fs.writeFileSync(filePath, updatedContent, 'utf-8');
+        console.log(`Updated content in ${filePath}`);
+      } else {
+        console.log(`[Dry Run] Would update content in ${filePath}`);
+      }
     } else {
       console.log(`No changes made to ${filePath}`);
     }
   } catch (error) {
-    console.error(`Failed to update ${filePath}: ${error}`);
+    console.error(`Failed to update ${filePath}: ${error.message}`);
   }
 }
 
-console.log(`Updating locale files to ${isUpstream ? 'upstream' : 'downstream'}...`);
-updateJsonValues(localeFile, nameToReplace, nameToInsert);
+function replaceWithRegex(filePath, patterns) {
+  try {
+    let content = fs.readFileSync(filePath, 'utf-8');
+    let updatedContent = content;
+    let changesMade = false;
 
-console.log(`Updating constants.links.ts to ${isUpstream ? 'upstream' : 'downstream'}...`);
+    patterns.forEach(({ search, replace }) => {
+      if (search.test(updatedContent)) {
+        console.log(`Applying regex replacement: ${search} -> ${replace} in ${filePath}`);
+        updatedContent = updatedContent.replace(search, replace);
+        changesMade = true;
+      }
+    });
 
-updateFileContent(constantsPath, [
-  { searchValue: docsLinkToReplace, replaceValue: docsLinkToInsert },
-  { searchValue: releaseNotesToReplace, replaceValue: releaseNotesToInsert },
-]);
+    if (changesMade) {
+      if (!dryRun) {
+        // Validate JSON integrity
+        JSON.parse(updatedContent); // Throws if invalid
+        fs.writeFileSync(filePath, updatedContent, 'utf-8');
+        console.log(`Updated JSON content in ${filePath}`);
+      } else {
+        console.log(`[Dry Run] Would update JSON content in ${filePath}`);
+      }
+    } else {
+      console.log(`No changes made to ${filePath}`);
+    }
+  } catch (error) {
+    console.error(`Failed to update ${filePath}: ${error.message}`);
+  }
+}
 
-console.log(`Updating console-extensions.json to ${isUpstream ? 'upstream' : 'downstream'}...`);
-updateConsoleExtensions(
-  consoleExtensionsPath,
-  `%plugin__kuadrant-console-plugin~${nameToReplace}%`,
-  nameToInsert,
-);
+function traverseAndReplace(obj, replaceValue) {
+  if (typeof obj === 'string') {
+    return obj.includes('Kuadrant') ? obj.split('Kuadrant').join(replaceValue) : obj;
+  } else if (Array.isArray(obj)) {
+    return obj.map((item) => traverseAndReplace(item, replaceValue));
+  } else if (typeof obj === 'object' && obj !== null) {
+    const newObj = {};
+    Object.entries(obj).forEach(([key, value]) => {
+      newObj[key] = traverseAndReplace(value, replaceValue);
+    });
+    return newObj;
+  } else {
+    return obj;
+  }
+}
 
-console.log('Update complete!');
+function replaceValuesInJson(filePath, replaceValue) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const jsonData = JSON.parse(content);
+
+    const updatedJsonData = traverseAndReplace(jsonData, replaceValue);
+
+    if (JSON.stringify(jsonData) !== JSON.stringify(updatedJsonData)) {
+      if (!dryRun) {
+        const updatedContentStr = JSON.stringify(updatedJsonData, null, 2);
+        fs.writeFileSync(filePath, updatedContentStr, 'utf-8');
+        console.log(`Updated JSON content in ${filePath}`);
+      } else {
+        console.log(`[Dry Run] Would update JSON content in ${filePath}`);
+      }
+    } else {
+      console.log(`No changes made to ${filePath}`);
+    }
+  } catch (error) {
+    console.error(`Failed to update ${filePath}: ${error.message}`);
+  }
+}
+
+if (dryRun) {
+  console.log('Running in Dry-Run mode. No files will be modified.');
+}
+
+Object.entries(replacements).forEach(([filePath, rules]) => {
+  switch (rules.type) {
+    case 'simple':
+      replaceSimpleStrings(filePath, rules.mappings);
+      break;
+    case 'regex':
+      replaceWithRegex(filePath, rules.patterns);
+      break;
+    case 'value':
+      replaceValuesInJson(filePath, rules.replaceValue);
+      break;
+    default:
+      console.warn(`Unknown replacement type for ${filePath}`);
+  }
+});
+
+console.log('Downstream replacement update complete!');
