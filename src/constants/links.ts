@@ -18,8 +18,8 @@ export const EXTERNAL_LINKS = {
   // TODO: Update these when available for real
   documentation: 'https://docs.kuadrant.io',
   releaseNotes: 'https://github.com/Kuadrant/kuadrant-operator/releases',
-  quickStarts:
-    'https://docs.kuadrant.io/latest/kuadrant-operator/doc/user-guides/secure-protect-connect/',
+  secureConnectProtect:
+    'https://docs.kuadrant.io/latest/kuadrant-operator/doc/user-guides/secure-protect-connect-single-multi-cluster/',
   highlights: 'https://kuadrant.io/blog/',
   blog: 'https://kuadrant.io/blog/',
 };
