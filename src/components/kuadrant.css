@@ -67,7 +67,9 @@
   padding: 1rem;
 }
 
-.kuadrant-dashboard-learning, .kuadrant-dashboard-feature-highlights, .kuadrant-dashboard-enhance  {
+.kuadrant-dashboard-learning,
+.kuadrant-dashboard-feature-highlights,
+.kuadrant-dashboard-enhance {
   margin-bottom: 0.5em;
 }
 
@@ -79,7 +81,7 @@
   color: var(--pf-global--palette--purple-700);
 }
 
-.pf-theme-dark .kuadrant-dashboard-learning  {
+.pf-theme-dark .kuadrant-dashboard-learning {
   color: var(--pf-v5-global--palette--purple-200);
 }
 
@@ -107,14 +109,15 @@
   font-size: 0.8rem;
   color: var(--pf-global--palette--black-600);
   margin-left: 1rem;
-  margin-right: 1rem
+  margin-right: 1rem;
 }
 
 .kuadrant-limits-header {
   margin: 1rem 0 0;
 }
 
-.kuadrant-limits-button, .pf-v5-c-label-group {
+.kuadrant-limits-button,
+.pf-v5-c-label-group {
   margin: 1rem;
 }
 
@@ -143,11 +146,12 @@
 
 .kuadrant-overview-create-button {
   position: absolute;
-  top: 0;   
-  right: 0; 
+  top: 0;
+  right: 0;
 }
 
-.kuadrant-overview-create-list, .kuadrant-overview-create-button {
+.kuadrant-overview-create-list,
+.kuadrant-overview-create-button {
   font-family: RedHatText, helvetica, arial, sans-serif;
-   }
+}
 

@@ -171,7 +171,7 @@ const KuadrantOverviewPage: React.FC = () => {
         <title data-test="example-page-title">{t('Kuadrant')}</title>
       </Helmet>
       <Page>
-        <PageSection>
+        <PageSection isFilled>
           <Title headingLevel="h1">{t('Kuadrant')} Overview</Title>
           <br />
 
