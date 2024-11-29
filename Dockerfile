@@ -1,27 +1,26 @@
-FROM registry.access.redhat.com/ubi9/nodejs-20:latest AS build
+FROM registry.access.redhat.com/ubi9:latest
 
 USER root
 
 RUN dnf update -y && dnf upgrade -y && \
-    command -v yarn || npm install -g yarn
+    dnf module enable nodejs:20 nginx:1.24 -y && \
+    dnf install -y nodejs nginx && \
+    npm install -g yarn
 
 RUN yarn config set network-concurrency 1 && \
     yarn config set network-timeout 100000
 
+RUN mkdir -p /var/cache/nginx /var/log/nginx /run && \
+    chmod -R 777 /var/cache/nginx /var/log/nginx /run
+
 WORKDIR /usr/src/app
-ADD package.json yarn.lock ./
+COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile --ignore-optional
 
-ADD . .
+COPY . .
 RUN yarn build
 
-FROM registry.access.redhat.com/ubi9/nginx-124:latest
-
-USER root
-
-RUN dnf update -y && dnf upgrade -y
-
-COPY --from=build /usr/src/app/dist /usr/share/nginx/html
+COPY dist /usr/share/nginx/html
 COPY entrypoint.sh /usr/share/nginx/html/entrypoint.sh
 
 USER 1001
