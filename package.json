@@ -1,6 +1,6 @@
 {
   "name": "kuadrant-console-plugin",
-  "version": "0.0.15-dev",
+  "version": "0.0.16-dev",
   "description": "Kuadrant OpenShift Console plugin",
   "private": true,
   "license": "Apache-2.0",
