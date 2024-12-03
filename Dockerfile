@@ -14,10 +14,10 @@ RUN mkdir -p /var/cache/nginx /var/log/nginx /run && \
     chmod -R 777 /var/cache/nginx /var/log/nginx /run
 
 WORKDIR /usr/src/app
-COPY package.json yarn.lock ./
+ADD package.json yarn.lock ./
 RUN yarn install --frozen-lockfile --ignore-optional
 
-COPY . .
+ADD . .
 RUN yarn build
 
 COPY dist /usr/share/nginx/html
