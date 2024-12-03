@@ -23,7 +23,7 @@ COPY . .
 
 RUN yarn build
 
-COPY dist /usr/share/nginx/html
+RUN cp -r dist /usr/share/nginx/html
 COPY entrypoint.sh /usr/share/nginx/html/entrypoint.sh
 
 USER 1001
