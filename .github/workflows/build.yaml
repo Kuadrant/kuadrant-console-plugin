@@ -48,6 +48,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           no-cache: true
           push: true
+          build-args: |
+            CACHEBUST=${{ github.run_id }}
           tags: |
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
@@ -61,6 +63,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           no-cache: true
+          build-args: |
+            CACHEBUST=${{ github.run_id }}
           tags: |
             ${{ env.IMAGE_NAME }}:${{ github.event.release.name }}
 
