@@ -18,7 +18,7 @@ ADD package.json yarn.lock ./
 RUN yarn install --frozen-lockfile --ignore-optional
 
 ADD . .
-RUN yarn build
+RUN yarn build && ls -la && ls -la dist
 
 COPY dist /usr/share/nginx/html
 COPY entrypoint.sh /usr/share/nginx/html/entrypoint.sh
