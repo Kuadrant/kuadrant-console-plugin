@@ -18,7 +18,10 @@ ADD package.json yarn.lock ./
 RUN yarn install --frozen-lockfile --ignore-optional
 
 ADD . .
-RUN yarn build && ls -la && ls -la dist
+
+RUN yarn build && \
+    echo "Build completed. Current directory contents:" && ls -la && \
+    echo "Contents of the dist directory:" && ls -la dist || echo "dist directory not found"
 
 COPY dist /usr/share/nginx/html
 COPY entrypoint.sh /usr/share/nginx/html/entrypoint.sh
