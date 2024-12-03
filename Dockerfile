@@ -19,6 +19,8 @@ RUN yarn install --frozen-lockfile --ignore-optional
 
 ADD . .
 
+ARG CACHE_BUST=1
+
 RUN yarn build && \
     echo "Build completed. Current directory contents:" && ls -la && \
     echo "Contents of the dist directory:" && ls -la dist || echo "dist directory not found"

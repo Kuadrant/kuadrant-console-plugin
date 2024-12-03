@@ -23,6 +23,9 @@ jobs:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
 
+      - name: Remove Buildx Builder
+        run: docker buildx rm builder || true
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
 
@@ -48,6 +51,8 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
+          build-args: |
+            CACHE_BUST=${{ github.run_id }}
 
       - name: Build and Push Versioned Multi-Arch Image (Release)
         if: github.event_name == 'release' && github.event.action == 'published'
