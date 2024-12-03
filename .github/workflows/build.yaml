@@ -41,7 +41,7 @@ jobs:
 
       - name: Build and Push Multi-Arch Image (Main)
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
@@ -51,17 +51,16 @@ jobs:
           tags: |
             ${{ env.IMAGE_NAME }}:latest
             ${{ env.IMAGE_NAME }}:${{ github.sha }}
-          build-args: |
-            CACHE_BUST=${{ github.run_id }}
 
       - name: Build and Push Versioned Multi-Arch Image (Release)
         if: github.event_name == 'release' && github.event.action == 'published'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
+          no-cache: true
           tags: |
             ${{ env.IMAGE_NAME }}:${{ github.event.release.name }}
 
