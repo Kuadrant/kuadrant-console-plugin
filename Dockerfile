@@ -1,7 +1,5 @@
 FROM registry.access.redhat.com/ubi9:latest
 
-ARG CACHEBUST=1
-
 USER root
 
 RUN dnf update -y && \
@@ -23,7 +21,7 @@ RUN yarn install --frozen-lockfile --ignore-optional
 
 COPY . .
 
-RUN echo $CACHEBUST && yarn build
+RUN yarn build
 
 COPY dist /usr/share/nginx/html
 COPY entrypoint.sh /usr/share/nginx/html/entrypoint.sh
