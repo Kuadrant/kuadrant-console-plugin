@@ -50,7 +50,7 @@ const fetchConfig = async () => {
   };
 
   try {
-    const response = await fetch('/api/plugins/kuadrant-console/config.js');
+    const response = await fetch('/api/plugins/kuadrant-console-plugin/config.js');
     if (!response.ok) {
       if (response.status === 404) {
         console.warn('config.js not found (running locally perhaps). Falling back to defaults.');
