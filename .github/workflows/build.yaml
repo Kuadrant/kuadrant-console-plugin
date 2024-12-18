@@ -16,44 +16,38 @@ env:
 
 jobs:
   build-multiarch:
-    name: Build and Push Multi-Arch Image
+    name: Build Multi-Arch Image with Buildah
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
-        arch: [ amd64, arm64v8 ]
-        install_latest: [ true, false ]
+        arch: [amd64, arm64]
+        install_latest: [true, false]
 
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Install QEMU for cross-architecture builds
+      - name: Set up QEMU for multi-arch
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-user-static
 
-      - name: Install latest buildah
+      - name: Install latest Buildah
         if: matrix.install_latest
         run: |
           sudo apt-get update
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository -y ppa:projectatomic/ppa
           sudo apt-get install -y buildah
 
-      - name: Create Containerfile
-        run: |
-          cat > Containerfile<<EOF
-          ARG ARCH
-          FROM docker.io/\${ARCH}/alpine:3.14
+      - name: Check out code
+        uses: actions/checkout@v4
 
-          RUN echo "hello world"
-
-          ENTRYPOINT [ "sh", "-c", "echo -n 'Machine: ' && uname -m && echo -n 'Bits: ' && getconf LONG_BIT && echo 'goodbye world'" ]
-          EOF
+      - name: Log in to Quay.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_PASSWORD }}
 
       - name: Build Multi-Arch Image
-        id: build_image_multiarch
+        id: build_image
         uses: redhat-actions/buildah-build@v2
         with:
           image: ${{ env.IMAGE_NAME }}
@@ -61,20 +55,19 @@ jobs:
             latest
             ${{ github.sha }}
           arch: ${{ matrix.arch }}
-          build-args: ARCH=${{ matrix.arch }}
-          containerfiles: ./Containerfile
+          containerfiles: |
+            ./Dockerfile
 
-      - name: Push Multi-Arch Image to Quay.io
+      - name: Push Multi-Arch Manifest
+        if: matrix.arch == 'arm64'
         uses: redhat-actions/push-to-registry@v2
         with:
-          registry: quay.io
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ env.REGISTRY_PASSWORD }}
           image: ${{ env.IMAGE_NAME }}
           tags: |
             latest
             ${{ github.sha }}
 
-      - name: Print pushed image URLs
+      - name: Print Image Info
         run: |
-          echo "Image pushed to ${{ env.IMAGE_NAME }}:latest and ${{ env.IMAGE_NAME }}:${{ github.sha }}"
+          echo "Image pushed to Quay.io: ${{ env.IMAGE_NAME }}"
+          echo "Tags: latest, ${{ github.sha }}"
