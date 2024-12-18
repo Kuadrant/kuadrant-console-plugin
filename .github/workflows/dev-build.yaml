@@ -44,7 +44,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.QUAY_USER }}
           password: ${{ secrets.QUAY_PASSWORD }}
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}
+          image: ${{ env.IMAGE_BASE_NAME }}
           tags: latest-${{ matrix.arch }}
 
   manifest:
