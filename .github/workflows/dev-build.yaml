@@ -43,5 +43,5 @@ jobs:
           registry: quay.io
           username: ${{ env.REGISTRY_USER }}
           password: ${{ env.REGISTRY_PASSWORD }}
-          image: ${{ env.IMAGE_NAME }}
+          image: kuadrant/console-plugin
           tags: latest
