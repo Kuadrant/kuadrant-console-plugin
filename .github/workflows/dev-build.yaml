@@ -32,8 +32,8 @@ jobs:
         id: build
         uses: redhat-actions/buildah-build@v2
         with:
-          image: ${{ env.IMAGE_BASE_NAME }}-${{ matrix.arch }}
-          tags: latest
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}
+          tags: latest-${{ matrix.arch }}
           archs: ${{ matrix.arch }}
           containerfiles: |
             ./Dockerfile
@@ -44,8 +44,8 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ secrets.QUAY_USER }}
           password: ${{ secrets.QUAY_PASSWORD }}
-          image: ${{ env.IMAGE_BASE_NAME }}-${{ matrix.arch }}
-          tags: latest
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}
+          tags: latest-${{ matrix.arch }}
 
   manifest:
     name: Create and Push Multi-Arch Manifest
@@ -58,8 +58,8 @@ jobs:
       - name: Create Manifest
         run: |
           buildah manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest
-          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-amd64:latest
-          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}-arm64:latest
+          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest-amd64
+          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest-arm64
 
       - name: Push Multi-Arch Manifest
         run: |
