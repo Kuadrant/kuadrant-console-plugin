@@ -1,4 +1,4 @@
-name: Build and Push Multi-Arch Image
+name: Build and Push Multi-Arch Image with Buildah
 
 on:
   push:
@@ -10,64 +10,53 @@ on:
   workflow_dispatch:
 
 env:
-  REGISTRY_USER: ${{ secrets.QUAY_USER }}
-  REGISTRY_PASSWORD: ${{ secrets.QUAY_PASSWORD }}
   IMAGE_NAME: quay.io/kuadrant/console-plugin
 
 jobs:
-  build-multiarch:
+  build:
     name: Build Multi-Arch Image with Buildah
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
         arch: [amd64, arm64]
-        install_latest: [true, false]
 
     steps:
-      - name: Set up QEMU for multi-arch
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install QEMU
         run: |
           sudo apt-get update
           sudo apt-get install -y qemu-user-static
 
-      - name: Install latest Buildah
-        if: matrix.install_latest
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y buildah
-
-      - name: Check out code
-        uses: actions/checkout@v4
-
-      - name: Log in to Quay.io
-        uses: redhat-actions/podman-login@v1
-        with:
-          registry: quay.io
-          username: ${{ secrets.QUAY_USER }}
-          password: ${{ secrets.QUAY_PASSWORD }}
-
-      - name: Build Multi-Arch Image
-        id: build_image
+      - name: Build Image for Main Branch
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: redhat-actions/buildah-build@v2
         with:
           image: ${{ env.IMAGE_NAME }}
           tags: |
             latest
             ${{ github.sha }}
-          arch: ${{ matrix.arch }}
+          archs: ${{ matrix.arch }}
           containerfiles: |
             ./Dockerfile
 
-      - name: Push Multi-Arch Manifest
-        if: matrix.arch == 'arm64'
-        uses: redhat-actions/push-to-registry@v2
+      - name: Build Image for Release
+        if: github.event_name == 'release' && github.event.action == 'published'
+        uses: redhat-actions/buildah-build@v2
         with:
           image: ${{ env.IMAGE_NAME }}
           tags: |
-            latest
-            ${{ github.sha }}
+            ${{ github.event.release.name }}
+          archs: ${{ matrix.arch }}
+          containerfiles: |
+            ./Dockerfile
 
-      - name: Print Image Info
-        run: |
-          echo "Image pushed to Quay.io: ${{ env.IMAGE_NAME }}"
-          echo "Tags: latest, ${{ github.sha }}"
+      - name: Push Images
+        if: always()
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_PASSWORD }}
