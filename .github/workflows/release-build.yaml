@@ -1,0 +1,46 @@
+name: Release Build and Push
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: quay.io/kuadrant/console-plugin
+
+jobs:
+  build:
+    name: Release Build for Tags
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install QEMU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static
+
+      - name: Build Release Image
+        id: build
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: ${{ env.IMAGE_NAME }}
+          tags: ${{ github.event.release.name }}
+          archs: ${{ matrix.arch }}
+          containerfiles: |
+            ./Dockerfile
+
+      - name: Push Release Image
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          registry: quay.io
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+          tags: ${{ github.event.release.name }}

@@ -1,12 +1,9 @@
-name: Build and Push Multi-Arch Image with Buildah
+name: Dev Build and Push
 
 on:
   push:
     branches:
       - main
-  release:
-    types:
-      - published
   workflow_dispatch:
 
 env:
@@ -14,7 +11,7 @@ env:
 
 jobs:
   build:
-    name: Build Multi-Arch Image with Buildah
+    name: Dev Build from Main
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
@@ -30,33 +27,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y qemu-user-static
 
-      - name: Build Image for Main Branch
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      - name: Build Image
+        id: build
         uses: redhat-actions/buildah-build@v2
         with:
           image: ${{ env.IMAGE_NAME }}
-          tags: |
-            latest
-            ${{ github.sha }}
+          tags: latest
           archs: ${{ matrix.arch }}
           containerfiles: |
             ./Dockerfile
 
-      - name: Build Image for Release
-        if: github.event_name == 'release' && github.event.action == 'published'
-        uses: redhat-actions/buildah-build@v2
-        with:
-          image: ${{ env.IMAGE_NAME }}
-          tags: |
-            ${{ github.event.release.name }}
-          archs: ${{ matrix.arch }}
-          containerfiles: |
-            ./Dockerfile
-
-      - name: Push Images
-        if: always()
+      - name: Push Image
         uses: redhat-actions/push-to-registry@v2
         with:
           registry: quay.io
           username: ${{ secrets.QUAY_USER }}
           password: ${{ secrets.QUAY_PASSWORD }}
+          tags: latest
