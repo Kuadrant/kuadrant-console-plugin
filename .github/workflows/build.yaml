@@ -15,59 +15,66 @@ env:
   IMAGE_NAME: quay.io/kuadrant/console-plugin
 
 jobs:
-  build:
+  build-multiarch:
     name: Build and Push Multi-Arch Image
     runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [ amd64, arm64v8 ]
+        install_latest: [ true, false ]
 
     steps:
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v2
-
-      - name: Remove Buildx Builder
-        run: docker buildx rm builder || true
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-
-      - name: Log in to Quay.io
-        uses: docker/login-action@v2
-        with:
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ env.REGISTRY_PASSWORD }}
-          registry: quay.io
-
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Build and Push Multi-Arch Image (Main)
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: docker/build-push-action@v6
+      - name: Install QEMU for cross-architecture builds
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static
+
+      - name: Install latest buildah
+        if: matrix.install_latest
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository -y ppa:projectatomic/ppa
+          sudo apt-get install -y buildah
+
+      - name: Create Containerfile
+        run: |
+          cat > Containerfile<<EOF
+          ARG ARCH
+          FROM docker.io/\${ARCH}/alpine:3.14
+
+          RUN echo "hello world"
+
+          ENTRYPOINT [ "sh", "-c", "echo -n 'Machine: ' && uname -m && echo -n 'Bits: ' && getconf LONG_BIT && echo 'goodbye world'" ]
+          EOF
+
+      - name: Build Multi-Arch Image
+        id: build_image_multiarch
+        uses: redhat-actions/buildah-build@v2
         with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          no-cache: true
+          image: ${{ env.IMAGE_NAME }}
           tags: |
-            ${{ env.IMAGE_NAME }}:latest
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            latest
+            ${{ github.sha }}
+          arch: ${{ matrix.arch }}
+          build-args: ARCH=${{ matrix.arch }}
+          containerfiles: ./Containerfile
 
-      - name: Build and Push Versioned Multi-Arch Image (Release)
-        if: github.event_name == 'release' && github.event.action == 'published'
-        uses: docker/build-push-action@v6
+      - name: Push Multi-Arch Image to Quay.io
+        uses: redhat-actions/push-to-registry@v2
         with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
-          push: true
-          no-cache: true
+          registry: quay.io
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+          image: ${{ env.IMAGE_NAME }}
           tags: |
-            ${{ env.IMAGE_NAME }}:${{ github.event.release.name }}
+            latest
+            ${{ github.sha }}
 
-      - name: Print main branch image URL
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: echo "Main branch image pushed to ${{ env.IMAGE_NAME }}:latest and ${{ env.IMAGE_NAME }}:${{ github.sha }}"
-
-      - name: Print versioned image URL
-        if: github.event_name == 'release' && github.event.action == 'published'
-        run: echo "Versioned image pushed to ${{ env.IMAGE_NAME }}:${{ github.event.release.name }}"
+      - name: Print pushed image URLs
+        run: |
+          echo "Image pushed to ${{ env.IMAGE_NAME }}:latest and ${{ env.IMAGE_NAME }}:${{ github.sha }}"
