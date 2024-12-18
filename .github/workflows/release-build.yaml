@@ -7,11 +7,12 @@ on:
   workflow_dispatch:
 
 env:
-  IMAGE_NAME: quay.io/kuadrant/console-plugin
+  IMAGE_BASE_NAME: kuadrant/console-plugin
+  REGISTRY: quay.io
 
 jobs:
   build:
-    name: Release Build for Tags
+    name: Release Build and Push Multi-Arch Image
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
@@ -31,17 +32,36 @@ jobs:
         id: build
         uses: redhat-actions/buildah-build@v2
         with:
-          image: ${{ env.IMAGE_NAME }}
-          tags: ${{ github.event.release.name }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}
+          tags: ${{ github.event.release.tag_name }}-${{ matrix.arch }}
           archs: ${{ matrix.arch }}
           containerfiles: |
             ./Dockerfile
 
-      - name: Push Release Image
+      - name: Push Architecture-Specific Release Image
         uses: redhat-actions/push-to-registry@v2
         with:
-          registry: quay.io
+          registry: ${{ env.REGISTRY }}
           username: ${{ secrets.QUAY_USER }}
           password: ${{ secrets.QUAY_PASSWORD }}
-          image: kuadrant/console-plugin
-          tags: ${{ github.event.release.name }}
+          image: ${{ env.IMAGE_BASE_NAME }}
+          tags: ${{ github.event.release.tag_name }}-${{ matrix.arch }}
+
+  manifest:
+    name: Create and Push Multi-Arch Release Manifest
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Install Buildah
+        run: sudo apt-get update && sudo apt-get install -y buildah
+
+      - name: Create Release Manifest
+        run: |
+          buildah manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.tag_name }}
+          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.tag_name }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.tag_name }}-amd64
+          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.tag_name }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.tag_name }}-arm64
+
+      - name: Push Multi-Arch Release Manifest
+        run: |
+          buildah manifest push --all ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.tag_name }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.tag_name }} \
+            --creds=${{ secrets.QUAY_USER }}:${{ secrets.QUAY_PASSWORD }}
