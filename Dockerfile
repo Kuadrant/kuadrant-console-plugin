@@ -22,6 +22,8 @@ RUN yarn install --frozen-lockfile --ignore-optional
 COPY . .
 
 RUN yarn build
+RUN pwd && ls -la
+RUN ls -la ./dist
 
 COPY ./dist /usr/share/nginx/html
 
