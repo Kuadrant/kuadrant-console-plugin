@@ -43,4 +43,5 @@ jobs:
           registry: quay.io
           username: ${{ secrets.QUAY_USER }}
           password: ${{ secrets.QUAY_PASSWORD }}
+          image: ${{ env.IMAGE_NAME }}
           tags: latest

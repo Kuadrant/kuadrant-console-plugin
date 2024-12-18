@@ -44,3 +44,4 @@ jobs:
           username: ${{ secrets.QUAY_USER }}
           password: ${{ secrets.QUAY_PASSWORD }}
           tags: ${{ github.event.release.name }}
+          image: ${{ env.IMAGE_NAME }}
