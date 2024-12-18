@@ -41,7 +41,7 @@ jobs:
         uses: redhat-actions/push-to-registry@v2
         with:
           registry: quay.io
-          username: ${{ env.REGISTRY_USER }}
-          password: ${{ env.REGISTRY_PASSWORD }}
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_PASSWORD }}
           image: kuadrant/console-plugin
           tags: latest
