@@ -40,8 +40,7 @@ jobs:
       - name: Push Release Image
         uses: redhat-actions/push-to-registry@v2
         with:
-          registry: quay.io
-          username: ${{ secrets.QUAY_USER }}
-          password: ${{ secrets.QUAY_PASSWORD }}
-          tags: ${{ github.event.release.name }}
-          image: ${{ env.IMAGE_NAME }}
+          image: quay.io/kuadrant/console-plugin
+          tags: latest
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
