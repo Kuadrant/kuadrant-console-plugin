@@ -131,6 +131,8 @@ metadata:
   name: kuadrant-console-plugin
 spec:
   displayName: 'Kuadrant Console Plugin'
+  i18n:
+    loadType: Preload
   backend:
     type: Service
     service:
