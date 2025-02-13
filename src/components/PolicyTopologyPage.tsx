@@ -50,7 +50,13 @@ import { CubesIcon, CloudUploadAltIcon, TopologyIcon, RouteIcon } from '@pattern
 
 import * as dot from 'graphlib-dot';
 import './kuadrant.css';
-import resourceGVKMapping from '../utils/latest';
+
+interface GVK {
+  group: string;
+  version: string;
+  kind: string;
+}
+let dynamicResourceGVKMapping: Record<string, GVK> = {};
 
 // Fetch the config.js file dynamically at runtime
 // Normally served from <cluster-host>/api/plugins/kuadrant-console/config.js
@@ -313,23 +319,19 @@ const CustomNode: React.FC<any> = ({
 };
 
 const goToResource = (resourceType: string, resourceName: string) => {
-  let finalResourceType = resourceType;
-  let finalGVK = resourceGVKMapping[resourceType];
-
+  let lookupType = resourceType;
   // special case - Listener should go to associated Gateway
   if (resourceType === 'Listener') {
-    finalResourceType = 'Gateway';
-    finalGVK = resourceGVKMapping[finalResourceType];
+    lookupType = 'Gateway';
   }
-
+  const finalGVK = dynamicResourceGVKMapping[lookupType];
+  if (!finalGVK) {
+    console.error(`GVK mapping not found for resource type: ${lookupType}`);
+    return;
+  }
   const [namespace, name] = resourceName.includes('/')
     ? resourceName.split('/')
     : [null, resourceName];
-
-  if (!finalGVK) {
-    console.error(`GVK mapping not found for resource type: ${finalResourceType}`);
-    return;
-  }
 
   const url = namespace
     ? `/k8s/ns/${namespace}/${finalGVK.group}~${finalGVK.version}~${finalGVK.kind}/${name}`
@@ -426,6 +428,18 @@ const PolicyTopologyPage: React.FC = () => {
       }
     };
     loadConfig();
+  }, []);
+
+  // pre-warm dynamic resource map
+  React.useEffect(() => {
+    prewarmApiResourceMapping()
+      .then((mapping) => {
+        dynamicResourceGVKMapping = mapping; // used in goToResource
+        console.log('Prewarmed API resource mapping:', mapping);
+      })
+      .catch((err) => {
+        console.error('Error prewarming API resource mapping:', err);
+      });
   }, []);
 
   // Watch the ConfigMap named "topology" in the namespace provided by the config.js
@@ -668,6 +682,74 @@ const PolicyTopologyPage: React.FC = () => {
       </Page>
     </>
   );
+};
+
+// helper function to pre-warm API resource discovery for mapping K -> GVK
+// TODO: this would be nice in https://github.com/openshift/dynamic-plugin-sdk/blob/main/packages/lib-utils/src/k8s/k8s-resource.ts
+const prewarmApiResourceMapping = async (): Promise<Record<string, GVK>> => {
+  const mapping: Record<string, GVK> = {};
+
+  // fetch core API resources
+  try {
+    const coreResp = await fetch('/api/kubernetes/api/v1');
+    if (!coreResp.ok) {
+      throw new Error(`Error fetching /api/kubernetes/api/v1: ${coreResp.statusText}`);
+    }
+    const coreData = await coreResp.json();
+    if (Array.isArray(coreData.resources)) {
+      coreData.resources.forEach((res: any) => {
+        if (res.kind && !res.name.includes('/')) {
+          mapping[res.kind] = { group: '', version: 'v1', kind: res.kind };
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching core API resources:', error);
+  }
+
+  // fetch API groups
+  try {
+    const apisResp = await fetch('/api/kubernetes/apis');
+    if (!apisResp.ok) {
+      throw new Error(`Error fetching /api/kubernetes/apis: ${apisResp.statusText}`);
+    }
+    const apisData = await apisResp.json();
+    if (Array.isArray(apisData.groups)) {
+      await Promise.all(
+        apisData.groups.map(async (group: any) => {
+          // Try using the preferredVersion
+          const preferred = group.preferredVersion;
+          if (!preferred) {
+            return;
+          }
+          const groupName = group.name;
+          const version = preferred.version;
+          try {
+            const groupResp = await fetch(`/api/kubernetes/apis/${groupName}/${version}`);
+            if (!groupResp.ok) {
+              throw new Error(
+                `Error fetching /api/kubernetes/apis/${groupName}/${version}: ${groupResp.statusText}`,
+              );
+            }
+            const groupData = await groupResp.json();
+            if (Array.isArray(groupData.resources)) {
+              groupData.resources.forEach((res: any) => {
+                if (res.kind && !res.name.includes('/')) {
+                  mapping[res.kind] = { group: groupName, version, kind: res.kind };
+                }
+              });
+            }
+          } catch (err) {
+            console.error(`Error fetching resources for group ${groupName}/${version}:`, err);
+          }
+        }),
+      );
+    }
+  } catch (error) {
+    console.error('Error fetching API groups:', error);
+  }
+
+  return mapping;
 };
 
 export default PolicyTopologyPage;
