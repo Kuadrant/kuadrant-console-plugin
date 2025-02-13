@@ -215,7 +215,10 @@ const KuadrantPoliciesPage: React.FC = () => {
 
   const handleNamespaceChange = (activeNamespace: string) => {
     let currentTab = '';
-    const activeTab = location.pathname.split('/').pop();
+    let activeTab = location.pathname.split('/').pop();
+    if (activeTab == 'policies') {
+      activeTab = '';
+    }
 
     if (activeNamespace !== '#ALL_NS#') {
       currentTab = `/kuadrant/ns/${activeNamespace}/policies/${activeTab}`;
