@@ -214,16 +214,20 @@ const KuadrantPoliciesPage: React.FC = () => {
   );
 
   const handleNamespaceChange = (activeNamespace: string) => {
-    let currentTab = '';
-    const activeTab = location.pathname.split('/').pop();
-
-    if (activeNamespace !== '#ALL_NS#') {
-      currentTab = `/kuadrant/ns/${activeNamespace}/policies/${activeTab}`;
-    } else {
-      currentTab = `/kuadrant/all-namespaces/policies/${activeTab}`;
+    let basePath = '';
+    let activeTab = location.pathname.split('/').pop();
+    if (activeTab == 'policies') {
+      activeTab = '';
     }
 
-    history.replace(currentTab);
+    if (activeNamespace !== '#ALL_NS#') {
+      basePath = `/kuadrant/ns/${activeNamespace}/policies`;
+    } else {
+      basePath = `/kuadrant/all-namespaces/policies`;
+    }
+    const fullPath = `${basePath}/${activeTab}`;
+
+    history.replace(fullPath);
   };
 
   let pages = [
