@@ -50,7 +50,17 @@ import { CubesIcon, CloudUploadAltIcon, TopologyIcon, RouteIcon } from '@pattern
 
 import * as dot from 'graphlib-dot';
 import './kuadrant.css';
-import resourceGVKMapping from '../utils/latest';
+
+interface GVK {
+  group: string;
+  version: string;
+  kind: string;
+}
+let dynamicResourceGVKMapping: Record<string, GVK> = {};
+const resourceHints: Record<string, string> = {
+  Gateway: 'gateway.networking.k8s.io',
+  DNSRecord: 'kuadrant.io',
+};
 
 // Fetch the config.js file dynamically at runtime
 // Normally served from <cluster-host>/api/plugins/kuadrant-console/config.js
@@ -313,23 +323,19 @@ const CustomNode: React.FC<any> = ({
 };
 
 const goToResource = (resourceType: string, resourceName: string) => {
-  let finalResourceType = resourceType;
-  let finalGVK = resourceGVKMapping[resourceType];
-
+  let lookupType = resourceType;
   // special case - Listener should go to associated Gateway
   if (resourceType === 'Listener') {
-    finalResourceType = 'Gateway';
-    finalGVK = resourceGVKMapping[finalResourceType];
+    lookupType = 'Gateway';
   }
-
+  const finalGVK = dynamicResourceGVKMapping[lookupType];
+  if (!finalGVK) {
+    console.error(`GVK mapping not found for resource type: ${lookupType}`);
+    return;
+  }
   const [namespace, name] = resourceName.includes('/')
     ? resourceName.split('/')
     : [null, resourceName];
-
-  if (!finalGVK) {
-    console.error(`GVK mapping not found for resource type: ${finalResourceType}`);
-    return;
-  }
 
   const url = namespace
     ? `/k8s/ns/${namespace}/${finalGVK.group}~${finalGVK.version}~${finalGVK.kind}/${name}`
@@ -426,6 +432,17 @@ const PolicyTopologyPage: React.FC = () => {
       }
     };
     loadConfig();
+  }, []);
+
+  React.useEffect(() => {
+    getGroupVersionKindForKind(resourceHints)
+      .then((mapping) => {
+        dynamicResourceGVKMapping = mapping; // used in goToResource
+        console.debug('Prewarmed API resource mapping:', mapping);
+      })
+      .catch((err) => {
+        console.error('Error prewarming API resource mapping:', err);
+      });
   }, []);
 
   // Watch the ConfigMap named "topology" in the namespace provided by the config.js
@@ -668,6 +685,99 @@ const PolicyTopologyPage: React.FC = () => {
       </Page>
     </>
   );
+};
+
+/**
+ * Retrieves a mapping from Kubernetes resource kinds to their Group/Version/Kind (GVK)
+ * by querying both core API resources and aggregated API discovery.
+ *
+ * TODO: externalise this as a more general purpose helper for use elsewhere in the plugin
+ * TODO: consider a contrib to https://github.com/openshift/dynamic-plugin-sdk/blob/main/packages/lib-utils/src/k8s/k8s-utils.ts
+ *
+ * This function accepts a resource hints object. If multiple API groups provide the same kind,
+ * the one matching the hint (if provided) will be used.
+ *
+ * @param resourceHints - a mapping of resource kinds to the preferred API group.
+ * Example:
+ * {
+ *   Gateway: 'gateway.networking.k8s.io',
+ *   DNSRecord: 'kuadrant.io'
+ * }
+ *
+ * @returns a Promise that resolves to an object mapping resource kinds to their GVK.
+ */
+export const getGroupVersionKindForKind = async (
+  resourceHints: Record<string, string>,
+): Promise<Record<string, GVK>> => {
+  const mapping: Record<string, GVK> = {};
+
+  // Helper to provide resource hinting where there could be resource ambiguity (E.g. `dnsrecords.kuadrant.io` vs `dnsrecords.ingress.operator.openshift.io`)
+  const updateMapping = (kind: string, group: string, version: string) => {
+    if (resourceHints[kind]) {
+      // Always override if the new group is the hinted group.
+      if (group === resourceHints[kind]) {
+        mapping[kind] = { group, version, kind };
+      }
+    } else if (!mapping[kind]) {
+      mapping[kind] = { group, version, kind };
+    }
+  };
+
+  // fetch core API resources
+  try {
+    const coreResp = await fetch('/api/kubernetes/api/v1');
+    if (!coreResp.ok) {
+      throw new Error(`Error fetching /api/kubernetes/api/v1: ${coreResp.statusText}`);
+    }
+    const coreData = await coreResp.json();
+    if (Array.isArray(coreData.resources)) {
+      coreData.resources.forEach((res: any) => {
+        if (res.kind && !res.name?.includes('/')) {
+          // core API resources have an empty group and are v1
+          updateMapping(res.kind, '', 'v1');
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching core API resources:', error);
+  }
+
+  // aggregated API discovery data from /api/kubernetes/apis
+  // https://github.com/kubernetes/enhancements/blob/master/keps/sig-api-machinery/3352-aggregated-discovery/README.md
+  try {
+    const aggregatedResp = await fetch('/api/kubernetes/apis', {
+      headers: {
+        Accept: 'application/json;g=apidiscovery.k8s.io;v=v2;as=APIGroupDiscoveryList',
+      },
+    });
+    if (!aggregatedResp.ok) {
+      throw new Error(`Error fetching aggregated discovery: ${aggregatedResp.statusText}`);
+    }
+    const aggregatedData = await aggregatedResp.json();
+    if (Array.isArray(aggregatedData.items)) {
+      aggregatedData.items.forEach((groupItem: any) => {
+        const groupName = groupItem.metadata?.name;
+        if (groupItem.versions && Array.isArray(groupItem.versions)) {
+          groupItem.versions.forEach((versionData: any) => {
+            const version = versionData.version;
+            if (versionData.resources && Array.isArray(versionData.resources)) {
+              versionData.resources.forEach((resource: any) => {
+                const kind = resource.responseKind?.kind || resource.kind;
+                const resourceName = resource.resource || resource.name;
+                if (kind && resourceName && !resourceName.includes('/')) {
+                  updateMapping(kind, groupName, version);
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching aggregated API discovery data:', error);
+  }
+
+  return mapping;
 };
 
 export default PolicyTopologyPage;
