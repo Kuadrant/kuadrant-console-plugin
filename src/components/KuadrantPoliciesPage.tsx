@@ -157,6 +157,7 @@ const KuadrantPoliciesPage: React.FC = () => {
   const { ns } = useParams<{ ns: string }>();
   const [activeNamespace, setActiveNamespace] = useActiveNamespace();
   const [activePerspective] = useActivePerspective();
+  const history = useHistory();
 
   React.useEffect(() => {
     if (ns && ns !== activeNamespace) {
@@ -212,6 +213,22 @@ const KuadrantPoliciesPage: React.FC = () => {
     <PoliciesListPage resource={resources[2]} activeNamespace={activeNamespace} />
   );
 
+  const handleNamespaceChange = (activeNamespace: string) => {
+    let currentTab = '';
+    let activeTab = location.pathname.split('/').pop();
+    if (activeTab == 'policies') {
+      activeTab = '';
+    }
+
+    if (activeNamespace !== '#ALL_NS#') {
+      currentTab = `/kuadrant/ns/${activeNamespace}/policies/${activeTab}`;
+    } else {
+      currentTab = `/kuadrant/all-namespaces/policies/${activeTab}`;
+    }
+
+    history.replace(currentTab);
+  };
+
   let pages = [
     {
       href: '',
@@ -259,7 +276,7 @@ const KuadrantPoliciesPage: React.FC = () => {
 
   return (
     <>
-      <NamespaceBar />
+      <NamespaceBar onNamespaceChange={handleNamespaceChange} />
       <Title headingLevel="h1" className="kuadrant-page-title">
         {t('Kuadrant')}
       </Title>
