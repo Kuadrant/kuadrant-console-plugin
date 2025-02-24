@@ -168,7 +168,7 @@ Update `settings.json` (File > Preferences > Settings):
 |                                 |                    |                           |                    |
 
 
-Openshift console is configured to share modules with its dynamic plugins (console plugins). 
+Openshift console is configured to share modules with its dynamic plugins (console plugins). For more information on versions and changes to the shared modules, please see the shared modules [documentation](https://www.npmjs.com/package/@openshift-console/dynamic-plugin-sdk?activeTab=readme)
 
 
 ### Version goals
