@@ -160,6 +160,21 @@ Update `settings.json` (File > Preferences > Settings):
 ```json
 "editor.formatOnSave": true
 ```
+## Version matrix
+
+| kuadrant-console-plugin version | PatternFly version | Openshift console version | Dynamic Plugin SDK |
+|---------------------------------|--------------------|---------------------------|--------------------|
+|         v0.0.3 - v0.0.18        |          5         |          v4.17.x          |       v1.6.0       |
+|                                 |                    |                           |                    |
+
+
+Openshift console is configured to share modules with its dynamic plugins (console plugins). 
+
+
+### Version goals
+- Support Openshift console versions 4.18.x (PatternFly 5).
+- Support Openshift console versions 4.19.x (PatternFly 6).
+
 
 ## References
 
