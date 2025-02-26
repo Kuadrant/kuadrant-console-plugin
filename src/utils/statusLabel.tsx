@@ -203,7 +203,7 @@ const getStatusLabel = (obj) => {
     (cond) => cond.type === 'Accepted' && cond.status === 'False',
   );
   const overriddenCondition = generalConditions.find(
-    (cond) => cond.type === 'Overridden' && cond.status === 'False',
+    (cond) => cond.reason === 'Overridden' && cond.status === 'False',
   );
   const conflictedCondition = generalConditions.find(
     (cond) => cond.reason === 'Conflicted' && cond.status === 'False',
