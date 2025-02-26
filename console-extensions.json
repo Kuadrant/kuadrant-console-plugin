@@ -1,5 +1,35 @@
 [
   {
+    "type": "console.tab/horizontalNav",
+    "properties": {
+      "model": {
+        "group": "gateway.networking.k8s.io",
+        "version": "v1",
+        "kind": "HTTPRoute"
+      },
+      "page": {
+        "name": "Policies",
+        "href": "policies"
+      },
+      "component": { "$codeRef": "HTTPRoutePoliciesPage" }
+    }
+  },
+  {
+    "type": "console.tab/horizontalNav",
+    "properties": {
+      "model": {
+        "group": "gateway.networking.k8s.io",
+        "version": "v1",
+        "kind": "Gateway"
+      },
+      "page": {
+        "name": "Policies",
+        "href": "policies"
+      },
+      "component": { "$codeRef": "GatewayPoliciesPage" }
+    }
+  },
+  {
     "type": "console.page/route",
     "properties": {
       "exact": true,
