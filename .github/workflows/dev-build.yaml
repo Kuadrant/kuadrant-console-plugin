@@ -1,0 +1,67 @@
+name: Dev Build and Push
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  IMAGE_BASE_NAME: kuadrant/console-plugin
+  REGISTRY: quay.io
+
+jobs:
+  build:
+    name: Build and Push Multi-Arch Image
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install QEMU
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qemu-user-static
+
+      - name: Build Image
+        id: build
+        uses: redhat-actions/buildah-build@v2
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}
+          tags: latest-${{ matrix.arch }}
+          archs: ${{ matrix.arch }}
+          containerfiles: |
+            ./Dockerfile
+
+      - name: Push Architecture-Specific Image
+        uses: redhat-actions/push-to-registry@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.QUAY_USER }}
+          password: ${{ secrets.QUAY_PASSWORD }}
+          image: ${{ env.IMAGE_BASE_NAME }}
+          tags: latest-${{ matrix.arch }}
+
+  manifest:
+    name: Create and Push Multi-Arch Manifest
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Install Buildah
+        run: sudo apt-get update && sudo apt-get install -y buildah
+
+      - name: Create Manifest
+        run: |
+          buildah manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest
+          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest-amd64
+          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest-arm64
+
+      - name: Push Multi-Arch Manifest
+        run: |
+          buildah manifest push --all ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:latest \
+            --creds=${{ secrets.QUAY_USER }}:${{ secrets.QUAY_PASSWORD }}

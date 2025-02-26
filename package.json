@@ -1,6 +1,6 @@
 {
   "name": "kuadrant-console-plugin",
-  "version": "0.0.17-dev",
+  "version": "0.0.19",
   "description": "Kuadrant OpenShift Console plugin",
   "private": true,
   "license": "Apache-2.0",
@@ -72,9 +72,12 @@
   },
   "consolePlugin": {
     "name": "kuadrant-console-plugin",
-    "version": "0.0.17-dev",
+    "version": "0.0.19",
     "displayName": "Kuadrant OpenShift Console Plugin",
     "description": "Kuadrant OpenShift Console Plugin",
+    "i18n": {
+      "loadType": "Preload"
+    },
     "exposedModules": {
       "KuadrantOverviewPage": "./components/KuadrantOverviewPage",
       "PolicyTopologyPage": "./components/PolicyTopologyPage",
@@ -82,7 +85,9 @@
       "KuadrantDNSPolicyCreatePage": "./components/KuadrantDNSPolicyCreatePage",
       "KuadrantAuthPolicyCreatePage": "./components/KuadrantAuthPolicyCreatePage",
       "KuadrantRateLimitPolicyCreatePage": "./components/KuadrantRateLimitPolicyCreatePage",
-      "KuadrantTLSCreatePage": "./components/KuadrantTLSCreatePage"
+      "KuadrantTLSCreatePage": "./components/KuadrantTLSCreatePage",
+      "HTTPRoutePoliciesPage": "./components/HTTPRoutePoliciesPage",
+      "GatewayPoliciesPage": "./components/GatewayPoliciesPage"
     },
     "dependencies": {
       "@console/pluginAPI": "*"

@@ -9,6 +9,15 @@ import {
   CardBody,
   TextContent,
   Text,
+  Toolbar,
+  ToolbarContent,
+  ToolbarFilter,
+  ToolbarItem,
+  Badge,
+  Select,
+  SelectList,
+  SelectOption,
+  MenuToggle,
 } from '@patternfly/react-core';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import {
@@ -35,11 +44,23 @@ import {
   action,
   DefaultGroup,
 } from '@patternfly/react-topology';
+import { useTranslation } from 'react-i18next';
 
 import { CubesIcon, CloudUploadAltIcon, TopologyIcon, RouteIcon } from '@patternfly/react-icons';
+
 import * as dot from 'graphlib-dot';
 import './kuadrant.css';
-import resourceGVKMapping from '../utils/latest';
+
+interface GVK {
+  group: string;
+  version: string;
+  kind: string;
+}
+let dynamicResourceGVKMapping: Record<string, GVK> = {};
+const resourceHints: Record<string, string> = {
+  Gateway: 'gateway.networking.k8s.io',
+  DNSRecord: 'kuadrant.io',
+};
 
 // Fetch the config.js file dynamically at runtime
 // Normally served from <cluster-host>/api/plugins/kuadrant-console/config.js
@@ -77,6 +98,24 @@ export const kindToAbbr = (kind: string) => {
   return (kind.replace(/[^A-Z]/g, '') || kind.toUpperCase()).slice(0, 4);
 };
 
+// List of resource types to show by default in the filter toolbar.
+// Only these kinds will be shown in the initial render if they exist in the parsed DOTfile
+const showByDefault = new Set([
+  'AuthPolicy',
+  'Authorino',
+  'ConfigMap',
+  'ConsolePlugin',
+  'DNSPolicy',
+  'Gateway',
+  'HTTPRoute',
+  'HTTPRouteRule',
+  'Kuadrant',
+  'Limitador',
+  'Listener',
+  'RateLimitPolicy',
+  'TLSPolicy',
+]);
+
 // Convert DOT graph to PatternFly node/edge models
 const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
   try {
@@ -98,19 +137,6 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       Kuadrant: NodeShape.ellipse,
     };
 
-    // excluded kinds that will be rewired if connected to other nodes
-    const excludedKinds = new Set([
-      'Issuer',
-      'ClusterIssuer',
-      'Certificate',
-      'WasmPlugin',
-      'AuthorizationPolicy',
-      'EnvoyFilter',
-      'GatewayClass',
-      'DNSRecord',
-      'AuthConfig',
-    ]);
-
     // kinds for unassociated policies - these will be grouped
     const unassociatedPolicies = new Set([
       'TLSPolicy',
@@ -128,32 +154,7 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       'ConsolePlugin',
     ]);
 
-    // reconnect edges for excluded, connected nodes (e.g. GatewayClass)
-    const rewireExcludedEdges = (graph, sourceNodeId, targetNodeId) => {
-      const sourceNode = graph.node(sourceNodeId);
-      const targetNode = graph.node(targetNodeId);
-
-      if (!sourceNode || !targetNode) return;
-
-      if (excludedKinds.has(sourceNode.type)) {
-        rewireNode(sourceNodeId, targetNodeId, 'source');
-      } else if (excludedKinds.has(targetNode.type)) {
-        rewireNode(sourceNodeId, targetNodeId, 'target');
-      } else {
-        addEdge(sourceNodeId, targetNodeId, sourceNode.type);
-      }
-    };
-
-    const rewireNode = (excludedId, connectedId, position) => {
-      const connections =
-        position === 'source' ? graph.successors(excludedId) : graph.predecessors(excludedId);
-      connections?.forEach((node) => {
-        addEdge(connectedId, node, 'default');
-        connectedNodeIds.add(node);
-      });
-    };
-
-    const addEdge = (source, target, type) => {
+    const addEdge = (source: string, target: string, type: string) => {
       edges.push({
         id: `edge-${source}-${target}`,
         type: 'edge',
@@ -167,39 +168,36 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       connectedNodeIds.add(target);
     };
 
-    // process edges with excluded kinds reconnected
+    // process edges: add each edge directly
     graph
       .edges()
-      .forEach(({ v: sourceNodeId, w: targetNodeId }) =>
-        rewireExcludedEdges(graph, sourceNodeId, targetNodeId),
+      .forEach(({ v: sourceNodeId, w: targetNodeId }: { v: string; w: string }) =>
+        addEdge(sourceNodeId, targetNodeId, 'default'),
       );
 
-    // create nodes while excluding specified kinds
-    graph.nodes().forEach((nodeId) => {
+    // create nodes
+    graph.nodes().forEach((nodeId: string) => {
       const nodeData = graph.node(nodeId);
       const [resourceType, resourceName] = nodeData.label.split('\\n');
-
-      if (!excludedKinds.has(resourceType)) {
-        nodes.push({
-          id: nodeId,
-          type: 'node',
+      nodes.push({
+        id: nodeId,
+        type: 'node',
+        label: resourceName,
+        resourceType,
+        width: 120,
+        height: 65,
+        labelPosition: LabelPosition.bottom,
+        shape: shapeMapping[resourceType] || NodeShape.rect,
+        data: {
           label: resourceName,
-          resourceType,
-          width: 120,
-          height: 65,
-          labelPosition: LabelPosition.bottom,
-          shape: shapeMapping[resourceType] || NodeShape.rect,
-          data: {
-            label: resourceName,
-            type: resourceType,
-            badge: kindToAbbr(resourceType),
-            badgeColor: '#2b9af3',
-          },
-        });
-      }
+          type: resourceType,
+          badge: kindToAbbr(resourceType),
+          badgeColor: '#2b9af3',
+        },
+      });
     });
 
-    const addGroup = (id, children, label) => {
+    const addGroup = (id: string, children: any[], label: string) => {
       groups.push({
         id,
         children: children.map((node) => node.id),
@@ -210,16 +208,19 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       });
     };
 
-    // Group unassociated policies and Kuadrant resources
+    // Group unassociated policies
     const unassociatedPolicyNodes = nodes.filter(
       (node) => !connectedNodeIds.has(node.id) && unassociatedPolicies.has(node.resourceType),
     );
-    if (unassociatedPolicyNodes.length)
+    if (unassociatedPolicyNodes.length) {
       addGroup('group-unattached', unassociatedPolicyNodes, 'Unattached Policies');
+    }
 
+    // Group Kuadrant internals
     const kuadrantInternalNodes = nodes.filter((node) => kuadrantInternals.has(node.resourceType));
-    if (kuadrantInternalNodes.length)
+    if (kuadrantInternalNodes.length) {
       addGroup('group-kuadrant-internals', kuadrantInternalNodes, 'Kuadrant Internals');
+    }
 
     // Filter out any remaining edges with missing nodes
     const nodeIds = new Set(nodes.map((node) => node.id));
@@ -234,6 +235,7 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
   }
 };
 
+// Custom node renderer
 const CustomNode: React.FC<any> = ({
   element,
   onSelect,
@@ -241,7 +243,8 @@ const CustomNode: React.FC<any> = ({
   onContextMenu,
   contextMenuOpen,
 }) => {
-  const excludedKinds = ['GatewayClass', 'HTTPRouteRule', 'Listener'];
+  // Disable the context menu for these 'meta-kinds'
+  const disabledContextMenuTypes = ['GatewayClass', 'HTTPRouteRule', 'Listener'];
   const data = element.getData();
   const { type, badge, badgeColor } = data;
 
@@ -290,9 +293,9 @@ const CustomNode: React.FC<any> = ({
       onSelect={onSelect}
       selected={selected}
       className={isPolicyNode ? 'policy-node' : ''}
-      // Disable context menu for excluded kinds
-      onContextMenu={!excludedKinds.includes(type) ? onContextMenu : undefined}
-      contextMenuOpen={!excludedKinds.includes(type) && contextMenuOpen}
+      // Disable context menu for specified types
+      onContextMenu={!disabledContextMenuTypes.includes(type) ? onContextMenu : undefined}
+      contextMenuOpen={!disabledContextMenuTypes.includes(type) && contextMenuOpen}
     >
       <g transform={`translate(${nodeWidth / 2}, ${paddingTop})`}>
         <foreignObject width={iconSize} height={iconSize} x={-iconSize / 2}>
@@ -320,23 +323,19 @@ const CustomNode: React.FC<any> = ({
 };
 
 const goToResource = (resourceType: string, resourceName: string) => {
-  let finalResourceType = resourceType;
-  let finalGVK = resourceGVKMapping[resourceType];
-
+  let lookupType = resourceType;
   // special case - Listener should go to associated Gateway
   if (resourceType === 'Listener') {
-    finalResourceType = 'Gateway';
-    finalGVK = resourceGVKMapping[finalResourceType];
+    lookupType = 'Gateway';
   }
-
+  const finalGVK = dynamicResourceGVKMapping[lookupType];
+  if (!finalGVK) {
+    console.error(`GVK mapping not found for resource type: ${lookupType}`);
+    return;
+  }
   const [namespace, name] = resourceName.includes('/')
     ? resourceName.split('/')
     : [null, resourceName];
-
-  if (!finalGVK) {
-    console.error(`GVK mapping not found for resource type: ${finalResourceType}`);
-    return;
-  }
 
   const url = namespace
     ? `/k8s/ns/${namespace}/${finalGVK.group}~${finalGVK.version}~${finalGVK.kind}/${name}`
@@ -387,8 +386,41 @@ const customComponentFactory = (kind: ModelKind, type: string) => {
 const PolicyTopologyPage: React.FC = () => {
   const [config, setConfig] = React.useState<any | null>(null);
   const [parseError, setParseError] = React.useState<string | null>(null);
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
-  // Fetch the configuration on mount
+  // dynamically generated list of all resource types from the parsed DOT file
+  const [allResourceTypes, setAllResourceTypes] = React.useState<string[]>([]);
+  // Resource filter state. On initial render, show only resources in showByDefault
+  const [selectedResourceTypes, setSelectedResourceTypes] = React.useState<string[]>([]);
+  const [isResourceFilterOpen, setIsResourceFilterOpen] = React.useState(false);
+
+  const onResourceSelect = (
+    _event: React.MouseEvent | React.ChangeEvent | undefined,
+    selection: string,
+  ) => {
+    // Toggle selection: remove if already selected, add if not
+    if (selectedResourceTypes.includes(selection)) {
+      setSelectedResourceTypes(selectedResourceTypes.filter((r) => r !== selection));
+    } else {
+      setSelectedResourceTypes([...selectedResourceTypes, selection]);
+    }
+  };
+
+  const onDeleteResourceFilter = (_category: string, chip: string) => {
+    if (chip) {
+      setSelectedResourceTypes(selectedResourceTypes.filter((r) => r !== chip));
+    }
+  };
+
+  const onDeleteResourceGroup = (_category: string) => {
+    setSelectedResourceTypes([]);
+  };
+
+  const clearAllFilters = () => {
+    setSelectedResourceTypes([]);
+  };
+
+  // Fetch configuration on mount
   React.useEffect(() => {
     const loadConfig = async () => {
       try {
@@ -400,6 +432,17 @@ const PolicyTopologyPage: React.FC = () => {
       }
     };
     loadConfig();
+  }, []);
+
+  React.useEffect(() => {
+    getGroupVersionKindForKind(resourceHints)
+      .then((mapping) => {
+        dynamicResourceGVKMapping = mapping; // used in goToResource
+        console.debug('Prewarmed API resource mapping:', mapping);
+      })
+      .catch((err) => {
+        console.error('Error prewarming API resource mapping:', err);
+      });
   }, []);
 
   // Watch the ConfigMap named "topology" in the namespace provided by the config.js
@@ -452,10 +495,53 @@ const PolicyTopologyPage: React.FC = () => {
           const { nodes, edges } = parseDotToModel(dotString);
           setParseError(null);
 
+          // Separate group nodes from normal nodes
+          const groupNodes = nodes.filter((n) => n.type === 'group');
+          const normalNodes = nodes.filter((n) => n.type !== 'group');
+
+          // Dynamically generate the list of resource types
+          const uniqueTypes = Array.from(
+            new Set(normalNodes.map((node) => node.resourceType)),
+          ).sort();
+          setAllResourceTypes(uniqueTypes);
+
+          // If the user has not yet set any filter, default to those in the showByDefault set
+          let newSelected = selectedResourceTypes.filter((r) => uniqueTypes.includes(r));
+          if (selectedResourceTypes.length === 0) {
+            newSelected = uniqueTypes.filter((t) => showByDefault.has(t));
+            setSelectedResourceTypes(newSelected);
+          }
+
+          // Filter nodes by the selected resource types
+          const filteredNormalNodes = normalNodes.filter((n) =>
+            newSelected.includes(n.resourceType),
+          );
+
+          // For each group, only keep children that are in the filtered nodes
+          const keptNormalNodeIds = new Set(filteredNormalNodes.map((n) => n.id));
+          const updatedGroups = groupNodes.map((g) => {
+            const validChildren = g.children?.filter((childId: string) =>
+              keptNormalNodeIds.has(childId),
+            );
+            return {
+              ...g,
+              children: validChildren,
+            };
+          });
+          const filteredGroups = updatedGroups.filter((g) => g.children?.length > 0);
+
+          const finalNodes = [...filteredNormalNodes, ...filteredGroups];
+
+          // Filter edges to include only those connecting valid node IDs
+          const validNodeIds = new Set(finalNodes.map((n) => n.id));
+          const filteredEdges = edges.filter(
+            (e) => validNodeIds.has(e.source) && validNodeIds.has(e.target),
+          );
+
           if (controllerRef.current) {
             const newModel = {
-              nodes,
-              edges,
+              nodes: finalNodes,
+              edges: filteredEdges,
               graph: {
                 id: 'g1',
                 type: 'graph',
@@ -469,14 +555,14 @@ const PolicyTopologyPage: React.FC = () => {
           }
         } catch (error) {
           setParseError('Failed to parse topology data.');
+          console.error(error, dotString);
         }
       }
     } else if (loadError) {
       setParseError('Failed to load topology data.');
     }
-  }, [configMap, loaded, loadError]);
+  }, [configMap, loaded, loadError, selectedResourceTypes]);
 
-  // Memoize the controller
   const controller = controllerRef.current;
 
   if (!config) {
@@ -498,11 +584,65 @@ const PolicyTopologyPage: React.FC = () => {
             <CardBody>
               <TextContent>
                 <Text component="p" className="pf-u-mb-md">
-                  This view visualizes the relationships and interactions between different
-                  resources within your cluster related to Kuadrant, allowing you to explore
-                  connections between Gateways, HTTPRoutes and Kuadrant Policies.
+                  {t(
+                    'This view visualizes the relationships and interactions between different resources within your cluster related to Kuadrant, allowing you to explore connections between Gateways, HTTPRoutes and Kuadrant Policies.',
+                  )}
                 </Text>
               </TextContent>
+
+              <Toolbar
+                id="resource-filter-toolbar"
+                className="pf-m-toggle-group-container"
+                collapseListedFiltersBreakpoint="xl"
+                clearAllFilters={clearAllFilters}
+                clearFiltersButtonText={t('Reset Filters')}
+              >
+                <ToolbarContent>
+                  <ToolbarItem variant="chip-group">
+                    <ToolbarFilter
+                      categoryName="Resource"
+                      chips={selectedResourceTypes}
+                      deleteChip={onDeleteResourceFilter}
+                      deleteChipGroup={onDeleteResourceGroup}
+                    >
+                      <Select
+                        aria-label="Resource filter"
+                        role="menu"
+                        isOpen={isResourceFilterOpen}
+                        onOpenChange={(isOpen) => setIsResourceFilterOpen(isOpen)}
+                        onSelect={onResourceSelect}
+                        selected={selectedResourceTypes}
+                        toggle={(toggleRef) => (
+                          <MenuToggle
+                            ref={toggleRef}
+                            onClick={() => setIsResourceFilterOpen(!isResourceFilterOpen)}
+                            isExpanded={isResourceFilterOpen}
+                          >
+                            Resource{' '}
+                            {selectedResourceTypes.length > 0 && (
+                              <Badge isRead>{selectedResourceTypes.length}</Badge>
+                            )}
+                          </MenuToggle>
+                        )}
+                      >
+                        <SelectList>
+                          {allResourceTypes.map((type) => (
+                            <SelectOption
+                              key={type}
+                              value={type}
+                              hasCheckbox
+                              isSelected={selectedResourceTypes.includes(type)}
+                            >
+                              {type}
+                            </SelectOption>
+                          ))}
+                        </SelectList>
+                      </Select>
+                    </ToolbarFilter>
+                  </ToolbarItem>
+                </ToolbarContent>
+              </Toolbar>
+
               {!loaded ? (
                 <div>Loading topology...</div>
               ) : loadError ? (
@@ -545,6 +685,99 @@ const PolicyTopologyPage: React.FC = () => {
       </Page>
     </>
   );
+};
+
+/**
+ * Retrieves a mapping from Kubernetes resource kinds to their Group/Version/Kind (GVK)
+ * by querying both core API resources and aggregated API discovery.
+ *
+ * TODO: externalise this as a more general purpose helper for use elsewhere in the plugin
+ * TODO: consider a contrib to https://github.com/openshift/dynamic-plugin-sdk/blob/main/packages/lib-utils/src/k8s/k8s-utils.ts
+ *
+ * This function accepts a resource hints object. If multiple API groups provide the same kind,
+ * the one matching the hint (if provided) will be used.
+ *
+ * @param resourceHints - a mapping of resource kinds to the preferred API group.
+ * Example:
+ * {
+ *   Gateway: 'gateway.networking.k8s.io',
+ *   DNSRecord: 'kuadrant.io'
+ * }
+ *
+ * @returns a Promise that resolves to an object mapping resource kinds to their GVK.
+ */
+export const getGroupVersionKindForKind = async (
+  resourceHints: Record<string, string>,
+): Promise<Record<string, GVK>> => {
+  const mapping: Record<string, GVK> = {};
+
+  // Helper to provide resource hinting where there could be resource ambiguity (E.g. `dnsrecords.kuadrant.io` vs `dnsrecords.ingress.operator.openshift.io`)
+  const updateMapping = (kind: string, group: string, version: string) => {
+    if (resourceHints[kind]) {
+      // Always override if the new group is the hinted group.
+      if (group === resourceHints[kind]) {
+        mapping[kind] = { group, version, kind };
+      }
+    } else if (!mapping[kind]) {
+      mapping[kind] = { group, version, kind };
+    }
+  };
+
+  // fetch core API resources
+  try {
+    const coreResp = await fetch('/api/kubernetes/api/v1');
+    if (!coreResp.ok) {
+      throw new Error(`Error fetching /api/kubernetes/api/v1: ${coreResp.statusText}`);
+    }
+    const coreData = await coreResp.json();
+    if (Array.isArray(coreData.resources)) {
+      coreData.resources.forEach((res: any) => {
+        if (res.kind && !res.name?.includes('/')) {
+          // core API resources have an empty group and are v1
+          updateMapping(res.kind, '', 'v1');
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching core API resources:', error);
+  }
+
+  // aggregated API discovery data from /api/kubernetes/apis
+  // https://github.com/kubernetes/enhancements/blob/master/keps/sig-api-machinery/3352-aggregated-discovery/README.md
+  try {
+    const aggregatedResp = await fetch('/api/kubernetes/apis', {
+      headers: {
+        Accept: 'application/json;g=apidiscovery.k8s.io;v=v2;as=APIGroupDiscoveryList',
+      },
+    });
+    if (!aggregatedResp.ok) {
+      throw new Error(`Error fetching aggregated discovery: ${aggregatedResp.statusText}`);
+    }
+    const aggregatedData = await aggregatedResp.json();
+    if (Array.isArray(aggregatedData.items)) {
+      aggregatedData.items.forEach((groupItem: any) => {
+        const groupName = groupItem.metadata?.name;
+        if (groupItem.versions && Array.isArray(groupItem.versions)) {
+          groupItem.versions.forEach((versionData: any) => {
+            const version = versionData.version;
+            if (versionData.resources && Array.isArray(versionData.resources)) {
+              versionData.resources.forEach((resource: any) => {
+                const kind = resource.responseKind?.kind || resource.kind;
+                const resourceName = resource.resource || resource.name;
+                if (kind && resourceName && !resourceName.includes('/')) {
+                  updateMapping(kind, groupName, version);
+                }
+              });
+            }
+          });
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching aggregated API discovery data:', error);
+  }
+
+  return mapping;
 };
 
 export default PolicyTopologyPage;

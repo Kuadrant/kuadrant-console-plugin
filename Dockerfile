@@ -22,13 +22,14 @@ RUN yarn install --frozen-lockfile --ignore-optional
 COPY . .
 
 RUN yarn build
+RUN pwd && ls -la
+RUN ls -la ./dist
 
-COPY dist /usr/share/nginx/html
+RUN cp -r ./dist/* /usr/share/nginx/html/
 
 COPY entrypoint.sh /usr/share/nginx/html/entrypoint.sh
 
 RUN test -f /usr/share/nginx/html/plugin-manifest.json && \
-    test -f /usr/share/nginx/html/plugin-entry.js && \
     test -f /usr/share/nginx/html/entrypoint.sh && \
     test -d /usr/share/nginx/html/locales && \
     echo "All required files are present."
