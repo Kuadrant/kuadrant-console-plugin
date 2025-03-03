@@ -23,6 +23,8 @@ import {
   DropdownList,
   MenuToggle,
   Button,
+  Alert,
+  Tooltip,
 } from '@patternfly/react-core';
 import {
   GlobeIcon,
@@ -31,10 +33,10 @@ import {
   ExternalLinkAltIcon,
   EllipsisVIcon,
 } from '@patternfly/react-icons';
-import { useActiveNamespace, useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
+import { useActiveNamespace, useActivePerspective, QueryBrowser, usePrometheusPoll, PrometheusEndpoint } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import ResourceList from './ResourceList';
-import { sortable } from '@patternfly/react-table';
+import { sortable, Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 import { INTERNAL_LINKS, EXTERNAL_LINKS } from '../constants/links';
 import resourceGVKMapping from '../utils/latest';
 import { useHistory } from 'react-router-dom';
@@ -164,6 +166,16 @@ const KuadrantOverviewPage: React.FC = () => {
     history.push(targetUrl);
     setIsOpen(false);
   };
+
+  const [totalRequestsRes, totalRequestsLoaded, totalRequestsError] = usePrometheusPoll({
+    endpoint: PrometheusEndpoint.QUERY,
+    query: 'topk(10, sum by (source_workload, source_workload_namespace) (increase(istio_requests_total[24h])))',
+  });
+
+  const [totalErrorsRes, totalErrorsLoaded, totalErrorsError] = usePrometheusPoll({
+    endpoint: PrometheusEndpoint.QUERY,
+    query: 'topk(10, sum by (response_code, source_workload, source_workload_namespace) (increase(istio_requests_total{response_code!~"2(.*)|3(.*)"}[24h])))',
+  });
 
   return (
     <>
@@ -379,7 +391,7 @@ const KuadrantOverviewPage: React.FC = () => {
             <FlexItem flex={{ default: 'flex_1' }}>
               <Card>
                 <CardTitle>
-                  <Title headingLevel="h2">{t('APIs / HTTPRoutes')}</Title>
+                  <Title headingLevel="h2">{t('HTTPRoutes')}</Title>
                   <Button
                     onClick={() => handleCreateResource('HTTPRoute')}
                     className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
@@ -398,6 +410,169 @@ const KuadrantOverviewPage: React.FC = () => {
               </Card>
             </FlexItem>
           </Flex>
+
+          <Flex className="pf-u-mt-xl">
+            <FlexItem flex={{ default: 'flex_1' }}>
+              <Card>
+                <CardTitle>
+                  <Title headingLevel="h2">{t('Gateways - Total traffic over 24hr')}</Title>
+                </CardTitle>
+                <CardBody className="pf-u-p-10">
+                {totalRequestsError && (
+                  <Alert variant="warning" data-testid="prometheus-error" title={t('Prometheus error')}>
+                    {totalRequestsError}
+                  </Alert>
+                )}
+                {!totalRequestsLoaded && (
+                  <Alert
+                    variant="info"
+                    data-testid="prometheus-loading"
+                    title={t('Prometheus loading')}
+                  >
+                    {t('Prometheus loading')}
+                  </Alert>
+                )}
+                {!totalRequestsError && totalRequestsLoaded && (
+                  <Table aria-label="Gateway request table" variant="compact">
+                  <Thead>
+                    <Tr>
+                      <Th>Gateway</Th>
+                      <Th>Requests</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {totalRequestsRes.data.result.map((item, idx) => {
+                      const gatewayName = item.metric.source_workload_namespace + '/' + item.metric.source_workload;
+                      return (
+                      <Tr key={idx}>
+                        <Td>
+                          <Tooltip content={gatewayName}>
+                            <span style={{
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}>
+                              {gatewayName}
+                            </span>
+                          </Tooltip>
+                        </Td>
+                        <Td>{parseFloat(item.value[1]).toFixed(0)}</Td>
+                      </Tr>
+                      )
+                    })}
+                  </Tbody>
+                </Table>
+                )}
+                </CardBody>
+              </Card>
+            </FlexItem>
+            <FlexItem flex={{ default: 'flex_1' }}>
+              <Card>
+                <CardTitle>
+                  <Title headingLevel="h2">{t('Gateways - Total req/s')}</Title>
+                </CardTitle>
+                <CardBody className="pf-u-p-10">
+                  <QueryBrowser
+                    defaultTimespan={30 * 60 * 1000}
+                    pollInterval={30 * 1000}
+                    formatSeriesTitle={(labels) => labels.source_workload_namespace + "/" + labels.source_workload}
+                    units={"req/s"}
+                    showLegend={false}
+                    queries={[
+                      `
+                      topk(10,
+                        sum(rate(istio_requests_total{}[5m])) by (source_workload, source_workload_namespace)
+                      )
+                      `,
+                    ]}
+                  />
+                </CardBody>
+              </Card>
+            </FlexItem>
+          </Flex>
+
+          <Flex className="pf-u-mt-xl">
+          <FlexItem flex={{ default: 'flex_1' }}>
+              <Card>
+                <CardTitle>
+                  <Title headingLevel="h2">{t('Gateways - Total errors over 24hr')}</Title>
+                </CardTitle>
+                <CardBody className="pf-u-p-10">
+                {totalErrorsError && (
+                  <Alert variant="warning" data-testid="prometheus-error" title={t('Prometheus error')}>
+                    {totalErrorsError}
+                  </Alert>
+                )}
+                {!totalErrorsLoaded && (
+                  <Alert
+                    variant="info"
+                    data-testid="prometheus-loading"
+                    title={t('Prometheus loading')}
+                  >
+                    {t('Prometheus loading')}
+                  </Alert>
+                )}
+                {!totalErrorsError && totalErrorsLoaded && (
+                  <Table aria-label="Gateway errors table" variant="compact">
+                  <Thead>
+                    <Tr>
+                      <Th>Gateway</Th>
+                      <Th>Error Code</Th>
+                      <Th>Requests</Th>
+                    </Tr>
+                  </Thead>
+                  <Tbody>
+                    {totalErrorsRes.data.result.map((item, idx) => {
+                      const gatewayName = item.metric.source_workload_namespace + '/' + item.metric.source_workload;
+                      return (
+                      <Tr key={idx}>
+                        <Td>
+                          <Tooltip content={gatewayName}>
+                            <span style={{
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}>
+                              {gatewayName}
+                            </span>
+                          </Tooltip>
+                        </Td>
+                        <Td>{item.metric.response_code}</Td>
+                        <Td>{parseFloat(item.value[1]).toFixed(0)}</Td>
+                      </Tr>
+                      )
+                    })}
+                  </Tbody>
+                </Table>
+                )}
+                </CardBody>
+              </Card>
+            </FlexItem>
+            <FlexItem flex={{ default: 'flex_1' }}>
+              <Card>
+                <CardTitle>
+                  <Title headingLevel="h2">{t('Gateways - Errors req/s')}</Title>
+                </CardTitle>
+                <CardBody className="pf-u-p-10">
+                  <QueryBrowser
+                    defaultTimespan={30 * 60 * 1000}
+                    pollInterval={30 * 1000}
+                    formatSeriesTitle={(labels) => labels.response_code + " - " + labels.source_workload_namespace + "/" + labels.source_workload}
+                    units={"req/s"}
+                    showLegend={false}
+                    queries={[
+                      `
+                      topk(10,
+                        sum(rate(istio_requests_total{response_code!~"2(.*)|3(.*)"}[5m])) by (response_code, source_workload, source_workload_namespace)
+                      )
+                      `,
+                    ]}
+                  />
+                </CardBody>
+              </Card>
+            </FlexItem>
+          </Flex>
+
         </PageSection>
       </Page>
     </>
