@@ -1,4 +1,5 @@
 {
+  "Access Denied": "Access Denied",
   "Add Limit": "Add Limit",
   "All Policies": "All Policies",
   "All references for the resource have been resolved.": "All references for the resource have been resolved.",
@@ -39,6 +40,8 @@
   "Enhance Your Work": "Enhance Your Work",
   "Error creating AuthPolicy": "Error creating AuthPolicy",
   "Error creating Rate Limit Policy": "Error creating Rate Limit Policy",
+  "Error loading topology:": "Error loading topology:",
+  "Error parsing topology:": "Error parsing topology:",
   "Error parsing YAML:": "Error parsing YAML:",
   "Expand Getting Started": "Expand Getting Started",
   "Failure Threshold": "Failure Threshold",
@@ -54,6 +57,7 @@
   "Health Check": "Health Check",
   "Hide for session": "Hide for session",
   "HTTPRoute API Target Reference": "HTTPRoute API Target Reference",
+  "in the namespace ": "in the namespace ",
   "Issuer": "Issuer",
   "Issuer API Target Reference": "Issuer API Target Reference",
   "Issuer: Reference to the issuer for the created certificate. To create an additional Issuer go to": "Issuer: Reference to the issuer for the created certificate. To create an additional Issuer go to",
@@ -67,6 +71,9 @@
   "Load balancing Geo": "Load balancing Geo",
   "Load balancing Weight": "Load balancing Weight",
   "LoadBalancing": "LoadBalancing",
+  "Loading configuration...": "Loading configuration...",
+  "Loading Permissions...": "Loading Permissions...",
+  "Loading topology...": "Loading topology...",
   "Loading..": "Loading..",
   "Name": "Name",
   "Namespace": "Namespace",
@@ -100,6 +107,7 @@
   "Select Gateway": "Select Gateway",
   "Select HTTPRoute": "Select HTTPRoute",
   "Select Issuer": "Select Issuer",
+  "Specifically, you do not have permission to read the ConfigMap ": "Specifically, you do not have permission to read the ConfigMap ",
   "Status": "Status",
   "Targets Gateway API networking resources Gateways to provide TLS for gateway listeners by managing the lifecycle of TLS certificates using cert-manager": "Targets Gateway API networking resources Gateways to provide TLS for gateway listeners by managing the lifecycle of TLS certificates using cert-manager",
   "The resource has an unknown status and is not accepted.": "The resource has an unknown status and is not accepted.",
@@ -118,6 +126,7 @@
   "TLS": "TLS",
   "TLSPolicy": "TLSPolicy",
   "to display - please create some.": "to display - please create some.",
+  "Topology View": "Topology View",
   "Type": "Type",
   "Unique name of the DNS Policy": "Unique name of the DNS Policy",
   "Unique name of the TLSPolicy.": "Unique name of the TLSPolicy.",
@@ -125,5 +134,6 @@
   "View Documentation": "View Documentation",
   "Weight value to apply to weighted endpoints default: 120": "Weight value to apply to weighted endpoints default: 120",
   "YAML View": "YAML View",
-  "You can view and create HTTPRoutes": "You can view and create HTTPRoutes"
+  "You can view and create HTTPRoutes": "You can view and create HTTPRoutes",
+  "You do not have permission to view Policy Topology": "You do not have permission to view Policy Topology"
 }
