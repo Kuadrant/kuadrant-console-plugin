@@ -83,8 +83,8 @@ const KuadrantOverviewPage: React.FC = () => {
   const permissions = RBACPermissions();
 
   console.log('TESSSSSST RBAC', permissions);
-  const gatewayPerms = permissions['gateways'] ?? false;
-  const httpPerms = permissions['httproutes'] ?? false;
+  const gatewayPerms = permissions['gateways'] ?? false; // hardcoded false for testing
+  const httpPerms = permissions['httproutes'] ?? false; // hardcoded false for testing
 
   console.log('GATEWAY', gatewayPerms);
 
