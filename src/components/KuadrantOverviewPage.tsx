@@ -23,6 +23,10 @@ import {
   DropdownList,
   MenuToggle,
   Button,
+  Bullseye,
+  EmptyState,
+  EmptyStateIcon,
+  EmptyStateBody,
 } from '@patternfly/react-core';
 import {
   GlobeIcon,
@@ -30,14 +34,19 @@ import {
   OptimizeIcon,
   ExternalLinkAltIcon,
   EllipsisVIcon,
+  LockIcon,
 } from '@patternfly/react-icons';
+
 import { useActiveNamespace, useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import ResourceList from './ResourceList';
 import { sortable } from '@patternfly/react-table';
 import { INTERNAL_LINKS, EXTERNAL_LINKS } from '../constants/links';
 import resourceGVKMapping from '../utils/latest';
+// import RBACPermissions from '../utils/resourceRBAC';
+
 import { useHistory } from 'react-router-dom';
+import RBACPermissions from '../utils/resourceRBAC';
 
 export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
@@ -70,6 +79,14 @@ const KuadrantOverviewPage: React.FC = () => {
   const onToggleClick = () => {
     setIsCreateOpen(!isCreateOpen);
   };
+  // const permissions = RbacPermissions("kuadrant.io","authpolicies","list")
+  const permissions = RBACPermissions();
+
+  console.log('TESSSSSST RBAC', permissions);
+  const gatewayPerms = permissions['gateways'] ?? false;
+  const httpPerms = permissions['httproutes'] ?? false;
+
+  console.log('GATEWAY', gatewayPerms);
 
   React.useEffect(() => {
     if (ns && ns !== activeNamespace) {
@@ -355,48 +372,98 @@ const KuadrantOverviewPage: React.FC = () => {
             </FlexItem>
           </Flex>
           <Flex className="pf-u-mt-xl">
-            <FlexItem flex={{ default: 'flex_1' }}>
-              <Card>
-                <CardTitle>
-                  <Title headingLevel="h2">{t('Gateways')}</Title>
-                  <Button
-                    onClick={() => handleCreateResource('Gateway')}
-                    className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
-                  >
-                    {t(`Create Gateway`)}
-                  </Button>
-                </CardTitle>
-                <CardBody className="pf-u-p-10">
-                  <ResourceList
-                    resources={[resourceGVKMapping['Gateway']]}
-                    columns={columns}
-                    namespace="#ALL_NS#"
-                    emtpyResourceName="Gateways"
-                  />
-                </CardBody>
-              </Card>
-            </FlexItem>
-            <FlexItem flex={{ default: 'flex_1' }}>
-              <Card>
-                <CardTitle>
-                  <Title headingLevel="h2">{t('APIs / HTTPRoutes')}</Title>
-                  <Button
-                    onClick={() => handleCreateResource('HTTPRoute')}
-                    className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
-                  >
-                    {t(`Create HTTPRoute`)}
-                  </Button>
-                </CardTitle>
-                <CardBody className="pf-u-p-10">
-                  <ResourceList
-                    resources={[resourceGVKMapping['HTTPRoute']]}
-                    columns={columns}
-                    namespace="#ALL_NS#"
-                    emtpyResourceName="HTTPRoutes"
-                  />
-                </CardBody>
-              </Card>
-            </FlexItem>
+            {gatewayPerms == true ? (
+              <FlexItem flex={{ default: 'flex_1' }}>
+                <Card>
+                  <CardTitle>
+                    <Title headingLevel="h2">{t('Gateways')}</Title>
+                    <Button
+                      onClick={() => handleCreateResource('Gateway')}
+                      className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                    >
+                      {t(`Create Gateway`)}
+                    </Button>
+                  </CardTitle>
+                  <CardBody className="pf-u-p-10">
+                    <ResourceList
+                      resources={[resourceGVKMapping['Gateway']]}
+                      columns={columns}
+                      namespace="#ALL_NS#"
+                      emtpyResourceName="Gateways"
+                    />
+                  </CardBody>
+                </Card>
+              </FlexItem>
+            ) : (
+              <FlexItem flex={{ default: 'flex_1' }}>
+                <Card>
+                  <CardBody className="pf-u-p-10">
+                    <CardTitle>
+                      <Title headingLevel="h2">{t('Gateways')}</Title>
+                    </CardTitle>
+                    <Bullseye>
+                      <EmptyState>
+                        <EmptyStateIcon icon={LockIcon} />
+                        <Title headingLevel="h4" size="lg">
+                          {t('Access Denied')}
+                        </Title>
+                        <EmptyStateBody>
+                          <Text component="p">
+                            {t('You do not have permission to view Gateways')}
+                          </Text>
+                        </EmptyStateBody>
+                      </EmptyState>
+                    </Bullseye>
+                  </CardBody>
+                </Card>
+              </FlexItem>
+            )}
+            {httpPerms == true ? (
+              <FlexItem flex={{ default: 'flex_1' }}>
+                <Card>
+                  <CardTitle>
+                    <Title headingLevel="h2">{t('APIs / HTTPRoutes')}</Title>
+                    <Button
+                      onClick={() => handleCreateResource('HTTPRoute')}
+                      className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                    >
+                      {t(`Create HTTPRoute`)}
+                    </Button>
+                  </CardTitle>
+                  <CardBody className="pf-u-p-10">
+                    <ResourceList
+                      resources={[resourceGVKMapping['HTTPRoute']]}
+                      columns={columns}
+                      namespace="#ALL_NS#"
+                      emtpyResourceName="HTTPRoutes"
+                    />
+                  </CardBody>
+                </Card>
+              </FlexItem>
+            ) : (
+              <FlexItem flex={{ default: 'flex_1' }}>
+                <Card>
+                  <CardBody className="pf-u-p-10">
+                    <CardTitle>
+                      <Title headingLevel="h2">{t('APIs / HTTPRoutes')}</Title>
+                    </CardTitle>
+                    <Bullseye>
+                      <EmptyState>
+                        <EmptyStateIcon icon={LockIcon} />
+                        <Title headingLevel="h4" size="lg">
+                          {t('Access Denied')}
+                        </Title>
+                        <EmptyStateBody>
+                          <Text component="p">
+                            {t('You do not have permission to view APIs / HTTPRoutes')}
+                          </Text>
+                        </EmptyStateBody>
+                      </EmptyState>
+                    </Bullseye>
+                  </CardBody>
+                </Card>
+              </FlexItem>
+            )}
           </Flex>
         </PageSection>
       </Page>
