@@ -23,6 +23,12 @@ import {
   DropdownList,
   MenuToggle,
   Button,
+  Alert,
+  Tooltip,
+  Label,
+  Popover,
+  Progress,
+  ProgressMeasureLocation,
 } from '@patternfly/react-core';
 import {
   GlobeIcon,
@@ -31,10 +37,21 @@ import {
   ExternalLinkAltIcon,
   EllipsisVIcon,
 } from '@patternfly/react-icons';
-import { useActiveNamespace, useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
+import {
+  useActiveNamespace,
+  useActivePerspective,
+  QueryBrowser,
+  usePrometheusPoll,
+  PrometheusEndpoint,
+  K8sResourceCommon,
+  k8sList,
+  GreenCheckCircleIcon,
+  YellowExclamationTriangleIcon,
+  TableData,
+} from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import ResourceList from './ResourceList';
-import { sortable } from '@patternfly/react-table';
+import { sortable, Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 import { INTERNAL_LINKS, EXTERNAL_LINKS } from '../constants/links';
 import resourceGVKMapping from '../utils/latest';
 import { useHistory } from 'react-router-dom';
@@ -55,6 +72,35 @@ export const resources: Resource[] = [
   { name: 'RateLimitPolicies', gvk: resourceGVKMapping['RateLimitPolicy'] },
   { name: 'TLSPolicies', gvk: resourceGVKMapping['TLSPolicy'] },
 ];
+
+interface TotalRequestsByGateway {
+  [gatewayName: string]: {
+    total?: number;
+    errors?: number;
+    codes?: {
+      [responseCode: string]: number;
+    };
+  };
+}
+interface Gateway extends K8sResourceCommon {
+  status?: {
+    conditions?: {
+      type: string;
+      status: string;
+    }[];
+  };
+}
+const GatewayModel = {
+  apiGroup: 'gateway.networking.k8s.io',
+  apiVersion: 'v1',
+  kind: 'Gateway',
+  plural: 'gateways',
+  namespaced: true,
+  abbr: '',
+  label: 'Gateways',
+  labelPlural: '',
+};
+
 const KuadrantOverviewPage: React.FC = () => {
   const history = useHistory();
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -141,6 +187,54 @@ const KuadrantOverviewPage: React.FC = () => {
     },
   ];
 
+  const gatewayTrafficColumns = [
+    {
+      title: t('plugin__kuadrant-console-plugin~Name'),
+      id: 'name',
+      sort: 'metadata.name',
+      transforms: [sortable],
+    },
+    {
+      title: t('plugin__kuadrant-console-plugin~Namespace'),
+      id: 'namespace',
+      sort: 'metadata.namespace',
+      transforms: [sortable],
+    },
+    {
+      title: t('plugin__kuadrant-console-plugin~Status'),
+      id: 'Status',
+    },
+    {
+      title: t('Total Requests'),
+      id: 'totalRequests',
+      sort: 'totalRequests',
+      transforms: [sortable],
+    },
+    {
+      title: t('Successful Requests'),
+      id: 'successfulRequests',
+      sort: 'successfulRequests',
+      transforms: [sortable],
+    },
+    {
+      title: t('Error Rate'),
+      id: 'errorRate',
+      sort: 'errorRate',
+      transforms: [sortable],
+    },
+    {
+      title: t('Error Codes'),
+      id: 'errorCodes',
+      sort: 'errorCodes',
+      transforms: [sortable],
+    },
+    {
+      title: '',
+      id: 'kebab',
+      props: { className: 'pf-v5-c-table__action' },
+    },
+  ];
+
   const handleCreateResource = (resource) => {
     const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
 
@@ -164,6 +258,206 @@ const KuadrantOverviewPage: React.FC = () => {
     history.push(targetUrl);
     setIsOpen(false);
   };
+
+  // Prometheus queries for gateway traffic
+  const [totalRequestsRes, totalRequestsLoaded, totalRequestsError] = usePrometheusPoll({
+    endpoint: PrometheusEndpoint.QUERY,
+    query:
+      'sum by (source_workload, source_workload_namespace) (increase(istio_requests_total[24h]))',
+  });
+  const [totalErrorsRes, totalErrorsLoaded, totalErrorsError] = usePrometheusPoll({
+    endpoint: PrometheusEndpoint.QUERY,
+    query:
+      'sum by (source_workload, source_workload_namespace) (increase(istio_requests_total{response_code!~"2(.*)|3(.*)"}[24h]))',
+  });
+  const [totalErrorsByCodeRes, totalErrorsByCodeLoaded, totalErrorsByCodeError] = usePrometheusPoll(
+    {
+      endpoint: PrometheusEndpoint.QUERY,
+      query:
+        'sum by (response_code, source_workload, source_workload_namespace) (increase(istio_requests_total{response_code!~"2(.*)|3(.*)"}[24h]))',
+    },
+  );
+
+  // Map out query reponses to more easily accessible objects based on gateway name
+  const totalRequestsByGateway: TotalRequestsByGateway = {};
+  const getGateway = (name: string) => {
+    if (!totalRequestsByGateway[name]) {
+      totalRequestsByGateway[name] = {};
+    }
+    return totalRequestsByGateway[name];
+  };
+  if (!totalRequestsError && totalRequestsLoaded) {
+    totalRequestsRes.data.result.forEach((item) => {
+      const gatewayName = `${item.metric.source_workload_namespace}/${item.metric.source_workload}`;
+      getGateway(gatewayName).total = parseFloat(item.value[1]);
+    });
+  }
+  if (!totalErrorsError && totalErrorsLoaded) {
+    totalErrorsRes.data.result.forEach((item) => {
+      const gatewayName = `${item.metric.source_workload_namespace}/${item.metric.source_workload}`;
+      getGateway(gatewayName).errors = parseFloat(item.value[1]);
+    });
+  }
+  if (!totalErrorsByCodeError && totalErrorsByCodeLoaded) {
+    totalErrorsByCodeRes.data.result.forEach((item, idx) => {
+      const gatewayName = `${item.metric.source_workload_namespace}/${item.metric.source_workload}`;
+      const gateway = getGateway(gatewayName);
+      if (!gateway.codes) gateway.codes = {};
+      gateway.codes[item.metric.response_code] = parseFloat(item.value[1]);
+    });
+  }
+
+  // Helper functions to pull out metric values in correct format, given a gateway object
+  const getTotalRequests = (obj: { metadata: { namespace: string; name: string } }): number => {
+    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    const total = totalRequestsByGateway[key]?.total;
+    return Number.isFinite(total) ? Math.round(total) : 0;
+  };
+  const getSuccessfulRequests = (obj: {
+    metadata: { namespace: string; name: string };
+  }): number => {
+    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    const success = totalRequestsByGateway[key]?.total - totalRequestsByGateway[key]?.errors;
+    return Number.isFinite(success) ? Math.round(success) : 0;
+  };
+  const getErrorRate = (obj: { metadata: { namespace: string; name: string } }): string => {
+    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    const rate = (totalRequestsByGateway[key]?.errors / totalRequestsByGateway[key]?.total) * 100;
+    return Number.isFinite(rate) ? rate.toFixed(1) : '-';
+  };
+  const getErrorCodes = (obj: { metadata: { namespace: string; name: string } }): Set<string> => {
+    const codes = new Set<string>();
+    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    if (totalRequestsByGateway[key]?.codes) {
+      Object.entries(totalRequestsByGateway[key].codes).forEach(([key, value]) => {
+        if (key.startsWith('4') && value > 0) {
+          codes.add('4xx');
+        } else if (key.startsWith('5') && value > 0) {
+          codes.add('5xx');
+        } // Omit all other http & non http error codes to avoid confusion.
+      });
+    }
+    return codes;
+  };
+
+  // Metrics columns rendering
+  const getErrorCodeDistribution = (
+    obj: { metadata: { namespace: string; name: string } },
+    prefix: string,
+  ): Record<string, number> => {
+    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    const codes = totalRequestsByGateway[key]?.codes ?? {};
+    const filteredCodes = Object.entries(codes).filter(([code]) => code.startsWith(prefix));
+
+    const total = filteredCodes.reduce((sum, [, count]) => sum + count, 0);
+
+    const distribution: Record<string, number> = {};
+    filteredCodes.forEach(([code, count]) => {
+      distribution[code] = total > 0 ? (count / total) * 100 : 0;
+    });
+
+    return distribution;
+  };
+  const ErrorCodeLabel: React.FC<{
+    obj: { metadata: { namespace: string; name: string } };
+    codeGroup: string;
+  }> = ({ obj, codeGroup }) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const distribution = getErrorCodeDistribution(obj, codeGroup[0]);
+    return (
+      <Popover
+        headerContent={`Error Code Distribution for ${codeGroup}`}
+        bodyContent={
+          <>
+            {Object.entries(distribution).map(([code, percent]) => (
+              <div key={code} style={{ marginBottom: '8px' }}>
+                <strong>{code}</strong>
+                <Progress
+                  value={percent}
+                  title={code}
+                  measureLocation={ProgressMeasureLocation.top}
+                />
+                <span>{percent.toFixed(2)}%</span>
+              </div>
+            ))}
+          </>
+        }
+        isVisible={isOpen}
+        shouldClose={() => setIsOpen(false)}
+        position="top"
+      >
+        <Button variant="link" isInline onClick={() => setIsOpen(!isOpen)}>
+          <Label>{codeGroup}</Label>
+        </Button>
+      </Popover>
+    );
+  };
+
+  const gatewayTrafficRenders = {
+    totalRequests: (column, obj, activeColumnIDs) => {
+      return (
+        <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+          {getTotalRequests(obj) || '-'}
+        </TableData>
+      );
+    },
+    successfulRequests: (column, obj, activeColumnIDs) => {
+      return (
+        <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+          {getSuccessfulRequests(obj) || '-'}
+        </TableData>
+      );
+    },
+    errorRate: (column, obj, activeColumnIDs) => {
+      return (
+        <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+          {getErrorRate(obj) || '-'}%
+        </TableData>
+      );
+    },
+    errorCodes: (column, obj, activeColumnIDs) => {
+      return (
+        <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+          {[...getErrorCodes(obj)].map((code) => {
+            return <ErrorCodeLabel key={code} obj={obj} codeGroup={code} />;
+          })}
+        </TableData>
+      );
+    },
+  };
+
+  const [gateways, setGateways] = React.useState<Gateway[]>([]);
+
+  const healthyCount = gateways.filter((gw) => {
+    const conditions = gw.status?.conditions ?? [];
+    const accepted = conditions.find((c) => c.type === 'Accepted' && c.status === 'True');
+    const programmed = conditions.find((c) => c.type === 'Programmed' && c.status === 'True');
+    return accepted && programmed;
+  }).length;
+
+  const unhealthyCount = gateways.length - healthyCount;
+
+  React.useEffect(() => {
+    const fetchGateways = async () => {
+      try {
+        const res = await k8sList({
+          model: GatewayModel,
+          queryParams: {
+            ns: '',
+          },
+        });
+        if (Array.isArray(res)) {
+          setGateways(res);
+        } else {
+          setGateways(res.items ?? []);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchGateways();
+  }, []);
 
   return (
     <>
@@ -288,6 +582,46 @@ const KuadrantOverviewPage: React.FC = () => {
           <Flex className="pf-u-mt-xl">
             <FlexItem flex={{ default: 'flex_1' }}>
               <Card>
+                {/* TODO: Loading placeholder */}
+                <CardTitle>
+                  <Title headingLevel="h2">{t('Gateways')}</Title>
+                  <CardBody className="pf-u-p-10">
+                    {gateways.length} total gateways <GreenCheckCircleIcon /> {healthyCount} healthy
+                    gateways <YellowExclamationTriangleIcon /> {unhealthyCount} unhealthy gateways
+                  </CardBody>
+                </CardTitle>
+              </Card>
+            </FlexItem>
+          </Flex>
+
+          <Flex className="pf-u-mt-xl">
+            <FlexItem flex={{ default: 'flex_1' }}>
+              <Card>
+                <CardTitle>
+                  <Title headingLevel="h2">{t('Gateways - Traffic Distribution')}</Title>
+                  <Button
+                    onClick={() => handleCreateResource('Gateway')}
+                    className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                  >
+                    {t(`Create Gateway`)}
+                  </Button>
+                </CardTitle>
+                <CardBody className="pf-u-p-10">
+                  <ResourceList
+                    resources={[resourceGVKMapping['Gateway']]}
+                    columns={gatewayTrafficColumns}
+                    renderers={gatewayTrafficRenders}
+                    namespace="#ALL_NS#"
+                    emtpyResourceName="Gateways"
+                  />
+                </CardBody>
+              </Card>
+            </FlexItem>
+          </Flex>
+
+          <Flex className="pf-u-mt-xl">
+            <FlexItem flex={{ default: 'flex_1' }}>
+              <Card>
                 <CardTitle>
                   <Title headingLevel="h2">{t('Policies')}</Title>
                   <Dropdown
@@ -379,7 +713,7 @@ const KuadrantOverviewPage: React.FC = () => {
             <FlexItem flex={{ default: 'flex_1' }}>
               <Card>
                 <CardTitle>
-                  <Title headingLevel="h2">{t('APIs / HTTPRoutes')}</Title>
+                  <Title headingLevel="h2">{t('HTTPRoutes')}</Title>
                   <Button
                     onClick={() => handleCreateResource('HTTPRoute')}
                     className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
@@ -393,6 +727,194 @@ const KuadrantOverviewPage: React.FC = () => {
                     columns={columns}
                     namespace="#ALL_NS#"
                     emtpyResourceName="HTTPRoutes"
+                  />
+                </CardBody>
+              </Card>
+            </FlexItem>
+          </Flex>
+
+          <Flex className="pf-u-mt-xl">
+            <FlexItem flex={{ default: 'flex_1' }}>
+              <Card>
+                <CardTitle>
+                  <Title headingLevel="h2">{t('Gateways - Total traffic over 24hr')}</Title>
+                </CardTitle>
+                <CardBody className="pf-u-p-10">
+                  {totalRequestsError && (
+                    <Alert
+                      variant="warning"
+                      data-testid="prometheus-error"
+                      title={t('Prometheus error')}
+                    >
+                      {totalRequestsError}
+                    </Alert>
+                  )}
+                  {!totalRequestsLoaded && (
+                    <Alert
+                      variant="info"
+                      data-testid="prometheus-loading"
+                      title={t('Prometheus loading')}
+                    >
+                      {t('Prometheus loading')}
+                    </Alert>
+                  )}
+                  {!totalRequestsError && totalRequestsLoaded && (
+                    <Table aria-label="Gateway request table" variant="compact">
+                      <Thead>
+                        <Tr>
+                          <Th>Gateway</Th>
+                          <Th>Requests</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {totalRequestsRes.data.result.map((item, idx) => {
+                          const gatewayName =
+                            item.metric.source_workload_namespace +
+                            '/' +
+                            item.metric.source_workload;
+                          return (
+                            <Tr key={idx}>
+                              <Td>
+                                <Tooltip content={gatewayName}>
+                                  <span
+                                    style={{
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                    }}
+                                  >
+                                    {gatewayName}
+                                  </span>
+                                </Tooltip>
+                              </Td>
+                              <Td>{parseFloat(item.value[1]).toFixed(0)}</Td>
+                            </Tr>
+                          );
+                        })}
+                      </Tbody>
+                    </Table>
+                  )}
+                </CardBody>
+              </Card>
+            </FlexItem>
+            <FlexItem flex={{ default: 'flex_1' }}>
+              <Card>
+                <CardTitle>
+                  <Title headingLevel="h2">{t('Gateways - Total req/s')}</Title>
+                </CardTitle>
+                <CardBody className="pf-u-p-10">
+                  <QueryBrowser
+                    defaultTimespan={30 * 60 * 1000}
+                    pollInterval={30 * 1000}
+                    formatSeriesTitle={(labels) =>
+                      labels.source_workload_namespace + '/' + labels.source_workload
+                    }
+                    units={'req/s'}
+                    showLegend={false}
+                    queries={[
+                      `
+                      topk(10,
+                        sum(rate(istio_requests_total{}[5m])) by (source_workload, source_workload_namespace)
+                      )
+                      `,
+                    ]}
+                  />
+                </CardBody>
+              </Card>
+            </FlexItem>
+          </Flex>
+
+          <Flex className="pf-u-mt-xl">
+            <FlexItem flex={{ default: 'flex_1' }}>
+              <Card>
+                <CardTitle>
+                  <Title headingLevel="h2">{t('Gateways - Total errors over 24hr')}</Title>
+                </CardTitle>
+                <CardBody className="pf-u-p-10">
+                  {totalErrorsError && (
+                    <Alert
+                      variant="warning"
+                      data-testid="prometheus-error"
+                      title={t('Prometheus error')}
+                    >
+                      {totalErrorsError}
+                    </Alert>
+                  )}
+                  {!totalErrorsLoaded && (
+                    <Alert
+                      variant="info"
+                      data-testid="prometheus-loading"
+                      title={t('Prometheus loading')}
+                    >
+                      {t('Prometheus loading')}
+                    </Alert>
+                  )}
+                  {!totalErrorsError && totalErrorsLoaded && (
+                    <Table aria-label="Gateway errors table" variant="compact">
+                      <Thead>
+                        <Tr>
+                          <Th>Gateway</Th>
+                          <Th>Error Code</Th>
+                          <Th>Requests</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {totalErrorsRes.data.result.map((item, idx) => {
+                          const gatewayName =
+                            item.metric.source_workload_namespace +
+                            '/' +
+                            item.metric.source_workload;
+                          return (
+                            <Tr key={idx}>
+                              <Td>
+                                <Tooltip content={gatewayName}>
+                                  <span
+                                    style={{
+                                      whiteSpace: 'nowrap',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                    }}
+                                  >
+                                    {gatewayName}
+                                  </span>
+                                </Tooltip>
+                              </Td>
+                              <Td>{item.metric.response_code}</Td>
+                              <Td>{parseFloat(item.value[1]).toFixed(0)}</Td>
+                            </Tr>
+                          );
+                        })}
+                      </Tbody>
+                    </Table>
+                  )}
+                </CardBody>
+              </Card>
+            </FlexItem>
+            <FlexItem flex={{ default: 'flex_1' }}>
+              <Card>
+                <CardTitle>
+                  <Title headingLevel="h2">{t('Gateways - Errors req/s')}</Title>
+                </CardTitle>
+                <CardBody className="pf-u-p-10">
+                  <QueryBrowser
+                    defaultTimespan={30 * 60 * 1000}
+                    pollInterval={30 * 1000}
+                    formatSeriesTitle={(labels) =>
+                      labels.response_code +
+                      ' - ' +
+                      labels.source_workload_namespace +
+                      '/' +
+                      labels.source_workload
+                    }
+                    units={'req/s'}
+                    showLegend={false}
+                    queries={[
+                      `
+                      topk(10,
+                        sum(rate(istio_requests_total{response_code!~"2(.*)|3(.*)"}[5m])) by (response_code, source_workload, source_workload_namespace)
+                      )
+                      `,
+                    ]}
                   />
                 </CardBody>
               </Card>
