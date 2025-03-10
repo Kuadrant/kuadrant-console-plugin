@@ -25,6 +25,9 @@
     "downstream-replacements": "node downstream.js && yarn i18n && yarn lint",
     "upstream-replacements": "node downstream.js --upstream && yarn i18n && yarn lint"
   },
+  "resolutions": {
+    "http-proxy-middleware": "2.0.7"
+  },
   "devDependencies": {
     "@cypress/webpack-preprocessor": "^5.15.5",
     "@openshift-console/dynamic-plugin-sdk": "^1.6.0",
