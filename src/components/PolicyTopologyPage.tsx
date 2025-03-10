@@ -18,8 +18,16 @@ import {
   SelectList,
   SelectOption,
   MenuToggle,
+  Bullseye,
+  EmptyState,
+  EmptyStateIcon,
+  EmptyStateBody,
 } from '@patternfly/react-core';
-import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
+import {
+  useK8sWatchResource,
+  useAccessReview,
+  K8sVerb,
+} from '@openshift-console/dynamic-plugin-sdk';
 import {
   DagreLayout,
   DefaultEdge,
@@ -46,7 +54,13 @@ import {
 } from '@patternfly/react-topology';
 import { useTranslation } from 'react-i18next';
 
-import { CubesIcon, CloudUploadAltIcon, TopologyIcon, RouteIcon } from '@patternfly/react-icons';
+import {
+  CubesIcon,
+  CloudUploadAltIcon,
+  TopologyIcon,
+  RouteIcon,
+  LockIcon,
+} from '@patternfly/react-icons';
 
 import * as dot from 'graphlib-dot';
 import './kuadrant.css';
@@ -386,13 +400,12 @@ const customComponentFactory = (kind: ModelKind, type: string) => {
 const PolicyTopologyPage: React.FC = () => {
   const [config, setConfig] = React.useState<any | null>(null);
   const [parseError, setParseError] = React.useState<string | null>(null);
-  const { t } = useTranslation('plugin__kuadrant-console-plugin');
-
   // dynamically generated list of all resource types from the parsed DOT file
   const [allResourceTypes, setAllResourceTypes] = React.useState<string[]>([]);
   // Resource filter state. On initial render, show only resources in showByDefault
   const [selectedResourceTypes, setSelectedResourceTypes] = React.useState<string[]>([]);
   const [isResourceFilterOpen, setIsResourceFilterOpen] = React.useState(false);
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
   const onResourceSelect = (
     _event: React.MouseEvent | React.ChangeEvent | undefined,
@@ -563,24 +576,70 @@ const PolicyTopologyPage: React.FC = () => {
     }
   }, [configMap, loaded, loadError, selectedResourceTypes]);
 
-  const controller = controllerRef.current;
+  const accessReviewProps = React.useMemo(() => {
+    return config
+      ? {
+          group: '',
+          resource: 'ConfigMap',
+          verb: 'read' as K8sVerb,
+          namespace: config.TOPOLOGY_CONFIGMAP_NAMESPACE,
+          name: config.TOPOLOGY_CONFIGMAP_NAME,
+        }
+      : {
+          // fallback
+          group: '',
+          resource: '',
+          verb: 'read' as K8sVerb,
+          namespace: '',
+          name: '',
+        };
+  }, [config]);
+
+  const [canReadTopology, isLoadingPermissions] = useAccessReview(accessReviewProps);
 
   if (!config) {
-    return <div>Loading configuration...</div>;
+    return <div>{t('Loading configuration...')}</div>;
   }
+
+  if (isLoadingPermissions) {
+    return <div>{t('Loading Permissions...')}</div>;
+  }
+
+  if (!canReadTopology) {
+    return (
+      <Bullseye>
+        <EmptyState>
+          <EmptyStateIcon icon={LockIcon} />
+          <Title headingLevel="h4" size="lg">
+            {t('Access Denied')}
+          </Title>
+          <EmptyStateBody>
+            <Text component="p">{t('You do not have permission to view Policy Topology')}</Text>
+            <Text component="p">
+              {t('Specifically, you do not have permission to read the ConfigMap ')}
+              <strong>{config.TOPOLOGY_CONFIGMAP_NAME}</strong> {t('in the namespace ')}
+              <strong>{config.TOPOLOGY_CONFIGMAP_NAMESPACE}</strong>
+            </Text>
+          </EmptyStateBody>
+        </EmptyState>
+      </Bullseye>
+    );
+  }
+
+  const controller = controllerRef.current;
 
   return (
     <>
       <Helmet>
-        <title>Policy Topology</title>
+        <title>{t('Policy Topology')}</title>
       </Helmet>
       <Page>
         <PageSection variant="light">
-          <Title headingLevel="h1">Policy Topology</Title>
+          <Title headingLevel="h1">{t('Policy Topology')}</Title>
         </PageSection>
         <PageSection className="policy-topology-section">
           <Card>
-            <CardTitle>Topology View</CardTitle>
+            <CardTitle>{t('Topology View')}</CardTitle>
             <CardBody>
               <TextContent>
                 <Text component="p" className="pf-u-mb-md">
@@ -589,7 +648,6 @@ const PolicyTopologyPage: React.FC = () => {
                   )}
                 </Text>
               </TextContent>
-
               <Toolbar
                 id="resource-filter-toolbar"
                 className="pf-m-toggle-group-container"
@@ -642,13 +700,16 @@ const PolicyTopologyPage: React.FC = () => {
                   </ToolbarItem>
                 </ToolbarContent>
               </Toolbar>
-
               {!loaded ? (
-                <div>Loading topology...</div>
+                <div>{t('Loading topology...')}</div>
               ) : loadError ? (
-                <div>Error loading topology: {loadError.message}</div>
+                <div>
+                  {t('Error loading topology:')} {loadError.message}
+                </div>
               ) : parseError ? (
-                <div>Error parsing topology: {parseError}</div>
+                <div>
+                  {t('Error parsing topology:')} {parseError}
+                </div>
               ) : (
                 controller && (
                   <TopologyView
