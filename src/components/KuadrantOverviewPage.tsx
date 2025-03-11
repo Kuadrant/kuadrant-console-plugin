@@ -338,19 +338,27 @@ const KuadrantOverviewPage: React.FC = () => {
   };
 
   // Metrics columns rendering
+  interface Distribution {
+    total: number;
+    percent: number;
+  }
   const getErrorCodeDistribution = (
     obj: { metadata: { namespace: string; name: string } },
     prefix: string,
-  ): Record<string, number> => {
+  ): Record<string, Distribution> => {
     const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
     const codes = totalRequestsByGateway[key]?.codes ?? {};
     const filteredCodes = Object.entries(codes).filter(([code]) => code.startsWith(prefix));
 
     const total = filteredCodes.reduce((sum, [, count]) => sum + count, 0);
 
-    const distribution: Record<string, number> = {};
+    const distribution: Record<string, Distribution> = {};
     filteredCodes.forEach(([code, count]) => {
-      distribution[code] = total > 0 ? (count / total) * 100 : 0;
+      if (count < 1) return;
+      distribution[code] = {
+        total: count,
+        percent: total > 0 ? (count / total) * 100 : 0,
+      }
     });
 
     return distribution;
@@ -363,20 +371,33 @@ const KuadrantOverviewPage: React.FC = () => {
     const distribution = getErrorCodeDistribution(obj, codeGroup[0]);
     return (
       <Popover
-        headerContent={`Error Code Distribution for ${codeGroup}`}
+        headerContent={`Error Code Distribution`}
         bodyContent={
           <>
-            {Object.entries(distribution).map(([code, percent]) => (
+            {Object.entries(distribution).map(([code, dist]) => (
               <div key={code} style={{ marginBottom: '8px' }}>
-                <strong>{code}</strong>
                 <Progress
-                  value={percent}
-                  title={code}
-                  measureLocation={ProgressMeasureLocation.top}
+                  value={dist.percent}
+                  title={
+                    <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
+                      <FlexItem>
+                        <strong>Code: {code}</strong>
+                      </FlexItem>
+                      <FlexItem align={{ default: 'alignRight' }}>
+                        {dist.total.toFixed(0)} requests
+                      </FlexItem>
+                    </Flex>
+                  }
+                  measureLocation={ProgressMeasureLocation.outside}
                 />
-                <span>{percent.toFixed(2)}%</span>
+                <Divider style={{ margin: '12px 0' }} />
               </div>
             ))}
+          </>
+        }
+        footerContent={
+          <>
+            <span>Last 24h data</span>
           </>
         }
         isVisible={isOpen}
@@ -583,8 +604,31 @@ const KuadrantOverviewPage: React.FC = () => {
                 <CardTitle>
                   <Title headingLevel="h2">{t('Gateways')}</Title>
                   <CardBody className="pf-u-p-10">
-                    {gateways.length} total gateways <GreenCheckCircleIcon /> {healthyCount} healthy
-                    gateways <YellowExclamationTriangleIcon /> {unhealthyCount} unhealthy gateways
+                    <Flex justifyContent={{ default: 'justifyContentSpaceAround' }} alignItems={{ default: 'alignItemsCenter' }}>
+                      {/* Total Gateways */}
+                      <FlexItem>
+                        <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsCenter' }}>
+                          <strong style={{ fontSize: '1.3rem' }}>{gateways.length}</strong>
+                          <span>Total Gateways</span>
+                        </Flex>
+                      </FlexItem>
+
+                      {/* Healthy Gateways */}
+                      <FlexItem>
+                        <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsCenter' }}>
+                          <strong style={{ fontSize: '1.3rem' }}><GreenCheckCircleIcon size="md" /> <span style={{ margin: '5px'}}>{healthyCount}</span></strong>
+                          <span>Healthy Gateways</span>
+                        </Flex>
+                      </FlexItem>
+
+                      {/* Unhealthy Gateways */}
+                      <FlexItem>
+                        <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsCenter' }}>
+                          <strong style={{ fontSize: '1.3rem' }}><YellowExclamationTriangleIcon size="md" /> <span style={{ margin: '5px'}}>{unhealthyCount}</span></strong>
+                          <span>Unhealthy Gateways</span>
+                        </Flex>
+                      </FlexItem>
+                    </Flex>
                   </CardBody>
                 </CardTitle>
               </Card>
