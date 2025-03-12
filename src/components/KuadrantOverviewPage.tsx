@@ -358,7 +358,7 @@ const KuadrantOverviewPage: React.FC = () => {
       distribution[code] = {
         total: count,
         percent: total > 0 ? (count / total) * 100 : 0,
-      }
+      };
     });
 
     return distribution;
@@ -379,7 +379,10 @@ const KuadrantOverviewPage: React.FC = () => {
                 <Progress
                   value={dist.percent}
                   title={
-                    <Flex justifyContent={{ default: 'justifyContentSpaceBetween' }} alignItems={{ default: 'alignItemsCenter' }}>
+                    <Flex
+                      justifyContent={{ default: 'justifyContentSpaceBetween' }}
+                      alignItems={{ default: 'alignItemsCenter' }}
+                    >
                       <FlexItem>
                         <strong>Code: {code}</strong>
                       </FlexItem>
@@ -604,10 +607,16 @@ const KuadrantOverviewPage: React.FC = () => {
                 <CardTitle>
                   <Title headingLevel="h2">{t('Gateways')}</Title>
                   <CardBody className="pf-u-p-10">
-                    <Flex justifyContent={{ default: 'justifyContentSpaceAround' }} alignItems={{ default: 'alignItemsCenter' }}>
+                    <Flex
+                      justifyContent={{ default: 'justifyContentSpaceAround' }}
+                      alignItems={{ default: 'alignItemsCenter' }}
+                    >
                       {/* Total Gateways */}
                       <FlexItem>
-                        <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsCenter' }}>
+                        <Flex
+                          direction={{ default: 'column' }}
+                          alignItems={{ default: 'alignItemsCenter' }}
+                        >
                           <strong style={{ fontSize: '1.3rem' }}>{gateways.length}</strong>
                           <span>Total Gateways</span>
                         </Flex>
@@ -615,16 +624,28 @@ const KuadrantOverviewPage: React.FC = () => {
 
                       {/* Healthy Gateways */}
                       <FlexItem>
-                        <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsCenter' }}>
-                          <strong style={{ fontSize: '1.3rem' }}><GreenCheckCircleIcon size="md" /> <span style={{ margin: '5px'}}>{healthyCount}</span></strong>
+                        <Flex
+                          direction={{ default: 'column' }}
+                          alignItems={{ default: 'alignItemsCenter' }}
+                        >
+                          <strong style={{ fontSize: '1.3rem' }}>
+                            <GreenCheckCircleIcon size="md" />{' '}
+                            <span style={{ margin: '5px' }}>{healthyCount}</span>
+                          </strong>
                           <span>Healthy Gateways</span>
                         </Flex>
                       </FlexItem>
 
                       {/* Unhealthy Gateways */}
                       <FlexItem>
-                        <Flex direction={{ default: 'column' }} alignItems={{ default: 'alignItemsCenter' }}>
-                          <strong style={{ fontSize: '1.3rem' }}><YellowExclamationTriangleIcon size="md" /> <span style={{ margin: '5px'}}>{unhealthyCount}</span></strong>
+                        <Flex
+                          direction={{ default: 'column' }}
+                          alignItems={{ default: 'alignItemsCenter' }}
+                        >
+                          <strong style={{ fontSize: '1.3rem' }}>
+                            <YellowExclamationTriangleIcon size="md" />{' '}
+                            <span style={{ margin: '5px' }}>{unhealthyCount}</span>
+                          </strong>
                           <span>Unhealthy Gateways</span>
                         </Flex>
                       </FlexItem>
