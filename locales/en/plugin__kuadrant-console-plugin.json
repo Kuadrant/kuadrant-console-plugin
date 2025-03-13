@@ -1,8 +1,10 @@
 {
+  "A healthy gateway has a `true` status for the `Accepted` and `Programmed` conditions.": "A healthy gateway has a `true` status for the `Accepted` and `Programmed` conditions.",
   "Access Denied": "Access Denied",
   "Add Limit": "Add Limit",
   "All Policies": "All Policies",
   "All references for the resource have been resolved.": "All references for the resource have been resolved.",
+  "An unhealthy gateway has a `false` status for the `Accepted` and/or `Programmed` conditions.": "An unhealthy gateway has a `false` status for the `Accepted` and/or `Programmed` conditions.",
   "Auth": "Auth",
   "AuthPolicy": "AuthPolicy",
   "Cancel": "Cancel",

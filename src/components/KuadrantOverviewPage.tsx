@@ -27,6 +27,7 @@ import {
   Popover,
   Progress,
   ProgressMeasureLocation,
+  Tooltip,
 } from '@patternfly/react-core';
 import {
   GlobeIcon,
@@ -632,7 +633,15 @@ const KuadrantOverviewPage: React.FC = () => {
                             <GreenCheckCircleIcon size="md" />{' '}
                             <span style={{ margin: '5px' }}>{healthyCount}</span>
                           </strong>
-                          <span>Healthy Gateways</span>
+                          <Tooltip
+                            content={
+                              <div>
+                                {t('A healthy gateway has a `true` status for the `Accepted` and `Programmed` conditions.')}
+                              </div>
+                            }
+                          >
+                            <span>Healthy Gateways</span>
+                          </Tooltip>
                         </Flex>
                       </FlexItem>
 
@@ -646,7 +655,15 @@ const KuadrantOverviewPage: React.FC = () => {
                             <YellowExclamationTriangleIcon size="md" />{' '}
                             <span style={{ margin: '5px' }}>{unhealthyCount}</span>
                           </strong>
-                          <span>Unhealthy Gateways</span>
+                          <Tooltip
+                            content={
+                              <div>
+                                {t('An unhealthy gateway has a `false` status for the `Accepted` and/or `Programmed` conditions.')}
+                              </div>
+                            }
+                          >
+                            <span>Unhealthy Gateways</span>
+                          </Tooltip>
                         </Flex>
                       </FlexItem>
                     </Flex>
