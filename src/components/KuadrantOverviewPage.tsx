@@ -636,7 +636,9 @@ const KuadrantOverviewPage: React.FC = () => {
                           <Tooltip
                             content={
                               <div>
-                                {t('A healthy gateway has a `true` status for the `Accepted` and `Programmed` conditions.')}
+                                {t(
+                                  'A healthy gateway has a `true` status for the `Accepted` and `Programmed` conditions.',
+                                )}
                               </div>
                             }
                           >
@@ -658,7 +660,9 @@ const KuadrantOverviewPage: React.FC = () => {
                           <Tooltip
                             content={
                               <div>
-                                {t('An unhealthy gateway has a `false` status for the `Accepted` and/or `Programmed` conditions.')}
+                                {t(
+                                  'An unhealthy gateway has a `false` status for the `Accepted` and/or `Programmed` conditions.',
+                                )}
                               </div>
                             }
                           >
