@@ -749,29 +749,6 @@ const KuadrantOverviewPage: React.FC = () => {
                 </CardBody>
               </Card>
             </FlexItem>
-          </Flex>
-          <Flex className="pf-u-mt-xl">
-            <FlexItem flex={{ default: 'flex_1' }}>
-              <Card>
-                <CardTitle>
-                  <Title headingLevel="h2">{t('Gateways')}</Title>
-                  <Button
-                    onClick={() => handleCreateResource('Gateway')}
-                    className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
-                  >
-                    {t(`Create Gateway`)}
-                  </Button>
-                </CardTitle>
-                <CardBody className="pf-u-p-10">
-                  <ResourceList
-                    resources={[resourceGVKMapping['Gateway']]}
-                    columns={columns}
-                    namespace="#ALL_NS#"
-                    emtpyResourceName="Gateways"
-                  />
-                </CardBody>
-              </Card>
-            </FlexItem>
             <FlexItem flex={{ default: 'flex_1' }}>
               <Card>
                 <CardTitle>
