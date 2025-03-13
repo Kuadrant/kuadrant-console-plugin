@@ -59,38 +59,33 @@ const ResourceList: React.FC<ResourceListProps> = ({
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
-  const userRBAC = RBACPermissions();
+  const userRBAC = RBACPermissions(resources);
 
-  const authPolicies = userRBAC['authpolicies-list'] ?? false; 
-  const rateLimitPolicies = userRBAC['ratelimitpolicies-list'] ?? false;
-  const dnsPolicies = userRBAC['dnspolicies'] ?? false; // hardcoded false for testing
-  const tlsPolicies = userRBAC['tlspolicies'] ?? false; // hardcoded false for testing
-  const gateways = userRBAC['gateways'] ?? false; // hardcoded false for testing
-  const httpRoutes = userRBAC['httproutes'] ?? false; // hardcoded false for testing
+  const resourceKinds = ['AuthPolicy', 'RateLimitPolicy', 'DNSPolicy', 'TLSPolicy'];
 
-
-  const resourceRBAC = [
-    { flag: authPolicies, group: "kuadrant.io", version: "v1", kind: "AuthPolicy" },
-    { flag: rateLimitPolicies, group: "kuadrant.io", version: "v1", kind: "RateLimitPolicy" },
-    { flag: dnsPolicies, group: "kuadrant.io", version: "v1",kind: "DNSPolicy" },
-    { flag: tlsPolicies, group: "kuadrant.io", version: "v1",kind: "TLSPolicy" },
-    { flag: gateways, group: "gateway.networking.k8s.io'", version: "v1",kind: "Gateway" },
-    { flag: httpRoutes, group: "kuadrant.io", version: "v1",kind: "HTTPRoute" },
-
-  ];
+  const resourceMappings = resourceKinds.map((kind) => ({
+    key: `${kind}-list`,
+    group: 'kuadrant.io',
+    version: 'v1',
+    kind,
+  }));
+  const resourceRBAC = resourceMappings.map(({ key, group, version, kind }) => ({
+    flag: userRBAC[key] ?? false,
+    group,
+    version,
+    kind,
+  }));
   
-  // Filter resources based on the flags
   resources = resourceRBAC.reduce(
-    (filteredResources, { flag, group, version, kind }) =>
+    (resources, { flag, group, version, kind }) =>
       flag !== true
-        ? filteredResources.filter(resource => !(resource.group === group && resource.version === version && resource.kind === kind))
-        : filteredResources,
-    resources
+        ? resources.filter(
+            (resource) =>
+              !(resource.group === group && resource.version === version && resource.kind === kind),
+          )
+        : resources,
+    resources,
   );
-
-
-  // console.log("RESOURCES WITHOUT", resources)
- 
 
   const resourceDescriptors: { [key: string]: WatchK8sResource } = resources.reduce(
     (acc, resource, index) => {
@@ -108,15 +103,10 @@ const ResourceList: React.FC<ResourceListProps> = ({
     },
     {} as { [key: string]: WatchK8sResource },
   );
-  // console.log('RESOURCESWAHHOOO', resourceDescriptors);
-
-  // resources.forEach(resources)
 
   const watchedResources = useK8sWatchResources<{ [key: string]: K8sResourceCommon[] }>(
     resourceDescriptors,
   );
-
-  // console.log('WATCHED', watchedResources);
 
   const allData = React.useMemo(
     () =>
