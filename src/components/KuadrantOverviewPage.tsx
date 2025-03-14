@@ -23,6 +23,11 @@ import {
   DropdownList,
   MenuToggle,
   Button,
+  Bullseye,
+  EmptyState,
+  EmptyStateIcon,
+  EmptyStateBody,
+  Tooltip,
 } from '@patternfly/react-core';
 import {
   GlobeIcon,
@@ -30,7 +35,9 @@ import {
   OptimizeIcon,
   ExternalLinkAltIcon,
   EllipsisVIcon,
+  LockIcon,
 } from '@patternfly/react-icons';
+
 import { useActiveNamespace, useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import ResourceList from './ResourceList';
@@ -38,6 +45,7 @@ import { sortable } from '@patternfly/react-table';
 import { INTERNAL_LINKS, EXTERNAL_LINKS } from '../constants/links';
 import resourceGVKMapping from '../utils/latest';
 import { useHistory } from 'react-router-dom';
+import RBACPermissions from '../utils/resourceRBAC';
 
 export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
@@ -54,6 +62,8 @@ export const resources: Resource[] = [
   { name: 'DNSPolicies', gvk: resourceGVKMapping['DNSPolicy'] },
   { name: 'RateLimitPolicies', gvk: resourceGVKMapping['RateLimitPolicy'] },
   { name: 'TLSPolicies', gvk: resourceGVKMapping['TLSPolicy'] },
+  { name: 'Gateways', gvk: resourceGVKMapping['Gateway'] },
+  { name: 'HTTPRoutes', gvk: resourceGVKMapping['HTTPRoute'] },
 ];
 const KuadrantOverviewPage: React.FC = () => {
   const history = useHistory();
@@ -70,6 +80,27 @@ const KuadrantOverviewPage: React.FC = () => {
   const onToggleClick = () => {
     setIsCreateOpen(!isCreateOpen);
   };
+
+  const permissions = RBACPermissions(resources.map((res) => res.gvk));
+
+  const resourceRBAC = [
+    'TLSPolicy',
+    'DNSPolicy',
+    'RateLimitPolicy',
+    'AuthPolicy',
+    'Gateway',
+    'HTTPRoute',
+  ].reduce(
+    (acc, resource) => ({
+      ...acc,
+      [resource]: {
+        list: permissions[`${resource}-list`],
+        create: permissions[`${resource}-create`],
+        delete: permissions[`${resource}-delete`],
+      },
+    }),
+    {} as Record<string, { list: boolean; create: boolean; delete: boolean }>,
+  );
 
   React.useEffect(() => {
     if (ns && ns !== activeNamespace) {
@@ -307,21 +338,73 @@ const KuadrantOverviewPage: React.FC = () => {
                     )}
                   >
                     <DropdownList class="kuadrant-overview-create-list pf-u-p-0">
-                      <DropdownItem value="AuthPolicy" key="auth-policy">
-                        {t('AuthPolicy')}
-                      </DropdownItem>
-                      <DropdownItem value="RateLimitPolicy" key="rate-limit-policy">
-                        {t('RateLimitPolicy')}
-                      </DropdownItem>
-                      {activePerspective !== 'dev' && (
-                        <>
-                          <DropdownItem value="DNSPolicy" key="dns-policy">
+                      {resourceRBAC['AuthPolicy']['create'] == true ? (
+                        <DropdownItem value="AuthPolicy" key="auth-policy">
+                          {t('AuthPolicy')}
+                        </DropdownItem>
+                      ) : (
+                        <Tooltip content="You do not have permission to create a AuthPolicy">
+                          <DropdownItem
+                            value="AuthPolicy"
+                            key="auth-policy"
+                            isAriaDisabled={!resourceRBAC['AuthPolicy']['create']}
+                          >
+                            {t('AuthPolicy')}
+                          </DropdownItem>
+                        </Tooltip>
+                      )}
+                      {resourceRBAC['RateLimitPolicy']['create'] == true ? (
+                        <DropdownItem value="RateLimitPolicy" key="rate-limit-policy">
+                          {t('RateLimitPolicy')}
+                        </DropdownItem>
+                      ) : (
+                        <Tooltip content="You do not have permission to create a RateLimitPolicy">
+                          <DropdownItem
+                            value="RateLimitPolicy"
+                            key="rate-limit-policy"
+                            isAriaDisabled={!resourceRBAC['RateLimitPolicy']['create']}
+                          >
+                            {t('RateLimitPolicy')}
+                          </DropdownItem>
+                        </Tooltip>
+                      )}
+                      {resourceRBAC['DNSPolicy']['create'] == true ? (
+                        <DropdownItem
+                          value="DNSPolicy"
+                          key="dns-policy"
+                          isAriaDisabled={!resourceRBAC['DNSPolicy']['create']}
+                        >
+                          {t('DNSPolicy')}
+                        </DropdownItem>
+                      ) : (
+                        <Tooltip content="You do not have permission to create a DNSPolicy">
+                          <DropdownItem
+                            value="DNSPolicy"
+                            key="dns-policy"
+                            isAriaDisabled={!resourceRBAC['DNSPolicy']['create']}
+                          >
                             {t('DNSPolicy')}
                           </DropdownItem>
-                          <DropdownItem value="TLSPolicy" key="tls-policy">
+                        </Tooltip>
+                      )}
+                      {resourceRBAC['DNSPolicy']['create'] == true ? (
+                        <DropdownItem
+                          value="TLSPolicy"
+                          key="tls-policy"
+                          isAriaDisabled={!resourceRBAC['TLSPolicy']['create']}
+                        >
+                          {t('TLSPolicy')}
+                        </DropdownItem>
+                      ) : (
+                        <Tooltip content="You do not have permission to create a TLSPolicy">
+                          <DropdownItem
+                            value="TLSPolicy"
+                            key="tls-policy"
+                            isAriaDisabled={!resourceRBAC['TLSPolicy']['create']}
+                          >
                             {t('TLSPolicy')}
                           </DropdownItem>
-                        </>
+                        </Tooltip>
                       )}
                     </DropdownList>
                   </Dropdown>
@@ -355,48 +438,120 @@ const KuadrantOverviewPage: React.FC = () => {
             </FlexItem>
           </Flex>
           <Flex className="pf-u-mt-xl">
-            <FlexItem flex={{ default: 'flex_1' }}>
-              <Card>
-                <CardTitle>
-                  <Title headingLevel="h2">{t('Gateways')}</Title>
-                  <Button
-                    onClick={() => handleCreateResource('Gateway')}
-                    className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
-                  >
-                    {t(`Create Gateway`)}
-                  </Button>
-                </CardTitle>
-                <CardBody className="pf-u-p-10">
-                  <ResourceList
-                    resources={[resourceGVKMapping['Gateway']]}
-                    columns={columns}
-                    namespace="#ALL_NS#"
-                    emtpyResourceName="Gateways"
-                  />
-                </CardBody>
-              </Card>
-            </FlexItem>
-            <FlexItem flex={{ default: 'flex_1' }}>
-              <Card>
-                <CardTitle>
-                  <Title headingLevel="h2">{t('APIs / HTTPRoutes')}</Title>
-                  <Button
-                    onClick={() => handleCreateResource('HTTPRoute')}
-                    className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
-                  >
-                    {t(`Create HTTPRoute`)}
-                  </Button>
-                </CardTitle>
-                <CardBody className="pf-u-p-10">
-                  <ResourceList
-                    resources={[resourceGVKMapping['HTTPRoute']]}
-                    columns={columns}
-                    namespace="#ALL_NS#"
-                    emtpyResourceName="HTTPRoutes"
-                  />
-                </CardBody>
-              </Card>
-            </FlexItem>
+            {resourceRBAC['Gateway']['list'] == true ? (
+              <FlexItem flex={{ default: 'flex_1' }}>
+                <Card>
+                  <CardTitle>
+                    <Title headingLevel="h2">{t('Gateways')}</Title>
+                    {resourceRBAC['Gateway']['create'] == true ? (
+                      <Button
+                        onClick={() => handleCreateResource('Gateway')}
+                        className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                      >
+                        {t(`Create Gateway`)}
+                      </Button>
+                    ) : (
+                      <Tooltip content="You do not have permission to create a Gateway">
+                        <Button
+                          className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                          isAriaDisabled={!resourceRBAC['Gateway']['create']}
+                        >
+                          {t(`Create Gateway`)}
+                        </Button>
+                      </Tooltip>
+                    )}
+                  </CardTitle>
+                  <CardBody className="pf-u-p-10">
+                    <ResourceList
+                      resources={[resourceGVKMapping['Gateway']]}
+                      columns={columns}
+                      namespace="#ALL_NS#"
+                      emtpyResourceName="Gateways"
+                    />
+                  </CardBody>
+                </Card>
+              </FlexItem>
+            ) : (
+              <FlexItem flex={{ default: 'flex_1' }}>
+                <Card>
+                  <CardBody className="pf-u-p-10">
+                    <CardTitle>
+                      <Title headingLevel="h2">{t('Gateways')}</Title>
+                    </CardTitle>
+                    <Bullseye>
+                      <EmptyState>
+                        <EmptyStateIcon icon={LockIcon} />
+                        <Title headingLevel="h4" size="lg">
+                          {t('Access Denied')}
+                        </Title>
+                        <EmptyStateBody>
+                          <Text component="p">
+                            {t('You do not have permission to view Gateways')}
+                          </Text>
+                        </EmptyStateBody>
+                      </EmptyState>
+                    </Bullseye>
+                  </CardBody>
+                </Card>
+              </FlexItem>
+            )}
+            {resourceRBAC['HTTPRoute']['list'] == true ? (
+              <FlexItem flex={{ default: 'flex_1' }}>
+                <Card>
+                  <CardTitle>
+                    <Title headingLevel="h2">{t('APIs / HTTPRoutes')}</Title>
+                    {resourceRBAC['HTTPRoute']['create'] == true ? (
+                      <Button
+                        onClick={() => handleCreateResource('HTTPRoute')}
+                        className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                      >
+                        {t(`Create HTTPRoute`)}
+                      </Button>
+                    ) : (
+                      <Tooltip content="You do not have permission to create a HTTPRoute">
+                        <Button
+                          className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                          isAriaDisabled={!resourceRBAC['HTTPRoute']['create']}
+                        >
+                          {t(`Create HTTPRoute`)}
+                        </Button>
+                      </Tooltip>
+                    )}
+                  </CardTitle>
+                  <CardBody className="pf-u-p-10">
+                    <ResourceList
+                      resources={[resourceGVKMapping['HTTPRoute']]}
+                      columns={columns}
+                      namespace="#ALL_NS#"
+                      emtpyResourceName="HTTPRoutes"
+                    />
+                  </CardBody>
+                </Card>
+              </FlexItem>
+            ) : (
+              <FlexItem flex={{ default: 'flex_1' }}>
+                <Card>
+                  <CardBody className="pf-u-p-10">
+                    <CardTitle>
+                      <Title headingLevel="h2">{t('APIs / HTTPRoutes')}</Title>
+                    </CardTitle>
+                    <Bullseye>
+                      <EmptyState>
+                        <EmptyStateIcon icon={LockIcon} />
+                        <Title headingLevel="h4" size="lg">
+                          {t('Access Denied')}
+                        </Title>
+                        <EmptyStateBody>
+                          <Text component="p">
+                            {t('You do not have permission to view APIs / HTTPRoutes')}
+                          </Text>
+                        </EmptyStateBody>
+                      </EmptyState>
+                    </Bullseye>
+                  </CardBody>
+                </Card>
+              </FlexItem>
+            )}
           </Flex>
         </PageSection>
       </Page>
