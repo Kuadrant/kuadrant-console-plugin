@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 
 type Resource = {
   group: string;
-  version: string;
   kind: string;
   namespace?: string;
 };
