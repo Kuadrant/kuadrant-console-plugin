@@ -75,7 +75,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
     version,
     kind,
   }));
-  
+
   resources = resourceRBAC.reduce(
     (resources, { flag, group, version, kind }) =>
       flag !== true

@@ -8,14 +8,17 @@ import {
   MenuToggleElement,
   Button,
   ButtonVariant,
+  Tooltip,
 } from '@patternfly/react-core';
 import { Modal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-core/next';
 import { k8sDelete, K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
+import { useHistory } from 'react-router-dom';
+import resourceGVKMapping from '../utils/latest';
+import RBACPermissions from '../utils/resourceRBAC';
 import getModelFromResource from '../utils/getModelFromResource'; // Assume you have a utility for getting the model from the resource
 type DropdownWithKebabProps = {
   obj: K8sResourceCommon;
 };
-import { useHistory } from 'react-router-dom';
 
 const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -39,6 +42,30 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   };
 
   const policyType = obj.kind.toLowerCase();
+
+  const resourceGVK: { group: string; kind: string }[] = [
+    { group: resourceGVKMapping[obj.kind].group, kind: obj.kind },
+  ];
+  const permissions = RBACPermissions(resourceGVK);
+  const resourceRBAC = [
+    'TLSPolicy',
+    'DNSPolicy',
+    'RateLimitPolicy',
+    'AuthPolicy',
+    'Gateway',
+    'HTTPRoute',
+  ].reduce(
+    (acc, resource) => ({
+      ...acc,
+      [resource]: {
+        delete: permissions[`${resource}-delete`],
+        edit: permissions[`${resource}-update`],
+      },
+    }),
+    {} as Record<string, { delete: boolean }>,
+  );
+
+  console.log('AFTER', resourceRBAC);
 
   const onEditClick = () => {
     if (
@@ -93,12 +120,37 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
         shouldFocusToggleOnSelect
       >
         <DropdownList>
-          <DropdownItem value="edit" key="edit" onClick={onEditClick}>
-            Edit
-          </DropdownItem>
-          <DropdownItem value="delete" key="delete">
-            Delete
-          </DropdownItem>
+          {resourceRBAC[obj.kind]['edit'] == true ? (
+            <DropdownItem value="edit" key="edit" onClick={onEditClick}>
+              Edit
+            </DropdownItem>
+          ) : (
+            <Tooltip content={`You do not have permission to edit the ${obj.kind}`}>
+              <DropdownItem
+                value="edit"
+                key="edit"
+                onClick={onEditClick}
+                isAriaDisabled={!resourceRBAC[obj.kind]['edit']}
+              >
+                Edit
+              </DropdownItem>
+            </Tooltip>
+          )}
+          {resourceRBAC[obj.kind]['delete'] == true ? (
+            <DropdownItem value="delete" key="delete">
+              Delete
+            </DropdownItem>
+          ) : (
+            <Tooltip content={`You do not have permission to delete the ${obj.kind}`}>
+              <DropdownItem
+                value="delete"
+                key="delete"
+                isAriaDisabled={!resourceRBAC[obj.kind]['delete']}
+              >
+                Delete
+              </DropdownItem>
+            </Tooltip>
+          )}
         </DropdownList>
       </Dropdown>
       <Modal

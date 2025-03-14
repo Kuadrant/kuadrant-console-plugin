@@ -38,7 +38,7 @@ import {
   LockIcon,
 } from '@patternfly/react-icons';
 
-import { useActiveNamespace, useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
+import { useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import ResourceList from './ResourceList';
 import { sortable } from '@patternfly/react-table';
@@ -70,7 +70,6 @@ const KuadrantOverviewPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const { ns } = useParams<{ ns: string }>();
   const [activeNamespace, setActiveNamespace] = useActiveNamespace();
-  const [activePerspective] = useActivePerspective();
   const [isExpanded, setIsExpanded] = React.useState(true);
   const [isOpen, setIsOpen] = React.useState(false);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
@@ -82,6 +81,7 @@ const KuadrantOverviewPage: React.FC = () => {
   };
 
   const permissions = RBACPermissions(resources.map((res) => res.gvk));
+  const policies = ['AuthPolicy', 'RateLimitPolicy', 'DNSPolicy', 'TLSPolicy'];
 
   const resourceRBAC = [
     'TLSPolicy',
@@ -96,10 +96,17 @@ const KuadrantOverviewPage: React.FC = () => {
       [resource]: {
         list: permissions[`${resource}-list`],
         create: permissions[`${resource}-create`],
+        delete: permissions[`${resource}-delete`],
       },
     }),
-    {} as Record<string, { list: boolean; create: boolean }>,
+    {} as Record<string, { list: boolean; create: boolean; delete: boolean }>,
   );
+
+  const policyRBACNill =
+    !resourceRBAC['AuthPolicy']['list'] &&
+    !resourceRBAC['RateLimitPolicy']['list'] &&
+    !resourceRBAC['DNSPolicy']['list'] &&
+    !resourceRBAC['TLSPolicy']['list'];
 
   React.useEffect(() => {
     if (ns && ns !== activeNamespace) {
@@ -316,100 +323,72 @@ const KuadrantOverviewPage: React.FC = () => {
           )}
 
           <Flex className="pf-u-mt-xl">
-            <FlexItem flex={{ default: 'flex_1' }}>
-              <Card>
-                <CardTitle>
-                  <Title headingLevel="h2">{t('Policies')}</Title>
-                  <Dropdown
-                    isOpen={isCreateOpen}
-                    onSelect={onMenuSelect}
-                    onOpenChange={setIsCreateOpen}
-                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                      <MenuToggle
-                        ref={toggleRef}
-                        onClick={onToggleClick}
-                        isExpanded={isCreateOpen}
-                        variant="primary"
-                        className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
-                      >
-                        {t('Create Policy')}
-                      </MenuToggle>
-                    )}
-                  >
-                    <DropdownList class="kuadrant-overview-create-list pf-u-p-0">
-                      {resourceRBAC['AuthPolicy']['create'] == true ? (
-                        <DropdownItem value="AuthPolicy" key="auth-policy">
-                          {t('AuthPolicy')}
-                        </DropdownItem>
-                      ) : (
-                        <Tooltip content="You do not have permission to create a AuthPolicy">
-                          <DropdownItem
-                            value="AuthPolicy"
-                            key="auth-policy"
-                            isAriaDisabled={!resourceRBAC['AuthPolicy']['create']}
-                          >
-                            {t('AuthPolicy')}
-                          </DropdownItem>
-                        </Tooltip>
-                      )}
-                      {resourceRBAC['RateLimitPolicy']['create'] == true ? (
-                        <DropdownItem value="RateLimitPolicy" key="rate-limit-policy">
-                          {t('RateLimitPolicy')}
-                        </DropdownItem>
-                      ) : (
-                        <Tooltip content="You do not have permission to create a RateLimitPolicy">
-                          <DropdownItem
-                            value="RateLimitPolicy"
-                            key="rate-limit-policy"
-                            isAriaDisabled={!resourceRBAC['RateLimitPolicy']['create']}
-                          >
-                            {t('RateLimitPolicy')}
-                          </DropdownItem>
-                        </Tooltip>
-                      )}
-                      {resourceRBAC['DNSPolicy']['create'] == true ? (
-                        <DropdownItem
-                          value="DNSPolicy"
-                          key="dns-policy"
-                          isAriaDisabled={!resourceRBAC['DNSPolicy']['create']}
+            {policyRBACNill ? (
+              <FlexItem flex={{ default: 'flex_1' }}>
+                <Card>
+                  <CardBody className="pf-u-p-10">
+                    <CardTitle>
+                      <Title headingLevel="h2">{t('Policies')}</Title>
+                    </CardTitle>
+                    <Bullseye>
+                      <EmptyState>
+                        <EmptyStateIcon icon={LockIcon} />
+                        <Title headingLevel="h4" size="lg">
+                          {t('Access Denied')}
+                        </Title>
+                        <EmptyStateBody>
+                          <Text component="p">
+                            {t('You do not have permission to view Policies')}
+                          </Text>
+                        </EmptyStateBody>
+                      </EmptyState>
+                    </Bullseye>
+                  </CardBody>
+                </Card>
+              </FlexItem>
+            ) : (
+              <FlexItem flex={{ default: 'flex_1' }}>
+                <Card>
+                  <CardTitle>
+                    <Title headingLevel="h2">{t('Policies')}</Title>
+                    <Dropdown
+                      isOpen={isCreateOpen}
+                      onSelect={onMenuSelect}
+                      onOpenChange={setIsCreateOpen}
+                      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                        <MenuToggle
+                          ref={toggleRef}
+                          onClick={onToggleClick}
+                          isExpanded={isCreateOpen}
+                          variant="primary"
+                          className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
                         >
-                          {t('DNSPolicy')}
-                        </DropdownItem>
-                      ) : (
-                        <Tooltip content="You do not have permission to create a DNSPolicy">
-                          <DropdownItem
-                            value="DNSPolicy"
-                            key="dns-policy"
-                            isAriaDisabled={!resourceRBAC['DNSPolicy']['create']}
-                          >
-                            {t('DNSPolicy')}
-                          </DropdownItem>
-                        </Tooltip>
+                          {t('Create Policy')}
+                        </MenuToggle>
                       )}
-                      {resourceRBAC['DNSPolicy']['create'] == true ? (
-                        <DropdownItem
-                          value="TLSPolicy"
-                          key="tls-policy"
-                          isAriaDisabled={!resourceRBAC['TLSPolicy']['create']}
-                        >
-                          {t('TLSPolicy')}
-                        </DropdownItem>
-                      ) : (
-                        <Tooltip content="You do not have permission to create a TLSPolicy">
-                          <DropdownItem
-                            value="TLSPolicy"
-                            key="tls-policy"
-                            isAriaDisabled={!resourceRBAC['TLSPolicy']['create']}
-                          >
-                            {t('TLSPolicy')}
-                          </DropdownItem>
-                        </Tooltip>
-                      )}
-                    </DropdownList>
-                  </Dropdown>
-                </CardTitle>
-                <CardBody className="pf-u-p-10">
-                  {activePerspective !== 'dev' ? (
+                    >
+                      <DropdownList class="kuadrant-overview-create-list pf-u-p-0">
+                        {policies.map((policy) => {
+                          const canCreate = resourceRBAC[policy]?.create;
+                          return canCreate ? (
+                            <DropdownItem value={policy} key={policy}>
+                              {t(policy)}
+                            </DropdownItem>
+                          ) : (
+                            <Tooltip
+                              key={policy}
+                              content={t(`You do not have permission to create a ${policy}`)}
+                            >
+                              <DropdownItem value={policy} isAriaDisabled>
+                                {t(policy)}
+                              </DropdownItem>
+                            </Tooltip>
+                          );
+                        })}
+                      </DropdownList>
+                    </Dropdown>
+                  </CardTitle>
+                  <CardBody className="pf-u-p-10">
                     <ResourceList
                       resources={[
                         resourceGVKMapping['AuthPolicy'],
@@ -421,28 +400,18 @@ const KuadrantOverviewPage: React.FC = () => {
                       namespace="#ALL_NS#"
                       paginationLimit={5}
                     />
-                  ) : (
-                    <ResourceList
-                      resources={[
-                        resourceGVKMapping['AuthPolicy'],
-                        resourceGVKMapping['RateLimitPolicy'],
-                      ]}
-                      columns={columns}
-                      namespace="#ALL_NS#"
-                      paginationLimit={5}
-                    />
-                  )}
-                </CardBody>
-              </Card>
-            </FlexItem>
+                  </CardBody>
+                </Card>
+              </FlexItem>
+            )}
           </Flex>
           <Flex className="pf-u-mt-xl">
-            {resourceRBAC['Gateway']['list'] == true ? (
+            {resourceRBAC['Gateway']?.list ? (
               <FlexItem flex={{ default: 'flex_1' }}>
                 <Card>
                   <CardTitle>
                     <Title headingLevel="h2">{t('Gateways')}</Title>
-                    {resourceRBAC['Gateway']['create'] == true ? (
+                    {resourceRBAC['Gateway']?.create ? (
                       <Button
                         onClick={() => handleCreateResource('Gateway')}
                         className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
@@ -453,7 +422,7 @@ const KuadrantOverviewPage: React.FC = () => {
                       <Tooltip content="You do not have permission to create a Gateway">
                         <Button
                           className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
-                          isAriaDisabled={!resourceRBAC['Gateway']['create']}
+                          isAriaDisabled
                         >
                           {t(`Create Gateway`)}
                         </Button>
@@ -494,12 +463,12 @@ const KuadrantOverviewPage: React.FC = () => {
                 </Card>
               </FlexItem>
             )}
-            {resourceRBAC['HTTPRoute']['list'] == true ? (
+            {resourceRBAC['HTTPRoute']?.list ? (
               <FlexItem flex={{ default: 'flex_1' }}>
                 <Card>
                   <CardTitle>
                     <Title headingLevel="h2">{t('APIs / HTTPRoutes')}</Title>
-                    {resourceRBAC['HTTPRoute']['create'] == true ? (
+                    {resourceRBAC['HTTPRoute']?.create ? (
                       <Button
                         onClick={() => handleCreateResource('HTTPRoute')}
                         className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
@@ -510,7 +479,7 @@ const KuadrantOverviewPage: React.FC = () => {
                       <Tooltip content="You do not have permission to create a HTTPRoute">
                         <Button
                           className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
-                          isAriaDisabled={!resourceRBAC['HTTPRoute']['create']}
+                          isAriaDisabled
                         >
                           {t(`Create HTTPRoute`)}
                         </Button>
