@@ -122,7 +122,7 @@
   "There are no": "There are no",
   "There is a conflict and the resource is not accepted.": "There is a conflict and the resource is not accepted.",
   "There is a conflict on the resource.": "There is a conflict on the resource.",
-  "This view visualizes the relationships and interactions between different resources within your cluster related to Kuadrant, allowing you to explore connections between Gateways, HTTPRoutes and Kuadrant Policies.": "This view visualizes the relationships and interactions between different resources within your cluster related to Connectivity Link, allowing you to explore connections between Gateways, HTTPRoutes and Connectivity Link Policies.",
+  "This view visualizes the relationships and interactions between different resources within your cluster related to Kuadrant, allowing you to explore connections between Gateways, HTTPRoutes and Kuadrant Policies.": "This view visualizes the relationships and interactions between different resources within your cluster related to Kuadrant, allowing you to explore connections between Gateways, HTTPRoutes and Kuadrant Policies.",
   "TLS": "TLS",
   "TLSPolicy": "TLSPolicy",
   "to display - please create some.": "to display - please create some.",
