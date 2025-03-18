@@ -96,10 +96,9 @@ const KuadrantOverviewPage: React.FC = () => {
       [resource]: {
         list: permissions[`${resource}-list`],
         create: permissions[`${resource}-create`],
-        delete: permissions[`${resource}-delete`],
       },
     }),
-    {} as Record<string, { list: boolean; create: boolean; delete: boolean }>,
+    {} as Record<string, { list: boolean; create: boolean;}>,
   );
 
   const policyRBACNill =
