@@ -135,5 +135,8 @@
   "Weight value to apply to weighted endpoints default: 120": "Weight value to apply to weighted endpoints default: 120",
   "YAML View": "YAML View",
   "You can view and create HTTPRoutes": "You can view and create HTTPRoutes",
+  "You do not have permission to view APIs / HTTPRoutes": "You do not have permission to view APIs / HTTPRoutes",
+  "You do not have permission to view Gateways": "You do not have permission to view Gateways",
+  "You do not have permission to view Policies": "You do not have permission to view Policies",
   "You do not have permission to view Policy Topology": "You do not have permission to view Policy Topology"
 }
