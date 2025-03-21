@@ -23,6 +23,11 @@ import {
   DropdownList,
   MenuToggle,
   Button,
+  Label,
+  Popover,
+  Progress,
+  ProgressMeasureLocation,
+  Tooltip,
 } from '@patternfly/react-core';
 import {
   GlobeIcon,
@@ -31,7 +36,17 @@ import {
   ExternalLinkAltIcon,
   EllipsisVIcon,
 } from '@patternfly/react-icons';
-import { useActiveNamespace, useActivePerspective } from '@openshift-console/dynamic-plugin-sdk';
+import {
+  useActiveNamespace,
+  useActivePerspective,
+  usePrometheusPoll,
+  PrometheusEndpoint,
+  K8sResourceCommon,
+  k8sList,
+  GreenCheckCircleIcon,
+  YellowExclamationTriangleIcon,
+  TableData,
+} from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import ResourceList from './ResourceList';
 import { sortable } from '@patternfly/react-table';
@@ -55,6 +70,35 @@ export const resources: Resource[] = [
   { name: 'RateLimitPolicies', gvk: resourceGVKMapping['RateLimitPolicy'] },
   { name: 'TLSPolicies', gvk: resourceGVKMapping['TLSPolicy'] },
 ];
+
+interface TotalRequestsByGateway {
+  [gatewayName: string]: {
+    total?: number;
+    errors?: number;
+    codes?: {
+      [responseCode: string]: number;
+    };
+  };
+}
+interface Gateway extends K8sResourceCommon {
+  status?: {
+    conditions?: {
+      type: string;
+      status: string;
+    }[];
+  };
+}
+const GatewayModel = {
+  apiGroup: 'gateway.networking.k8s.io',
+  apiVersion: 'v1',
+  kind: 'Gateway',
+  plural: 'gateways',
+  namespaced: true,
+  abbr: '',
+  label: 'Gateways',
+  labelPlural: '',
+};
+
 const KuadrantOverviewPage: React.FC = () => {
   const history = useHistory();
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -141,6 +185,54 @@ const KuadrantOverviewPage: React.FC = () => {
     },
   ];
 
+  const gatewayTrafficColumns = [
+    {
+      title: t('plugin__kuadrant-console-plugin~Name'),
+      id: 'name',
+      sort: 'metadata.name',
+      transforms: [sortable],
+    },
+    {
+      title: t('plugin__kuadrant-console-plugin~Namespace'),
+      id: 'namespace',
+      sort: 'metadata.namespace',
+      transforms: [sortable],
+    },
+    {
+      title: t('plugin__kuadrant-console-plugin~Status'),
+      id: 'Status',
+    },
+    {
+      title: t('Total Requests'),
+      id: 'totalRequests',
+      sort: 'totalRequests',
+      transforms: [sortable],
+    },
+    {
+      title: t('Successful Requests'),
+      id: 'successfulRequests',
+      sort: 'successfulRequests',
+      transforms: [sortable],
+    },
+    {
+      title: t('Error Rate'),
+      id: 'errorRate',
+      sort: 'errorRate',
+      transforms: [sortable],
+    },
+    {
+      title: t('Error Codes'),
+      id: 'errorCodes',
+      sort: 'errorCodes',
+      transforms: [sortable],
+    },
+    {
+      title: '',
+      id: 'kebab',
+      props: { className: 'pf-v5-c-table__action' },
+    },
+  ];
+
   const handleCreateResource = (resource) => {
     const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
 
@@ -164,6 +256,230 @@ const KuadrantOverviewPage: React.FC = () => {
     history.push(targetUrl);
     setIsOpen(false);
   };
+
+  // Prometheus queries for gateway traffic
+  const [totalRequestsRes, totalRequestsLoaded, totalRequestsError] = usePrometheusPoll({
+    endpoint: PrometheusEndpoint.QUERY,
+    query:
+      'sum by (source_workload, source_workload_namespace) (increase(istio_requests_total[24h]))',
+  });
+  const [totalErrorsRes, totalErrorsLoaded, totalErrorsError] = usePrometheusPoll({
+    endpoint: PrometheusEndpoint.QUERY,
+    query:
+      'sum by (source_workload, source_workload_namespace) (increase(istio_requests_total{response_code!~"2(.*)|3(.*)"}[24h]))',
+  });
+  const [totalErrorsByCodeRes, totalErrorsByCodeLoaded, totalErrorsByCodeError] = usePrometheusPoll(
+    {
+      endpoint: PrometheusEndpoint.QUERY,
+      query:
+        'sum by (response_code, source_workload, source_workload_namespace) (increase(istio_requests_total{response_code!~"2(.*)|3(.*)"}[24h]))',
+    },
+  );
+
+  // Map out query reponses to more easily accessible objects based on gateway name
+  const totalRequestsByGateway: TotalRequestsByGateway = {};
+  const getGateway = (name: string) => {
+    if (!totalRequestsByGateway[name]) {
+      totalRequestsByGateway[name] = {};
+    }
+    return totalRequestsByGateway[name];
+  };
+  if (!totalRequestsError && totalRequestsLoaded) {
+    totalRequestsRes.data.result.forEach((item) => {
+      const gatewayName = `${item.metric.source_workload_namespace}/${item.metric.source_workload}`;
+      getGateway(gatewayName).total = parseFloat(item.value[1]);
+    });
+  }
+  if (!totalErrorsError && totalErrorsLoaded) {
+    totalErrorsRes.data.result.forEach((item) => {
+      const gatewayName = `${item.metric.source_workload_namespace}/${item.metric.source_workload}`;
+      getGateway(gatewayName).errors = parseFloat(item.value[1]);
+    });
+  }
+  if (!totalErrorsByCodeError && totalErrorsByCodeLoaded) {
+    totalErrorsByCodeRes.data.result.forEach((item, idx) => {
+      const gatewayName = `${item.metric.source_workload_namespace}/${item.metric.source_workload}`;
+      const gateway = getGateway(gatewayName);
+      if (!gateway.codes) gateway.codes = {};
+      gateway.codes[item.metric.response_code] = parseFloat(item.value[1]);
+    });
+  }
+
+  // Helper functions to pull out metric values in correct format, given a gateway object
+  const getTotalRequests = (obj: { metadata: { namespace: string; name: string } }): number => {
+    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    const total = totalRequestsByGateway[key]?.total;
+    return Number.isFinite(total) ? Math.round(total) : 0;
+  };
+  const getSuccessfulRequests = (obj: {
+    metadata: { namespace: string; name: string };
+  }): number => {
+    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    const success = totalRequestsByGateway[key]?.total - totalRequestsByGateway[key]?.errors;
+    return Number.isFinite(success) ? Math.round(success) : 0;
+  };
+  const getErrorRate = (obj: { metadata: { namespace: string; name: string } }): string => {
+    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    const rate = (totalRequestsByGateway[key]?.errors / totalRequestsByGateway[key]?.total) * 100;
+    return Number.isFinite(rate) ? rate.toFixed(1) : '-';
+  };
+  const getErrorCodes = (obj: { metadata: { namespace: string; name: string } }): Set<string> => {
+    const codes = new Set<string>();
+    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    if (totalRequestsByGateway[key]?.codes) {
+      Object.entries(totalRequestsByGateway[key].codes).forEach(([key, value]) => {
+        if (key.startsWith('4') && value > 0) {
+          codes.add('4xx');
+        } else if (key.startsWith('5') && value > 0) {
+          codes.add('5xx');
+        } // Omit all other http & non http error codes to avoid confusion.
+      });
+    }
+    return codes;
+  };
+
+  // Metrics columns rendering
+  interface Distribution {
+    total: number;
+    percent: number;
+  }
+  const getErrorCodeDistribution = (
+    obj: { metadata: { namespace: string; name: string } },
+    prefix: string,
+  ): Record<string, Distribution> => {
+    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    const codes = totalRequestsByGateway[key]?.codes ?? {};
+    const filteredCodes = Object.entries(codes).filter(([code]) => code.startsWith(prefix));
+
+    const total = filteredCodes.reduce((sum, [, count]) => sum + count, 0);
+
+    const distribution: Record<string, Distribution> = {};
+    filteredCodes.forEach(([code, count]) => {
+      if (count < 1) return;
+      distribution[code] = {
+        total: count,
+        percent: total > 0 ? (count / total) * 100 : 0,
+      };
+    });
+
+    return distribution;
+  };
+  const ErrorCodeLabel: React.FC<{
+    obj: { metadata: { namespace: string; name: string } };
+    codeGroup: string;
+  }> = ({ obj, codeGroup }) => {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const distribution = getErrorCodeDistribution(obj, codeGroup[0]);
+    return (
+      <Popover
+        headerContent={`Error Code Distribution`}
+        bodyContent={
+          <>
+            {Object.entries(distribution).map(([code, dist]) => (
+              <div key={code} style={{ marginBottom: '8px' }}>
+                <Progress
+                  value={dist.percent}
+                  title={
+                    <Flex
+                      justifyContent={{ default: 'justifyContentSpaceBetween' }}
+                      alignItems={{ default: 'alignItemsCenter' }}
+                    >
+                      <FlexItem>
+                        <strong>Code: {code}</strong>
+                      </FlexItem>
+                      <FlexItem align={{ default: 'alignRight' }}>
+                        {dist.total.toFixed(0)} requests
+                      </FlexItem>
+                    </Flex>
+                  }
+                  measureLocation={ProgressMeasureLocation.outside}
+                />
+                <Divider style={{ margin: '12px 0' }} />
+              </div>
+            ))}
+          </>
+        }
+        footerContent={
+          <>
+            <span>Last 24h data</span>
+          </>
+        }
+        isVisible={isOpen}
+        shouldClose={() => setIsOpen(false)}
+        position="top"
+      >
+        <Button variant="link" isInline onClick={() => setIsOpen(!isOpen)}>
+          <Label>{codeGroup}</Label>
+        </Button>
+      </Popover>
+    );
+  };
+
+  const gatewayTrafficRenders = {
+    totalRequests: (column, obj, activeColumnIDs) => {
+      return (
+        <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+          {getTotalRequests(obj) || '-'}
+        </TableData>
+      );
+    },
+    successfulRequests: (column, obj, activeColumnIDs) => {
+      return (
+        <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+          {getSuccessfulRequests(obj) || '-'}
+        </TableData>
+      );
+    },
+    errorRate: (column, obj, activeColumnIDs) => {
+      return (
+        <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+          {getErrorRate(obj) || '-'}%
+        </TableData>
+      );
+    },
+    errorCodes: (column, obj, activeColumnIDs) => {
+      return (
+        <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+          {[...getErrorCodes(obj)].map((code) => {
+            return <ErrorCodeLabel key={code} obj={obj} codeGroup={code} />;
+          })}
+        </TableData>
+      );
+    },
+  };
+
+  const [gateways, setGateways] = React.useState<Gateway[]>([]);
+
+  const healthyCount = gateways.filter((gw) => {
+    const conditions = gw.status?.conditions ?? [];
+    const accepted = conditions.find((c) => c.type === 'Accepted' && c.status === 'True');
+    const programmed = conditions.find((c) => c.type === 'Programmed' && c.status === 'True');
+    return accepted && programmed;
+  }).length;
+
+  const unhealthyCount = gateways.length - healthyCount;
+
+  React.useEffect(() => {
+    const fetchGateways = async () => {
+      try {
+        const res = await k8sList({
+          model: GatewayModel,
+          queryParams: {
+            ns: '',
+          },
+        });
+        if (Array.isArray(res)) {
+          setGateways(res);
+        } else {
+          setGateways(res.items ?? []);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchGateways();
+  }, []);
 
   return (
     <>
@@ -288,6 +604,107 @@ const KuadrantOverviewPage: React.FC = () => {
           <Flex className="pf-u-mt-xl">
             <FlexItem flex={{ default: 'flex_1' }}>
               <Card>
+                {/* TODO: Loading placeholder */}
+                <CardTitle>
+                  <Title headingLevel="h2">{t('Gateways')}</Title>
+                  <CardBody className="pf-u-p-10">
+                    <Flex
+                      justifyContent={{ default: 'justifyContentSpaceAround' }}
+                      alignItems={{ default: 'alignItemsCenter' }}
+                    >
+                      {/* Total Gateways */}
+                      <FlexItem>
+                        <Flex
+                          direction={{ default: 'column' }}
+                          alignItems={{ default: 'alignItemsCenter' }}
+                        >
+                          <strong style={{ fontSize: '1.3rem' }}>{gateways.length}</strong>
+                          <span>Total Gateways</span>
+                        </Flex>
+                      </FlexItem>
+
+                      {/* Healthy Gateways */}
+                      <FlexItem>
+                        <Flex
+                          direction={{ default: 'column' }}
+                          alignItems={{ default: 'alignItemsCenter' }}
+                        >
+                          <strong style={{ fontSize: '1.3rem' }}>
+                            <GreenCheckCircleIcon size="md" />{' '}
+                            <span style={{ margin: '5px' }}>{healthyCount}</span>
+                          </strong>
+                          <Tooltip
+                            content={
+                              <div>
+                                {t(
+                                  'A healthy gateway has a `true` status for the `Accepted` and `Programmed` conditions.',
+                                )}
+                              </div>
+                            }
+                          >
+                            <span>Healthy Gateways</span>
+                          </Tooltip>
+                        </Flex>
+                      </FlexItem>
+
+                      {/* Unhealthy Gateways */}
+                      <FlexItem>
+                        <Flex
+                          direction={{ default: 'column' }}
+                          alignItems={{ default: 'alignItemsCenter' }}
+                        >
+                          <strong style={{ fontSize: '1.3rem' }}>
+                            <YellowExclamationTriangleIcon size="md" />{' '}
+                            <span style={{ margin: '5px' }}>{unhealthyCount}</span>
+                          </strong>
+                          <Tooltip
+                            content={
+                              <div>
+                                {t(
+                                  'An unhealthy gateway has a `false` status for the `Accepted` and/or `Programmed` conditions.',
+                                )}
+                              </div>
+                            }
+                          >
+                            <span>Unhealthy Gateways</span>
+                          </Tooltip>
+                        </Flex>
+                      </FlexItem>
+                    </Flex>
+                  </CardBody>
+                </CardTitle>
+              </Card>
+            </FlexItem>
+          </Flex>
+
+          <Flex className="pf-u-mt-xl">
+            <FlexItem flex={{ default: 'flex_1' }}>
+              <Card>
+                <CardTitle>
+                  <Title headingLevel="h2">{t('Gateways - Traffic Distribution')}</Title>
+                  <Button
+                    onClick={() => handleCreateResource('Gateway')}
+                    className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                  >
+                    {t(`Create Gateway`)}
+                  </Button>
+                </CardTitle>
+                <CardBody className="pf-u-p-10">
+                  <ResourceList
+                    resources={[resourceGVKMapping['Gateway']]}
+                    columns={gatewayTrafficColumns}
+                    renderers={gatewayTrafficRenders}
+                    namespace="#ALL_NS#"
+                    emtpyResourceName="Gateways"
+                  />
+                </CardBody>
+              </Card>
+            </FlexItem>
+          </Flex>
+
+          <Flex className="pf-u-mt-xl">
+            <FlexItem flex={{ default: 'flex_1' }}>
+              <Card>
                 <CardTitle>
                   <Title headingLevel="h2">{t('Policies')}</Title>
                   <Dropdown
@@ -353,33 +770,10 @@ const KuadrantOverviewPage: React.FC = () => {
                 </CardBody>
               </Card>
             </FlexItem>
-          </Flex>
-          <Flex className="pf-u-mt-xl">
             <FlexItem flex={{ default: 'flex_1' }}>
               <Card>
                 <CardTitle>
-                  <Title headingLevel="h2">{t('Gateways')}</Title>
-                  <Button
-                    onClick={() => handleCreateResource('Gateway')}
-                    className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
-                  >
-                    {t(`Create Gateway`)}
-                  </Button>
-                </CardTitle>
-                <CardBody className="pf-u-p-10">
-                  <ResourceList
-                    resources={[resourceGVKMapping['Gateway']]}
-                    columns={columns}
-                    namespace="#ALL_NS#"
-                    emtpyResourceName="Gateways"
-                  />
-                </CardBody>
-              </Card>
-            </FlexItem>
-            <FlexItem flex={{ default: 'flex_1' }}>
-              <Card>
-                <CardTitle>
-                  <Title headingLevel="h2">{t('APIs / HTTPRoutes')}</Title>
+                  <Title headingLevel="h2">{t('HTTPRoutes')}</Title>
                   <Button
                     onClick={() => handleCreateResource('HTTPRoute')}
                     className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
