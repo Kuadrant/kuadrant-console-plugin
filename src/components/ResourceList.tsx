@@ -36,6 +36,7 @@ import { SearchIcon } from '@patternfly/react-icons';
 import { getStatusLabel } from '../utils/statusLabel';
 
 import DropdownWithKebab from './DropdownWithKebab';
+import useAccessReviews from '../utils/resourceRBAC';
 
 type ResourceListProps = {
   resources: Array<{
@@ -57,6 +58,35 @@ const ResourceList: React.FC<ResourceListProps> = ({
   emtpyResourceName = 'Policies',
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
+
+  const { userRBAC } = useAccessReviews(resources);
+  // console.log("LOADING",loading)
+
+  const resourceKinds = ['AuthPolicy', 'RateLimitPolicy', 'DNSPolicy', 'TLSPolicy'];
+
+  const resourceMappings = resourceKinds.map((kind) => ({
+    key: `${kind}-list`,
+    group: 'kuadrant.io',
+    version: 'v1',
+    kind,
+  }));
+  const resourceRBAC = resourceMappings.map(({ key, group, version, kind }) => ({
+    flag: userRBAC[key] ?? false,
+    group,
+    version,
+    kind,
+  }));
+
+  resources = resourceRBAC.reduce(
+    (resources, { flag, group, version, kind }) =>
+      flag !== true
+        ? resources.filter(
+            (resource) =>
+              !(resource.group === group && resource.version === version && resource.kind === kind),
+          )
+        : resources,
+    resources,
+  );
 
   const resourceDescriptors: { [key: string]: WatchK8sResource } = resources.reduce(
     (acc, resource, index) => {
