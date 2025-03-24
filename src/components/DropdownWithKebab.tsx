@@ -14,7 +14,7 @@ import { Modal, ModalBody, ModalFooter, ModalHeader } from '@patternfly/react-co
 import { k8sDelete, K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
 import { useHistory } from 'react-router-dom';
 import resourceGVKMapping from '../utils/latest';
-import RBACPermissions from '../utils/resourceRBAC';
+import useAccessReviews from '../utils/resourceRBAC';
 import getModelFromResource from '../utils/getModelFromResource'; // Assume you have a utility for getting the model from the resource
 type DropdownWithKebabProps = {
   obj: K8sResourceCommon;
@@ -46,7 +46,9 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   const resourceGVK: { group: string; kind: string }[] = [
     { group: resourceGVKMapping[obj.kind].group, kind: obj.kind },
   ];
-  const permissions = RBACPermissions(resourceGVK);
+  const { userRBAC } = useAccessReviews(resourceGVK);
+  // console.log("LOADING",loading)
+
   const resourceRBAC = [
     'TLSPolicy',
     'DNSPolicy',
@@ -58,14 +60,12 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
     (acc, resource) => ({
       ...acc,
       [resource]: {
-        delete: permissions[`${resource}-delete`],
-        edit: permissions[`${resource}-update`],
+        delete: userRBAC[`${resource}-delete`],
+        edit: userRBAC[`${resource}-update`],
       },
     }),
     {} as Record<string, { delete: boolean }>,
   );
-
-  console.log('AFTER', resourceRBAC);
 
   const onEditClick = () => {
     if (

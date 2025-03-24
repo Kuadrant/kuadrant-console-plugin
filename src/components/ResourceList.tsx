@@ -36,7 +36,7 @@ import { SearchIcon } from '@patternfly/react-icons';
 import { getStatusLabel } from '../utils/statusLabel';
 
 import DropdownWithKebab from './DropdownWithKebab';
-import RBACPermissions from '../utils/resourceRBAC';
+import useAccessReviews from '../utils/resourceRBAC';
 
 type ResourceListProps = {
   resources: Array<{
@@ -59,7 +59,8 @@ const ResourceList: React.FC<ResourceListProps> = ({
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
-  const userRBAC = RBACPermissions(resources);
+  const { userRBAC } = useAccessReviews(resources);
+  // console.log("LOADING",loading)
 
   const resourceKinds = ['AuthPolicy', 'RateLimitPolicy', 'DNSPolicy', 'TLSPolicy'];
 

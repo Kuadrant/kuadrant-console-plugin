@@ -9,8 +9,9 @@ type Resource = {
 
 const verbs: K8sVerb[] = ['list', 'create', 'update', 'delete'];
 
-function RBACPermissions(resource: Resource[]) {
-  const [RBAC, setRBAC] = useState<Record<string, boolean>>({});
+function useAccessReviews(resource: Resource[]) {
+  const [userRBAC, setUserRBAC] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const checkRBAC = async () => {
@@ -30,13 +31,14 @@ function RBACPermissions(resource: Resource[]) {
         acc[key] = isAllowed;
         return acc;
       }, {} as Record<string, boolean>);
-      setRBAC(RBACMap);
+      setUserRBAC(RBACMap);
+      setLoading(false);
     };
 
     checkRBAC();
   }, []);
 
-  return RBAC;
+  return { userRBAC, loading };
 }
 
-export default RBACPermissions;
+export default useAccessReviews;
