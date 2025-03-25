@@ -48,6 +48,14 @@ type ResourceListProps = {
   emtpyResourceName?: string;
   paginationLimit?: number;
   columns?: TableColumn<K8sResourceCommon>[];
+  renderers?: Record<
+    string,
+    (
+      column: TableColumn<K8sResourceCommon>,
+      resource: K8sResourceCommon,
+      activeColumnIDs: Set<string>,
+    ) => React.ReactNode
+  >;
 };
 
 const ResourceList: React.FC<ResourceListProps> = ({
@@ -55,6 +63,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   namespace = '#ALL_NS#',
   paginationLimit = 10,
   columns,
+  renderers,
   emtpyResourceName = 'Policies',
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -235,61 +244,65 @@ const ResourceList: React.FC<ResourceListProps> = ({
     return (
       <>
         {usedColumns.map((column) => {
-          switch (column.id) {
-            case 'name':
-              return (
-                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                  <ResourceLink
-                    groupVersionKind={{ group, version, kind }}
-                    name={obj.metadata.name}
-                    namespace={obj.metadata.namespace}
-                  />
-                </TableData>
-              );
-            case 'type':
-              return (
-                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                  {kind}
-                </TableData>
-              );
-            case 'namespace':
-              return (
-                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                  {obj.metadata.namespace ? (
+          if (renderers && renderers[column.id]) {
+            return renderers[column.id](column, obj, activeColumnIDs);
+          } else {
+            switch (column.id) {
+              case 'name':
+                return (
+                  <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
                     <ResourceLink
-                      groupVersionKind={{ version: 'v1', kind: 'Namespace' }}
-                      name={obj.metadata.namespace}
+                      groupVersionKind={{ group, version, kind }}
+                      name={obj.metadata.name}
+                      namespace={obj.metadata.namespace}
                     />
-                  ) : (
-                    '-'
-                  )}
-                </TableData>
-              );
-            case 'Status':
-              return (
-                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                  {getStatusLabel(obj)}
-                </TableData>
-              );
-            case 'Created':
-              return (
-                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                  <Timestamp timestamp={obj.metadata.creationTimestamp} />
-                </TableData>
-              );
-            case 'kebab':
-              return (
-                <TableData
-                  key={column.id}
-                  id={column.id}
-                  activeColumnIDs={activeColumnIDs}
-                  className="pf-v5-c-table__action"
-                >
-                  <DropdownWithKebab obj={obj} />
-                </TableData>
-              );
-            default:
-              return null;
+                  </TableData>
+                );
+              case 'type':
+                return (
+                  <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+                    {kind}
+                  </TableData>
+                );
+              case 'namespace':
+                return (
+                  <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+                    {obj.metadata.namespace ? (
+                      <ResourceLink
+                        groupVersionKind={{ version: 'v1', kind: 'Namespace' }}
+                        name={obj.metadata.namespace}
+                      />
+                    ) : (
+                      '-'
+                    )}
+                  </TableData>
+                );
+              case 'Status':
+                return (
+                  <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+                    {getStatusLabel(obj)}
+                  </TableData>
+                );
+              case 'Created':
+                return (
+                  <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+                    <Timestamp timestamp={obj.metadata.creationTimestamp} />
+                  </TableData>
+                );
+              case 'kebab':
+                return (
+                  <TableData
+                    key={column.id}
+                    id={column.id}
+                    activeColumnIDs={activeColumnIDs}
+                    className="pf-v5-c-table__action"
+                  >
+                    <DropdownWithKebab obj={obj} />
+                  </TableData>
+                );
+              default:
+                return null;
+            }
           }
         })}
       </>
