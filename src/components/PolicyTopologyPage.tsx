@@ -18,10 +18,6 @@ import {
   SelectList,
   SelectOption,
   MenuToggle,
-  Bullseye,
-  EmptyState,
-  EmptyStateIcon,
-  EmptyStateBody,
 } from '@patternfly/react-core';
 import {
   useK8sWatchResource,
@@ -54,16 +50,11 @@ import {
 } from '@patternfly/react-topology';
 import { useTranslation } from 'react-i18next';
 
-import {
-  CubesIcon,
-  CloudUploadAltIcon,
-  TopologyIcon,
-  RouteIcon,
-  LockIcon,
-} from '@patternfly/react-icons';
+import { CubesIcon, CloudUploadAltIcon, TopologyIcon, RouteIcon } from '@patternfly/react-icons';
 
 import * as dot from 'graphlib-dot';
 import './kuadrant.css';
+import NoPermissionsView from './NoPermissionsView';
 
 interface GVK {
   group: string;
@@ -607,22 +598,16 @@ const PolicyTopologyPage: React.FC = () => {
 
   if (!canReadTopology) {
     return (
-      <Bullseye>
-        <EmptyState>
-          <EmptyStateIcon icon={LockIcon} />
-          <Title headingLevel="h4" size="lg">
-            {t('Access Denied')}
-          </Title>
-          <EmptyStateBody>
-            <Text component="p">{t('You do not have permission to view Policy Topology')}</Text>
-            <Text component="p">
-              {t('Specifically, you do not have permission to read the ConfigMap ')}
-              <strong>{config.TOPOLOGY_CONFIGMAP_NAME}</strong> {t('in the namespace ')}
-              <strong>{config.TOPOLOGY_CONFIGMAP_NAMESPACE}</strong>
-            </Text>
-          </EmptyStateBody>
-        </EmptyState>
-      </Bullseye>
+      <NoPermissionsView
+        primaryMessage={t('You do not have permission to view Policy Topology')}
+        secondaryMessage={
+          <>
+            {t('Specifically, you do not have permission to read the ConfigMap ')}
+            <strong>{config.TOPOLOGY_CONFIGMAP_NAME}</strong> {t('in the namespace ')}
+            <strong>{config.TOPOLOGY_CONFIGMAP_NAMESPACE}</strong>
+          </>
+        }
+      />
     );
   }
 

@@ -12,9 +12,9 @@ import {
   useActivePerspective,
   ListPageCreateLink,
   ListPageBody,
+  useAccessReview,
 } from '@openshift-console/dynamic-plugin-sdk';
-
-import { Title } from '@patternfly/react-core';
+import { Title, Tooltip } from '@patternfly/react-core';
 import {
   Dropdown,
   DropdownItem,
@@ -25,6 +25,8 @@ import {
 import ResourceList from './ResourceList';
 import './kuadrant.css';
 import resourceGVKMapping from '../utils/latest';
+import NoPermissionsView from './NoPermissionsView';
+import { getResourceNameFromKind } from '../utils/getModelFromResource';
 
 interface Resource {
   name: string;
@@ -42,29 +44,68 @@ export const resources: Resource[] = [
   { name: 'TLSPolicies', gvk: resourceGVKMapping['TLSPolicy'] },
 ];
 
+interface ResourceRBAC {
+  list: boolean;
+  create: boolean;
+}
+
+interface RBACMap {
+  [key: string]: ResourceRBAC;
+}
+
+const useResourceRBAC = (resourceKey: string, namespace?: string): ResourceRBAC => {
+  const gvk = resourceGVKMapping[resourceKey];
+  const resourceName = getResourceNameFromKind(gvk.kind);
+  const [listAllowed] = useAccessReview({
+    group: gvk.group,
+    resource: resourceName,
+    verb: 'list',
+    namespace,
+  });
+  const [createAllowed] = useAccessReview({
+    group: gvk.group,
+    resource: resourceName,
+    verb: 'create',
+    namespace,
+  });
+  // console.log(
+  //   `[RBAC] ${resourceKey} in ns ${
+  //     namespace || 'cluster'
+  //   }: list = ${listAllowed}, create = ${createAllowed}`,
+  // );
+  return { list: listAllowed, create: createAllowed };
+};
+
 export const AllPoliciesListPage: React.FC<{
   activeNamespace: string;
   columns?: TableColumn<K8sResourceCommon>[];
   showAlertGroup?: boolean;
   paginationLimit?: number;
-}> = ({ activeNamespace, columns, showAlertGroup = false, paginationLimit }) => {
+  resourceRBAC: RBACMap;
+}> = ({ activeNamespace, columns, showAlertGroup = false, paginationLimit, resourceRBAC }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activePerspective] = useActivePerspective();
-  const history = useHistory();
-  const [isOpen, setIsOpen] = useState(false);
 
-  let filteredResources = resources;
+  let filteredResources = resources.filter((r) => {
+    const allowed = resourceRBAC[r.gvk.kind]?.list;
+    return allowed;
+  });
 
   // Filter out DNSPolicies and TLSPolicies if active perspective is 'dev'
   if (activePerspective === 'dev') {
-    filteredResources = resources.filter(
+    filteredResources = filteredResources.filter(
       (resource) => !['DNSPolicies', 'TLSPolicies'].includes(resource.name),
     );
   }
 
-  const onToggleClick = () => {
-    setIsOpen(!isOpen);
-  };
+  if (filteredResources.length === 0) {
+    return <NoPermissionsView primaryMessage={t('You do not have permission to view Policies')} />;
+  }
+
+  const [isOpen, setIsOpen] = useState(false);
+  const history = useHistory();
+
+  const onToggleClick = () => setIsOpen(!isOpen);
 
   const onMenuSelect = (_event: React.MouseEvent<Element, MouseEvent>, policyType: string) => {
     const resource = resourceGVKMapping[policyType];
@@ -73,6 +114,26 @@ export const AllPoliciesListPage: React.FC<{
     history.push(targetUrl);
     setIsOpen(false); // Close the dropdown after selecting an option
   };
+
+  const canCreateAny = ['AuthPolicy', 'RateLimitPolicy', 'DNSPolicy', 'TLSPolicy'].some(
+    (policy) => resourceRBAC[policy]?.create,
+  );
+
+  const createPolicyItems = ['AuthPolicy', 'RateLimitPolicy']
+    .concat(activePerspective !== 'dev' ? ['DNSPolicy', 'TLSPolicy'] : [])
+    .map((policy) => {
+      return resourceRBAC[policy]?.create ? (
+        <DropdownItem value={policy} key={policy.toLowerCase()}>
+          {t(policy)}
+        </DropdownItem>
+      ) : (
+        <Tooltip key={policy} content={t(`You do not have permission to create a ${policy}`)}>
+          <DropdownItem value={policy} isAriaDisabled>
+            {t(policy)}
+          </DropdownItem>
+        </Tooltip>
+      );
+    });
 
   return (
     <>
@@ -95,30 +156,14 @@ export const AllPoliciesListPage: React.FC<{
                   ref={toggleRef}
                   onClick={onToggleClick}
                   isExpanded={isOpen}
-                  variant="primary"
+                  variant={canCreateAny ? 'primary' : 'secondary'}
+                  isDisabled={!canCreateAny}
                 >
                   {t('Create Policy')}
                 </MenuToggle>
               )}
             >
-              <DropdownList>
-                <DropdownItem value="AuthPolicy" key="auth-policy">
-                  {t('AuthPolicy')}
-                </DropdownItem>
-                <DropdownItem value="RateLimitPolicy" key="rate-limit-policy">
-                  {t('RateLimitPolicy')}
-                </DropdownItem>
-                {activePerspective !== 'dev' && (
-                  <>
-                    <DropdownItem value="DNSPolicy" key="dns-policy">
-                      {t('DNSPolicy')}
-                    </DropdownItem>
-                    <DropdownItem value="TLSPolicy" key="tls-policy">
-                      {t('TLSPolicy')}
-                    </DropdownItem>
-                  </>
-                )}
-              </DropdownList>
+              <DropdownList>{createPolicyItems}</DropdownList>
             </Dropdown>
           </div>
         </div>
@@ -127,12 +172,20 @@ export const AllPoliciesListPage: React.FC<{
   );
 };
 
-const PoliciesListPage: React.FC<{ resource: Resource; activeNamespace: string }> = ({
-  resource,
-  activeNamespace,
-}) => {
+const PoliciesListPage: React.FC<{
+  resource: Resource;
+  activeNamespace: string;
+  resourceRBAC: RBACMap;
+}> = ({ resource, activeNamespace, resourceRBAC }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
+
+  if (!resourceRBAC[resource.gvk.kind]?.list) {
+    console.warn(`[PoliciesListPage] No list permission for ${resource.gvk.kind}`);
+    return (
+      <NoPermissionsView primaryMessage={t('You do not have permission to view this resource')} />
+    );
+  }
 
   return (
     <>
@@ -140,11 +193,22 @@ const PoliciesListPage: React.FC<{ resource: Resource; activeNamespace: string }
         <div className="co-m-nav-title--row kuadrant-resource-create-container">
           <ResourceList resources={[resource.gvk]} namespace={activeNamespace} />
           <div className="kuadrant-resource-create-button pf-u-mt-md">
-            <ListPageCreateLink
-              to={`/k8s/ns/${resolvedNamespace}/${resource.gvk.group}~${resource.gvk.version}~${resource.gvk.kind}/~new`}
-            >
-              {t(`plugin__kuadrant-console-plugin~Create ${resource.gvk.kind}`)}
-            </ListPageCreateLink>
+            {resourceRBAC[resource.gvk.kind]?.create ? (
+              <ListPageCreateLink
+                to={`/k8s/ns/${resolvedNamespace}/${resource.gvk.group}~${resource.gvk.version}~${resource.gvk.kind}/~new`}
+              >
+                {t(`plugin__kuadrant-console-plugin~Create ${resource.gvk.kind}`)}
+              </ListPageCreateLink>
+            ) : (
+              <Tooltip content={t(`You do not have permission to create a ${resource.gvk.kind}`)}>
+                <span
+                  className="pf-c-button pf-m-primary pf-u-mt-md pf-u-mr-md"
+                  aria-disabled="true"
+                >
+                  {t(`Create ${resource.gvk.kind}`)}
+                </span>
+              </Tooltip>
+            )}
           </div>
         </div>
       </ListPageBody>
@@ -201,33 +265,50 @@ const KuadrantPoliciesPage: React.FC = () => {
     },
   ];
 
+  const nsForCheck = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
+  const resourceRBAC: RBACMap = {
+    AuthPolicy: useResourceRBAC('AuthPolicy', nsForCheck),
+    DNSPolicy: useResourceRBAC('DNSPolicy', nsForCheck),
+    RateLimitPolicy: useResourceRBAC('RateLimitPolicy', nsForCheck),
+    TLSPolicy: useResourceRBAC('TLSPolicy', nsForCheck),
+  };
+
+  const permsLoaded = ['AuthPolicy', 'DNSPolicy', 'RateLimitPolicy', 'TLSPolicy'].every(
+    (key) => resourceRBAC[key] !== undefined,
+  );
+  if (!permsLoaded) {
+    return <div>Loading permissions...</div>;
+  }
+
+  const policyRBACNil =
+    !resourceRBAC['AuthPolicy'].list &&
+    !resourceRBAC['RateLimitPolicy'].list &&
+    !resourceRBAC['DNSPolicy'].list &&
+    !resourceRBAC['TLSPolicy']?.list;
+
   const All: React.FC = () => (
-    <AllPoliciesListPage activeNamespace={activeNamespace} columns={defaultColumns} />
+    <AllPoliciesListPage
+      activeNamespace={activeNamespace}
+      columns={defaultColumns}
+      resourceRBAC={resourceRBAC}
+    />
   );
 
   const Auth: React.FC = () => (
-    <PoliciesListPage resource={resources[0]} activeNamespace={activeNamespace} />
+    <PoliciesListPage
+      resource={resources[0]}
+      activeNamespace={activeNamespace}
+      resourceRBAC={resourceRBAC}
+    />
   );
 
   const RateLimit: React.FC = () => (
-    <PoliciesListPage resource={resources[2]} activeNamespace={activeNamespace} />
+    <PoliciesListPage
+      resource={resources[2]}
+      activeNamespace={activeNamespace}
+      resourceRBAC={resourceRBAC}
+    />
   );
-
-  const handleNamespaceChange = (activeNamespace: string) => {
-    let currentTab = '';
-    let activeTab = location.pathname.split('/').pop();
-    if (activeTab == 'policies') {
-      activeTab = '';
-    }
-
-    if (activeNamespace !== '#ALL_NS#') {
-      currentTab = `/kuadrant/ns/${activeNamespace}/policies/${activeTab}`;
-    } else {
-      currentTab = `/kuadrant/all-namespaces/policies/${activeTab}`;
-    }
-
-    history.replace(currentTab);
-  };
 
   let pages = [
     {
@@ -239,10 +320,18 @@ const KuadrantPoliciesPage: React.FC = () => {
 
   if (activePerspective === 'admin') {
     const DNS: React.FC = () => (
-      <PoliciesListPage resource={resources[1]} activeNamespace={activeNamespace} />
+      <PoliciesListPage
+        resource={resources[1]}
+        activeNamespace={activeNamespace}
+        resourceRBAC={resourceRBAC}
+      />
     );
     const TLS: React.FC = () => (
-      <PoliciesListPage resource={resources[3]} activeNamespace={activeNamespace} />
+      <PoliciesListPage
+        resource={resources[3]}
+        activeNamespace={activeNamespace}
+        resourceRBAC={resourceRBAC}
+      />
     );
 
     pages = [
@@ -274,13 +363,33 @@ const KuadrantPoliciesPage: React.FC = () => {
     },
   ];
 
+  const handleNamespaceChange = (activeNamespace: string) => {
+    let currentTab = '';
+    let activeTab = location.pathname.split('/').pop();
+    if (activeTab === 'policies') {
+      activeTab = '';
+    }
+
+    if (activeNamespace !== '#ALL_NS#') {
+      currentTab = `/kuadrant/ns/${activeNamespace}/policies/${activeTab}`;
+    } else {
+      currentTab = `/kuadrant/all-namespaces/policies/${activeTab}`;
+    }
+
+    history.replace(currentTab);
+  };
+
   return (
     <>
       <NamespaceBar onNamespaceChange={handleNamespaceChange} />
       <Title headingLevel="h1" className="kuadrant-page-title">
         {t('Kuadrant')}
       </Title>
-      <HorizontalNav pages={pages} />
+      {policyRBACNil ? (
+        <NoPermissionsView primaryMessage={t('You do not have permission to view Policies')} />
+      ) : (
+        <HorizontalNav pages={pages} />
+      )}
     </>
   );
 };

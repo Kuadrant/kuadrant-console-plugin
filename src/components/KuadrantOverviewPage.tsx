@@ -123,7 +123,6 @@ const KuadrantOverviewPage: React.FC = () => {
 
   const { userRBAC, loading } = useAccessReviews(resources.map((res) => res.gvk));
 
-  console.log('LOADING', loading);
   const policies = ['AuthPolicy', 'RateLimitPolicy', 'DNSPolicy', 'TLSPolicy'];
 
   const resourceRBAC = [
