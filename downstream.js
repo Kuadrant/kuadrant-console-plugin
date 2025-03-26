@@ -19,7 +19,7 @@ const replacements = {
     type: 'simple',
     mappings: {
       // Order matters: specific URLs first to prevent partial matches
-      'https://docs.kuadrant.io/latest/kuadrant-operator/doc/user-guides/secure-protect-connect-single-multi-cluster/':
+      'https://docs.kuadrant.io/latest/getting-started-single-cluster/':
         'https://docs.redhat.com/en/documentation/red_hat_connectivity_link/1.0/html-single/configuring_and_deploying_gateway_policies_with_connectivity_link/index',
       'https://docs.kuadrant.io/latest/kuadrant-operator/doc/observability/examples/':
         'https://docs.redhat.com/en/documentation/red_hat_connectivity_link/1.0/html-single/connectivity_link_observability_guide/index',
