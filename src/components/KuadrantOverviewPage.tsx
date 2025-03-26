@@ -409,7 +409,7 @@ const KuadrantOverviewPage: React.FC = () => {
     return (
       <Popover
         className="custom-rounded-popover"
-        headerContent={`Error Code Distribution`}
+        headerContent={`Error Code`}
         bodyContent={
           <>
             <Text component={TextVariants.p}>
