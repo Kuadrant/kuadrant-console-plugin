@@ -430,7 +430,7 @@ const KuadrantOverviewPage: React.FC = () => {
                           <strong>Code: {code}</strong>
                         </FlexItem>
                         <FlexItem align={{ default: 'alignRight' }}>
-                          {dist.total.toFixed(0)} requests
+                          {dist.total.toFixed(0) === '1' ? '1 request' : `${dist.total.toFixed(0)} requests`}
                         </FlexItem>
                       </Flex>
                     }
