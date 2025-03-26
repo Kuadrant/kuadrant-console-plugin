@@ -15,7 +15,7 @@ import { k8sDelete, K8sResourceCommon } from '@openshift-console/dynamic-plugin-
 import { useHistory } from 'react-router-dom';
 import resourceGVKMapping from '../utils/latest';
 import useAccessReviews from '../utils/resourceRBAC';
-import getModelFromResource from '../utils/getModelFromResource'; // Assume you have a utility for getting the model from the resource
+import { getModelFromResource } from '../utils/getModelFromResource';
 type DropdownWithKebabProps = {
   obj: K8sResourceCommon;
 };
@@ -47,8 +47,6 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
     { group: resourceGVKMapping[obj.kind].group, kind: obj.kind },
   ];
   const { userRBAC } = useAccessReviews(resourceGVK);
-  // console.log("LOADING",loading)
-
   const resourceRBAC = [
     'TLSPolicy',
     'DNSPolicy',

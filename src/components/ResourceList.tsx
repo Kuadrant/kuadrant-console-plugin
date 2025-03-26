@@ -26,17 +26,17 @@ import {
   useK8sWatchResources,
   VirtualizedTable,
   Timestamp,
-  TableData,
   RowProps,
   TableColumn,
   WatchK8sResource,
   ListPageBody,
+  TableData,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { SearchIcon } from '@patternfly/react-icons';
 import { getStatusLabel } from '../utils/statusLabel';
-
 import DropdownWithKebab from './DropdownWithKebab';
 import useAccessReviews from '../utils/resourceRBAC';
+import { getResourceNameFromKind } from '../utils/getModelFromResource';
 
 type ResourceListProps = {
   resources: Array<{
@@ -68,36 +68,37 @@ const ResourceList: React.FC<ResourceListProps> = ({
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
-  const { userRBAC } = useAccessReviews(resources);
-  // console.log("LOADING",loading)
+  const accessResources = resources.map((r) => ({
+    ...r,
+    kind: getResourceNameFromKind(r.kind),
+  }));
 
-  const resourceKinds = ['AuthPolicy', 'RateLimitPolicy', 'DNSPolicy', 'TLSPolicy'];
+  const { userRBAC } = useAccessReviews(accessResources);
+
+  const resourceKinds = [
+    'AuthPolicy',
+    'RateLimitPolicy',
+    'DNSPolicy',
+    'TLSPolicy',
+    'Gateway',
+    'HTTPRoute',
+  ];
 
   const resourceMappings = resourceKinds.map((kind) => ({
-    key: `${kind}-list`,
+    key: `${getResourceNameFromKind(kind)}-list`,
     group: 'kuadrant.io',
     version: 'v1',
     kind,
   }));
-  const resourceRBAC = resourceMappings.map(({ key, group, version, kind }) => ({
-    flag: userRBAC[key] ?? false,
-    group,
-    version,
-    kind,
-  }));
 
-  resources = resourceRBAC.reduce(
-    (resources, { flag, group, version, kind }) =>
-      flag !== true
-        ? resources.filter(
-            (resource) =>
-              !(resource.group === group && resource.version === version && resource.kind === kind),
-          )
-        : resources,
-    resources,
-  );
+  // filter out resources that the user doesn't have permission to list
+  const filteredResources = resources.filter((resource) => {
+    const mapping = resourceMappings.find((m) => m.kind === resource.kind);
+    const allowed = mapping ? userRBAC[mapping.key] : false;
+    return allowed;
+  });
 
-  const resourceDescriptors: { [key: string]: WatchK8sResource } = resources.reduce(
+  const resourceDescriptors: { [key: string]: WatchK8sResource } = filteredResources.reduce(
     (acc, resource, index) => {
       const key = `${resource.group}-${resource.version}-${resource.kind}-${index}`;
       acc[key] = {
@@ -131,7 +132,6 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const loadErrors = Object.values(watchedResources)
     .filter((res) => res.loadError)
     .map((res) => res.loadError);
-
   const combinedLoadError =
     loadErrors.length > 0 ? new Error(loadErrors.map((err) => err.message).join('; ')) : null;
 
@@ -141,9 +141,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const [filterSelected, setFilterSelected] = React.useState('Name');
   const [filteredData, setFilteredData] = React.useState<K8sResourceCommon[]>([]);
 
-  const onToggleClick = () => {
-    setIsOpen(!isOpen);
-  };
+  const onToggleClick = () => setIsOpen(!isOpen);
 
   const onFilterSelect = (
     _event: React.MouseEvent<Element, MouseEvent> | undefined,
@@ -155,7 +153,6 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
   React.useEffect(() => {
     let data = allData;
-
     if (filters) {
       const filterValue = filters.toLowerCase();
       data = data.filter((item) => {
@@ -170,7 +167,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
       });
     }
     setFilteredData(data);
-  }, [allData, filters]);
+  }, [allData, filters, filterSelected]);
 
   const defaultColumns: TableColumn<K8sResourceCommon>[] = [
     {
@@ -350,7 +347,8 @@ const ResourceList: React.FC<ResourceListProps> = ({
                         filterValue: filterSelected.toLowerCase(),
                       })}
                       onChange={(_event, value) => handleFilterChange(value)}
-                      className="pf-v5-c-form-control co-text-filter-with-icon "
+                      className="pf-v5-c-form-control co-text-filter-with-icon"
+                      aria-label="Resource search"
                     />
                   </InputGroup>
                 </ToolbarItem>
