@@ -75,7 +75,14 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
   const { userRBAC } = useAccessReviews(accessResources);
 
-  const resourceKinds = ['AuthPolicy', 'RateLimitPolicy', 'DNSPolicy', 'TLSPolicy'];
+  const resourceKinds = [
+    'AuthPolicy',
+    'RateLimitPolicy',
+    'DNSPolicy',
+    'TLSPolicy',
+    'Gateway',
+    'HTTPRoute',
+  ];
 
   const resourceMappings = resourceKinds.map((kind) => ({
     key: `${getResourceNameFromKind(kind)}-list`,

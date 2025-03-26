@@ -58,6 +58,7 @@ import { INTERNAL_LINKS, EXTERNAL_LINKS } from '../constants/links';
 import resourceGVKMapping from '../utils/latest';
 import { useHistory } from 'react-router-dom';
 import useAccessReviews from '../utils/resourceRBAC';
+import { getResourceNameFromKind } from '../utils/getModelFromResource';
 
 export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
@@ -121,7 +122,13 @@ const KuadrantOverviewPage: React.FC = () => {
     setIsCreateOpen(!isCreateOpen);
   };
 
-  const { userRBAC, loading } = useAccessReviews(resources.map((res) => res.gvk));
+  const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
+  const rbacResources = resources.map((res) => ({
+    group: res.gvk.group,
+    kind: getResourceNameFromKind(res.gvk.kind),
+    namespace: resolvedNamespace,
+  }));
+  const { userRBAC, loading } = useAccessReviews(rbacResources);
 
   const policies = ['AuthPolicy', 'RateLimitPolicy', 'DNSPolicy', 'TLSPolicy'];
 
@@ -136,8 +143,8 @@ const KuadrantOverviewPage: React.FC = () => {
     (acc, resource) => ({
       ...acc,
       [resource]: {
-        list: userRBAC[`${resource}-list`],
-        create: userRBAC[`${resource}-create`],
+        list: userRBAC[`${getResourceNameFromKind(resource)}-list`],
+        create: userRBAC[`${getResourceNameFromKind(resource)}-create`],
       },
     }),
     {} as Record<string, { list: boolean; create: boolean }>,

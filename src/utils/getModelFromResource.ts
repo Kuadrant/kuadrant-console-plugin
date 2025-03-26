@@ -23,7 +23,7 @@ export const getModelFromResource = (obj: K8sResourceCommon): K8sModel => {
 };
 
 export const getResourceNameFromKind = (kind: string) => {
-  if (kind.endsWith('y')) {
+  if (kind.endsWith('y') && !/[aeiou]y$/i.test(kind)) {
     return kind.substring(0, kind.length - 1).toLowerCase() + 'ies';
   }
   return kind.toLowerCase() + 's';
