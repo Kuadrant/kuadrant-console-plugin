@@ -4,6 +4,9 @@ See below for setup requirements.
 
 Based on https://github.com/openshift/console-plugin-template
 
+## Screenshots
+
+![Overview](docs/images/overview.gif)
 ## Running
 
 - Target a running OCP with `oc login`
