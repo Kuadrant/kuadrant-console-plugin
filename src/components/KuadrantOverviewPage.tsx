@@ -384,7 +384,8 @@ const KuadrantOverviewPage: React.FC = () => {
   ): Record<string, Distribution> => {
     const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
     const codes = totalRequestsByGateway[key]?.codes ?? {};
-    const filteredCodes = Object.entries(codes).filter(([code]) => code.startsWith(prefix));
+    const filteredCodes = Object.entries(codes).filter(([code]) => code.startsWith(prefix))
+    .sort(([, count1], [, count2]) => count2 - count1);
 
     const total = filteredCodes.reduce((sum, [, count]) => sum + count, 0);
 
