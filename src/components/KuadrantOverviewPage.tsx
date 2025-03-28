@@ -390,7 +390,9 @@ const KuadrantOverviewPage: React.FC = () => {
   ): Record<string, Distribution> => {
     const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
     const codes = totalRequestsByGateway[key]?.codes ?? {};
-    const filteredCodes = Object.entries(codes).filter(([code]) => code.startsWith(prefix));
+    const filteredCodes = Object.entries(codes)
+      .filter(([code]) => code.startsWith(prefix))
+      .sort(([, count1], [, count2]) => count2 - count1);
 
     const total = filteredCodes.reduce((sum, [, count]) => sum + count, 0);
 
@@ -415,37 +417,41 @@ const KuadrantOverviewPage: React.FC = () => {
     return (
       <Popover
         className="custom-rounded-popover"
-        headerContent={`Error Code Distribution`}
+        headerContent={`Error Code`}
         bodyContent={
           <>
             <Text component={TextVariants.p}>
               {t('Displays the distribution of error codes for request failures.')}
             </Text>
-            {Object.entries(distribution).map(([code, dist]) => {
-              lastCode = code;
-              return (
-                <div key={code} style={{ marginBottom: '8px' }}>
-                  <Progress
-                    value={dist.percent}
-                    title={
-                      <Flex
-                        justifyContent={{ default: 'justifyContentSpaceBetween' }}
-                        alignItems={{ default: 'alignItemsCenter' }}
-                      >
-                        <FlexItem>
-                          <strong>Code: {code}</strong>
-                        </FlexItem>
-                        <FlexItem align={{ default: 'alignRight' }}>
-                          {dist.total.toFixed(0)} requests
-                        </FlexItem>
-                      </Flex>
-                    }
-                    measureLocation={ProgressMeasureLocation.outside}
-                  />
-                  <Divider style={{ margin: '12px 0' }} />
-                </div>
-              );
-            })}
+            <div className="custom-rounded-popover-codes">
+              {Object.entries(distribution).map(([code, dist]) => {
+                lastCode = code;
+                return (
+                  <div key={code} style={{ marginBottom: '8px' }}>
+                    <Progress
+                      value={dist.percent}
+                      title={
+                        <Flex
+                          justifyContent={{ default: 'justifyContentSpaceBetween' }}
+                          alignItems={{ default: 'alignItemsCenter' }}
+                        >
+                          <FlexItem>
+                            <strong>Code: {code}</strong>
+                          </FlexItem>
+                          <FlexItem align={{ default: 'alignRight' }}>
+                            {dist.total.toFixed(0) === '1'
+                              ? '1 request'
+                              : `${dist.total.toFixed(0)} requests`}
+                          </FlexItem>
+                        </Flex>
+                      }
+                      measureLocation={ProgressMeasureLocation.outside}
+                    />
+                    <Divider style={{ margin: '12px 0' }} />
+                  </div>
+                );
+              })}
+            </div>
           </>
         }
         footerContent={
