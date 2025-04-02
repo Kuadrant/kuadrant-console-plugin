@@ -386,7 +386,6 @@ const KuadrantOverviewPage: React.FC = () => {
     const codes = totalRequestsByGateway[key]?.codes ?? {};
     const filteredCodes = Object.entries(codes)
       .filter(([code]) => code.startsWith(prefix))
-      .sort(([, count1], [, count2]) => count2 - count1);
 
     const total = filteredCodes.reduce((sum, [, count]) => sum + count, 0);
 
@@ -399,7 +398,18 @@ const KuadrantOverviewPage: React.FC = () => {
       };
     });
 
-    return distribution;
+    // Sort codes by total after calculating percent
+    const sortedDistribution = Object.entries(distribution)
+      .sort(([,a], [,b]) => Number(b.total) - Number(a.total))
+
+    console.log("Dist:", sortedDistribution)
+
+    const sortedObject: Record<string, Distribution> = {};
+    for (const [key, value] of sortedDistribution) {
+        sortedObject['x'+String(key)] = value;     
+    }
+
+  return sortedObject  
   };
   const ErrorCodeLabel: React.FC<{
     obj: { metadata: { namespace: string; name: string } };

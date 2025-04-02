@@ -161,5 +161,6 @@
 
 .custom-rounded-popover-codes {
   max-height: 400px;
-  overflow-y: scroll;
+  overflow-y: auto;
+  display: block;
 }
