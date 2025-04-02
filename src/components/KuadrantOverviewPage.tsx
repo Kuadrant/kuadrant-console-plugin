@@ -748,7 +748,7 @@ const KuadrantOverviewPage: React.FC = () => {
                 <FlexItem flex={{ default: 'flex_1' }}>
                   <Card>
                     <CardTitle>
-                      <Title headingLevel="h2">{t('Gateways - Traffic Distribution')}</Title>
+                      <Title headingLevel="h2">{t('Gateways - Traffic Analysis')}</Title>
                       {resourceRBAC['Gateway']?.create ? (
                         <Button
                           onClick={() => handleCreateResource('Gateway')}
