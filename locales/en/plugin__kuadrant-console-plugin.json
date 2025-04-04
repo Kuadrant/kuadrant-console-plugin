@@ -53,7 +53,7 @@
   "Gateway API Target Reference": "Gateway API Target Reference",
   "Gateway: Reference to a Kubernetes resource that the policy attaches to. To create an additional gateway go to": "Gateway: Reference to a Kubernetes resource that the policy attaches to. To create an additional gateway go to",
   "Gateways": "Gateways",
-  "Gateways - Traffic Distribution": "Gateways - Traffic Distribution",
+  "Gateways - Traffic Analysis": "Gateways - Traffic Analysis",
   "Geo value to apply to geo endpoints": "Geo value to apply to geo endpoints",
   "Geography Label (e.g. 'EU')": "Geography Label (e.g. 'EU')",
   "Getting started resources": "Getting started resources",
