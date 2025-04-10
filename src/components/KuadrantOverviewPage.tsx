@@ -381,11 +381,10 @@ const KuadrantOverviewPage: React.FC = () => {
   const getErrorCodeDistribution = (
     obj: { metadata: { namespace: string; name: string } },
     prefix: string,
-  ): Record<string, Distribution> => {
+  ): Array<[string, Distribution]> => {
     const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
     const codes = totalRequestsByGateway[key]?.codes ?? {};
-    const filteredCodes = Object.entries(codes)
-      .filter(([code]) => code.startsWith(prefix))
+    const filteredCodes = Object.entries(codes).filter(([code]) => code.startsWith(prefix));
 
     const total = filteredCodes.reduce((sum, [, count]) => sum + count, 0);
 
@@ -399,17 +398,11 @@ const KuadrantOverviewPage: React.FC = () => {
     });
 
     // Sort codes by total after calculating percent
-    const sortedDistribution = Object.entries(distribution)
-      .sort(([,a], [,b]) => Number(b.total) - Number(a.total))
+    const sortedDistribution = Object.entries(distribution).sort(
+      ([, a], [, b]) => Number(b.total) - Number(a.total),
+    );
 
-    console.log("Dist:", sortedDistribution)
-
-    const sortedObject: Record<string, Distribution> = {};
-    for (const [key, value] of sortedDistribution) {
-        sortedObject['x'+String(key)] = value;     
-    }
-
-  return sortedObject  
+    return sortedDistribution;
   };
   const ErrorCodeLabel: React.FC<{
     obj: { metadata: { namespace: string; name: string } };
@@ -428,7 +421,7 @@ const KuadrantOverviewPage: React.FC = () => {
               {t('Displays the distribution of error codes for request failures.')}
             </Text>
             <div className="custom-rounded-popover-codes">
-              {Object.entries(distribution).map(([code, dist]) => {
+              {(distribution).map(([code, dist]) => {
                 lastCode = code;
                 return (
                   <div key={code} style={{ marginBottom: '8px' }}>
@@ -476,7 +469,7 @@ const KuadrantOverviewPage: React.FC = () => {
             textDecorationStyle: 'dotted',
           }}
         >
-          &nbsp;{Object.entries(distribution).length === 1 ? lastCode : codeGroup}&nbsp;
+          &nbsp;{distribution.length === 1 ? lastCode : codeGroup}&nbsp;
         </Label>
       </Popover>
     );
