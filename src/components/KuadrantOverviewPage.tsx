@@ -420,8 +420,8 @@ const KuadrantOverviewPage: React.FC = () => {
             <Text component={TextVariants.p}>
               {t('Displays the distribution of error codes for request failures.')}
             </Text>
-            <div className="custom-rounded-popover-codes">
-              {(distribution).map(([code, dist]) => {
+            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+              {distribution.map(([code, dist]) => {
                 lastCode = code;
                 return (
                   <div key={code} style={{ marginBottom: '8px' }}>

@@ -158,9 +158,3 @@
 .custom-rounded-popover .pf-v5-c-popover__content {
   border-radius: 12px;
 }
-
-.custom-rounded-popover-codes {
-  max-height: 400px;
-  overflow-y: auto;
-  display: block;
-}
