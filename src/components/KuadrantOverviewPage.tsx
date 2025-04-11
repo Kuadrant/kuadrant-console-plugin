@@ -388,17 +388,20 @@ const KuadrantOverviewPage: React.FC = () => {
 
     const total = filteredCodes.reduce((sum, [, count]) => sum + count, 0);
 
-    const distribution: Record<string, Distribution> = {};
+    let distribution: Array<[string, Distribution]> = [];
     filteredCodes.forEach(([code, count]) => {
       if (count < 1) return;
-      distribution[code] = {
-        total: count,
-        percent: total > 0 ? (count / total) * 100 : 0,
-      };
+      distribution.push([
+        code,
+        {
+          total: count,
+          percent: total > 0 ? (count / total) * 100 : 0,
+        },
+      ]);
     });
 
     // Sort codes by total after calculating percent
-    const sortedDistribution = Object.entries(distribution).sort(
+    const sortedDistribution = distribution.sort(
       ([, a], [, b]) => Number(b.total) - Number(a.total),
     );
 
