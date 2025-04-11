@@ -388,7 +388,7 @@ const KuadrantOverviewPage: React.FC = () => {
 
     const total = filteredCodes.reduce((sum, [, count]) => sum + count, 0);
 
-    let distribution: Array<[string, Distribution]> = [];
+    const distribution: Array<[string, Distribution]> = [];
     filteredCodes.forEach(([code, count]) => {
       if (count < 1) return;
       distribution.push([
@@ -423,7 +423,7 @@ const KuadrantOverviewPage: React.FC = () => {
             <Text component={TextVariants.p}>
               {t('Displays the distribution of error codes for request failures.')}
             </Text>
-            <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            <div className="popover-codes">
               {distribution.map(([code, dist]) => {
                 lastCode = code;
                 return (
