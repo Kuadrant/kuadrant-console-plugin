@@ -387,23 +387,31 @@ const KuadrantOverviewPage: React.FC = () => {
   const getErrorCodeDistribution = (
     obj: { metadata: { namespace: string; name: string } },
     prefix: string,
-  ): Record<string, Distribution> => {
+  ): Array<[string, Distribution]> => {
     const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
     const codes = totalRequestsByGateway[key]?.codes ?? {};
     const filteredCodes = Object.entries(codes).filter(([code]) => code.startsWith(prefix));
 
     const total = filteredCodes.reduce((sum, [, count]) => sum + count, 0);
 
-    const distribution: Record<string, Distribution> = {};
+    const distribution: Array<[string, Distribution]> = [];
     filteredCodes.forEach(([code, count]) => {
       if (count < 1) return;
-      distribution[code] = {
-        total: count,
-        percent: total > 0 ? (count / total) * 100 : 0,
-      };
+      distribution.push([
+        code,
+        {
+          total: count,
+          percent: total > 0 ? (count / total) * 100 : 0,
+        },
+      ]);
     });
 
-    return distribution;
+    // Sort codes by total after calculating percent
+    const sortedDistribution = distribution.sort(
+      ([, a], [, b]) => Number(b.total) - Number(a.total),
+    );
+
+    return sortedDistribution;
   };
   const ErrorCodeLabel: React.FC<{
     obj: { metadata: { namespace: string; name: string } };
@@ -415,37 +423,41 @@ const KuadrantOverviewPage: React.FC = () => {
     return (
       <Popover
         className="custom-rounded-popover"
-        headerContent={`Error Code Distribution`}
+        headerContent={`Error Code`}
         bodyContent={
           <>
             <Text component={TextVariants.p}>
               {t('Displays the distribution of error codes for request failures.')}
             </Text>
-            {Object.entries(distribution).map(([code, dist]) => {
-              lastCode = code;
-              return (
-                <div key={code} style={{ marginBottom: '8px' }}>
-                  <Progress
-                    value={dist.percent}
-                    title={
-                      <Flex
-                        justifyContent={{ default: 'justifyContentSpaceBetween' }}
-                        alignItems={{ default: 'alignItemsCenter' }}
-                      >
-                        <FlexItem>
-                          <strong>Code: {code}</strong>
-                        </FlexItem>
-                        <FlexItem align={{ default: 'alignRight' }}>
-                          {dist.total.toFixed(0)} requests
-                        </FlexItem>
-                      </Flex>
-                    }
-                    measureLocation={ProgressMeasureLocation.outside}
-                  />
-                  <Divider style={{ margin: '12px 0' }} />
-                </div>
-              );
-            })}
+            <div className="popover-codes">
+              {distribution.map(([code, dist]) => {
+                lastCode = code;
+                return (
+                  <div key={code} style={{ marginBottom: '8px' }}>
+                    <Progress
+                      value={dist.percent}
+                      title={
+                        <Flex
+                          justifyContent={{ default: 'justifyContentSpaceBetween' }}
+                          alignItems={{ default: 'alignItemsCenter' }}
+                        >
+                          <FlexItem>
+                            <strong>Code: {code}</strong>
+                          </FlexItem>
+                          <FlexItem align={{ default: 'alignRight' }}>
+                            {dist.total.toFixed(0) === '1'
+                              ? '1 request'
+                              : `${dist.total.toFixed(0)} requests`}
+                          </FlexItem>
+                        </Flex>
+                      }
+                      measureLocation={ProgressMeasureLocation.outside}
+                    />
+                    <Divider style={{ margin: '12px 0' }} />
+                  </div>
+                );
+              })}
+            </div>
           </>
         }
         footerContent={
@@ -466,7 +478,7 @@ const KuadrantOverviewPage: React.FC = () => {
             textDecorationStyle: 'dotted',
           }}
         >
-          &nbsp;{Object.entries(distribution).length === 1 ? lastCode : codeGroup}&nbsp;
+          &nbsp;{distribution.length === 1 ? lastCode : codeGroup}&nbsp;
         </Label>
       </Popover>
     );
