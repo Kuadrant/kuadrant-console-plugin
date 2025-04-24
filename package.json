@@ -60,7 +60,7 @@
     "react-dom": "^17.0.1",
     "react-helmet": "^6.1.0",
     "react-i18next": "^11.7.3",
-    "react-router": "5.3.x",
+    "react-router": "7.5.x",
     "react-router-dom": "5.3.x",
     "style-loader": "^3.3.1",
     "stylelint": "^15.3.0",
