@@ -544,6 +544,14 @@ const KuadrantOverviewPage: React.FC = () => {
             ns: '',
           },
         });
+
+        // Create an updatedGateways array
+        const updatedGateways = Array.isArray(res) ? res : res.items ?? [];
+
+        // Compare if the new and old gateways are different
+        if (JSON.stringify(updatedGateways) !== JSON.stringify(gateways)) {
+          setGateways(updatedGateways);
+        }
         if (Array.isArray(res)) {
           setGateways(res);
         } else {
@@ -554,8 +562,11 @@ const KuadrantOverviewPage: React.FC = () => {
       }
     };
 
-    fetchGateways();
-  }, []);
+    // Check if there's a gateway change every 5 seconds, run the fetch gateway function periodically
+    const interval = setInterval(fetchGateways, 5000);
+    // Reset the 5 second counter
+    return () => clearInterval(interval);
+  }, [gateways]);
   if (loading) {
     return <div>{t('Loading Permissions...')}</div>;
   } else
