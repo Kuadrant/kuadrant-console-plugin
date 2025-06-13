@@ -562,6 +562,9 @@ const KuadrantOverviewPage: React.FC = () => {
       }
     };
 
+    // Call the function once to prevent the initial 5 second delay
+    fetchGateways();
+
     // Check if there's a gateway change every 5 seconds, run the fetch gateway function periodically
     const interval = setInterval(fetchGateways, 5000);
     // Reset the 5 second counter
