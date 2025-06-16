@@ -1,12 +1,5 @@
 import * as React from 'react';
-import {
-  Title,
-  Bullseye,
-  EmptyState,
-  EmptyStateIcon,
-  EmptyStateBody,
-  Text,
-} from '@patternfly/react-core';
+import { Title, Bullseye, EmptyState, EmptyStateBody, Content } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import { LockIcon } from '@patternfly/react-icons';
 
@@ -19,14 +12,17 @@ const NoPermissionsView: React.FC<{
   const effectiveHeading = heading || t('Access Denied');
   return (
     <Bullseye>
-      <EmptyState>
-        <EmptyStateIcon icon={LockIcon} />
-        <Title headingLevel="h4" size="lg">
-          {effectiveHeading}
-        </Title>
+      <EmptyState
+        titleText={
+          <Title headingLevel="h4" size="lg">
+            {effectiveHeading}
+          </Title>
+        }
+        icon={LockIcon}
+      >
         <EmptyStateBody>
-          <Text component="p">{primaryMessage}</Text>
-          {secondaryMessage && <Text component="p">{secondaryMessage}</Text>}
+          <Content component="p">{primaryMessage}</Content>
+          {secondaryMessage && <Content component="p">{secondaryMessage}</Content>}
         </EmptyStateBody>
       </EmptyState>
     </Bullseye>

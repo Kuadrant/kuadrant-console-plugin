@@ -1,14 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import * as React from 'react';
 import Helmet from 'react-helmet';
 import {
-  Page,
   PageSection,
   Title,
   Card,
   CardTitle,
   CardBody,
-  TextContent,
-  Text,
+  Content,
   Toolbar,
   ToolbarContent,
   ToolbarFilter,
@@ -116,7 +115,6 @@ const showByDefault = new Set([
   'HTTPRouteRule',
   'Kuadrant',
   'Limitador',
-  'Listener',
   'RateLimitPolicy',
   'TLSPolicy',
 ]);
@@ -305,7 +303,8 @@ const CustomNode: React.FC<any> = ({
       <g transform={`translate(${nodeWidth / 2}, ${paddingTop})`}>
         <foreignObject width={iconSize} height={iconSize} x={-iconSize / 2}>
           <IconComponent
-            style={{ color: '#393F44', width: `${iconSize}px`, height: `${iconSize}px` }}
+            className="kuadrant-topology-node-icon"
+            style={{ width: `${iconSize}px`, height: `${iconSize}px` }}
           />
         </foreignObject>
       </g>
@@ -315,7 +314,6 @@ const CustomNode: React.FC<any> = ({
           style={{
             fontWeight: 'bold',
             fontSize: '12px',
-            fill: '#000',
             textAnchor: 'middle',
           }}
           dominantBaseline="central"
@@ -441,6 +439,7 @@ const PolicyTopologyPage: React.FC = () => {
   // Resource filter state. On initial render, show only resources in showByDefault
   const [selectedResourceTypes, setSelectedResourceTypes] = React.useState<string[]>([]);
   const [isResourceFilterOpen, setIsResourceFilterOpen] = React.useState(false);
+  const [isInitialLoad, setIsInitialLoad] = React.useState(true);
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
   const onResourceSelect = (
@@ -461,7 +460,7 @@ const PolicyTopologyPage: React.FC = () => {
     }
   };
 
-  const onDeleteResourceGroup = (_category: string) => {
+  const onDeleteResourceGroup = () => {
     setSelectedResourceTypes([]);
   };
 
@@ -535,6 +534,9 @@ const PolicyTopologyPage: React.FC = () => {
     };
   }, []);
 
+  // track previous filter selections
+  const prevSelectedResourceTypesRef = React.useRef<string[]>([]);
+
   // Handle data updates
   React.useEffect(() => {
     if (loaded && !loadError && configMap) {
@@ -587,6 +589,11 @@ const PolicyTopologyPage: React.FC = () => {
             (e) => validNodeIds.has(e.source) && validNodeIds.has(e.target),
           );
 
+          // check if filter changed
+          const filterChanged =
+            JSON.stringify([...prevSelectedResourceTypesRef.current].sort()) !==
+            JSON.stringify([...selectedResourceTypes].sort());
+
           if (controllerRef.current) {
             const newModel = {
               nodes: finalNodes,
@@ -598,10 +605,48 @@ const PolicyTopologyPage: React.FC = () => {
               },
             };
 
-            controllerRef.current.fromModel(newModel, false);
-            controllerRef.current.getGraph().layout();
-            controllerRef.current.getGraph().fit(80);
+            if (isInitialLoad && finalNodes.length > 0) {
+              // first load
+              controllerRef.current.fromModel(newModel, false);
+              controllerRef.current.getGraph().layout();
+
+              // fit to screen after layout
+              setTimeout(() => {
+                if (controllerRef.current) {
+                  controllerRef.current.getGraph().fit(80);
+                }
+              }, 100);
+              setIsInitialLoad(false);
+            } else if (!isInitialLoad && finalNodes.length > 0) {
+              // updates
+              if (filterChanged) {
+                // filter changed - refit
+                controllerRef.current.fromModel(newModel, false);
+                controllerRef.current.getGraph().layout();
+
+                setTimeout(() => {
+                  if (controllerRef.current) {
+                    controllerRef.current.getGraph().fit(80);
+                  }
+                }, 100);
+              } else {
+                // preserve zoom/pan
+                const currentScale = controllerRef.current.getGraph().getScale();
+                const currentPosition = controllerRef.current.getGraph().getPosition();
+
+                controllerRef.current.fromModel(newModel, false);
+                controllerRef.current.getGraph().layout();
+
+                controllerRef.current.getGraph().setScale(currentScale);
+                controllerRef.current.getGraph().setPosition(currentPosition);
+              }
+            } else {
+              // no nodes yet
+              controllerRef.current.fromModel(newModel, false);
+            }
           }
+
+          prevSelectedResourceTypesRef.current = [...selectedResourceTypes];
         } catch (error) {
           setParseError('Failed to parse topology data.');
           console.error(error, dotString);
@@ -663,117 +708,113 @@ const PolicyTopologyPage: React.FC = () => {
       <Helmet>
         <title>{t('Policy Topology')}</title>
       </Helmet>
-      <Page>
-        <PageSection variant="light">
-          <Title headingLevel="h1">{t('Policy Topology')}</Title>
-        </PageSection>
-        <PageSection className="policy-topology-section">
-          <Card>
-            <CardTitle>{t('Topology View')}</CardTitle>
-            <CardBody>
-              <TextContent>
-                <Text component="p" className="pf-u-mb-md">
-                  {t(
-                    'This view visualizes the relationships and interactions between different resources within your cluster related to Kuadrant, allowing you to explore connections between Gateways, HTTPRoutes and Kuadrant Policies.',
-                  )}
-                </Text>
-              </TextContent>
-              <Toolbar
-                id="resource-filter-toolbar"
-                className="pf-m-toggle-group-container"
-                collapseListedFiltersBreakpoint="xl"
-                clearAllFilters={clearAllFilters}
-                clearFiltersButtonText={t('Reset Filters')}
-              >
-                <ToolbarContent>
-                  <ToolbarItem variant="chip-group">
-                    <ToolbarFilter
-                      categoryName="Resource"
-                      chips={selectedResourceTypes}
-                      deleteChip={onDeleteResourceFilter}
-                      deleteChipGroup={onDeleteResourceGroup}
-                    >
-                      <Select
-                        aria-label="Resource filter"
-                        role="menu"
-                        isOpen={isResourceFilterOpen}
-                        onOpenChange={(isOpen) => setIsResourceFilterOpen(isOpen)}
-                        onSelect={onResourceSelect}
-                        selected={selectedResourceTypes}
-                        toggle={(toggleRef) => (
-                          <MenuToggle
-                            ref={toggleRef}
-                            onClick={() => setIsResourceFilterOpen(!isResourceFilterOpen)}
-                            isExpanded={isResourceFilterOpen}
-                          >
-                            Resource{' '}
-                            {selectedResourceTypes.length > 0 && (
-                              <Badge isRead>{selectedResourceTypes.length}</Badge>
-                            )}
-                          </MenuToggle>
-                        )}
-                      >
-                        <SelectList>
-                          {allResourceTypes.map((type) => (
-                            <SelectOption
-                              key={type}
-                              value={type}
-                              hasCheckbox
-                              isSelected={selectedResourceTypes.includes(type)}
-                            >
-                              {type}
-                            </SelectOption>
-                          ))}
-                        </SelectList>
-                      </Select>
-                    </ToolbarFilter>
-                  </ToolbarItem>
-                </ToolbarContent>
-              </Toolbar>
-              {!loaded ? (
-                <div>{t('Loading topology...')}</div>
-              ) : loadError ? (
-                <div>
-                  {t('Error loading topology:')} {loadError.message}
-                </div>
-              ) : parseError ? (
-                <div>
-                  {t('Error parsing topology:')} {parseError}
-                </div>
-              ) : (
-                controller && (
-                  <TopologyView
-                    style={{ height: '70vh' }}
-                    className="kuadrant-policy-topology"
-                    controlBar={
-                      <TopologyControlBar
-                        controlButtons={createTopologyControlButtons({
-                          ...defaultControlButtonsOptions,
-                          resetView: false,
-                          zoomInCallback: action(() => {
-                            controller.getGraph().scaleBy(4 / 3);
-                          }),
-                          zoomOutCallback: action(() => {
-                            controller.getGraph().scaleBy(0.75);
-                          }),
-                          fitToScreenCallback: action(() => {
-                            controller.getGraph().fit(80);
-                          }),
-                          legend: false,
-                        })}
-                      />
-                    }
+      <PageSection>
+        <Title headingLevel="h1">{t('Policy Topology')}</Title>
+        <Card>
+          <CardTitle>{t('Topology View')}</CardTitle>
+          <CardBody>
+            <Content>
+              <Content component="p" className="pf-u-mb-md">
+                {t(
+                  'This view visualizes the relationships and interactions between different resources within your cluster related to Kuadrant, allowing you to explore connections between Gateways, HTTPRoutes and Kuadrant Policies.',
+                )}
+              </Content>
+            </Content>
+            <Toolbar
+              id="resource-filter-toolbar"
+              className="pf-m-toggle-group-container"
+              collapseListedFiltersBreakpoint="xl"
+              clearAllFilters={clearAllFilters}
+              clearFiltersButtonText={t('Reset Filters')}
+            >
+              <ToolbarContent>
+                <ToolbarItem variant="label-group">
+                  <ToolbarFilter
+                    categoryName="Resource"
+                    labels={selectedResourceTypes}
+                    deleteLabel={onDeleteResourceFilter}
+                    deleteLabelGroup={onDeleteResourceGroup}
                   >
-                    <VisualizationProvider controller={controller}>
-                      <VisualizationSurface />
-                    </VisualizationProvider>
-                  </TopologyView>
-                )
-              )}
-            </CardBody>
-          </Card>
-        </PageSection>
-      </Page>
+                    <Select
+                      aria-label="Resource filter"
+                      role="menu"
+                      isOpen={isResourceFilterOpen}
+                      onOpenChange={(isOpen) => setIsResourceFilterOpen(isOpen)}
+                      onSelect={onResourceSelect}
+                      selected={selectedResourceTypes}
+                      toggle={(toggleRef) => (
+                        <MenuToggle
+                          ref={toggleRef}
+                          onClick={() => setIsResourceFilterOpen(!isResourceFilterOpen)}
+                          isExpanded={isResourceFilterOpen}
+                        >
+                          Resource{' '}
+                          {selectedResourceTypes.length > 0 && (
+                            <Badge isRead>{selectedResourceTypes.length}</Badge>
+                          )}
+                        </MenuToggle>
+                      )}
+                    >
+                      <SelectList>
+                        {allResourceTypes.map((type) => (
+                          <SelectOption
+                            key={type}
+                            value={type}
+                            hasCheckbox
+                            isSelected={selectedResourceTypes.includes(type)}
+                          >
+                            {type}
+                          </SelectOption>
+                        ))}
+                      </SelectList>
+                    </Select>
+                  </ToolbarFilter>
+                </ToolbarItem>
+              </ToolbarContent>
+            </Toolbar>
+            {!loaded ? (
+              <div>{t('Loading topology...')}</div>
+            ) : loadError ? (
+              <div>
+                {t('Error loading topology:')} {loadError.message}
+              </div>
+            ) : parseError ? (
+              <div>
+                {t('Error parsing topology:')} {parseError}
+              </div>
+            ) : (
+              controller && (
+                <TopologyView
+                  style={{ height: '70vh' }}
+                  className="kuadrant-policy-topology"
+                  controlBar={
+                    <TopologyControlBar
+                      controlButtons={createTopologyControlButtons({
+                        ...defaultControlButtonsOptions,
+                        resetView: false,
+                        zoomInCallback: action(() => {
+                          controller.getGraph().scaleBy(4 / 3);
+                        }),
+                        zoomOutCallback: action(() => {
+                          controller.getGraph().scaleBy(0.75);
+                        }),
+                        fitToScreenCallback: action(() => {
+                          controller.getGraph().fit(80);
+                        }),
+                        legend: false,
+                      })}
+                    />
+                  }
+                >
+                  <VisualizationProvider controller={controller}>
+                    <VisualizationSurface />
+                  </VisualizationProvider>
+                </TopologyView>
+              )
+            )}
+          </CardBody>
+        </Card>
+      </PageSection>
     </>
   );
 };
