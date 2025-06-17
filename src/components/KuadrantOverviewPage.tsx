@@ -46,7 +46,7 @@ import {
   usePrometheusPoll,
   PrometheusEndpoint,
   K8sResourceCommon,
-  k8sList,
+  useK8sWatchResource,
   GreenCheckCircleIcon,
   YellowExclamationTriangleIcon,
   TableData,
@@ -96,16 +96,16 @@ interface Gateway extends K8sResourceCommon {
     }[];
   };
 }
-const GatewayModel = {
-  apiGroup: 'gateway.networking.k8s.io',
-  apiVersion: 'v1',
-  kind: 'Gateway',
-  plural: 'gateways',
-  namespaced: true,
-  abbr: '',
-  label: 'Gateways',
-  labelPlural: '',
-};
+// const GatewayModel = {
+//   apiGroup: 'gateway.networking.k8s.io',
+//   apiVersion: 'v1',
+//   kind: 'Gateway',
+//   plural: 'gateways',
+//   namespaced: true,
+//   abbr: '',
+//   label: 'Gateways',
+//   labelPlural: '',
+// };
 
 const KuadrantOverviewPage: React.FC = () => {
   const history = useHistory();
@@ -524,52 +524,29 @@ const KuadrantOverviewPage: React.FC = () => {
     },
   };
 
-  const [gateways, setGateways] = React.useState<Gateway[]>([]);
+  const gvk = { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' };
 
-  const healthyCount = gateways.filter((gw) => {
-    const conditions = gw.status?.conditions ?? [];
-    const accepted = conditions.find((c) => c.type === 'Accepted' && c.status === 'True');
-    const programmed = conditions.find((c) => c.type === 'Programmed' && c.status === 'True');
-    return accepted && programmed;
-  }).length;
+  const [gateways, gatewayLoaded, gatewayError] = useK8sWatchResource<Gateway[]>({
+    groupVersionKind: gvk,
+    isList: true,
+    namespace: ns,
+  });
 
-  const unhealthyCount = gateways.length - healthyCount;
+  console.log('hello', gateways, gatewayLoaded, gatewayError);
 
-  React.useEffect(() => {
-    const fetchGateways = async () => {
-      try {
-        const res = await k8sList({
-          model: GatewayModel,
-          queryParams: {
-            ns: '',
-          },
-        });
-
-        // Create an updatedGateways array
-        const updatedGateways = Array.isArray(res) ? res : res.items ?? [];
-
-        // Compare if the new and old gateways are different
-        if (JSON.stringify(updatedGateways) !== JSON.stringify(gateways)) {
-          setGateways(updatedGateways);
-        }
-        if (Array.isArray(res)) {
-          setGateways(res);
-        } else {
-          setGateways(res.items ?? []);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    // Call the function once to prevent the initial 5 second delay
-    fetchGateways();
-
-    // Check if there's a gateway change every 5 seconds, run the fetch gateway function periodically
-    const interval = setInterval(fetchGateways, 5000);
-    // Reset the 5 second counter
-    return () => clearInterval(interval);
+  const gatewayCount = React.useMemo(() => gateways?.length ?? 0, [gateways]);
+  
+  const healthyCount = React.useMemo(() => {
+    return gateways.filter((gw) => {
+      const conditions = gw.status?.conditions ?? [];
+      const accepted = conditions.some((c) => c.type === 'Accepted' && c.status === 'True');
+      const programmed = conditions.some((c) => c.type === 'Programmed' && c.status === 'True');
+      return accepted && programmed;
+    }).length;
   }, [gateways]);
+
+  const unhealthyCount = gatewayCount - healthyCount;
+
   if (loading) {
     return <div>{t('Loading Permissions...')}</div>;
   } else
