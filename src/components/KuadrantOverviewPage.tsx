@@ -96,16 +96,6 @@ interface Gateway extends K8sResourceCommon {
     }[];
   };
 }
-// const GatewayModel = {
-//   apiGroup: 'gateway.networking.k8s.io',
-//   apiVersion: 'v1',
-//   kind: 'Gateway',
-//   plural: 'gateways',
-//   namespaced: true,
-//   abbr: '',
-//   label: 'Gateways',
-//   labelPlural: '',
-// };
 
 const KuadrantOverviewPage: React.FC = () => {
   const history = useHistory();
@@ -529,12 +519,9 @@ const KuadrantOverviewPage: React.FC = () => {
   const [gateways, gatewayLoaded, gatewayError] = useK8sWatchResource<Gateway[]>({
     groupVersionKind: gvk,
     isList: true,
-    namespace: ns,
   });
 
   console.log('hello', gateways, gatewayLoaded, gatewayError);
-
-  const gatewayCount = React.useMemo(() => gateways?.length ?? 0, [gateways]);
   
   const healthyCount = React.useMemo(() => {
     return gateways.filter((gw) => {
@@ -545,7 +532,7 @@ const KuadrantOverviewPage: React.FC = () => {
     }).length;
   }, [gateways]);
 
-  const unhealthyCount = gatewayCount - healthyCount;
+  const unhealthyCount = gateways.length - healthyCount;
 
   if (loading) {
     return <div>{t('Loading Permissions...')}</div>;
