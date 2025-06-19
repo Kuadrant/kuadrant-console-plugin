@@ -516,7 +516,7 @@ const KuadrantOverviewPage: React.FC = () => {
 
   const gvk = { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' };
 
-  const [gateways, gatewayLoaded, gatewayError] = useK8sWatchResource<Gateway[]>({
+  const [gateways] = useK8sWatchResource<Gateway[]>({
     groupVersionKind: gvk,
     isList: true,
   });
