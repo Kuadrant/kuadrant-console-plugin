@@ -46,7 +46,7 @@ import {
   usePrometheusPoll,
   PrometheusEndpoint,
   K8sResourceCommon,
-  k8sList,
+  useK8sWatchResource,
   GreenCheckCircleIcon,
   YellowExclamationTriangleIcon,
   TableData,
@@ -96,16 +96,6 @@ interface Gateway extends K8sResourceCommon {
     }[];
   };
 }
-const GatewayModel = {
-  apiGroup: 'gateway.networking.k8s.io',
-  apiVersion: 'v1',
-  kind: 'Gateway',
-  plural: 'gateways',
-  namespaced: true,
-  abbr: '',
-  label: 'Gateways',
-  labelPlural: '',
-};
 
 const KuadrantOverviewPage: React.FC = () => {
   const history = useHistory();
@@ -524,38 +514,24 @@ const KuadrantOverviewPage: React.FC = () => {
     },
   };
 
-  const [gateways, setGateways] = React.useState<Gateway[]>([]);
+  const gvk = { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' };
 
-  const healthyCount = gateways.filter((gw) => {
-    const conditions = gw.status?.conditions ?? [];
-    const accepted = conditions.find((c) => c.type === 'Accepted' && c.status === 'True');
-    const programmed = conditions.find((c) => c.type === 'Programmed' && c.status === 'True');
-    return accepted && programmed;
-  }).length;
+  const [gateways, gatewayLoaded, gatewayError] = useK8sWatchResource<Gateway[]>({
+    groupVersionKind: gvk,
+    isList: true,
+  });
+
+  const healthyCount = React.useMemo(() => {
+    return gateways.filter((gw) => {
+      const conditions = gw.status?.conditions ?? [];
+      const accepted = conditions.some((c) => c.type === 'Accepted' && c.status === 'True');
+      const programmed = conditions.some((c) => c.type === 'Programmed' && c.status === 'True');
+      return accepted && programmed;
+    }).length;
+  }, [gateways]);
 
   const unhealthyCount = gateways.length - healthyCount;
 
-  React.useEffect(() => {
-    const fetchGateways = async () => {
-      try {
-        const res = await k8sList({
-          model: GatewayModel,
-          queryParams: {
-            ns: '',
-          },
-        });
-        if (Array.isArray(res)) {
-          setGateways(res);
-        } else {
-          setGateways(res.items ?? []);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    fetchGateways();
-  }, []);
   if (loading) {
     return <div>{t('Loading Permissions...')}</div>;
   } else
