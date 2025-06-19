@@ -521,8 +521,6 @@ const KuadrantOverviewPage: React.FC = () => {
     isList: true,
   });
 
-  console.log('hello', gateways, gatewayLoaded, gatewayError);
-  
   const healthyCount = React.useMemo(() => {
     return gateways.filter((gw) => {
       const conditions = gw.status?.conditions ?? [];
