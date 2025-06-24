@@ -5,9 +5,9 @@ import { useTranslation } from 'react-i18next';
 import {
   CheckCircleIcon,
   ExclamationTriangleIcon,
-  LayerGroupIcon,
+  BuildIcon,
   UploadIcon,
-  OutlinedHourglassIcon,
+  PendingIcon,
 } from '@patternfly/react-icons';
 
 import { Label, Tooltip } from '@patternfly/react-core';
@@ -185,12 +185,7 @@ const getStatusLabel = (obj) => {
   const generalConditions = status?.conditions || [];
 
   if (generalConditions.length === 0) {
-    return generateLabelWithTooltip(
-      'Creating',
-      'cyan',
-      <OutlinedHourglassIcon />,
-      tooltipTexts['Creating'],
-    );
+    return generateLabelWithTooltip('Creating', 'cyan', <PendingIcon />, tooltipTexts['Creating']);
   }
 
   const enforcedCondition = generalConditions.find(
@@ -226,7 +221,7 @@ const getStatusLabel = (obj) => {
     return generateLabelWithTooltip(
       'Overridden (Not Enforced)',
       'grey',
-      <LayerGroupIcon />,
+      <BuildIcon />,
       tooltipTexts['Overridden (Not Enforced)'],
     );
   } else if (acceptedCondition) {
