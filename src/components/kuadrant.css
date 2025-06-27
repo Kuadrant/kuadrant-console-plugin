@@ -78,19 +78,19 @@
 }
 
 .kuadrant-dashboard-learning {
-  color: var(--pf-global--palette--purple-700);
+  color: var(--pf-v5-global--palette--purple-700);
 }
 
-.pf-theme-dark .kuadrant-dashboard-learning {
+.pf-v5-theme-dark .kuadrant-dashboard-learning {
   color: var(--pf-v5-global--palette--purple-200);
 }
 
 .kuadrant-dashboard-feature-highlights {
-  color: var(--pf-global--palette--blue-300);
+  color: var(--pf-v5-global--palette--blue-300);
 }
 
 .kuadrant-dashboard-enhance {
-  color: var(--pf-global--palette--orange-400);
+  color: var(--pf-v5-global--palette--orange-400);
 }
 
 .kuadrant-dashboard-resource-link {
