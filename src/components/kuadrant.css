@@ -140,6 +140,12 @@
   justify-content: flex-start;
 }
 
+.pf-v5-theme-dark .kuadrant-pagination-left {
+  display: flex;
+  justify-content: flex-start;
+  background-color: var(--pf-v5-global--BackgroundColor--100) !important; /* OCP 4.19 background color */
+}
+
 .kuadrant-policy-list-body {
   width: 100%;
 }
@@ -162,4 +168,12 @@
 .popover-codes {
   max-height: 240px;
   overflow-y: auto;
+}
+
+.pf-v5-theme-dark .pf-m-compact {
+  background-color: var(--pf-v5-global--BackgroundColor--100) !important; /* Note: OCP 4.19 background color */
+}
+
+.pf-v5-theme-dark .pf-m-border-rows {
+  background-color: var(--pf-v5-global--BackgroundColor--100) !important; /* Note: OCP 4.19 background color */
 }
