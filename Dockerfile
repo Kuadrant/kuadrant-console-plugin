@@ -1,4 +1,4 @@
-FROM registry.access.redhat.com/ubi9:latest
+FROM registry.access.redhat.com/ubi9/ubi:latest
 
 USER root
 
