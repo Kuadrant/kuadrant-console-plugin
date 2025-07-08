@@ -358,12 +358,60 @@ const customLayoutFactory = (type: string, graph: any): any => {
   });
 };
 
+interface PolicyConfig {
+  key: string;
+  displayName: string;
+}
+const RESOURCE_POLICIES_MAP: Record<string, PolicyConfig[]> = {
+  Gateway: [
+    { key: 'AuthPolicy', displayName: 'Create AuthPolicy' },
+    { key: 'DNSPolicy', displayName: 'Create DNSPolicy' },
+    { key: 'RateLimitPolicy', displayName: 'Create RateLimitPolicy' },
+    { key: 'TLSPolicy', displayName: 'Create TLSPolicy' },
+  ],
+  HTTPRoute: [
+    { key: 'AuthPolicy', displayName: 'Create AuthPolicy' },
+    { key: 'RateLimitPolicy', displayName: 'Create RateLimitPolicy' },
+  ],
+};
+const navigateToCreatePolicy = (policyType: string) => {
+  const resource = dynamicResourceGVKMapping[policyType];
+  if (!resource) {
+    console.error(`GVK mapping not found for policy type: ${policyType}`);
+    return;
+  }
+  const url = `/k8s/ns/default/${resource.group}~${resource.version}~${resource.kind}/~new`;
+  window.location.href = url;
+};
 const customComponentFactory = (kind: ModelKind, type: string) => {
-  const contextMenuItem = (resourceType: string, resourceName: string) => (
-    <ContextMenuItem key="go-to-resource" onClick={() => goToResource(resourceType, resourceName)}>
-      Go to Resource
-    </ContextMenuItem>
-  );
+  const contextMenuItem = (resourceType: string, resourceName: string) => {
+    const createPolicyMenuItems = (resourceType: string) => {
+      const policies = RESOURCE_POLICIES_MAP[resourceType] || [];
+
+      return policies
+        .filter((policy) => dynamicResourceGVKMapping[policy.key])
+        .map((policy) => (
+          <ContextMenuItem
+            key={`create-${policy.key.toLowerCase()}`}
+            onClick={() => navigateToCreatePolicy(policy.key)}
+          >
+            {policy.displayName}
+          </ContextMenuItem>
+        ));
+    };
+
+    return (
+      <>
+        <ContextMenuItem
+          key="go-to-resource"
+          onClick={() => goToResource(resourceType, resourceName)}
+        >
+          Go to Resource
+        </ContextMenuItem>
+        {RESOURCE_POLICIES_MAP[resourceType] && <>{createPolicyMenuItems(resourceType)}</>}
+      </>
+    );
+  };
 
   const contextMenu = (element: any) => {
     const resourceType = element.getData().type;
