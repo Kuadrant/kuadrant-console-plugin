@@ -655,7 +655,7 @@ const KuadrantOverviewPage: React.FC = () => {
               </Card>
             )}
 
-            <Flex className="pf-u-mt-xl">
+            <Flex className="pf-v5-u-mt-xl">
               <FlexItem flex={{ default: 'flex_1' }}>
                 <Card>
                   {/* TODO: Loading placeholder */}
@@ -731,7 +731,7 @@ const KuadrantOverviewPage: React.FC = () => {
               </FlexItem>
             </Flex>
 
-            <Flex className="pf-u-mt-xl">
+            <Flex className="pf-v5-u-mt-xl">
               {resourceRBAC['Gateway']?.list ? (
                 <FlexItem flex={{ default: 'flex_1' }}>
                   <Card>
@@ -740,7 +740,7 @@ const KuadrantOverviewPage: React.FC = () => {
                       {resourceRBAC['Gateway']?.create ? (
                         <Button
                           onClick={() => handleCreateResource('Gateway')}
-                          className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                          className="kuadrant-overview-create-button pf-v5-u-mt-md pf-v5-u-mr-md"
                         >
                           {t(`Create Gateway`)}
                         </Button>
@@ -792,7 +792,7 @@ const KuadrantOverviewPage: React.FC = () => {
               )}
             </Flex>
 
-            <Flex className="pf-u-mt-xl">
+            <Flex className="pf-v5-u-mt-xl">
               {policyRBACNill ? (
                 <FlexItem flex={{ default: 'flex_1' }}>
                   <Card>
@@ -831,7 +831,7 @@ const KuadrantOverviewPage: React.FC = () => {
                             onClick={onToggleClick}
                             isExpanded={isCreateOpen}
                             variant="primary"
-                            className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                            className="kuadrant-overview-create-button pf-v5-u-mt-md pf-v5-u-mr-md"
                           >
                             {t('Create Policy')}
                           </MenuToggle>
@@ -883,7 +883,7 @@ const KuadrantOverviewPage: React.FC = () => {
                       {resourceRBAC['HTTPRoute']?.create ? (
                         <Button
                           onClick={() => handleCreateResource('HTTPRoute')}
-                          className="kuadrant-overview-create-button pf-u-mt-md pf-u-mr-md"
+                          className="kuadrant-overview-create-button pf-v5-u-mt-md pf-v5-u-mr-md"
                         >
                           {t(`Create HTTPRoute`)}
                         </Button>
