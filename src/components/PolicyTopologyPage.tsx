@@ -358,11 +358,33 @@ const customLayoutFactory = (type: string, graph: any): any => {
   });
 };
 
+const handleAttachPolicy = (resourceType: string, resourceName: string) => {
+  // Пока просто alert для проверки
+  alert(`Attach policy to ${resourceType}: ${resourceName}`);
+  
+  // Скоро здесь будет логика показа подменю политик
+};
+
 const customComponentFactory = (kind: ModelKind, type: string) => {
   const contextMenuItem = (resourceType: string, resourceName: string) => (
-    <ContextMenuItem key="go-to-resource" onClick={() => goToResource(resourceType, resourceName)}>
-      Go to Resource
-    </ContextMenuItem>
+      <><ContextMenuItem key="go-to-resource" onClick={() => goToResource(resourceType, resourceName)}>
+        Go to Resource
+      </ContextMenuItem>
+        {resourceType === 'Gateway' && (
+            <><ContextMenuItem key="go-to-policy" onClick={() => handleAttachPolicy(resourceType, resourceName)}>
+               Create AuthPolicy
+            </ContextMenuItem>
+            <ContextMenuItem key="go-to-policy" onClick={() => handleAttachPolicy(resourceType, resourceName)}>
+            Create DNSPolicy
+            </ContextMenuItem>
+            <ContextMenuItem key="go-to-policy" onClick={() => handleAttachPolicy(resourceType, resourceName)}>
+            Create RateLimitPolicy
+            </ContextMenuItem>
+            <ContextMenuItem key="go-to-policy" onClick={() => handleAttachPolicy(resourceType, resourceName)}>
+            Create TLSPolicy
+            </ContextMenuItem>
+            </>
+        )}</>
   );
 
   const contextMenu = (element: any) => {
