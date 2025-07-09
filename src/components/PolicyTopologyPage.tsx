@@ -381,7 +381,7 @@ const customComponentFactory = (kind: ModelKind, type: string) => {
             Create RateLimitPolicy
             </ContextMenuItem>
             <ContextMenuItem key="go-to-policy" onClick={() => handleAttachPolicy(resourceType, resourceName)}>
-            Create TLSPolicy
+              Create а
             </ContextMenuItem>
             </>
         )}</>
