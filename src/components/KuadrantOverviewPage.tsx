@@ -59,6 +59,7 @@ import resourceGVKMapping from '../utils/latest';
 import { useHistory } from 'react-router-dom';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
+import { KuadrantStatusAlert } from './KuadrantStatusAlert';
 
 export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
@@ -544,6 +545,8 @@ const KuadrantOverviewPage: React.FC = () => {
           <PageSection isFilled>
             <Title headingLevel="h1">{t('Kuadrant')} Overview</Title>
             <br />
+            
+            <KuadrantStatusAlert />
 
             {!hideCard && (
               <Card id="expandable-card" isExpanded={isExpanded}>
