@@ -66,6 +66,8 @@
   "Issuer: Reference to the issuer for the created certificate. To create an additional Issuer go to": "Issuer: Reference to the issuer for the created certificate. To create an additional Issuer go to",
   "Kuadrant": "Kuadrant",
   "Kuadrant Policies": "Kuadrant Policies",
+  "Kuadrant Status": "Kuadrant Status",
+  "Kuadrant Status Loading...": "Kuadrant Status Loading...",
   "Last 24h overview": "Last 24h overview",
   "Learn how to create, import and use Kuadrant policies on OpenShift with step-by-step instructions and tasks.": "Learn how to create, import and use Kuadrant policies on OpenShift with step-by-step instructions and tasks.",
   "Learning Resources": "Learning Resources",
