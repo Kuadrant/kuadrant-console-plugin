@@ -364,7 +364,7 @@ const navigateToCreatePolicy = (policyType: string) => {
     console.error(`GVK mapping not found for policy type: ${policyType}`);
     return;
   }
-  const url = `/k8s/cluster/${resource.group}~${resource.version}~${resource.kind}/~new`;
+  const url = `/k8s/ns/default/${resource.group}~${resource.version}~${resource.kind}/~new`;
   window.location.href = url;
 };
 const customComponentFactory = (kind: ModelKind, type: string) => {
