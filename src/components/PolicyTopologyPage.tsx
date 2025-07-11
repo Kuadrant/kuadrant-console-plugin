@@ -384,54 +384,58 @@ const customComponentFactory = (kind: ModelKind, type: string) => {
       setIsOpen(!isOpen);
     };
 
+
     const policyItems = POLICIES.map((policy) => (
-      <DropdownItem
+        <DropdownItem
         key={policy.id}
-        component="button"
-        onClick={() => handleAttachPolicy(policy.name, resourceName)}
-      >
-        Create {policy.name}
-      </DropdownItem>
+            component="button"
+            onClick={() => handleAttachPolicy(policy.name, resourceName)}
+        >
+          Создать {policy.name}
+        </DropdownItem>
     ));
 
     const onSelect = () => {
       setIsOpen(false);
     };
 
-    return [
-      <Dropdown
-        isOpen={isOpen}
-        onSelect={onSelect}
-        onOpenChange={(isOpen: boolean) => setIsOpen(isOpen)}
-        toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-          <MenuToggle
-            ref={toggleRef}
-            onClick={onToggleClick}
-            isExpanded={isOpen}
-            //
-            style={{ display: 'none' }}
-          >
-            {resourceName}
-          </MenuToggle>
-        )}
-        isPlain //
-      >
-        <DropdownList>
-          <DropdownItem
-            key="go-to-resource"
-            component="button"
-            onClick={() => goToResource(resourceType, resourceName)}
-          >
-            Go to Resource
-          </DropdownItem>
 
-          {/* check is gw*/}
-          {resourceType === 'Gateway' && (
-            <DropdownGroup label="create policy">{policyItems}</DropdownGroup>
-          )}
-        </DropdownList>
-      </Dropdown>,
-    ];
+    return (
+        [<Dropdown
+            isOpen={isOpen}
+            onSelect={onSelect}
+            onOpenChange={(isOpen: boolean) => setIsOpen(isOpen)}
+            toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                <MenuToggle
+                    ref={toggleRef}
+                    onClick={onToggleClick}
+                    isExpanded={isOpen}
+                    //
+                    style={{ display: 'none' }}
+                >
+                  {resourceName}
+                </MenuToggle>
+            )}
+            isPlain //
+        >
+          <DropdownList>
+            <DropdownItem
+                key="go-to-resource"
+                component="button"
+                onClick={() => goToResource(resourceType, resourceName)}
+            >
+              Go to Resource
+            </DropdownItem>
+
+            {/* check is gw*/}
+            {resourceType === 'Gateway' && (
+                <DropdownGroup label="create policy">
+                  {policyItems}
+                </DropdownGroup>
+            )}
+          </DropdownList>
+        </Dropdown>]
+    );
   };
 
   switch (type) {
@@ -442,6 +446,8 @@ const customComponentFactory = (kind: ModelKind, type: string) => {
         case ModelKind.graph:
           return withPanZoom()(GraphComponent);
         case ModelKind.node:
+          // withContextMenu ожидает компонент, который он будет рендерить
+          // HOC withContextMenu сам управляет позиционированием и открытием
           return withContextMenu(contextMenu)(CustomNode);
         case ModelKind.edge:
           return withSelection()(DefaultEdge);
