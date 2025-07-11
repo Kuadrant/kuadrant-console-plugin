@@ -18,11 +18,6 @@ import {
   SelectList,
   SelectOption,
   MenuToggle,
-  Dropdown,
-  DropdownGroup,
-  DropdownItem,
-  DropdownList,
-  MenuToggleElement,
 } from '@patternfly/react-core';
 import {
   useK8sWatchResource,
@@ -49,6 +44,7 @@ import {
   EdgeStyle,
   EdgeAnimationSpeed,
   withContextMenu,
+  ContextMenuItem,
   action,
   DefaultGroup,
 } from '@patternfly/react-topology';
@@ -59,7 +55,6 @@ import { CubesIcon, CloudUploadAltIcon, TopologyIcon, RouteIcon } from '@pattern
 import * as dot from 'graphlib-dot';
 import './kuadrant.css';
 import NoPermissionsView from './NoPermissionsView';
-import { useState } from 'react';
 
 interface GVK {
   group: string;
@@ -363,79 +358,39 @@ const customLayoutFactory = (type: string, graph: any): any => {
   });
 };
 
-// Список политик и обработчик остаются теми же
-const POLICIES = [
-  { id: 'auth-policy', name: 'AuthPolicy' },
-  { id: 'dns-policy', name: 'DNSPolicy' },
-  { id: 'ratelimit-policy', name: 'RateLimitPolicy' },
-];
-
-const handleAttachPolicy = (policyName: string, resourceName: string) => {
-  alert(`Attach ${policyName} to resource: ${resourceName}`);
+const handleAttachPolicy = (resourceType: string, resourceName: string) => {
+  // Пока просто alert для проверки
+  alert(`Attach policy to ${resourceType}: ${resourceName}`);
+  
+  // Скоро здесь будет логика показа подменю политик
 };
 
 const customComponentFactory = (kind: ModelKind, type: string) => {
+  const contextMenuItem = (resourceType: string, resourceName: string) => (
+      <><ContextMenuItem key="go-to-resource" onClick={() => goToResource(resourceType, resourceName)}>
+        Go to Resource
+      </ContextMenuItem>
+        {resourceType === 'Gateway' && (
+            <><ContextMenuItem key="go-to-policy" onClick={() => handleAttachPolicy(resourceType, resourceName)}>
+               Create AuthPolicy
+            </ContextMenuItem>
+            <ContextMenuItem key="go-to-policy" onClick={() => handleAttachPolicy(resourceType, resourceName)}>
+            Create DNSPolicy
+            </ContextMenuItem>
+            <ContextMenuItem key="go-to-policy" onClick={() => handleAttachPolicy(resourceType, resourceName)}>
+            Create RateLimitPolicy
+            </ContextMenuItem>
+            <ContextMenuItem key="go-to-policy" onClick={() => handleAttachPolicy(resourceType, resourceName)}>
+              Create а
+            </ContextMenuItem>
+            </>
+        )}</>
+  );
+
   const contextMenu = (element: any) => {
-    const [isOpen, setIsOpen] = useState(false);
     const resourceType = element.getData().type;
     const resourceName = element.getLabel();
-
-    const onToggleClick = () => {
-      setIsOpen(!isOpen);
-    };
-
-
-    const policyItems = POLICIES.map((policy) => (
-        <DropdownItem
-        key={policy.id}
-            component="button"
-            onClick={() => handleAttachPolicy(policy.name, resourceName)}
-        >
-          Создать {policy.name}
-        </DropdownItem>
-    ));
-
-    const onSelect = () => {
-      setIsOpen(false);
-    };
-
-
-    return (
-        [<Dropdown
-            isOpen={isOpen}
-            onSelect={onSelect}
-            onOpenChange={(isOpen: boolean) => setIsOpen(isOpen)}
-            toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                <MenuToggle
-                    ref={toggleRef}
-                    onClick={onToggleClick}
-                    isExpanded={isOpen}
-                    //
-                    style={{ display: 'none' }}
-                >
-                  {resourceName}
-                </MenuToggle>
-            )}
-            isPlain //
-        >
-          <DropdownList>
-            <DropdownItem
-                key="go-to-resource"
-                component="button"
-                onClick={() => goToResource(resourceType, resourceName)}
-            >
-              Go to Resource
-            </DropdownItem>
-
-            {/* check is gw*/}
-            {resourceType === 'Gateway' && (
-                <DropdownGroup label="create policy">
-                  {policyItems}
-                </DropdownGroup>
-            )}
-          </DropdownList>
-        </Dropdown>]
-    );
+    return [contextMenuItem(resourceType, resourceName)];
   };
 
   switch (type) {
@@ -446,8 +401,6 @@ const customComponentFactory = (kind: ModelKind, type: string) => {
         case ModelKind.graph:
           return withPanZoom()(GraphComponent);
         case ModelKind.node:
-          // withContextMenu ожидает компонент, который он будет рендерить
-          // HOC withContextMenu сам управляет позиционированием и открытием
           return withContextMenu(contextMenu)(CustomNode);
         case ModelKind.edge:
           return withSelection()(DefaultEdge);
