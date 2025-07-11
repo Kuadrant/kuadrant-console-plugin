@@ -358,13 +358,15 @@ const customLayoutFactory = (type: string, graph: any): any => {
   });
 };
 
-const handleAttachPolicy = (resourceType: string, resourceName: string) => {
-  // Пока просто alert для проверки
-  alert(`Attach policy to ${resourceType}: ${resourceName}`);
-
-  // Скоро здесь будет логика показа подменю политик
+const navigateToCreatePolicy = (policyType: string) => {
+  const resource = dynamicResourceGVKMapping[policyType];
+  if (!resource) {
+    console.error(`GVK mapping not found for policy type: ${policyType}`);
+    return;
+  }
+  const url = `/k8s/cluster/${resource.group}~${resource.version}~${resource.kind}/~new`;
+  window.location.href = url;
 };
-
 const customComponentFactory = (kind: ModelKind, type: string) => {
   const contextMenuItem = (resourceType: string, resourceName: string) => (
     <>
@@ -377,28 +379,28 @@ const customComponentFactory = (kind: ModelKind, type: string) => {
       {resourceType === 'Gateway' && (
         <>
           <ContextMenuItem
-            key="go-to-policy"
-            onClick={() => handleAttachPolicy(resourceType, resourceName)}
+            key="create-auth-policy"
+            onClick={() => navigateToCreatePolicy('AuthPolicy')}
           >
             Create AuthPolicy
           </ContextMenuItem>
           <ContextMenuItem
-            key="go-to-policy"
-            onClick={() => handleAttachPolicy(resourceType, resourceName)}
+            key="create-dns-policy"
+            onClick={() => navigateToCreatePolicy('DNSPolicy')}
           >
             Create DNSPolicy
           </ContextMenuItem>
           <ContextMenuItem
-            key="go-to-policy"
-            onClick={() => handleAttachPolicy(resourceType, resourceName)}
+            key="create-ratelimit-policy"
+            onClick={() => navigateToCreatePolicy('RateLimitPolicy')}
           >
             Create RateLimitPolicy
           </ContextMenuItem>
           <ContextMenuItem
-            key="go-to-policy"
-            onClick={() => handleAttachPolicy(resourceType, resourceName)}
+            key="create-tls-policy"
+            onClick={() => navigateToCreatePolicy('TLSPolicy')}
           >
-            Create а
+            Create TLSPolicy
           </ContextMenuItem>
         </>
       )}
