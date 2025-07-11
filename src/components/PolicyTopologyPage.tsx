@@ -358,6 +358,22 @@ const customLayoutFactory = (type: string, graph: any): any => {
   });
 };
 
+interface PolicyConfig {
+  key: string;
+  displayName: string;
+}
+const RESOURCE_POLICIES_MAP: Record<string, PolicyConfig[]> = {
+  Gateway: [
+    { key: 'AuthPolicy', displayName: 'Create AuthPolicy' },
+    { key: 'DNSPolicy', displayName: 'Create DNSPolicy' },
+    { key: 'RateLimitPolicy', displayName: 'Create RateLimitPolicy' },
+    { key: 'TLSPolicy', displayName: 'Create TLSPolicy' },
+  ],
+  HTTPRoute: [
+    { key: 'AuthPolicy', displayName: 'Create AuthPolicy' },
+    { key: 'RateLimitPolicy', displayName: 'Create RateLimitPolicy' },
+  ],
+};
 const navigateToCreatePolicy = (policyType: string) => {
   const resource = dynamicResourceGVKMapping[policyType];
   if (!resource) {
@@ -368,44 +384,34 @@ const navigateToCreatePolicy = (policyType: string) => {
   window.location.href = url;
 };
 const customComponentFactory = (kind: ModelKind, type: string) => {
-  const contextMenuItem = (resourceType: string, resourceName: string) => (
-    <>
-      <ContextMenuItem
-        key="go-to-resource"
-        onClick={() => goToResource(resourceType, resourceName)}
-      >
-        Go to Resource
-      </ContextMenuItem>
-      {resourceType === 'Gateway' && (
-        <>
+  const contextMenuItem = (resourceType: string, resourceName: string) => {
+    const createPolicyMenuItems = (resourceType: string) => {
+      const policies = RESOURCE_POLICIES_MAP[resourceType] || [];
+
+      return policies
+        .filter((policy) => dynamicResourceGVKMapping[policy.key])
+        .map((policy) => (
           <ContextMenuItem
-            key="create-auth-policy"
-            onClick={() => navigateToCreatePolicy('AuthPolicy')}
+            key={`create-${policy.key.toLowerCase()}`}
+            onClick={() => navigateToCreatePolicy(policy.key)}
           >
-            Create AuthPolicy
+            {policy.displayName}
           </ContextMenuItem>
-          <ContextMenuItem
-            key="create-dns-policy"
-            onClick={() => navigateToCreatePolicy('DNSPolicy')}
-          >
-            Create DNSPolicy
-          </ContextMenuItem>
-          <ContextMenuItem
-            key="create-ratelimit-policy"
-            onClick={() => navigateToCreatePolicy('RateLimitPolicy')}
-          >
-            Create RateLimitPolicy
-          </ContextMenuItem>
-          <ContextMenuItem
-            key="create-tls-policy"
-            onClick={() => navigateToCreatePolicy('TLSPolicy')}
-          >
-            Create TLSPolicy
-          </ContextMenuItem>
-        </>
-      )}
-    </>
-  );
+        ));
+    };
+
+    return (
+      <>
+        <ContextMenuItem
+          key="go-to-resource"
+          onClick={() => goToResource(resourceType, resourceName)}
+        >
+          Go to Resource
+        </ContextMenuItem>
+        {RESOURCE_POLICIES_MAP[resourceType] && <>{createPolicyMenuItems(resourceType)}</>}
+      </>
+    );
+  };
 
   const contextMenu = (element: any) => {
     const resourceType = element.getData().type;
