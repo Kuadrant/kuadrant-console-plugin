@@ -362,7 +362,7 @@ interface PolicyConfig {
   key: string;
   displayName: string;
 }
-const RESOURCE_POLICIES_MAP: Record<string, PolicyConfig[]> = {
+const ResourcePolicyMap: Record<string, PolicyConfig[]> = {
   Gateway: [
     { key: 'AuthPolicy', displayName: 'Create AuthPolicy' },
     { key: 'DNSPolicy', displayName: 'Create DNSPolicy' },
@@ -383,23 +383,13 @@ const navigateToCreatePolicy = (policyType: string) => {
   const url = `/k8s/ns/default/${resource.group}~${resource.version}~${resource.kind}/~new`;
   window.location.href = url;
 };
+
+const getPolicyConfigsForResource = (resourceType: string): PolicyConfig[] =>
+  (ResourcePolicyMap[resourceType] || []).filter((policy) => dynamicResourceGVKMapping[policy.key]);
+
 const customComponentFactory = (kind: ModelKind, type: string) => {
   const contextMenuItem = (resourceType: string, resourceName: string) => {
-    const createPolicyMenuItems = (resourceType: string) => {
-      const policies = RESOURCE_POLICIES_MAP[resourceType] || [];
-
-      return policies
-        .filter((policy) => dynamicResourceGVKMapping[policy.key])
-        .map((policy) => (
-          <ContextMenuItem
-            key={`create-${policy.key.toLowerCase()}`}
-            onClick={() => navigateToCreatePolicy(policy.key)}
-          >
-            {policy.displayName}
-          </ContextMenuItem>
-        ));
-    };
-
+    const policyConfigs = getPolicyConfigsForResource(resourceType);
     return (
       <>
         <ContextMenuItem
@@ -408,7 +398,14 @@ const customComponentFactory = (kind: ModelKind, type: string) => {
         >
           Go to Resource
         </ContextMenuItem>
-        {RESOURCE_POLICIES_MAP[resourceType] && <>{createPolicyMenuItems(resourceType)}</>}
+        {policyConfigs.map((policy) => (
+          <ContextMenuItem
+            key={`create-${policy.key.toLowerCase()}`}
+            onClick={() => navigateToCreatePolicy(policy.key)}
+          >
+            {policy.displayName}
+          </ContextMenuItem>
+        ))}
       </>
     );
   };
