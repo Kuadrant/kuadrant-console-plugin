@@ -558,7 +558,7 @@ const PolicyTopologyPage: React.FC = () => {
 
           // If the user has not yet set any filter, default to those in the showByDefault set
           let newSelected = selectedResourceTypes.filter((r) => uniqueTypes.includes(r));
-          if (selectedResourceTypes.length === 0) {
+          if (selectedResourceTypes.length === 0 && isInitialLoad) {
             newSelected = uniqueTypes.filter((t) => showByDefault.has(t));
             setSelectedResourceTypes(newSelected);
           }
