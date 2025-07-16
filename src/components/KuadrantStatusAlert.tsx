@@ -37,21 +37,47 @@ export const KuadrantStatusAlert: React.FC = () => {
 
       if (reason === 'MissingDependency') {
         return (
-          <Alert title={t('Kuadrant Status')} variant="warning" ouiaId="WarningAlert">
-            <div>{kuadrantResource?.status?.conditions?.[0]?.message}</div>
+          <Alert
+            isExpandable={true}
+            title={t('Kuadrant Status')}
+            variant="warning"
+            ouiaId="WarningAlert"
+          >
+            <div>
+              {t('Message')}: {kuadrantResource?.status?.conditions?.[0]?.message}
+            </div>
+            <div>
+              {t('Reason')}: {kuadrantResource?.status?.conditions?.[0]?.reason}
+            </div>
+            <div>
+              {t('Status')}: {kuadrantResource?.status?.conditions?.[0]?.status}
+            </div>
           </Alert>
         );
       } else {
         return (
-          <Alert title={t('Kuadrant Status')} variant="success" ouiaId="SuccessAlert">
-            <div>{kuadrantResource?.status?.conditions?.[0]?.message}</div>
+          <Alert
+            isExpandable={true}
+            title={t('Kuadrant Status')}
+            variant="success"
+            ouiaId="SuccessAlert"
+          >
+            <div>
+              {t('Message')}: {kuadrantResource?.status?.conditions?.[0]?.message}
+            </div>
+            <div>
+              {t('Reason')}: {kuadrantResource?.status?.conditions?.[0]?.reason}
+            </div>
+            <div>
+              {t('Status')}: {kuadrantResource?.status?.conditions?.[0]?.status}
+            </div>
           </Alert>
         );
       }
     }
   } else {
     return (
-      <Alert title={t('Kuadrant Status')} variant="danger">
+      <Alert isExpandable={true} title={t('Kuadrant Status')} variant="danger">
         <div>{t(err.toString())}</div>
       </Alert>
     );
