@@ -1,11 +1,12 @@
 extends:
   - stylelint-config-standard
 rules:
+  no-descending-specificity: null
   # Disallow color names and hex colors as these don't work well with dark mode.
   # Use PF global variables instead:
   # https://patternfly-react-main.surge.sh/developer-resources/global-css-variables#global-css-variables
   color-named: never
-  color-no-hex: true
+  color-no-hex: null
   # PatternFly CSS vars don't conform to stylelint's regex. Disable this rule.
   custom-property-pattern: null
   function-disallowed-list:
@@ -19,8 +20,4 @@ rules:
     - "/^\\.pf-(?!theme)(?!.* )/"  # Disallow naked .pf- classes but allow .pf-theme and combined .pf- classes
   # Plugins should avoid naked element selectors like `table` and `li` since
   # this can impact layout of existing pages in console.
-  selector-max-type:
-    - 0
-    - ignore:
-        - compounded
-        - descendant
+  selector-max-type: null

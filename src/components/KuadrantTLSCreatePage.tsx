@@ -233,7 +233,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
         </title>
       </Helmet>
       <Page>
-        <PageSection className="pf-m-no-padding" variant="light">
+        <PageSection hasBodyWrapper={false} className="pf-m-no-padding">
           <div className="co-m-nav-title">
             <Title headingLevel="h1">{create ? 'Create TLS Policy' : 'Edit TLS Policy'}</Title>
             <p className="help-block co-m-pane__heading-help-text">
@@ -275,7 +275,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
           </FormGroup>
         </PageSection>
         {view === 'form' ? (
-          <PageSection variant="light">
+          <PageSection hasBodyWrapper={false}>
             <Form className="co-m-pane__form">
               <FormGroup label={t('Policy name')} isRequired fieldId="simple-form-policy-name-01">
                 <TextInput

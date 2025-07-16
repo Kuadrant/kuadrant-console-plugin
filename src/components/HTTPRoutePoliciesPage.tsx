@@ -42,7 +42,7 @@ const HTTPRoutePoliciesPage: React.FC = () => {
         <title data-test="example-page-title">{t('Kuadrant Policies')}</title>
       </Helmet>
       <Page>
-        <PageSection variant="light">
+        <PageSection hasBodyWrapper={false}>
           <Title headingLevel="h2">{t('Kuadrant Policies')}</Title>
           {!loaded ? (
             <div>Loading...</div>

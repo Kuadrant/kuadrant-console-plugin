@@ -82,7 +82,7 @@ export const AllPoliciesListPage: React.FC<{
   showAlertGroup?: boolean;
   paginationLimit?: number;
   resourceRBAC: RBACMap;
-}> = ({ activeNamespace, columns, showAlertGroup = false, paginationLimit, resourceRBAC }) => {
+}> = ({ activeNamespace, columns, paginationLimit, resourceRBAC }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activePerspective] = useActivePerspective();
 
