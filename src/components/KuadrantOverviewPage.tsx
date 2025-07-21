@@ -627,9 +627,7 @@ const KuadrantOverviewPage: React.FC = () => {
                             <ReplicatorIcon /> {t('Operations & Tools')}
                           </Title>
                           <Content component={ContentVariants.small}>
-                            {t(
-                              'Additional operators and tools to support Kuadrant.',
-                            )}
+                            {t('Additional operators and tools to support Kuadrant.')}
                           </Content>
                           <Stack hasGutter className="pf-u-mt-md">
                             <StackItem>
