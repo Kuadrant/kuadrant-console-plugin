@@ -2,10 +2,10 @@ import {
   FormGroup,
   FormSelect,
   FormSelectOption,
-  Modal,
   TextInput,
   Wizard,
   WizardStep,
+  Modal,
 } from '@patternfly/react-core';
 import * as React from 'react';
 import { LimitConfig } from './types';

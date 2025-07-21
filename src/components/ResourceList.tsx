@@ -6,7 +6,6 @@ import {
   AlertGroup,
   Pagination,
   EmptyState,
-  EmptyStateIcon,
   EmptyStateBody,
   Title,
   ToolbarItem,
@@ -292,7 +291,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
                     key={column.id}
                     id={column.id}
                     activeColumnIDs={activeColumnIDs}
-                    className="pf-v5-c-table__action"
+                    className="pf-v6-c-table__action"
                   >
                     <DropdownWithKebab obj={obj} />
                   </TableData>
@@ -356,11 +355,14 @@ const ResourceList: React.FC<ResourceListProps> = ({
             </ToolbarContent>
           </Toolbar>
           {paginatedData.length === 0 && allLoaded ? (
-            <EmptyState>
-              <EmptyStateIcon icon={SearchIcon} />
-              <Title headingLevel="h4" size="lg">
-                {t('No')} {emtpyResourceName} {t('found')}
-              </Title>
+            <EmptyState
+              titleText={
+                <Title headingLevel="h4" size="lg">
+                  {t('No')} {emtpyResourceName} {t('found')}
+                </Title>
+              }
+              icon={SearchIcon}
+            >
               <EmptyStateBody>
                 {t('There are no')} {emtpyResourceName} {t('to display - please create some.')}
               </EmptyStateBody>

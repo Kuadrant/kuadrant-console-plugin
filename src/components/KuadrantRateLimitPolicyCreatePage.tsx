@@ -4,10 +4,9 @@ import {
   Button,
   ButtonVariant,
   Modal,
-  ModalBox,
-  ModalBoxHeader,
-  ModalBoxBody,
-  ModalBoxFooter,
+  ModalVariant,
+  ModalBody,
+  ModalFooter,
 } from '@patternfly/react-core';
 
 import { useTranslation } from 'react-i18next';
@@ -66,22 +65,20 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
         header="Create RateLimit Policy"
         create
       />
-      <Modal isOpen={isErrorModalOpen} onClose={() => setIsErrorModalOpen(false)} variant="medium">
-        <ModalBox aria-labelledby="error-modal-title" aria-describedby="error-modal-description">
-          <ModalBoxHeader>{t('Error creating Rate Limit Policy')}</ModalBoxHeader>
-          <ModalBoxBody id="error-modal-description">
-            <b>{errorModalMsg}</b>
-          </ModalBoxBody>
-          <ModalBoxFooter>
-            <Button
-              key="ok"
-              variant={ButtonVariant.link}
-              onClick={() => setIsErrorModalOpen(false)}
-            >
-              OK
-            </Button>
-          </ModalBoxFooter>
-        </ModalBox>
+      <Modal
+        isOpen={isErrorModalOpen}
+        onClose={() => setIsErrorModalOpen(false)}
+        variant={ModalVariant.medium}
+        title={t('Error creating Rate Limit Policy')}
+      >
+        <ModalBody>
+          <b>{errorModalMsg}</b>
+        </ModalBody>
+        <ModalFooter>
+          <Button key="ok" variant={ButtonVariant.link} onClick={() => setIsErrorModalOpen(false)}>
+            OK
+          </Button>
+        </ModalFooter>
       </Modal>
     </>
   );

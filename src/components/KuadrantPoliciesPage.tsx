@@ -82,7 +82,7 @@ export const AllPoliciesListPage: React.FC<{
   showAlertGroup?: boolean;
   paginationLimit?: number;
   resourceRBAC: RBACMap;
-}> = ({ activeNamespace, columns, showAlertGroup = false, paginationLimit, resourceRBAC }) => {
+}> = ({ activeNamespace, columns, paginationLimit, resourceRBAC }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activePerspective] = useActivePerspective();
 
@@ -139,12 +139,14 @@ export const AllPoliciesListPage: React.FC<{
     <>
       <ListPageBody>
         <div className="co-m-nav-title--row kuadrant-resource-create-container">
-          <ResourceList
-            resources={filteredResources.map((r) => r.gvk)}
-            namespace={activeNamespace}
-            columns={columns}
-            paginationLimit={paginationLimit}
-          />
+          <div className="kuadrant-policy-list">
+            <ResourceList
+              resources={filteredResources.map((r) => r.gvk)}
+              namespace={activeNamespace}
+              columns={columns}
+              paginationLimit={paginationLimit}
+            />
+          </div>
 
           <div className="kuadrant-resource-create-button pf-u-mt-md">
             <Dropdown
@@ -261,7 +263,7 @@ const KuadrantPoliciesPage: React.FC = () => {
     {
       title: '', // No title for the kebab menu column
       id: 'kebab',
-      props: { className: 'pf-v5-c-table__action' },
+      props: { className: 'pf-v6-c-table__action' },
     },
   ];
 
