@@ -546,6 +546,11 @@ const KuadrantOverviewPage: React.FC = () => {
             {t('Kuadrant')} Overview
           </Title>
           <Grid hasGutter>
+            {/* Kuadrant CR Status Alert */}
+            <GridItem style={{ marginTop: '8px' }}>
+              <KuadrantStatusAlert />
+            </GridItem>
+
             {!hideCard && (
               <GridItem>
                 <Card id="expandable-card" isExpanded={isExpanded}>
