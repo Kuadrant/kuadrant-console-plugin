@@ -794,7 +794,7 @@ const KuadrantOverviewPage: React.FC = () => {
             )}
 
             {policyRBACNill ? (
-              <GridItem>
+              <GridItem lg={6}>
                 <Card>
                   <CardBody className="pf-u-p-10">
                     <CardTitle>
@@ -820,7 +820,7 @@ const KuadrantOverviewPage: React.FC = () => {
                 </Card>
               </GridItem>
             ) : (
-              <GridItem>
+              <GridItem lg={6}>
                 <Card>
                   <CardTitle className="kuadrant-resource-create-container">
                     <Title headingLevel="h2">{t('Policies')}</Title>
@@ -879,7 +879,7 @@ const KuadrantOverviewPage: React.FC = () => {
             )}
 
             {resourceRBAC['HTTPRoute']?.list ? (
-              <GridItem>
+              <GridItem lg={6}>
                 <Card>
                   <CardTitle className="kuadrant-resource-create-container">
                     <Title headingLevel="h2">{t('HTTPRoutes')}</Title>
@@ -909,7 +909,7 @@ const KuadrantOverviewPage: React.FC = () => {
                 </Card>
               </GridItem>
             ) : (
-              <GridItem>
+              <GridItem lg={6}>
                 <Card>
                   <CardBody className="pf-u-p-10">
                     <CardTitle>
