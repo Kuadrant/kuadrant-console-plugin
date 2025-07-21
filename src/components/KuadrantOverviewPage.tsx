@@ -212,7 +212,7 @@ const KuadrantOverviewPage: React.FC = () => {
     {
       title: '',
       id: 'kebab',
-      props: { className: 'pf-v5-c-table__action' },
+      props: { className: 'pf-v6-c-table__action' },
     },
   ];
 
@@ -260,7 +260,7 @@ const KuadrantOverviewPage: React.FC = () => {
     {
       title: '',
       id: 'kebab',
-      props: { className: 'pf-v5-c-table__action' },
+      props: { className: 'pf-v6-c-table__action' },
     },
   ];
 
@@ -540,7 +540,7 @@ const KuadrantOverviewPage: React.FC = () => {
         <Helmet>
           <title data-test="example-page-title">{t('Kuadrant')}</title>
         </Helmet>
-        <PageSection>
+        <PageSection className="kuadrant-overview-page">
           <Title headingLevel="h1" className="pf-u-mb-lg">
             {t('Kuadrant')} Overview
           </Title>

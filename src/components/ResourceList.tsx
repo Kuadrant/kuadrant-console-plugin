@@ -291,7 +291,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
                     key={column.id}
                     id={column.id}
                     activeColumnIDs={activeColumnIDs}
-                    className="pf-v5-c-table__action"
+                    className="pf-v6-c-table__action"
                   >
                     <DropdownWithKebab obj={obj} />
                   </TableData>
