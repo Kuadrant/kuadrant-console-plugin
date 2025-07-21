@@ -624,11 +624,11 @@ const KuadrantOverviewPage: React.FC = () => {
                         <Divider orientation={{ default: 'vertical' }} />
                         <FlexItem flex={{ default: 'flex_1' }}>
                           <Title headingLevel="h4" className="kuadrant-dashboard-enhance">
-                            <ReplicatorIcon /> {t('Enhance Your Work')}
+                            <ReplicatorIcon /> {t('Operations & Tools')}
                           </Title>
                           <Content component={ContentVariants.small}>
                             {t(
-                              'Ease operational complexity with API management and App Connectivity by using additional Operators and tools.',
+                              'Additional operators and tools to support Kuadrant.',
                             )}
                           </Content>
                           <Stack hasGutter className="pf-u-mt-md">
