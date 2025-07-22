@@ -22,13 +22,30 @@ interface KuadrantResource extends K8sResourceCommon {
   };
 }
 
-export const KuadrantStatusAlert: React.FC = () => {
+export const KuadrantStatusAlert: React.FC = React.memo(() => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const kuadrantGVK: K8sGroupVersionKind = resourceGVKMapping.Kuadrant;
 
-  const [kuadrantResource, loaded, err] = useK8sWatchResource<KuadrantResource>({
+  const [kuadrantList, listLoaded, listErr] = useK8sWatchResource<KuadrantResource[]>({
     groupVersionKind: kuadrantGVK,
+    isList: true,
   });
+
+  const kuadrantItem = listLoaded && !listErr && kuadrantList?.length > 0 ? kuadrantList[0] : null;
+
+  const [kuadrantResource, loaded, err] = useK8sWatchResource<KuadrantResource>(
+    kuadrantItem
+      ? {
+          groupVersionKind: kuadrantGVK,
+          name: kuadrantItem.metadata.name,
+          namespace: kuadrantItem.metadata.namespace,
+        }
+      : { groupVersionKind: kuadrantGVK },
+  );
+
+  if (!listLoaded || listErr || !kuadrantItem) {
+    return null;
+  }
 
   const conditions = kuadrantResource?.status?.conditions ?? [];
   const missingDependency = conditions.filter((c) => c.reason === 'MissingDependency');
@@ -142,4 +159,6 @@ export const KuadrantStatusAlert: React.FC = () => {
       </Tooltip>
     </div>
   );
-};
+});
+
+KuadrantStatusAlert.displayName = 'KuadrantStatusAlert';
