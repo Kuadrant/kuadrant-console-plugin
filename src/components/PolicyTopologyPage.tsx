@@ -497,13 +497,13 @@ const PolicyTopologyPage: React.FC = () => {
   const [configMap, loaded, loadError] = useK8sWatchResource<any>(
     config
       ? {
-        groupVersionKind: {
-          version: 'v1',
-          kind: 'ConfigMap',
-        },
-        name: config.TOPOLOGY_CONFIGMAP_NAME,
-        namespace: config.TOPOLOGY_CONFIGMAP_NAMESPACE,
-      }
+          groupVersionKind: {
+            version: 'v1',
+            kind: 'ConfigMap',
+          },
+          name: config.TOPOLOGY_CONFIGMAP_NAME,
+          namespace: config.TOPOLOGY_CONFIGMAP_NAMESPACE,
+        }
       : null, // Only watch if config is loaded
   );
 
@@ -610,7 +610,7 @@ const PolicyTopologyPage: React.FC = () => {
 
             // node types that should preserve transitive connections when filtered
             const transitiveNodeTypes = new Set(['Listener', 'HTTPRouteRule']);
-            
+
             // for each filtered-out node, create transitive edges
             allNodes.forEach((node) => {
               if (!keptNodeIds.has(node.id) && transitiveNodeTypes.has(node.resourceType)) {
@@ -729,20 +729,20 @@ const PolicyTopologyPage: React.FC = () => {
   const accessReviewProps = React.useMemo(() => {
     return config
       ? {
-        group: '',
-        resource: 'ConfigMap',
-        verb: 'read' as K8sVerb,
-        namespace: config.TOPOLOGY_CONFIGMAP_NAMESPACE,
-        name: config.TOPOLOGY_CONFIGMAP_NAME,
-      }
+          group: '',
+          resource: 'ConfigMap',
+          verb: 'read' as K8sVerb,
+          namespace: config.TOPOLOGY_CONFIGMAP_NAMESPACE,
+          name: config.TOPOLOGY_CONFIGMAP_NAME,
+        }
       : {
-        // fallback
-        group: '',
-        resource: '',
-        verb: 'read' as K8sVerb,
-        namespace: '',
-        name: '',
-      };
+          // fallback
+          group: '',
+          resource: '',
+          verb: 'read' as K8sVerb,
+          namespace: '',
+          name: '',
+        };
   }, [config]);
 
   const [canReadTopology, isLoadingPermissions] = useAccessReview(accessReviewProps);
