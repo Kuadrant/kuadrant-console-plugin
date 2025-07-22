@@ -120,7 +120,7 @@ const KuadrantOverviewPage: React.FC = () => {
   }));
   const { userRBAC, loading } = useAccessReviews(rbacResources);
 
-  const policies = ['AuthPolicy', 'RateLimitPolicy', 'DNSPolicy', 'TLSPolicy'];
+  const policies = [t('AuthPolicy'), t('RateLimitPolicy'), t('DNSPolicy'), t('TLSPolicy')];
 
   const resourceRBAC = [
     'TLSPolicy',

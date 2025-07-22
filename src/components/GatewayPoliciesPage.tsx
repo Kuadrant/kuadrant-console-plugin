@@ -1,7 +1,7 @@
 import * as React from 'react';
 import Helmet from 'react-helmet';
 import { useTranslation } from 'react-i18next';
-import { Page, PageSection, Title } from '@patternfly/react-core';
+import { PageSection, Title } from '@patternfly/react-core';
 import { useLocation } from 'react-router-dom';
 import './kuadrant.css';
 import AssociatedResourceList from './AssociatedResourceList';
@@ -40,18 +40,16 @@ const GatewayPoliciesPage: React.FC = () => {
       <Helmet>
         <title data-test="example-page-title">{t('Kuadrant Policies')}</title>
       </Helmet>
-      <Page>
-        <PageSection hasBodyWrapper={false}>
-          <Title headingLevel="h2">{t('Kuadrant Policies')}</Title>
-          {!loaded ? (
-            <div>Loading...</div>
-          ) : loadError ? (
-            <div>Error loading HTTPRoute: {loadError.message}</div>
-          ) : (
-            <AssociatedResourceList resource={httpRoute} />
-          )}
-        </PageSection>
-      </Page>
+      <PageSection hasBodyWrapper={false}>
+        <Title headingLevel="h2">{t('Kuadrant Policies')}</Title>
+        {!loaded ? (
+          <div>Loading...</div>
+        ) : loadError ? (
+          <div>Error loading Gateway: {loadError.message}</div>
+        ) : (
+          <AssociatedResourceList resource={httpRoute} />
+        )}
+      </PageSection>
     </>
   );
 };
