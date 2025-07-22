@@ -59,6 +59,7 @@ import resourceGVKMapping from '../utils/latest';
 import { useHistory } from 'react-router-dom';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
+import { KuadrantStatusAlert } from './KuadrantStatusAlert';
 
 export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
@@ -545,6 +546,11 @@ const KuadrantOverviewPage: React.FC = () => {
             {t('Kuadrant')} Overview
           </Title>
           <Grid hasGutter>
+            {/* Kuadrant CR Status Alert */}
+            <GridItem style={{ marginTop: '8px' }}>
+              <KuadrantStatusAlert />
+            </GridItem>
+
             {!hideCard && (
               <GridItem>
                 <Card id="expandable-card" isExpanded={isExpanded}>
