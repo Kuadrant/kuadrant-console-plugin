@@ -19,7 +19,7 @@ export const EXTERNAL_LINKS = {
   documentation: 'https://docs.kuadrant.io',
   releaseNotes: 'https://github.com/Kuadrant/kuadrant-operator/releases',
   secureConnectProtect:
-    'https://docs.kuadrant.io/latest/kuadrant-operator/doc/user-guides/secure-protect-connect-single-multi-cluster/',
+    'https://docs.kuadrant.io/latest/kuadrant-operator/doc/user-guides/full-walkthrough/secure-protect-connect/',
   highlights: 'https://kuadrant.io/blog/',
   blog: 'https://kuadrant.io/blog/',
 };
