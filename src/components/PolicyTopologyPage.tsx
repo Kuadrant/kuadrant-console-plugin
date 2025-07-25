@@ -583,11 +583,80 @@ const PolicyTopologyPage: React.FC = () => {
 
           const finalNodes = [...filteredNormalNodes, ...filteredGroups];
 
-          // Filter edges to include only those connecting valid node IDs
+          // preserve transitive connections when intermediate nodes are filtered out
+          const preserveTransitiveEdges = (
+            allNodes: any[],
+            allEdges: any[],
+            keptNodeIds: Set<string>,
+          ) => {
+            const edgesBySource = new Map<string, any[]>();
+            const edgesByTarget = new Map<string, any[]>();
+
+            // build edge lookup maps
+            allEdges.forEach((edge) => {
+              if (!edgesBySource.has(edge.source)) {
+                edgesBySource.set(edge.source, []);
+              }
+              edgesBySource.get(edge.source)?.push(edge);
+
+              if (!edgesByTarget.has(edge.target)) {
+                edgesByTarget.set(edge.target, []);
+              }
+              edgesByTarget.get(edge.target)?.push(edge);
+            });
+
+            const resultEdges: any[] = [];
+            const processedEdges = new Set<string>();
+
+            // node types that should preserve transitive connections when filtered
+            const transitiveNodeTypes = new Set(['Listener', 'HTTPRouteRule']);
+
+            // for each filtered-out node, create transitive edges
+            allNodes.forEach((node) => {
+              if (!keptNodeIds.has(node.id) && transitiveNodeTypes.has(node.resourceType)) {
+                // this node is being filtered out and is a type we want to preserve connections for
+                const incomingEdges = edgesByTarget.get(node.id) || [];
+                const outgoingEdges = edgesBySource.get(node.id) || [];
+
+                // create transitive edges from all predecessors to all successors
+                incomingEdges.forEach((inEdge) => {
+                  outgoingEdges.forEach((outEdge) => {
+                    if (keptNodeIds.has(inEdge.source) && keptNodeIds.has(outEdge.target)) {
+                      const edgeKey = `${inEdge.source}-${outEdge.target}`;
+                      if (!processedEdges.has(edgeKey)) {
+                        processedEdges.add(edgeKey);
+                        resultEdges.push({
+                          id: `edge-${inEdge.source}-${outEdge.target}`,
+                          type: 'edge',
+                          source: inEdge.source,
+                          target: outEdge.target,
+                          edgeStyle: EdgeStyle.default,
+                          style: { strokeWidth: 2, stroke: '#393F44' },
+                        });
+                      }
+                    }
+                  });
+                });
+              }
+            });
+
+            // add original edges between kept nodes
+            allEdges.forEach((edge) => {
+              if (keptNodeIds.has(edge.source) && keptNodeIds.has(edge.target)) {
+                const edgeKey = `${edge.source}-${edge.target}`;
+                if (!processedEdges.has(edgeKey)) {
+                  processedEdges.add(edgeKey);
+                  resultEdges.push(edge);
+                }
+              }
+            });
+
+            return resultEdges;
+          };
+
+          // Filter edges to include transitive connections
           const validNodeIds = new Set(finalNodes.map((n) => n.id));
-          const filteredEdges = edges.filter(
-            (e) => validNodeIds.has(e.source) && validNodeIds.has(e.target),
-          );
+          const filteredEdges = preserveTransitiveEdges(nodes, edges, validNodeIds);
 
           // check if filter changed
           const filterChanged =
