@@ -65,7 +65,6 @@ import { useHistory } from 'react-router-dom';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
 import { KuadrantStatusAlert } from './KuadrantStatusAlert';
-// import { getStatusLabel } from '../utils/statusLabel';
 
 export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
@@ -199,7 +198,6 @@ const KuadrantOverviewPage: React.FC = () => {
     </>
   );
 
-  // Status legend popover used inline next to status labels
   const StatusLegend: React.FC = () => {
     return (
       <Popover
@@ -221,27 +219,42 @@ const KuadrantOverviewPage: React.FC = () => {
                 justifyItems: 'start',
               }}
             >
-              <Label isCompact color="green" icon={<CheckCircleIcon />}> {t('Enforced')} </Label>
+              <Label isCompact color="green" icon={<CheckCircleIcon />}>
+                {' '}
+                {t('Enforced')}{' '}
+              </Label>
               <span style={{ fontSize: 12 }}>
                 {t('Resource is accepted, configured, and all policies are enforced.')}
               </span>
 
-              <Label isCompact color="purple" icon={<UploadIcon />}> {t('Accepted ')} </Label>
+              <Label isCompact color="purple" icon={<UploadIcon />}>
+                {' '}
+                {t('Accepted ')}{' '}
+              </Label>
               <span style={{ fontSize: 12 }}>
                 {t('Resource is accepted, but not all policies are enforced.')}
               </span>
 
-              <Label isCompact color="blue" icon={<BuildIcon />}> {t('Programmed')} </Label>
+              <Label isCompact color="blue" icon={<BuildIcon />}>
+                {' '}
+                {t('Programmed')}{' '}
+              </Label>
               <span style={{ fontSize: 12 }}>
                 {t('Resource is being configured but not yet enforced.')}
               </span>
 
-              <Label isCompact color="red" icon={<ExclamationCircleIcon />}> {t('Conflicted')} </Label>
+              <Label isCompact color="red" icon={<ExclamationCircleIcon />}>
+                {' '}
+                {t('Conflicted')}{' '}
+              </Label>
               <span style={{ fontSize: 12 }}>
                 {t('Resource has conflicts, possibly due to policies or configuration issues.')}
               </span>
 
-              <Label isCompact color="red" icon={<ExclamationCircleIcon />}> {t('Resolved')} </Label>
+              <Label isCompact color="red" icon={<ExclamationCircleIcon />}>
+                {' '}
+                {t('Resolved')}{' '}
+              </Label>
               <span style={{ fontSize: 12 }}>
                 {t('All dependencies for the policy are successfully resolved.')}
               </span>
@@ -280,6 +293,30 @@ const KuadrantOverviewPage: React.FC = () => {
     },
   ];
 
+  const getGatewayStatusRank = (gw: Gateway): number => {
+    const conditions = gw.status?.conditions ?? [];
+    const isAccepted = conditions.some((c) => c.type === 'Accepted' && c.status === 'True');
+    const isProgrammed = conditions.some((c) => c.type === 'Programmed' && c.status === 'True');
+    const isConflicted = conditions.some((c) => c.type === 'Conflicted' && c.status === 'True');
+    const isResolvedRefs = conditions.some((c) => c.type === 'ResolvedRefs' && c.status === 'True');
+
+    if (isAccepted && isProgrammed) return 5;
+    if (isProgrammed) return 3;
+    if (isConflicted) return 2;
+    if (isResolvedRefs) return 1;
+    return 0;
+  };
+
+  const sortGatewaysByStatus = (
+    data: K8sResourceCommon[],
+    sortDirection: 'asc' | 'desc',
+  ): K8sResourceCommon[] => {
+    const sorted = [...data].sort(
+      (a, b) => getGatewayStatusRank(a as Gateway) - getGatewayStatusRank(b as Gateway),
+    );
+    return sortDirection === 'desc' ? sorted.reverse() : sorted;
+  };
+
   const gatewayTrafficColumns = [
     {
       title: t('plugin__kuadrant-console-plugin~Name'),
@@ -295,12 +332,16 @@ const KuadrantOverviewPage: React.FC = () => {
     },
     {
       title: (
-        <span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
           {t('plugin__kuadrant-console-plugin~Status')}
-          <StatusLegend />
+          <span style={{ display: 'inline-flex' }}>
+            <StatusLegend />
+          </span>
         </span>
       ) as unknown as string,
       id: 'Status',
+      sort: sortGatewaysByStatus,
+      transforms: [sortable],
     },
     {
       title: t('Total Requests'),
