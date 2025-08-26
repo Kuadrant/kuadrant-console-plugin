@@ -40,6 +40,11 @@ import {
   ExternalLinkAltIcon,
   EllipsisVIcon,
   LockIcon,
+  CheckCircleIcon,
+  ExclamationCircleIcon,
+  BuildIcon,
+  UploadIcon,
+  QuestionCircleIcon,
 } from '@patternfly/react-icons';
 import {
   useActiveNamespace,
@@ -60,6 +65,7 @@ import { useHistory } from 'react-router-dom';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
 import { KuadrantStatusAlert } from './KuadrantStatusAlert';
+// import { getStatusLabel } from '../utils/statusLabel';
 
 export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
@@ -193,6 +199,63 @@ const KuadrantOverviewPage: React.FC = () => {
     </>
   );
 
+  // Status legend popover used inline next to status labels
+  const StatusLegend: React.FC = () => {
+    return (
+      <Popover
+        headerContent={t('Status')}
+        bodyContent={
+          <>
+            <Content component={ContentVariants.p}>
+              {t(
+                'It indicates the current operational state of the Gateway and reflects whether its configuration is applied and functioning correctly.',
+              )}
+            </Content>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'auto 1fr',
+                columnGap: 8,
+                rowGap: 8,
+                alignItems: 'center',
+                justifyItems: 'start',
+              }}
+            >
+              <Label isCompact color="green" icon={<CheckCircleIcon />}> {t('Enforced')} </Label>
+              <span style={{ fontSize: 12 }}>
+                {t('Resource is accepted, configured, and all policies are enforced.')}
+              </span>
+
+              <Label isCompact color="purple" icon={<UploadIcon />}> {t('Accepted ')} </Label>
+              <span style={{ fontSize: 12 }}>
+                {t('Resource is accepted, but not all policies are enforced.')}
+              </span>
+
+              <Label isCompact color="blue" icon={<BuildIcon />}> {t('Programmed')} </Label>
+              <span style={{ fontSize: 12 }}>
+                {t('Resource is being configured but not yet enforced.')}
+              </span>
+
+              <Label isCompact color="red" icon={<ExclamationCircleIcon />}> {t('Conflicted')} </Label>
+              <span style={{ fontSize: 12 }}>
+                {t('Resource has conflicts, possibly due to policies or configuration issues.')}
+              </span>
+
+              <Label isCompact color="red" icon={<ExclamationCircleIcon />}> {t('Resolved')} </Label>
+              <span style={{ fontSize: 12 }}>
+                {t('All dependencies for the policy are successfully resolved.')}
+              </span>
+            </div>
+          </>
+        }
+        triggerAction="hover"
+        position="top"
+      >
+        <QuestionCircleIcon style={{ marginLeft: 6, cursor: 'help' }} aria-label="Status help" />
+      </Popover>
+    );
+  };
+
   const columns = [
     {
       title: t('plugin__kuadrant-console-plugin~Name'),
@@ -231,7 +294,12 @@ const KuadrantOverviewPage: React.FC = () => {
       transforms: [sortable],
     },
     {
-      title: t('plugin__kuadrant-console-plugin~Status'),
+      title: (
+        <span>
+          {t('plugin__kuadrant-console-plugin~Status')}
+          <StatusLegend />
+        </span>
+      ) as unknown as string,
       id: 'Status',
     },
     {
