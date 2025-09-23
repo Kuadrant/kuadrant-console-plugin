@@ -8,7 +8,6 @@ import {
   HelperText,
   HelperTextItem,
   FormHelperText,
-  Page,
   PageSection,
   Title,
   Radio,
@@ -232,129 +231,127 @@ const KuadrantTLSCreatePage: React.FC = () => {
           {create ? t('Create TLS Policy') : t('Edit TLS Policy')}
         </title>
       </Helmet>
-      <Page>
-        <PageSection hasBodyWrapper={false} className="pf-m-no-padding">
-          <div className="co-m-nav-title">
-            <Title headingLevel="h1">{create ? 'Create TLS Policy' : 'Edit TLS Policy'}</Title>
-            <p className="help-block co-m-pane__heading-help-text">
-              <div>
-                {t(
-                  'Targets Gateway API networking resources Gateways to provide TLS for gateway listeners by managing the lifecycle of TLS certificates using cert-manager',
-                )}
-              </div>
-            </p>
-          </div>
-          <FormGroup
-            className="kuadrant-editor-toggle"
-            role="radiogroup"
-            isInline
-            hasNoPaddingTop
-            fieldId="create-type-radio-group"
-            label={t('Configure via')}
-          >
-            <Flex alignItems={{ default: 'alignItemsCenter' }}>
-              <FlexItem>
-                <Radio
-                  label={t('Form View')}
-                  isChecked={view === 'form'}
-                  onChange={() => setView('form')}
-                  id="form-view"
-                  name="view-toggle"
-                />
-              </FlexItem>
-              <FlexItem>
-                <Radio
-                  label={t('YAML View')}
-                  isChecked={view === 'yaml'}
-                  onChange={() => setView('yaml')}
-                  id="yaml-view"
-                  name="view-toggle"
-                />
-              </FlexItem>
-            </Flex>
-          </FormGroup>
-        </PageSection>
-        {view === 'form' ? (
-          <PageSection hasBodyWrapper={false}>
-            <Form className="co-m-pane__form">
-              <FormGroup label={t('Policy name')} isRequired fieldId="simple-form-policy-name-01">
-                <TextInput
-                  isRequired
-                  type="text"
-                  id="simple-form-policy-name-01"
-                  name="simple-form-policy-name-01"
-                  aria-describedby="simple-form-policy-name-01-helper"
-                  value={policyName}
-                  onChange={handleNameChange}
-                  isDisabled={formDisabled}
-                  placeholder={t('Policy name')}
-                />
-                <FormHelperText>
-                  <HelperText>
-                    <HelperTextItem>{t('Unique name of the TLSPolicy.')}</HelperTextItem>
-                  </HelperText>
-                </FormHelperText>
-              </FormGroup>
-              <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
-              <FormGroup
-                role="radiogroup"
-                isInline
-                fieldId="cert-manager-issuer"
-                label={t('Cert manager issuer type')}
-                isRequired
-                aria-labelledby="issuer-label"
-              >
-                <Radio
-                  label={t('Cluster issuer')}
-                  isChecked={certIssuerType === 'clusterissuer'}
-                  onChange={() => {
-                    setCertIssuerType('clusterissuer');
-                  }}
-                  id="cluster-issuer"
-                  name="issuer"
-                />
-                <Radio
-                  label={t('Issuer')}
-                  isChecked={certIssuerType === 'issuer'}
-                  onChange={() => {
-                    setCertIssuerType('issuer');
-                  }}
-                  id="issuer"
-                  name="issuer"
-                />
-              </FormGroup>
-              {certIssuerType === 'clusterissuer' ? (
-                <ClusterIssuerSelect
-                  selectedClusterIssuer={selectedClusterIssuers}
-                  onChange={setSelectedClusterIssuers}
-                />
-              ) : (
-                <IssuerSelect selectedIssuer={selectedIssuer} onChange={setSelectedIssuers} />
+      <PageSection hasBodyWrapper={false} className="pf-m-no-padding">
+        <div className="co-m-nav-title">
+          <Title headingLevel="h1">{create ? 'Create TLS Policy' : 'Edit TLS Policy'}</Title>
+          <p className="help-block co-m-pane__heading-help-text">
+            <div>
+              {t(
+                'Targets Gateway API networking resources Gateways to provide TLS for gateway listeners by managing the lifecycle of TLS certificates using cert-manager',
               )}
-              <ActionGroup className="pf-u-mt-0">
-                <KuadrantCreateUpdate
-                  model={tlsPolicyModel}
-                  resource={tlsPolicy}
-                  policyType="tls"
-                  history={history}
-                  validation={isFormValid}
-                />
-                <Button variant="link" onClick={handleCancelResource}>
-                  {t('Cancel')}
-                </Button>
-              </ActionGroup>
-            </Form>
-          </PageSection>
-        ) : (
-          <React.Suspense fallback={<div> {t('Loading..')}.</div>}>
-            <ResourceYAMLEditor
-              initialResource={yamlInput}
-              create={create}
-              onChange={handleYAMLChange}
-            ></ResourceYAMLEditor>
-          </React.Suspense>
-        )}
-      </Page>
+            </div>
+          </p>
+        </div>
+        <FormGroup
+          className="kuadrant-editor-toggle"
+          role="radiogroup"
+          isInline
+          hasNoPaddingTop
+          fieldId="create-type-radio-group"
+          label={t('Configure via')}
+        >
+          <Flex alignItems={{ default: 'alignItemsCenter' }}>
+            <FlexItem>
+              <Radio
+                label={t('Form View')}
+                isChecked={view === 'form'}
+                onChange={() => setView('form')}
+                id="form-view"
+                name="view-toggle"
+              />
+            </FlexItem>
+            <FlexItem>
+              <Radio
+                label={t('YAML View')}
+                isChecked={view === 'yaml'}
+                onChange={() => setView('yaml')}
+                id="yaml-view"
+                name="view-toggle"
+              />
+            </FlexItem>
+          </Flex>
+        </FormGroup>
+      </PageSection>
+      {view === 'form' ? (
+        <PageSection hasBodyWrapper={false}>
+          <Form className="co-m-pane__form">
+            <FormGroup label={t('Policy name')} isRequired fieldId="simple-form-policy-name-01">
+              <TextInput
+                isRequired
+                type="text"
+                id="simple-form-policy-name-01"
+                name="simple-form-policy-name-01"
+                aria-describedby="simple-form-policy-name-01-helper"
+                value={policyName}
+                onChange={handleNameChange}
+                isDisabled={formDisabled}
+                placeholder={t('Policy name')}
+              />
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem>{t('Unique name of the TLSPolicy.')}</HelperTextItem>
+                </HelperText>
+              </FormHelperText>
+            </FormGroup>
+            <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
+            <FormGroup
+              role="radiogroup"
+              isInline
+              fieldId="cert-manager-issuer"
+              label={t('Cert manager issuer type')}
+              isRequired
+              aria-labelledby="issuer-label"
+            >
+              <Radio
+                label={t('Cluster issuer')}
+                isChecked={certIssuerType === 'clusterissuer'}
+                onChange={() => {
+                  setCertIssuerType('clusterissuer');
+                }}
+                id="cluster-issuer"
+                name="issuer"
+              />
+              <Radio
+                label={t('Issuer')}
+                isChecked={certIssuerType === 'issuer'}
+                onChange={() => {
+                  setCertIssuerType('issuer');
+                }}
+                id="issuer"
+                name="issuer"
+              />
+            </FormGroup>
+            {certIssuerType === 'clusterissuer' ? (
+              <ClusterIssuerSelect
+                selectedClusterIssuer={selectedClusterIssuers}
+                onChange={setSelectedClusterIssuers}
+              />
+            ) : (
+              <IssuerSelect selectedIssuer={selectedIssuer} onChange={setSelectedIssuers} />
+            )}
+            <ActionGroup className="pf-u-mt-0">
+              <KuadrantCreateUpdate
+                model={tlsPolicyModel}
+                resource={tlsPolicy}
+                policyType="tls"
+                history={history}
+                validation={isFormValid}
+              />
+              <Button variant="link" onClick={handleCancelResource}>
+                {t('Cancel')}
+              </Button>
+            </ActionGroup>
+          </Form>
+        </PageSection>
+      ) : (
+        <React.Suspense fallback={<div> {t('Loading..')}.</div>}>
+          <ResourceYAMLEditor
+            initialResource={yamlInput}
+            create={create}
+            onChange={handleYAMLChange}
+          ></ResourceYAMLEditor>
+        </React.Suspense>
+      )}
     </>
   );
 };
