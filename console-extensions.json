@@ -120,6 +120,28 @@
     }
   },
   {
+    "type": "console.action/resource-provider",
+    "properties": {
+      "model": {
+        "group": "kuadrant.io",
+        "version": "v1",
+        "kind": "DNSPolicy"
+      },
+      "provider": { "$codeRef": "useDNSPolicyActions" }
+    }
+  },
+  {
+    "type": "console.action/resource-provider",
+    "properties": {
+      "model": {
+        "group": "kuadrant.io",
+        "version": "v1",
+        "kind": "TLSPolicy"
+      },
+      "provider": { "$codeRef": "useTLSPolicyActions" }
+    }
+  },
+  {
     "type": "console.navigation/section",
     "properties": {
       "id": "kuadrant-section-admin",

@@ -79,7 +79,9 @@
       "KuadrantRateLimitPolicyCreatePage": "./components/KuadrantRateLimitPolicyCreatePage",
       "KuadrantTLSCreatePage": "./components/KuadrantTLSCreatePage",
       "HTTPRoutePoliciesPage": "./components/HTTPRoutePoliciesPage",
-      "GatewayPoliciesPage": "./components/GatewayPoliciesPage"
+      "GatewayPoliciesPage": "./components/GatewayPoliciesPage",
+      "useDNSPolicyActions": "./components/dnspolicy/useDNSPolicyActions",
+      "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions"
     },
     "dependencies": {
       "@console/pluginAPI": "*"
