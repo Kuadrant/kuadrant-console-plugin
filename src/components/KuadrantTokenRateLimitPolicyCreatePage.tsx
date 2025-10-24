@@ -52,7 +52,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
   return (
     <>
       <Helmet>
-        <title data-test="example-page-title">{t('Create Token RateLimit Policy')}</title>
+        <title data-test="example-page-title">{t('Create TokenRateLimit Policy')}</title>
       </Helmet>
 
       <ResourceYAMLEditor
