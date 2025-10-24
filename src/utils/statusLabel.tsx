@@ -50,8 +50,13 @@ const getStatusLabel = (obj) => {
       'kuadrant.io/TLSPolicyAffected',
       'kuadrant.io/AuthPolicyAffected',
       'kuadrant.io/RateLimitPolicyAffected',
+      'kuadrant.io/TokenRateLimitPolicyAffected',
     ],
-    HTTPRoute: ['kuadrant.io/AuthPolicyAffected', 'kuadrant.io/RateLimitPolicyAffected'],
+    HTTPRoute: [
+      'kuadrant.io/AuthPolicyAffected',
+      'kuadrant.io/RateLimitPolicyAffected',
+      'kuadrant.io/TokenRateLimitPolicyAffected',
+    ],
   };
 
   const policiesAffected = policiesMap[kind] || [];
