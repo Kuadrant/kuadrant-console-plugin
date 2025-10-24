@@ -28,6 +28,11 @@ const AssociatedResourceList: React.FC<AssociatedResourceListProps> = ({ resourc
       isList: true,
       namespace: resource.metadata.namespace,
     },
+    TokenRateLimitPolicy: {
+      groupVersionKind: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'TokenRateLimitPolicy' },
+      isList: true,
+      namespace: resource.metadata.namespace,
+    },
     AuthPolicy: {
       groupVersionKind: { group: 'kuadrant.io', version: 'v1', kind: 'AuthPolicy' },
       isList: true,

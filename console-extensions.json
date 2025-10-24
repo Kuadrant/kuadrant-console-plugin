@@ -102,6 +102,17 @@
     "properties": {
       "model": {
         "group": "kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "TokenRateLimitPolicy"
+      },
+      "component": { "$codeRef": "KuadrantTokenRateLimitPolicyCreatePage" }
+    }
+  },
+  {
+    "type": "console.resource/create",
+    "properties": {
+      "model": {
+        "group": "kuadrant.io",
         "version": "v1",
         "kind": "TLSPolicy"
       },
