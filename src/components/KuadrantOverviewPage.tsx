@@ -80,6 +80,7 @@ export const resources: Resource[] = [
   { name: 'AuthPolicies', gvk: resourceGVKMapping['AuthPolicy'] },
   { name: 'DNSPolicies', gvk: resourceGVKMapping['DNSPolicy'] },
   { name: 'RateLimitPolicies', gvk: resourceGVKMapping['RateLimitPolicy'] },
+  { name: 'TokenRateLimitPolicies', gvk: resourceGVKMapping['TokenRateLimitPolicy'] },
   { name: 'TLSPolicies', gvk: resourceGVKMapping['TLSPolicy'] },
   { name: 'Gateways', gvk: resourceGVKMapping['Gateway'] },
   { name: 'HTTPRoutes', gvk: resourceGVKMapping['HTTPRoute'] },
@@ -126,12 +127,19 @@ const KuadrantOverviewPage: React.FC = () => {
   }));
   const { userRBAC, loading } = useAccessReviews(rbacResources);
 
-  const policies = [t('AuthPolicy'), t('RateLimitPolicy'), t('DNSPolicy'), t('TLSPolicy')];
+  const policies = [
+    t('AuthPolicy'),
+    t('RateLimitPolicy'),
+    t('TokenRateLimitPolicy'),
+    t('DNSPolicy'),
+    t('TLSPolicy'),
+  ];
 
   const resourceRBAC = [
     'TLSPolicy',
     'DNSPolicy',
     'RateLimitPolicy',
+    'TokenRateLimitPolicy',
     'AuthPolicy',
     'Gateway',
     'HTTPRoute',
@@ -149,6 +157,7 @@ const KuadrantOverviewPage: React.FC = () => {
   const policyRBACNill =
     !resourceRBAC['AuthPolicy']['list'] &&
     !resourceRBAC['RateLimitPolicy']['list'] &&
+    !resourceRBAC['TokenRateLimitPolicy']['list'] &&
     !resourceRBAC['DNSPolicy']['list'] &&
     !resourceRBAC['TLSPolicy']['list'];
 
@@ -980,6 +989,7 @@ const KuadrantOverviewPage: React.FC = () => {
                         resourceGVKMapping['AuthPolicy'],
                         resourceGVKMapping['DNSPolicy'],
                         resourceGVKMapping['RateLimitPolicy'],
+                        resourceGVKMapping['TokenRateLimitPolicy'],
                         resourceGVKMapping['TLSPolicy'],
                       ]}
                       columns={columns}

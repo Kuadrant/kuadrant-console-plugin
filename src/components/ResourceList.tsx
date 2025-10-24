@@ -77,6 +77,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const resourceKinds = [
     'AuthPolicy',
     'RateLimitPolicy',
+    'TokenRateLimitPolicy',
     'DNSPolicy',
     'TLSPolicy',
     'Gateway',
