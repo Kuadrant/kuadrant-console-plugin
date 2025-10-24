@@ -382,7 +382,7 @@ const KuadrantPoliciesPage: React.FC = () => {
     },
     {
       href: 'tokenratelimit',
-      name: t('Token RateLimit'),
+      name: t('TokenRateLimit'),
       component: TokenRateLimit,
     },
   ];
