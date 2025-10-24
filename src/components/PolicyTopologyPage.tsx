@@ -254,7 +254,13 @@ const CustomNode: React.FC<any> = ({
   const data = element.getData();
   const { type, badge, badgeColor } = data;
 
-  const isPolicyNode = ['TLSPolicy', 'DNSPolicy', 'AuthPolicy', 'RateLimitPolicy'].includes(type);
+  const isPolicyNode = [
+    'TLSPolicy',
+    'DNSPolicy',
+    'AuthPolicy',
+    'RateLimitPolicy',
+    'TokenRateLimitPolicy',
+  ].includes(type);
 
   let IconComponent;
   switch (type) {
