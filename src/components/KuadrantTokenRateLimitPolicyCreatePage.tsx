@@ -57,7 +57,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
 
       <ResourceYAMLEditor
         initialResource={tokenRateLimitPolicy}
-        header="Create Token RateLimit Policy"
+        header="Create TokenRateLimit Policy"
         create
       />
       <Modal
