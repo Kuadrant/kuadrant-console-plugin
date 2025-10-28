@@ -6,6 +6,7 @@ const resourceGVKMapping: { [key: string]: { group: string; version: string; kin
   AuthPolicy: { group: 'kuadrant.io', version: 'v1', kind: 'AuthPolicy' },
   RateLimitPolicy: { group: 'kuadrant.io', version: 'v1', kind: 'RateLimitPolicy' },
   ConfigMap: { group: '', version: 'v1', kind: 'ConfigMap' },
+  TokenRateLimitPolicy: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'TokenRateLimitPolicy' },
   Listener: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Listener' },
   GatewayClass: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'GatewayClass' },
   WasmPlugin: { group: 'extensions.istio.io', version: 'v1alpha1', kind: 'WasmPlugin' },

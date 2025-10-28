@@ -116,6 +116,7 @@ const showByDefault = new Set([
   'Kuadrant',
   'Limitador',
   'RateLimitPolicy',
+  'TokenRateLimitPolicy',
   'TLSPolicy',
 ]);
 
@@ -135,6 +136,7 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       DNSPolicy: NodeShape.rect,
       AuthPolicy: NodeShape.rect,
       RateLimitPolicy: NodeShape.rect,
+      TokenRateLimitPolicy: NodeShape.rect,
       ConfigMap: NodeShape.ellipse,
       Listener: NodeShape.rect,
       Kuadrant: NodeShape.ellipse,
@@ -146,6 +148,7 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       'DNSPolicy',
       'AuthPolicy',
       'RateLimitPolicy',
+      'TokenRateLimitPolicy',
     ]);
 
     // kinds for Kuadrant internals - these will be grouped also
@@ -251,7 +254,13 @@ const CustomNode: React.FC<any> = ({
   const data = element.getData();
   const { type, badge, badgeColor } = data;
 
-  const isPolicyNode = ['TLSPolicy', 'DNSPolicy', 'AuthPolicy', 'RateLimitPolicy'].includes(type);
+  const isPolicyNode = [
+    'TLSPolicy',
+    'DNSPolicy',
+    'AuthPolicy',
+    'RateLimitPolicy',
+    'TokenRateLimitPolicy',
+  ].includes(type);
 
   let IconComponent;
   switch (type) {
@@ -366,10 +375,12 @@ const ResourcePolicyMap: Record<string, PolicyConfig[]> = {
     { key: 'DNSPolicy', displayName: 'Create DNSPolicy' },
     { key: 'RateLimitPolicy', displayName: 'Create RateLimitPolicy' },
     { key: 'TLSPolicy', displayName: 'Create TLSPolicy' },
+    { key: 'TokenRateLimitPolicy', displayName: 'Create TokenRateLimitPolicy' },
   ],
   HTTPRoute: [
     { key: 'AuthPolicy', displayName: 'Create AuthPolicy' },
     { key: 'RateLimitPolicy', displayName: 'Create RateLimitPolicy' },
+    { key: 'TokenRateLimitPolicy', displayName: 'Create TokenRateLimitPolicy' },
   ],
 };
 const navigateToCreatePolicy = (policyType: string) => {
