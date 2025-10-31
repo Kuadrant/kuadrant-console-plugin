@@ -17,7 +17,7 @@ import {
 
 import { k8sDelete, K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
 import { useHistory } from 'react-router-dom';
-import resourceGVKMapping from '../utils/latest';
+import { resourceGVKMapping } from '../utils/resources';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getModelFromResource } from '../utils/getModelFromResource';
 type DropdownWithKebabProps = {
@@ -56,6 +56,8 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
     'DNSPolicy',
     'RateLimitPolicy',
     'TokenRateLimitPolicy',
+    'OIDCPolicy',
+    'PlanPolicy',
     'AuthPolicy',
     'Gateway',
     'HTTPRoute',
@@ -75,6 +77,8 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
       obj.kind === 'AuthPolicy' ||
       obj.kind === 'RateLimitPolicy' ||
       obj.kind === 'TokenRateLimitPolicy' ||
+      obj.kind === 'OIDCPolicy' ||
+      obj.kind === 'PlanPolicy' ||
       obj.kind === 'Gateway' ||
       obj.kind === 'HTTPRoute'
     ) {

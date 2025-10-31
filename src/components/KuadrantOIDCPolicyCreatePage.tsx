@@ -14,37 +14,29 @@ import './kuadrant.css';
 import { ResourceYAMLEditor, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
 import { resourceGVKMapping } from '../utils/resources';
 
-const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
+const KuadrantOIDCPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [selectedNamespace] = useActiveNamespace();
   const [isErrorModalOpen, setIsErrorModalOpen] = React.useState(false);
   const [errorModalMsg] = React.useState('');
 
-  const tokenRateLimitPolicy = {
+  const oidcPolicy = {
     apiVersion:
-      resourceGVKMapping['TokenRateLimitPolicy'].group +
-      '/' +
-      resourceGVKMapping['TokenRateLimitPolicy'].version,
-    kind: resourceGVKMapping['TokenRateLimitPolicy'].kind,
+      resourceGVKMapping['OIDCPolicy'].group + '/' + resourceGVKMapping['OIDCPolicy'].version,
+    kind: resourceGVKMapping['OIDCPolicy'].kind,
     metadata: {
-      name: 'basic-token-limit',
+      name: 'example-oidc-policy',
       namespace: selectedNamespace,
     },
     spec: {
       targetRef: {
         group: 'gateway.networking.k8s.io',
         kind: 'Gateway',
-        name: 'ai-gateway',
+        name: 'my-gateway',
       },
-      limits: {
-        global: {
-          rates: [
-            {
-              limit: 100000,
-              window: '1h',
-            },
-          ],
-        },
+      provider: {
+        clientID: 'my-client-id',
+        issuerURL: 'https://auth.example.com',
       },
     },
   };
@@ -52,19 +44,15 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
   return (
     <>
       <Helmet>
-        <title data-test="example-page-title">{t('Create TokenRateLimit Policy')}</title>
+        <title data-test="example-page-title">{t('Create OIDC Policy')}</title>
       </Helmet>
 
-      <ResourceYAMLEditor
-        initialResource={tokenRateLimitPolicy}
-        header="Create TokenRateLimit Policy"
-        create
-      />
+      <ResourceYAMLEditor initialResource={oidcPolicy} header="Create OIDC Policy" create />
       <Modal
         isOpen={isErrorModalOpen}
         onClose={() => setIsErrorModalOpen(false)}
         variant={ModalVariant.medium}
-        title={t('Error creating Token Rate Limit Policy')}
+        title={t('Error creating OIDC Policy')}
       >
         <ModalBody>
           <b>{errorModalMsg}</b>
@@ -79,4 +67,4 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
   );
 };
 
-export default KuadrantTokenRateLimitPolicyCreatePage;
+export default KuadrantOIDCPolicyCreatePage;
