@@ -188,21 +188,21 @@ export type ResourceKind = keyof typeof RESOURCES;
 // get all policy kinds
 export const getPolicyKinds = (): ResourceKind[] => {
   return Object.entries(RESOURCES)
-    .filter(([_, meta]) => meta.isPolicy)
+    .filter(([, meta]) => meta.isPolicy)
     .map(([kind]) => kind as ResourceKind);
 };
 
 // get all kinds that should show in topology by default
 export const getTopologyDefaultKinds = (): ResourceKind[] => {
   return Object.entries(RESOURCES)
-    .filter(([_, meta]) => meta.showInTopologyByDefault)
+    .filter(([, meta]) => meta.showInTopologyByDefault)
     .map(([kind]) => kind as ResourceKind);
 };
 
 // get all kuadrant internal resource kinds
 export const getKuadrantInternalKinds = (): ResourceKind[] => {
   return Object.entries(RESOURCES)
-    .filter(([_, meta]) => meta.isKuadrantInternal)
+    .filter(([, meta]) => meta.isKuadrantInternal)
     .map(([kind]) => kind as ResourceKind);
 };
 
@@ -219,12 +219,9 @@ export const getResourceMetadata = (kind: ResourceKind): ResourceMetadata => {
 // backwards compatibility - export GVK mapping like latest.tsx
 export const resourceGVKMapping: Record<ResourceKind, ResourceGVK> = Object.entries(
   RESOURCES,
-).reduce(
-  (acc, [kind, meta]) => {
-    acc[kind as ResourceKind] = meta.gvk;
-    return acc;
-  },
-  {} as Record<ResourceKind, ResourceGVK>,
-);
+).reduce((acc, [kind, meta]) => {
+  acc[kind as ResourceKind] = meta.gvk;
+  return acc;
+}, {} as Record<ResourceKind, ResourceGVK>);
 
 export default resourceGVKMapping;

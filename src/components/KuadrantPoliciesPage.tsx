@@ -134,18 +134,18 @@ export const AllPoliciesListPage: React.FC<{
   });
 
   const createPolicyItems = availablePolicies.map((policy) => {
-      return resourceRBAC[policy]?.create ? (
-        <DropdownItem value={policy} key={policy.toLowerCase()}>
+    return resourceRBAC[policy]?.create ? (
+      <DropdownItem value={policy} key={policy.toLowerCase()}>
+        {t(policy)}
+      </DropdownItem>
+    ) : (
+      <Tooltip key={policy} content={t(`You do not have permission to create a ${policy}`)}>
+        <DropdownItem value={policy} isAriaDisabled>
           {t(policy)}
         </DropdownItem>
-      ) : (
-        <Tooltip key={policy} content={t(`You do not have permission to create a ${policy}`)}>
-          <DropdownItem value={policy} isAriaDisabled>
-            {t(policy)}
-          </DropdownItem>
-        </Tooltip>
-      );
-    });
+      </Tooltip>
+    );
+  });
 
   return (
     <>
@@ -287,13 +287,10 @@ const KuadrantPoliciesPage: React.FC = () => {
 
   // dynamically generate RBAC map for all policies
   const policyKinds = getPolicyKinds();
-  const resourceRBAC: RBACMap = policyKinds.reduce(
-    (acc, kind) => {
-      acc[kind] = useResourceRBAC(kind, nsForCheck);
-      return acc;
-    },
-    {} as RBACMap,
-  );
+  const resourceRBAC: RBACMap = policyKinds.reduce((acc, kind) => {
+    acc[kind] = useResourceRBAC(kind, nsForCheck);
+    return acc;
+  }, {} as RBACMap);
 
   const permsLoaded = policyKinds.every((key) => resourceRBAC[key] !== undefined);
   if (!permsLoaded) {

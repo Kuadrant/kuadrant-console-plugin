@@ -34,12 +34,20 @@ const AssociatedResourceList: React.FC<AssociatedResourceListProps> = ({ resourc
       namespace: resource.metadata.namespace,
     },
     OIDCPolicy: {
-      groupVersionKind: { group: 'extensions.kuadrant.io', version: 'v1alpha1', kind: 'OIDCPolicy' },
+      groupVersionKind: {
+        group: 'extensions.kuadrant.io',
+        version: 'v1alpha1',
+        kind: 'OIDCPolicy',
+      },
       isList: true,
       namespace: resource.metadata.namespace,
     },
     PlanPolicy: {
-      groupVersionKind: { group: 'extensions.kuadrant.io', version: 'v1alpha1', kind: 'PlanPolicy' },
+      groupVersionKind: {
+        group: 'extensions.kuadrant.io',
+        version: 'v1alpha1',
+        kind: 'PlanPolicy',
+      },
       isList: true,
       namespace: resource.metadata.namespace,
     },
