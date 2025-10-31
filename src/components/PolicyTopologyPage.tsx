@@ -117,6 +117,8 @@ const showByDefault = new Set([
   'Limitador',
   'RateLimitPolicy',
   'TokenRateLimitPolicy',
+  'OIDCPolicy',
+  'PlanPolicy',
   'TLSPolicy',
 ]);
 
@@ -137,6 +139,8 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       AuthPolicy: NodeShape.rect,
       RateLimitPolicy: NodeShape.rect,
       TokenRateLimitPolicy: NodeShape.rect,
+      OIDCPolicy: NodeShape.rect,
+      PlanPolicy: NodeShape.rect,
       ConfigMap: NodeShape.ellipse,
       Listener: NodeShape.rect,
       Kuadrant: NodeShape.ellipse,
@@ -149,6 +153,8 @@ const parseDotToModel = (dotString: string): { nodes: any[]; edges: any[] } => {
       'AuthPolicy',
       'RateLimitPolicy',
       'TokenRateLimitPolicy',
+      'OIDCPolicy',
+      'PlanPolicy',
     ]);
 
     // kinds for Kuadrant internals - these will be grouped also
@@ -260,6 +266,8 @@ const CustomNode: React.FC<any> = ({
     'AuthPolicy',
     'RateLimitPolicy',
     'TokenRateLimitPolicy',
+    'OIDCPolicy',
+    'PlanPolicy',
   ].includes(type);
 
   let IconComponent;
@@ -376,11 +384,15 @@ const ResourcePolicyMap: Record<string, PolicyConfig[]> = {
     { key: 'RateLimitPolicy', displayName: 'Create RateLimitPolicy' },
     { key: 'TLSPolicy', displayName: 'Create TLSPolicy' },
     { key: 'TokenRateLimitPolicy', displayName: 'Create TokenRateLimitPolicy' },
+    { key: 'OIDCPolicy', displayName: 'Create OIDC Policy' },
+    { key: 'PlanPolicy', displayName: 'Create Plan Policy' },
   ],
   HTTPRoute: [
     { key: 'AuthPolicy', displayName: 'Create AuthPolicy' },
     { key: 'RateLimitPolicy', displayName: 'Create RateLimitPolicy' },
     { key: 'TokenRateLimitPolicy', displayName: 'Create TokenRateLimitPolicy' },
+    { key: 'OIDCPolicy', displayName: 'Create OIDC Policy' },
+    { key: 'PlanPolicy', displayName: 'Create Plan Policy' },
   ],
 };
 const navigateToCreatePolicy = (policyType: string) => {

@@ -56,6 +56,8 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
     'DNSPolicy',
     'RateLimitPolicy',
     'TokenRateLimitPolicy',
+    'OIDCPolicy',
+    'PlanPolicy',
     'AuthPolicy',
     'Gateway',
     'HTTPRoute',
@@ -75,6 +77,8 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
       obj.kind === 'AuthPolicy' ||
       obj.kind === 'RateLimitPolicy' ||
       obj.kind === 'TokenRateLimitPolicy' ||
+      obj.kind === 'OIDCPolicy' ||
+      obj.kind === 'PlanPolicy' ||
       obj.kind === 'Gateway' ||
       obj.kind === 'HTTPRoute'
     ) {

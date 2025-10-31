@@ -81,6 +81,8 @@ export const resources: Resource[] = [
   { name: 'DNSPolicies', gvk: resourceGVKMapping['DNSPolicy'] },
   { name: 'RateLimitPolicies', gvk: resourceGVKMapping['RateLimitPolicy'] },
   { name: 'TokenRateLimitPolicies', gvk: resourceGVKMapping['TokenRateLimitPolicy'] },
+  { name: 'OIDCPolicies', gvk: resourceGVKMapping['OIDCPolicy'] },
+  { name: 'PlanPolicies', gvk: resourceGVKMapping['PlanPolicy'] },
   { name: 'TLSPolicies', gvk: resourceGVKMapping['TLSPolicy'] },
   { name: 'Gateways', gvk: resourceGVKMapping['Gateway'] },
   { name: 'HTTPRoutes', gvk: resourceGVKMapping['HTTPRoute'] },
@@ -131,6 +133,8 @@ const KuadrantOverviewPage: React.FC = () => {
     t('AuthPolicy'),
     t('RateLimitPolicy'),
     t('TokenRateLimitPolicy'),
+    t('OIDCPolicy'),
+    t('PlanPolicy'),
     t('DNSPolicy'),
     t('TLSPolicy'),
   ];
@@ -140,6 +144,8 @@ const KuadrantOverviewPage: React.FC = () => {
     'DNSPolicy',
     'RateLimitPolicy',
     'TokenRateLimitPolicy',
+    'OIDCPolicy',
+    'PlanPolicy',
     'AuthPolicy',
     'Gateway',
     'HTTPRoute',
@@ -158,6 +164,8 @@ const KuadrantOverviewPage: React.FC = () => {
     !resourceRBAC['AuthPolicy']['list'] &&
     !resourceRBAC['RateLimitPolicy']['list'] &&
     !resourceRBAC['TokenRateLimitPolicy']['list'] &&
+    !resourceRBAC['OIDCPolicy']['list'] &&
+    !resourceRBAC['PlanPolicy']['list'] &&
     !resourceRBAC['DNSPolicy']['list'] &&
     !resourceRBAC['TLSPolicy']['list'];
 
@@ -990,6 +998,8 @@ const KuadrantOverviewPage: React.FC = () => {
                         resourceGVKMapping['DNSPolicy'],
                         resourceGVKMapping['RateLimitPolicy'],
                         resourceGVKMapping['TokenRateLimitPolicy'],
+                        resourceGVKMapping['OIDCPolicy'],
+                        resourceGVKMapping['PlanPolicy'],
                         resourceGVKMapping['TLSPolicy'],
                       ]}
                       columns={columns}

@@ -78,6 +78,8 @@ const ResourceList: React.FC<ResourceListProps> = ({
     'AuthPolicy',
     'RateLimitPolicy',
     'TokenRateLimitPolicy',
+    'OIDCPolicy',
+    'PlanPolicy',
     'DNSPolicy',
     'TLSPolicy',
     'Gateway',
