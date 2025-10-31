@@ -11,6 +11,7 @@ interface UseTopologyDataProps {
   controller: Visualization | null;
   configMapData: string | null;
   selectedResourceTypes: string[];
+  selectedNamespace: string | null;
   onInitialSelection?: (types: string[]) => void;
   loaded: boolean;
   loadError: any;
@@ -18,6 +19,7 @@ interface UseTopologyDataProps {
 
 interface UseTopologyDataReturn {
   allResourceTypes: string[];
+  allNamespaces: string[];
   parseError: string | null;
   isInitialLoad: boolean;
 }
@@ -28,16 +30,19 @@ export const useTopologyData = ({
   controller,
   configMapData,
   selectedResourceTypes,
+  selectedNamespace,
   onInitialSelection,
   loaded,
   loadError,
 }: UseTopologyDataProps): UseTopologyDataReturn => {
   const [parseError, setParseError] = React.useState<string | null>(null);
   const [allResourceTypes, setAllResourceTypes] = React.useState<string[]>([]);
+  const [allNamespaces, setAllNamespaces] = React.useState<string[]>([]);
   const [isInitialLoad, setIsInitialLoad] = React.useState(true);
 
   // track previous filter selections to detect changes
   const prevSelectedResourceTypesRef = React.useRef<string[]>([]);
+  const prevSelectedNamespaceRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     if (!loaded || loadError || !configMapData || !controller) {
@@ -59,6 +64,16 @@ export const useTopologyData = ({
       const uniqueTypes = Array.from(new Set(normalNodes.map((node) => node.resourceType))).sort();
       setAllResourceTypes(uniqueTypes);
 
+      // extract unique namespaces from node labels
+      const namespaces = new Set<string>();
+      normalNodes.forEach((node) => {
+        const parts = node.label.split('/');
+        if (parts.length > 1) {
+          namespaces.add(parts[0]);
+        }
+      });
+      setAllNamespaces(Array.from(namespaces).sort());
+
       // on initial load, default to showByDefault set
       let activeSelection = selectedResourceTypes.filter((r) => uniqueTypes.includes(r));
       if (selectedResourceTypes.length === 0 && isInitialLoad) {
@@ -69,8 +84,102 @@ export const useTopologyData = ({
         }
       }
 
-      // filter nodes by the active resource types
-      const filteredNormalNodes = normalNodes.filter((n) =>
+      // filter by namespace first if one is selected (before resource type filtering)
+      let namespacedNodes = normalNodes;
+      if (selectedNamespace) {
+        // extract namespace from label (format: "namespace/name" or just "name" for cluster-scoped)
+        const getNamespace = (label: string) => {
+          const parts = label.split('/');
+          return parts.length > 1 ? parts[0] : null; // null = cluster-scoped
+        };
+
+        // first pass: find nodes in the selected namespace
+        const nodesInNamespace = new Set(
+          normalNodes
+            .filter((n) => {
+              const ns = getNamespace(n.label);
+              return ns === selectedNamespace;
+            })
+            .map((n) => n.id),
+        );
+
+        // second pass: follow edges to find connected infrastructure
+        // edge structure: Gateway -> Listener -> HTTPRoute -> HTTPRouteRule
+        // policies point to their targets with dashed edges
+        const connectedNodes = new Set(nodesInNamespace);
+        const nodeMap = new Map(normalNodes.map((n) => [n.id, n]));
+
+        // iterative traversal to build connected graph
+        let changed = true;
+        let iteration = 0;
+        const maxIterations = 4;
+
+        while (changed && iteration < maxIterations) {
+          changed = false;
+          iteration++;
+
+          edges.forEach((edge) => {
+            const sourceNode = nodeMap.get(edge.source);
+            const targetNode = nodeMap.get(edge.target);
+            if (!sourceNode || !targetNode) return;
+
+            const targetNs = getNamespace(targetNode.label);
+
+            // forward traversal: if source is in our set
+            if (connectedNodes.has(edge.source)) {
+              // traverse to child resources
+              if (
+                targetNode.resourceType === 'Listener' ||
+                targetNode.resourceType === 'HTTPRouteRule' ||
+                targetNode.resourceType === 'HTTPRoute' ||
+                targetNode.resourceType === 'DNSRecord'
+              ) {
+                if (!connectedNodes.has(edge.target)) {
+                  connectedNodes.add(edge.target);
+                  changed = true;
+                }
+              }
+              // include cluster-scoped infrastructure except GatewayClass
+              else if (targetNs === null && targetNode.resourceType !== 'GatewayClass') {
+                if (!connectedNodes.has(edge.target)) {
+                  connectedNodes.add(edge.target);
+                  changed = true;
+                }
+              }
+            }
+
+            // backward traversal: if target is in our set
+            if (connectedNodes.has(edge.target)) {
+              // include parent infrastructure (Gateway, Listener)
+              if (sourceNode.resourceType === 'Gateway' || sourceNode.resourceType === 'Listener') {
+                if (!connectedNodes.has(edge.source)) {
+                  connectedNodes.add(edge.source);
+                  changed = true;
+                }
+              }
+              // include policies targeting our resources
+              else if (sourceNode.resourceType?.includes('Policy')) {
+                if (!connectedNodes.has(edge.source)) {
+                  connectedNodes.add(edge.source);
+                  changed = true;
+                }
+              }
+              // include HTTPRoutes that target our listeners
+              else if (sourceNode.resourceType === 'HTTPRoute') {
+                if (!connectedNodes.has(edge.source)) {
+                  connectedNodes.add(edge.source);
+                  changed = true;
+                }
+              }
+            }
+          });
+        }
+
+        namespacedNodes = normalNodes.filter((n) => connectedNodes.has(n.id));
+      }
+
+      // now filter by resource types
+      const filteredNormalNodes = namespacedNodes.filter((n) =>
         activeSelection.includes(n.resourceType),
       );
 
@@ -93,10 +202,11 @@ export const useTopologyData = ({
       const validNodeIds = new Set(finalNodes.map((n) => n.id));
       const filteredEdges = preserveTransitiveEdges(nodes, edges, validNodeIds);
 
-      // check if filter changed
+      // check if filter changed (resource types or namespace)
       const filterChanged =
         JSON.stringify([...prevSelectedResourceTypesRef.current].sort()) !==
-        JSON.stringify([...activeSelection].sort());
+          JSON.stringify([...activeSelection].sort()) ||
+        prevSelectedNamespaceRef.current !== selectedNamespace;
 
       const newModel = {
         nodes: finalNodes,
@@ -151,14 +261,24 @@ export const useTopologyData = ({
       }
 
       prevSelectedResourceTypesRef.current = [...activeSelection];
+      prevSelectedNamespaceRef.current = selectedNamespace;
     } catch (error) {
       setParseError('Failed to parse topology data.');
       console.error('Topology parsing error:', error);
     }
-  }, [controller, configMapData, selectedResourceTypes, loaded, loadError, isInitialLoad]);
+  }, [
+    controller,
+    configMapData,
+    selectedResourceTypes,
+    selectedNamespace,
+    loaded,
+    loadError,
+    isInitialLoad,
+  ]);
 
   return {
     allResourceTypes,
+    allNamespaces,
     parseError,
     isInitialLoad,
   };

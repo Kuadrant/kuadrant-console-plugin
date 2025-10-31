@@ -27,6 +27,7 @@ const PolicyTopologyPage: React.FC = () => {
   // config and state
   const [config, setConfig] = React.useState<TopologyConfig | null>(null);
   const [selectedResourceTypes, setSelectedResourceTypes] = React.useState<string[]>([]);
+  const [selectedNamespace, setSelectedNamespace] = React.useState<string | null>(null);
 
   // filter handlers
   const onResourceSelect = (
@@ -52,6 +53,18 @@ const PolicyTopologyPage: React.FC = () => {
 
   const clearAllFilters = () => {
     setSelectedResourceTypes([]);
+    setSelectedNamespace(null);
+  };
+
+  const onNamespaceSelect = (
+    _event: React.MouseEvent | React.ChangeEvent | undefined,
+    selection: string | null,
+  ) => {
+    setSelectedNamespace(selection);
+  };
+
+  const onDeleteNamespace = () => {
+    setSelectedNamespace(null);
   };
 
   // fetch configuration on mount
@@ -85,10 +98,11 @@ const PolicyTopologyPage: React.FC = () => {
   const controller = useVisualizationController();
 
   // process topology data and apply to controller
-  const { allResourceTypes, parseError } = useTopologyData({
+  const { allResourceTypes, allNamespaces, parseError } = useTopologyData({
     controller,
     configMapData: configMap?.data?.topology || null,
     selectedResourceTypes,
+    selectedNamespace,
     onInitialSelection: setSelectedResourceTypes,
     loaded,
     loadError,
@@ -161,9 +175,13 @@ const PolicyTopologyPage: React.FC = () => {
             <ResourceFilterToolbar
               allResourceTypes={allResourceTypes}
               selectedResourceTypes={selectedResourceTypes}
+              allNamespaces={allNamespaces}
+              selectedNamespace={selectedNamespace}
               onSelect={onResourceSelect}
+              onNamespaceSelect={onNamespaceSelect}
               onDeleteFilter={onDeleteResourceFilter}
               onDeleteGroup={onDeleteResourceGroup}
+              onDeleteNamespace={onDeleteNamespace}
               onClearAll={clearAllFilters}
             />
 
