@@ -11,7 +11,8 @@ const dryRun = args.includes('--dry-run');
 const constantsPath = path.join('src', 'constants', 'links.ts');
 const localesPath = path.join('locales', 'en', 'plugin__kuadrant-console-plugin.json');
 const consoleExtensionsPath = path.join('console-extensions.json');
-const version = '1.1';
+// use 'latest' to always point to the most recent documentation version
+const version = 'latest';
 
 // Replacement mappings
 const replacements = {
@@ -27,7 +28,7 @@ const replacements = {
       'https://docs.kuadrant.io':
         `https://docs.redhat.com/en/documentation/red_hat_connectivity_link/${version}/`,
       'https://github.com/Kuadrant/kuadrant-operator/releases':
-        `https://docs.redhat.com/en/documentation/red_hat_connectivity_link/${version}/html-single/release_notes_for_connectivity_link_${version}/index`,
+        `https://docs.redhat.com/en/documentation/red_hat_connectivity_link/${version}/html-single/release_notes_for_connectivity_link/index`,
       'Kuadrant': 'Connectivity Link',
     },
   },
