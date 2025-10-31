@@ -95,6 +95,14 @@ export const RESOURCES = {
     isKuadrantInternal: false,
     createPath: 'KuadrantTLSCreatePage',
   },
+  DNSRecord: {
+    gvk: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'DNSRecord' },
+    plural: 'DNSRecords',
+    isPolicy: false,
+    isGatewayAPI: false,
+    showInTopologyByDefault: true,
+    isKuadrantInternal: false,
+  },
 
   // kuadrant v1alpha1 policies
   TokenRateLimitPolicy: {
@@ -223,5 +231,24 @@ export const resourceGVKMapping: Record<ResourceKind, ResourceGVK> = Object.entr
   acc[kind as ResourceKind] = meta.gvk;
   return acc;
 }, {} as Record<ResourceKind, ResourceGVK>);
+
+// policy attachment configuration - which policies can target which resources
+export const RESOURCE_POLICY_MAP: Partial<Record<ResourceKind, ResourceKind[]>> = {
+  Gateway: [
+    'AuthPolicy',
+    'DNSPolicy',
+    'RateLimitPolicy',
+    'TLSPolicy',
+    'TokenRateLimitPolicy',
+    'OIDCPolicy',
+    'PlanPolicy',
+  ],
+  HTTPRoute: ['AuthPolicy', 'RateLimitPolicy', 'TokenRateLimitPolicy', 'OIDCPolicy', 'PlanPolicy'],
+};
+
+// get policy kinds that can target a given resource
+export const getPoliciesForResource = (resourceKind: ResourceKind): ResourceKind[] => {
+  return RESOURCE_POLICY_MAP[resourceKind] || [];
+};
 
 export default resourceGVKMapping;
