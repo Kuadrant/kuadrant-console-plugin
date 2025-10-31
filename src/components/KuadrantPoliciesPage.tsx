@@ -260,6 +260,10 @@ const KuadrantPoliciesPage: React.FC = () => {
       transforms: [sortable],
     },
     {
+      title: t('plugin__kuadrant-console-plugin~Target'),
+      id: 'target',
+    },
+    {
       title: t('plugin__kuadrant-console-plugin~Status'),
       id: 'Status',
     },
