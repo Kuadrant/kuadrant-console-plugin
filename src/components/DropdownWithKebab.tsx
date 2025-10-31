@@ -17,7 +17,7 @@ import {
 
 import { k8sDelete, K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
 import { useHistory } from 'react-router-dom';
-import resourceGVKMapping from '../utils/latest';
+import { resourceGVKMapping } from '../utils/resources';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getModelFromResource } from '../utils/getModelFromResource';
 type DropdownWithKebabProps = {

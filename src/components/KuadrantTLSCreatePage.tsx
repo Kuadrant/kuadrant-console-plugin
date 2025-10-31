@@ -35,7 +35,7 @@ import { Gateway } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
-import resourceGVKMapping from '../utils/latest';
+import { resourceGVKMapping } from '../utils/resources';
 
 const KuadrantTLSCreatePage: React.FC = () => {
   const history = useHistory();

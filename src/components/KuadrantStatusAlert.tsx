@@ -7,7 +7,7 @@ import { Icon } from '@patternfly/react-core';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { CheckCircleIcon, ExclamationTriangleIcon } from '@patternfly/react-icons';
-import resourceGVKMapping from '../utils/latest';
+import { resourceGVKMapping } from '../utils/resources';
 import { Tooltip } from '@patternfly/react-core';
 import { InfoCircleIcon, ExclamationCircleIcon } from '@patternfly/react-icons';
 
