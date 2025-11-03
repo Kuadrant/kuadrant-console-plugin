@@ -33,7 +33,7 @@ import GatewaySelect from './gateway/GatewaySelect';
 import yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
-import resourceGVKMapping from '../utils/latest';
+import { resourceGVKMapping } from '../utils/resources';
 
 const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');

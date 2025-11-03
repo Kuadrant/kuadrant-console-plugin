@@ -7,9 +7,40 @@ CONSOLE_PORT=${CONSOLE_PORT:=9000}
 CONSOLE_IMAGE_PLATFORM=${CONSOLE_IMAGE_PLATFORM:="linux/amd64"}
 
 # Plugin metadata is declared in package.json
-PLUGIN_NAME=${npm_package_consolePlugin_name}
+if [ -n "${npm_package_consolePlugin_name:-}" ]; then
+  PLUGIN_NAME="${npm_package_consolePlugin_name}"
+else
+  PLUGIN_NAME=$(node -p "require('./package.json').consolePlugin.name")
+fi
 
 echo "Starting local OpenShift console..."
+
+# check if oc is installed
+if ! command -v oc &> /dev/null; then
+    echo "Error: 'oc' command not found. Please install the OpenShift CLI."
+    echo "Download from: https://docs.openshift.com/container-platform/latest/cli_reference/openshift_cli/getting-started-cli.html"
+    exit 1
+fi
+
+# check if connected to a cluster
+if ! oc whoami --show-server &> /dev/null; then
+    echo "Error: Not connected to a cluster."
+    echo ""
+    echo "To connect to an OpenShift cluster, run:"
+    echo "  oc login <cluster-url>"
+    exit 1
+fi
+
+# check if it's actually an OpenShift cluster (not just any k8s cluster)
+if ! oc get clusterversion &> /dev/null; then
+    echo "Error: Not connected to an OpenShift cluster."
+    echo ""
+    echo "Current cluster: $(kubectl config current-context 2>/dev/null || echo "unknown")"
+    echo "This script requires OpenShift. To connect: oc login <openshift-cluster-url>"
+    echo ""
+    echo "For non-OpenShift clusters, run: yarn start"
+    exit 1
+fi
 
 BRIDGE_USER_AUTH="disabled"
 BRIDGE_K8S_MODE="off-cluster"

@@ -112,6 +112,28 @@
     "type": "console.resource/create",
     "properties": {
       "model": {
+        "group": "extensions.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "OIDCPolicy"
+      },
+      "component": { "$codeRef": "KuadrantOIDCPolicyCreatePage" }
+    }
+  },
+  {
+    "type": "console.resource/create",
+    "properties": {
+      "model": {
+        "group": "extensions.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "PlanPolicy"
+      },
+      "component": { "$codeRef": "KuadrantPlanPolicyCreatePage" }
+    }
+  },
+  {
+    "type": "console.resource/create",
+    "properties": {
+      "model": {
         "group": "kuadrant.io",
         "version": "v1",
         "kind": "TLSPolicy"
