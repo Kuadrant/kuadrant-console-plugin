@@ -33,6 +33,24 @@ const AssociatedResourceList: React.FC<AssociatedResourceListProps> = ({ resourc
       isList: true,
       namespace: resource.metadata.namespace,
     },
+    OIDCPolicy: {
+      groupVersionKind: {
+        group: 'extensions.kuadrant.io',
+        version: 'v1alpha1',
+        kind: 'OIDCPolicy',
+      },
+      isList: true,
+      namespace: resource.metadata.namespace,
+    },
+    PlanPolicy: {
+      groupVersionKind: {
+        group: 'extensions.kuadrant.io',
+        version: 'v1alpha1',
+        kind: 'PlanPolicy',
+      },
+      isList: true,
+      namespace: resource.metadata.namespace,
+    },
     AuthPolicy: {
       groupVersionKind: { group: 'kuadrant.io', version: 'v1', kind: 'AuthPolicy' },
       isList: true,

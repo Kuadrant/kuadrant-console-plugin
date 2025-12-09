@@ -105,6 +105,34 @@ const canRead = accessReviews[0];
 - **KuadrantCreateUpdate**: Handles create/update operations for all policy types
 - **ApiManagementPage**: API catalog and access request management (see API Management section)
 
+## Policy Topology Architecture
+
+The Policy Topology view is built on PatternFly React Topology and visualises relationships between Gateways, HTTPRoutes, and Kuadrant Policies.
+
+### Key Design Decisions
+
+**1. View State Preservation**
+- `useTopologyData` distinguishes between three scenarios:
+  - **Initial load**: Fit to screen
+  - **Filter changes** (user interaction): Refit to screen to show newly visible nodes
+  - **Data updates** (ConfigMap changes): **Preserve zoom/pan** to avoid jarring view resets
+- This prevents the "odd shifting" behaviour where the user's focus would unexpectedly move during topology updates
+
+**2. Resource Metadata Management**
+- All resource metadata (GVK, plural names, `showInTopologyByDefault`) comes from the centralized `src/utils/resources.ts` registry
+- Uses static registry instead of dynamic API discovery for instant controller creation
+- Single source of truth prevents inconsistencies and reduces complexity
+
+**3. Controller Lifecycle**
+- `useVisualizationController` creates the controller once on mount using `useRef` with initialisation flag
+- Controller is never recreated during the component lifecycle, preventing view resets
+- Component factory and layout factory are registered once at creation time
+
+**4. State Management**
+- GVK mapping and selected resource types use React state (`useState`), not module-level variables
+- Module-level object mutations don't trigger React re-renders, causing initialisation failures
+- Always use state for values that affect rendering or hook dependencies
+
 ## Development Commands
 
 ```bash
@@ -168,6 +196,7 @@ Currently limited testing infrastructure:
 8. **Race conditions in React hooks**: Use `useRef` with initialisation flags to prevent re-creation of expensive objects
 9. **Dynamic values in factory functions**: Pass getter functions instead of values to ensure current state is accessed
 10. **Topology fit-to-screen not working**: Check for controller recreation due to changing dependencies
+11. **Topology not rendering after refactor**: CRITICAL - GVK mapping must be stored in React state (`useState`), not module-level variables. Module-level object mutations don't trigger React re-renders, causing the controller to never initialize when the mapping is populated asynchronously
 
 ## PatternFly 6 Upgrade Notes
 

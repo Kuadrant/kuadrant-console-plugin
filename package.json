@@ -21,7 +21,8 @@
     "upstream-replacements": "node downstream.js --upstream && yarn i18n && yarn lint"
   },
   "resolutions": {
-    "http-proxy-middleware": "2.0.7"
+    "http-proxy-middleware": "2.0.7",
+    "node-forge": "^1.3.2"
   },
   "devDependencies": {
     "@openshift-console/dynamic-plugin-sdk": "^1.6.0",
@@ -78,6 +79,8 @@
       "KuadrantAuthPolicyCreatePage": "./components/KuadrantAuthPolicyCreatePage",
       "KuadrantRateLimitPolicyCreatePage": "./components/KuadrantRateLimitPolicyCreatePage",
       "KuadrantTokenRateLimitPolicyCreatePage": "./components/KuadrantTokenRateLimitPolicyCreatePage",
+      "KuadrantOIDCPolicyCreatePage": "./components/KuadrantOIDCPolicyCreatePage",
+      "KuadrantPlanPolicyCreatePage": "./components/KuadrantPlanPolicyCreatePage",
       "KuadrantTLSCreatePage": "./components/KuadrantTLSCreatePage",
       "HTTPRoutePoliciesPage": "./components/HTTPRoutePoliciesPage",
       "GatewayPoliciesPage": "./components/GatewayPoliciesPage",

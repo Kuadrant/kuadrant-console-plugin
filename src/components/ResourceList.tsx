@@ -78,6 +78,8 @@ const ResourceList: React.FC<ResourceListProps> = ({
     'AuthPolicy',
     'RateLimitPolicy',
     'TokenRateLimitPolicy',
+    'OIDCPolicy',
+    'PlanPolicy',
     'DNSPolicy',
     'TLSPolicy',
     'Gateway',
@@ -189,6 +191,10 @@ const ResourceList: React.FC<ResourceListProps> = ({
       transforms: [sortable],
     },
     {
+      title: t('plugin__kuadrant-console-plugin~Target'),
+      id: 'target',
+    },
+    {
       title: t('plugin__kuadrant-console-plugin~Status'),
       id: 'Status',
     },
@@ -274,6 +280,26 @@ const ResourceList: React.FC<ResourceListProps> = ({
                     )}
                   </TableData>
                 );
+              case 'target': {
+                const targetRef = (obj as any).spec?.targetRef;
+                return (
+                  <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+                    {targetRef ? (
+                      <ResourceLink
+                        groupVersionKind={{
+                          group: targetRef.group,
+                          version: targetRef.version || 'v1',
+                          kind: targetRef.kind,
+                        }}
+                        name={targetRef.name}
+                        namespace={obj.metadata.namespace}
+                      />
+                    ) : (
+                      '-'
+                    )}
+                  </TableData>
+                );
+              }
               case 'Status':
                 return (
                   <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
