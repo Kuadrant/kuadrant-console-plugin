@@ -6,10 +6,9 @@ RUN dnf update -y && \
     dnf upgrade -y && \
     dnf module enable nodejs:22 nginx:1.24 -y && \
     dnf install -y nodejs nginx npm && \
-    npm install -g yarn
+    corepack enable
 
-RUN yarn config set network-concurrency 1 && \
-    yarn config set network-timeout 100000
+RUN yarn config set --home enableGlobalCache true
 
 RUN mkdir -p /var/cache/nginx /var/log/nginx /run && \
     chmod -R 777 /var/cache/nginx /var/log/nginx /run /usr/share/nginx/html/
