@@ -72,7 +72,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
     kind: getResourceNameFromKind(r.kind),
   }));
 
-  const { userRBAC } = useAccessReviews(accessResources);
+  const { userRBAC, loading: rbacLoading } = useAccessReviews(accessResources);
 
   const resourceKinds = [
     'AuthPolicy',
@@ -129,7 +129,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
     [watchedResources],
   );
 
-  const allLoaded = Object.values(watchedResources).every((res) => res.loaded);
+  const allLoaded = !rbacLoading && Object.values(watchedResources).every((res) => res.loaded);
 
   const loadErrors = Object.values(watchedResources)
     .filter((res) => res.loadError)

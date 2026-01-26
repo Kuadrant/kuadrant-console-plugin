@@ -50,7 +50,7 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   const resourceGVK: { group: string; kind: string }[] = [
     { group: resourceGVKMapping[obj.kind].group, kind: obj.kind },
   ];
-  const { userRBAC } = useAccessReviews(resourceGVK);
+  const { userRBAC, loading: rbacLoading } = useAccessReviews(resourceGVK);
   const resourceRBAC = [
     'TLSPolicy',
     'DNSPolicy',
@@ -128,7 +128,7 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
         shouldFocusToggleOnSelect
       >
         <DropdownList>
-          {resourceRBAC[obj.kind]['edit'] == true ? (
+          {!rbacLoading && resourceRBAC[obj.kind]['edit'] == true ? (
             <DropdownItem value="edit" key="edit" onClick={onEditClick}>
               Edit
             </DropdownItem>
@@ -144,7 +144,7 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
               </DropdownItem>
             </Tooltip>
           )}
-          {resourceRBAC[obj.kind]['delete'] == true ? (
+          {!rbacLoading && resourceRBAC[obj.kind]['delete'] == true ? (
             <DropdownItem value="delete" key="delete">
               Delete
             </DropdownItem>
