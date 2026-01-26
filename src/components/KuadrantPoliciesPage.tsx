@@ -55,6 +55,7 @@ const getResourceByKind = (kind: string): Resource => {
 interface ResourceRBAC {
   list: boolean;
   create: boolean;
+  loaded: boolean;
 }
 
 interface RBACMap {
@@ -64,24 +65,19 @@ interface RBACMap {
 const useResourceRBAC = (resourceKey: string, namespace?: string): ResourceRBAC => {
   const gvk = resourceGVKMapping[resourceKey];
   const resourceName = getResourceNameFromKind(gvk.kind);
-  const [listAllowed] = useAccessReview({
+  const [listAllowed, listLoading] = useAccessReview({
     group: gvk.group,
     resource: resourceName,
     verb: 'list',
     namespace,
   });
-  const [createAllowed] = useAccessReview({
+  const [createAllowed, createLoading] = useAccessReview({
     group: gvk.group,
     resource: resourceName,
     verb: 'create',
     namespace,
   });
-  // console.log(
-  //   `[RBAC] ${resourceKey} in ns ${
-  //     namespace || 'cluster'
-  //   }: list = ${listAllowed}, create = ${createAllowed}`,
-  // );
-  return { list: listAllowed, create: createAllowed };
+  return { list: listAllowed, create: createAllowed, loaded: !listLoading && !createLoading };
 };
 
 export const AllPoliciesListPage: React.FC<{
@@ -292,7 +288,7 @@ const KuadrantPoliciesPage: React.FC = () => {
     return acc;
   }, {} as RBACMap);
 
-  const permsLoaded = policyKinds.every((key) => resourceRBAC[key] !== undefined);
+  const permsLoaded = policyKinds.every((key) => resourceRBAC[key]?.loaded);
   if (!permsLoaded) {
     return <div>Loading permissions...</div>;
   }
