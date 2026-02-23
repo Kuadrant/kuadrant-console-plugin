@@ -36,6 +36,7 @@ import { getStatusLabel } from '../utils/statusLabel';
 import DropdownWithKebab from './DropdownWithKebab';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
+import { RESOURCES } from '../utils/resources';
 
 type ResourceListProps = {
   resources: Array<{
@@ -88,8 +89,8 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
   const resourceMappings = resourceKinds.map((kind) => ({
     key: `${getResourceNameFromKind(kind)}-list`,
-    group: 'kuadrant.io',
-    version: 'v1',
+    group: RESOURCES[kind].gvk.group,
+    version: RESOURCES[kind].gvk.version,
     kind,
   }));
 
