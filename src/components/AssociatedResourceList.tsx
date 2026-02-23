@@ -13,60 +13,35 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import { SearchIcon } from '@patternfly/react-icons';
 import { getStatusLabel } from '../utils/statusLabel';
+import { RESOURCES } from '../utils/resources';
 
 type AssociatedResourceListProps = {
   resource: K8sResourceKind;
 };
 
+const policyKinds = [
+  'RateLimitPolicy',
+  'TokenRateLimitPolicy',
+  'OIDCPolicy',
+  'PlanPolicy',
+  'AuthPolicy',
+  'DNSPolicy',
+  'TLSPolicy',
+] as const;
+
 const AssociatedResourceList: React.FC<AssociatedResourceListProps> = ({ resource }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
-  // TODO: dynamic?
-  const associatedResources: { [key: string]: WatchK8sResource } = {
-    RateLimitPolicy: {
-      groupVersionKind: { group: 'kuadrant.io', version: 'v1', kind: 'RateLimitPolicy' },
-      isList: true,
-      namespace: resource.metadata.namespace,
-    },
-    TokenRateLimitPolicy: {
-      groupVersionKind: { group: 'kuadrant.io', version: 'v1alpha1', kind: 'TokenRateLimitPolicy' },
-      isList: true,
-      namespace: resource.metadata.namespace,
-    },
-    OIDCPolicy: {
-      groupVersionKind: {
-        group: 'extensions.kuadrant.io',
-        version: 'v1alpha1',
-        kind: 'OIDCPolicy',
+  const associatedResources: { [key: string]: WatchK8sResource } = Object.fromEntries(
+    policyKinds.map((kind) => [
+      kind,
+      {
+        groupVersionKind: RESOURCES[kind].gvk,
+        isList: true,
+        namespace: resource.metadata.namespace,
       },
-      isList: true,
-      namespace: resource.metadata.namespace,
-    },
-    PlanPolicy: {
-      groupVersionKind: {
-        group: 'extensions.kuadrant.io',
-        version: 'v1alpha1',
-        kind: 'PlanPolicy',
-      },
-      isList: true,
-      namespace: resource.metadata.namespace,
-    },
-    AuthPolicy: {
-      groupVersionKind: { group: 'kuadrant.io', version: 'v1', kind: 'AuthPolicy' },
-      isList: true,
-      namespace: resource.metadata.namespace,
-    },
-    DNSPolicy: {
-      groupVersionKind: { group: 'kuadrant.io', version: 'v1', kind: 'DNSPolicy' },
-      isList: true,
-      namespace: resource.metadata.namespace,
-    },
-    TLSPolicy: {
-      groupVersionKind: { group: 'kuadrant.io', version: 'v1', kind: 'TLSPolicy' },
-      isList: true,
-      namespace: resource.metadata.namespace,
-    },
-  };
+    ]),
+  );
 
   const watchedResources = useK8sWatchResources<{ [key: string]: K8sResourceKind[] }>(
     associatedResources,

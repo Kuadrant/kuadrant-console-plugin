@@ -12,6 +12,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 
 import extractResourceNameFromURL from '../utils/nameFromPath';
+import { RESOURCES } from '../utils/resources';
 
 const GatewayPoliciesPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -21,11 +22,7 @@ const GatewayPoliciesPage: React.FC = () => {
   const routeName = extractResourceNameFromURL(location.pathname);
   const resources = {
     gateway: {
-      groupVersionKind: {
-        group: 'gateway.networking.k8s.io',
-        version: 'v1',
-        kind: 'Gateway',
-      },
+      groupVersionKind: RESOURCES.Gateway.gvk,
       namespace: activeNamespace,
       name: routeName,
       isList: false,

@@ -12,6 +12,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 
 import extractResourceNameFromURL from '../utils/nameFromPath';
+import { RESOURCES } from '../utils/resources';
 
 const HTTPRoutePoliciesPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -22,11 +23,7 @@ const HTTPRoutePoliciesPage: React.FC = () => {
 
   const resources = {
     httpRoute: {
-      groupVersionKind: {
-        group: 'gateway.networking.k8s.io',
-        version: 'v1',
-        kind: 'HTTPRoute',
-      },
+      groupVersionKind: RESOURCES.HTTPRoute.gvk,
       namespace: activeNamespace,
       name: routeName,
       isList: false,

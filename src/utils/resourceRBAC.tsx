@@ -16,12 +16,13 @@ function useAccessReviews(resource: Resource[]) {
   useEffect(() => {
     const checkRBAC = async () => {
       const results = await Promise.all(
-        resource.flatMap(({ group, kind }) =>
+        resource.flatMap(({ group, kind, namespace }) =>
           verbs.map(async (verb) => {
             const result = await checkAccess({
               group,
               resource: kind,
               verb,
+              ...(namespace ? { namespace } : {}),
             });
             return { key: `${kind}-${verb}`, isAllowed: result.status?.allowed };
           }),

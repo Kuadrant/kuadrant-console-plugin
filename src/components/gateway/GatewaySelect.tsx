@@ -10,6 +10,7 @@ import {
 import * as React from 'react';
 import { Gateway } from './types';
 import { useTranslation } from 'react-i18next';
+import { RESOURCES } from '../../utils/resources';
 
 interface GatewaySelectProps {
   selectedGateway: Gateway;
@@ -19,7 +20,7 @@ interface GatewaySelectProps {
 const GatewaySelect: React.FC<GatewaySelectProps> = ({ selectedGateway, onChange }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [gateways, setGateways] = React.useState([]);
-  const gvk = { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' };
+  const gvk = RESOURCES.Gateway.gvk;
 
   const gatewayResource = {
     groupVersionKind: gvk,

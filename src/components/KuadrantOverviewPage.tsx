@@ -60,7 +60,7 @@ import './kuadrant.css';
 import ResourceList from './ResourceList';
 import { sortable } from '@patternfly/react-table';
 import { INTERNAL_LINKS, EXTERNAL_LINKS } from '../constants/links';
-import { resourceGVKMapping } from '../utils/resources';
+import { RESOURCES, resourceGVKMapping } from '../utils/resources';
 import { useHistory } from 'react-router-dom';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
@@ -641,7 +641,7 @@ const KuadrantOverviewPage: React.FC = () => {
     },
   };
 
-  const gvk = { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'Gateway' };
+  const gvk = RESOURCES.Gateway.gvk;
 
   const [gateways] = useK8sWatchResource<Gateway[]>({
     groupVersionKind: gvk,

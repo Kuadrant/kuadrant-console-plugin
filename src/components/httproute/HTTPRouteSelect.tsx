@@ -8,8 +8,9 @@ import {
   HelperTextItem,
 } from '@patternfly/react-core';
 import * as React from 'react';
-import { HTTPRoute } from './types'; // You will need to define this type similarly to Gateway.
+import { HTTPRoute } from './types';
 import { useTranslation } from 'react-i18next';
+import { RESOURCES } from '../../utils/resources';
 
 interface HTTPRouteSelectProps {
   selectedHTTPRoute: HTTPRoute;
@@ -19,7 +20,7 @@ interface HTTPRouteSelectProps {
 const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({ selectedHTTPRoute, onChange }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [httpRoutes, setHTTPRoutes] = React.useState([]);
-  const gvk = { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'HTTPRoute' };
+  const gvk = RESOURCES.HTTPRoute.gvk;
 
   const httpRouteResource = {
     groupVersionKind: gvk,
