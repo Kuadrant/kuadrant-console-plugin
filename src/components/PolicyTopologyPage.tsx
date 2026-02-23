@@ -113,8 +113,8 @@ const PolicyTopologyPage: React.FC = () => {
     return config
       ? {
           group: '',
-          resource: 'ConfigMap',
-          verb: 'read' as K8sVerb,
+          resource: 'configmaps',
+          verb: 'get' as K8sVerb,
           namespace: config.TOPOLOGY_CONFIGMAP_NAMESPACE,
           name: config.TOPOLOGY_CONFIGMAP_NAME,
         }
