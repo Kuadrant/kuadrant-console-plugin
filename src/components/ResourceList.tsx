@@ -282,7 +282,13 @@ const ResourceList: React.FC<ResourceListProps> = ({
                   </TableData>
                 );
               case 'target': {
-                const targetRef = (obj as any).spec?.targetRef;
+                const targetRef = (
+                  obj as K8sResourceCommon & {
+                    spec?: {
+                      targetRef?: { group: string; version?: string; kind: string; name: string };
+                    };
+                  }
+                ).spec?.targetRef;
                 return (
                   <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
                     {targetRef ? (
