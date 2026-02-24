@@ -11,8 +11,6 @@ import {
   PageSection,
   Title,
   Radio,
-  Flex,
-  FlexItem,
 } from '@patternfly/react-core';
 import Helmet from 'react-helmet';
 import {
@@ -234,42 +232,33 @@ const KuadrantTLSCreatePage: React.FC = () => {
       <PageSection hasBodyWrapper={false} className="pf-m-no-padding">
         <div className="co-m-nav-title">
           <Title headingLevel="h1">{create ? 'Create TLS Policy' : 'Edit TLS Policy'}</Title>
-          <p className="help-block co-m-pane__heading-help-text">
-            <div>
-              {t(
-                'Targets Gateway API networking resources Gateways to provide TLS for gateway listeners by managing the lifecycle of TLS certificates using cert-manager',
-              )}
-            </div>
+          <p className="help-block">
+            {t(
+              'Targets Gateway API networking resources Gateways to provide TLS for gateway listeners by managing the lifecycle of TLS certificates using cert-manager',
+            )}
           </p>
         </div>
         <FormGroup
           className="kuadrant-editor-toggle"
           role="radiogroup"
           isInline
-          hasNoPaddingTop
           fieldId="create-type-radio-group"
           label={t('Configure via')}
         >
-          <Flex alignItems={{ default: 'alignItemsCenter' }}>
-            <FlexItem>
-              <Radio
-                label={t('Form View')}
-                isChecked={view === 'form'}
-                onChange={() => setView('form')}
-                id="form-view"
-                name="view-toggle"
-              />
-            </FlexItem>
-            <FlexItem>
-              <Radio
-                label={t('YAML View')}
-                isChecked={view === 'yaml'}
-                onChange={() => setView('yaml')}
-                id="yaml-view"
-                name="view-toggle"
-              />
-            </FlexItem>
-          </Flex>
+          <Radio
+            label={t('Form View')}
+            isChecked={view === 'form'}
+            onChange={() => setView('form')}
+            id="form-view"
+            name="view-toggle"
+          />
+          <Radio
+            label={t('YAML View')}
+            isChecked={view === 'yaml'}
+            onChange={() => setView('yaml')}
+            id="yaml-view"
+            name="view-toggle"
+          />
         </FormGroup>
       </PageSection>
       {view === 'form' ? (

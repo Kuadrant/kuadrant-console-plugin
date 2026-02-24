@@ -106,15 +106,30 @@
   padding-top: 1rem;
 }
 
+/* Form/YAML view toggle styling for DNS and TLS policy create pages */
 .kuadrant-editor-toggle {
-  display: flex;
-  padding: var(--pf-v6-global--spacer--sm) 1.5rem var(--pf-v6-global--spacer--sm) 1.5rem;
-  border-bottom: var(--pf-v6-global--BorderWidth--sm) solid var(--pf-v6-global--BorderColor--100);
-  border-top: var(--pf-v6-global--BorderWidth--sm) solid var(--pf-v6-global--BorderColor--100);
+  /* Use grid layout to place label and radio buttons on same line */
+  display: grid !important;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 1rem;
+
+  /* Horizontal separator lines above and below the toggle section */
+  border-top: 1px solid #d2d2d2 !important;
+  border-bottom: 1px solid #d2d2d2 !important;
+
+  /* Add padding for content spacing */
+  padding: 1rem 1.5rem !important;
+
+  /* Negative horizontal margins extend borders edge-to-edge, zero bottom margin reduces gap to form */
+  margin: 1rem -1.5rem 0 !important;
+  width: auto !important;
 }
 
-.kuadrant-editor-toggle .pf-v6-c-radio {
-  padding: 0 0 0 1rem;
+/* Display radio buttons horizontally with spacing */
+.kuadrant-editor-toggle .pf-v6-c-form__group-control {
+  display: flex;
+  gap: 1rem;
 }
 
 .kuadrant-modal-dynamic-height {
