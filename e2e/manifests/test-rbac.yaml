@@ -1,0 +1,123 @@
+# test personas for e2e RBAC verification
+# users don't need to exist - impersonation creates the RBAC context
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kuadrant-test
+---
+# test-dev: httproutes only (read gateways)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: test-dev
+  namespace: kuadrant-test
+rules:
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: test-dev
+  namespace: kuadrant-test
+subjects:
+  - kind: User
+    name: test-dev
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: test-dev
+  apiGroup: rbac.authorization.k8s.io
+---
+# test-devops: route-level policies (read httproutes + gateways)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: test-devops
+  namespace: kuadrant-test
+rules:
+  - apiGroups: ["kuadrant.io"]
+    resources: ["authpolicies", "ratelimitpolicies"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes", "gateways"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: test-devops
+  namespace: kuadrant-test
+subjects:
+  - kind: User
+    name: test-devops
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: test-devops
+  apiGroup: rbac.authorization.k8s.io
+---
+# test-viewer: read-only access to policies, gateways, httproutes (no create/update/delete)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: test-viewer
+  namespace: kuadrant-test
+rules:
+  - apiGroups: ["kuadrant.io"]
+    resources: ["authpolicies", "ratelimitpolicies"]
+    verbs: ["get", "list"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes", "gateways"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: test-viewer
+  namespace: kuadrant-test
+subjects:
+  - kind: User
+    name: test-viewer
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: test-viewer
+  apiGroup: rbac.authorization.k8s.io
+---
+# test-admin: full access to all kuadrant + gateway api resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: test-admin-kuadrant
+rules:
+  - apiGroups: ["kuadrant.io"]
+    resources: ["authpolicies", "ratelimitpolicies", "dnspolicies", "tlspolicies", "tokenratelimitpolicies"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways", "httproutes", "gatewayclasses"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["oidcpolicies", "planpolicies"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: test-admin-kuadrant
+subjects:
+  - kind: User
+    name: test-admin
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: test-admin-kuadrant
+  apiGroup: rbac.authorization.k8s.io
