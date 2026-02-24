@@ -296,32 +296,29 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       <PageSection hasBodyWrapper={false} className="pf-m-no-padding">
         <div className="co-m-nav-title">
           <Title headingLevel="h1">{create ? t('Create DNS Policy') : t('Edit DNS Policy')}</Title>
-          <p className="help-block co-m-pane__heading-help-text">
-            <div>
-              {t(
-                'DNSPolicy configures how North-South based traffic should be balanced and reach the gateways',
-              )}
-            </div>
+          <p className="help-block">
+            {t(
+              'DNSPolicy configures how North-South based traffic should be balanced and reach the gateways',
+            )}
           </p>
         </div>
         <FormGroup
           className="kuadrant-editor-toggle"
           role="radiogroup"
           isInline
-          hasNoPaddingTop
           fieldId="create-type-radio-group"
-          label="Create via:"
+          label={t('Configure via')}
         >
           <Radio
             name="create-type-radio"
-            label="Form"
+            label={t('Form View')}
             id="create-type-radio-form"
             isChecked={createView === 'form'}
             onChange={() => setCreateView('form')}
           />
           <Radio
             name="create-type-radio"
-            label="YAML"
+            label={t('YAML View')}
             id="create-type-radio-yaml"
             isChecked={createView === 'yaml'}
             onChange={() => setCreateView('yaml')}
