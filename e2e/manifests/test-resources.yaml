@@ -1,0 +1,16 @@
+# test fixtures for e2e RBAC tests.
+# these resources exist so the kebab menu (edit/delete) can be tested.
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: test-auth-policy
+  namespace: kuadrant-test
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-route
+  rules:
+    authentication:
+      "anon":
+        anonymous: {}

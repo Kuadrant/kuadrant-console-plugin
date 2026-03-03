@@ -46,34 +46,24 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   };
 
   const policyType = obj.kind.toLowerCase();
+  const resourceName = getResourceNameFromKind(obj.kind);
 
-  const resourceGVK: { group: string; kind: string }[] = [
+  const resourceGVK: { group: string; kind: string; namespace?: string }[] = [
     {
       group: RESOURCES[obj.kind as ResourceKind].gvk.group,
-      kind: getResourceNameFromKind(obj.kind),
+      kind: resourceName,
+      namespace: obj.metadata?.namespace,
     },
   ];
   const { userRBAC, loading: rbacLoading } = useAccessReviews(resourceGVK);
-  const resourceRBAC = [
-    'TLSPolicy',
-    'DNSPolicy',
-    'RateLimitPolicy',
-    'TokenRateLimitPolicy',
-    'OIDCPolicy',
-    'PlanPolicy',
-    'AuthPolicy',
-    'Gateway',
-    'HTTPRoute',
-  ].reduce(
-    (acc, resource) => ({
-      ...acc,
-      [resource]: {
-        delete: userRBAC[`${resource}-delete`],
-        edit: userRBAC[`${resource}-update`],
-      },
-    }),
-    {} as Record<string, { delete: boolean }>,
-  );
+
+  // keys from useAccessReviews use the plural resource name (e.g. authpolicies-delete)
+  const resourceRBAC = {
+    [obj.kind]: {
+      delete: userRBAC[`${resourceName}-delete`],
+      edit: userRBAC[`${resourceName}-update`],
+    },
+  };
 
   const onEditClick = () => {
     if (

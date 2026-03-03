@@ -4,6 +4,8 @@
 .devcontainer/dev.env
 integration-tests/videos
 integration-tests/screenshots
+playwright-report/
+test-results/
 
 # Yarn v4
 .yarn/*
