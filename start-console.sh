@@ -81,5 +81,11 @@ if [ -x "$(command -v podman)" ]; then
     fi
 else
     BRIDGE_PLUGINS="${PLUGIN_NAME}=http://host.docker.internal:9001"
-    docker run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm -p "$CONSOLE_PORT":9000 --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
+    # On Linux, add host.docker.internal mapping since it's not available by default
+    if [ "$(uname -s)" = "Linux" ]; then
+        ADD_HOST_PARAM="--add-host=host.docker.internal:host-gateway"
+    else
+        ADD_HOST_PARAM=""
+    fi
+    docker run --pull always --platform $CONSOLE_IMAGE_PLATFORM --rm -p "$CONSOLE_PORT":9000 $ADD_HOST_PARAM --env-file <(set | grep BRIDGE) $CONSOLE_IMAGE
 fi
