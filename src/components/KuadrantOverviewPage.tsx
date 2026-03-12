@@ -658,14 +658,15 @@ const KuadrantOverviewPage: React.FC = () => {
 
   const clusterVersionResource = {
     groupVersionKind: { group: 'config.openshift.io', version: 'v1', kind: 'ClusterVersion' },
-    name: 'version',  // ClusterVersion is always named 'version'
-    isList: false,     // Single resource, not a list
+    name: 'version', // ClusterVersion is always named 'version'
+    isList: false, // Single resource, not a list
   };
   const [clusterVersionObj, loaded] = useK8sWatchResource<ClusterVersion>(clusterVersionResource);
 
-  const clusterVersion = loaded && clusterVersionObj?.status?.desired?.version
-    ? clusterVersionObj.status.desired.version
-    : null;
+  const clusterVersion =
+    loaded && clusterVersionObj?.status?.desired?.version
+      ? clusterVersionObj.status.desired.version
+      : null;
 
   const healthyCount = React.useMemo(() => {
     return gateways.filter((gw) => {
@@ -794,7 +795,10 @@ const KuadrantOverviewPage: React.FC = () => {
                             <StackItem>
                               <Content
                                 component="a"
-                                href={INTERNAL_LINKS.certManagerOperator(activeNamespace, clusterVersion)}
+                                href={INTERNAL_LINKS.certManagerOperator(
+                                  activeNamespace,
+                                  clusterVersion,
+                                )}
                                 className="kuadrant-dashboard-resource-link"
                               >
                                 {t('cert-manager Operator')} <ExternalLinkAltIcon />

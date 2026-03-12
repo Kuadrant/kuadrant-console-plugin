@@ -20,9 +20,7 @@ export const INTERNAL_LINKS = {
     }?selectedId=openshift-cert-manager-operator-redhat-operators-openshift-marketplace`;
 
     // Determine link based on cluster version 4.20+ vs 4.19 and lower
-    return (major > 4 || (major === 4 && minor >= 20))
-      ? linkLatest
-      : link419;
+    return major > 4 || (major === 4 && minor >= 20) ? linkLatest : link419;
   },
 };
 
