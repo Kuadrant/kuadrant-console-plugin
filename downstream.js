@@ -28,7 +28,7 @@ const replacements = {
       'https://docs.kuadrant.io':
         `https://docs.redhat.com/en/documentation/red_hat_connectivity_link/${version}/`,
       'https://github.com/Kuadrant/kuadrant-operator/releases':
-        `https://docs.redhat.com/en/documentation/red_hat_connectivity_link/${version}/html-single/release_notes_for_connectivity_link/index`,
+        `https://docs.redhat.com/en/documentation/red_hat_connectivity_link/${version}/html/whats_new/rhcl-release-notes`,
       'Kuadrant': 'Connectivity Link',
     },
   },
