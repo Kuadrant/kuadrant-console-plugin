@@ -33,6 +33,14 @@ plugin:
     create: true
     annotations: {}
     name: ""
+  topologyConfigMapName: "topology"
+  topologyConfigMapNamespace: "kuadrant-system"
+  metrics:
+    metricName: "istio_request_duration_milliseconds_count"
+    queryFunction: "rate"
+    timeWindow: "2m"
+    workloadSuffix: ""
+    successCodePattern: "2(.*)|3(.*)"
   jobs:
     patchConsoles:
       enabled: true
