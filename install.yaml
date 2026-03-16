@@ -36,6 +36,16 @@ spec:
             value: topology
           - name: TOPOLOGY_CONFIGMAP_NAMESPACE
             value: kuadrant-system
+          - name: METRICS_METRIC_NAME
+            value: istio_request_duration_milliseconds_count
+          - name: METRICS_QUERY_FUNCTION
+            value: rate
+          - name: METRICS_TIME_WINDOW
+            value: 2m
+          - name: METRICS_WORKLOAD_SUFFIX
+            value: ""
+          - name: METRICS_SUCCESS_CODE_PATTERN
+            value: "2(.*)|3(.*)"
         volumeMounts:
         - name: plugin-serving-cert
           readOnly: true
