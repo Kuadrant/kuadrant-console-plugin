@@ -1,16 +1,32 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export interface TopologyConfig {
+export interface MetricsConfig {
+  metricName: string;
+  queryFunction: string;
+  timeWindow: string;
+  workloadSuffix: string;
+  successCodePattern: string;
+}
+
+export interface KuadrantConfig {
   TOPOLOGY_CONFIGMAP_NAME: string;
   TOPOLOGY_CONFIGMAP_NAMESPACE: string;
+  METRICS?: MetricsConfig;
 }
 
 // fetch the config.js file dynamically at runtime
 // normally served from <cluster-host>/api/plugins/kuadrant-console-plugin/config.js
-export const fetchConfig = async (): Promise<TopologyConfig> => {
-  const defaultConfig: TopologyConfig = {
+export const fetchConfig = async (): Promise<KuadrantConfig> => {
+  const defaultConfig: KuadrantConfig = {
     TOPOLOGY_CONFIGMAP_NAME: 'topology',
     TOPOLOGY_CONFIGMAP_NAMESPACE: 'kuadrant-system',
+    METRICS: {
+      metricName: 'istio_request_duration_milliseconds_count',
+      queryFunction: 'rate',
+      timeWindow: '2m',
+      workloadSuffix: '',
+      successCodePattern: '2(.*)|3(.*)',
+    },
   };
 
   try {

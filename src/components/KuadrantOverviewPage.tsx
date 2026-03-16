@@ -64,6 +64,13 @@ import { RESOURCES, resourceGVKMapping } from '../utils/resources';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
 import { KuadrantStatusAlert } from './KuadrantStatusAlert';
+import { fetchConfig, KuadrantConfig, MetricsConfig } from '../utils/topology/configLoader';
+import {
+  buildTotalRequestsQuery,
+  buildErrorRequestsQuery,
+  buildErrorsByCodeQuery,
+  buildGatewayKey,
+} from '../utils/metricsQueries';
 
 export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
@@ -124,6 +131,22 @@ const KuadrantOverviewPage: React.FC = () => {
   const [hideCard, setHideCard] = React.useState(
     sessionStorage.getItem('hideGettingStarted') === 'true',
   );
+
+  // Load metrics configuration
+  const [config, setConfig] = React.useState<KuadrantConfig | null>(null);
+
+  React.useEffect(() => {
+    fetchConfig().then(setConfig).catch(console.error);
+  }, []);
+
+  const metricsConfig: MetricsConfig = config?.METRICS || {
+    metricName: 'istio_request_duration_milliseconds_count',
+    queryFunction: 'rate',
+    timeWindow: '2m',
+    workloadSuffix: '',
+    successCodePattern: '2(.*)|3(.*)',
+  };
+
   const onToggleClick = () => {
     setIsCreateOpen(!isCreateOpen);
   };
@@ -425,19 +448,16 @@ const KuadrantOverviewPage: React.FC = () => {
   // Prometheus queries for gateway traffic
   const [totalRequestsRes, totalRequestsLoaded, totalRequestsError] = usePrometheusPoll({
     endpoint: PrometheusEndpoint.QUERY,
-    query:
-      'sum by (source_workload, source_workload_namespace) (increase(istio_requests_total[24h]))',
+    query: buildTotalRequestsQuery(metricsConfig),
   });
   const [totalErrorsRes, totalErrorsLoaded, totalErrorsError] = usePrometheusPoll({
     endpoint: PrometheusEndpoint.QUERY,
-    query:
-      'sum by (source_workload, source_workload_namespace) (increase(istio_requests_total{response_code!~"2(.*)|3(.*)"}[24h]))',
+    query: buildErrorRequestsQuery(metricsConfig),
   });
   const [totalErrorsByCodeRes, totalErrorsByCodeLoaded, totalErrorsByCodeError] = usePrometheusPoll(
     {
       endpoint: PrometheusEndpoint.QUERY,
-      query:
-        'sum by (response_code, source_workload, source_workload_namespace) (increase(istio_requests_total{response_code!~"2(.*)|3(.*)"}[24h]))',
+      query: buildErrorsByCodeQuery(metricsConfig),
     },
   );
 
@@ -472,25 +492,41 @@ const KuadrantOverviewPage: React.FC = () => {
 
   // Helper functions to pull out metric values in correct format, given a gateway object
   const getTotalRequests = (obj: { metadata: { namespace: string; name: string } }): number => {
-    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    const key = buildGatewayKey(
+      obj.metadata.namespace,
+      obj.metadata.name,
+      metricsConfig.workloadSuffix,
+    );
     const total = totalRequestsByGateway[key]?.total;
     return Number.isFinite(total) ? Math.round(total) : 0;
   };
   const getSuccessfulRequests = (obj: {
     metadata: { namespace: string; name: string };
   }): number => {
-    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    const key = buildGatewayKey(
+      obj.metadata.namespace,
+      obj.metadata.name,
+      metricsConfig.workloadSuffix,
+    );
     const success = totalRequestsByGateway[key]?.total - totalRequestsByGateway[key]?.errors;
     return Number.isFinite(success) ? Math.round(success) : 0;
   };
   const getErrorRate = (obj: { metadata: { namespace: string; name: string } }): string => {
-    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    const key = buildGatewayKey(
+      obj.metadata.namespace,
+      obj.metadata.name,
+      metricsConfig.workloadSuffix,
+    );
     const rate = (totalRequestsByGateway[key]?.errors / totalRequestsByGateway[key]?.total) * 100;
     return Number.isFinite(rate) ? rate.toFixed(1) : '-';
   };
   const getErrorCodes = (obj: { metadata: { namespace: string; name: string } }): Set<string> => {
     const codes = new Set<string>();
-    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    const key = buildGatewayKey(
+      obj.metadata.namespace,
+      obj.metadata.name,
+      metricsConfig.workloadSuffix,
+    );
     if (totalRequestsByGateway[key]?.codes) {
       Object.entries(totalRequestsByGateway[key].codes).forEach(([key, value]) => {
         if (key.startsWith('4') && value > 0) {
@@ -512,7 +548,11 @@ const KuadrantOverviewPage: React.FC = () => {
     obj: { metadata: { namespace: string; name: string } },
     prefix: string,
   ): Array<[string, Distribution]> => {
-    const key = `${obj.metadata.namespace}/${obj.metadata.name}-istio`;
+    const key = buildGatewayKey(
+      obj.metadata.namespace,
+      obj.metadata.name,
+      metricsConfig.workloadSuffix,
+    );
     const codes = totalRequestsByGateway[key]?.codes ?? {};
     const filteredCodes = Object.entries(codes).filter(([code]) => code.startsWith(prefix));
 
