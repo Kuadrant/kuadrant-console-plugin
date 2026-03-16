@@ -1,0 +1,196 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-gateway
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: toystore
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: external
+  namespace: api-gateway
+spec:
+  gatewayClassName: istio
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: toystore
+  namespace: toystore
+  labels:
+    backstage.io/kubernetes-id: toystore
+spec:
+  selector:
+    app: toystore
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: toystore
+  namespace: toystore
+  labels:
+    app: toystore
+    backstage.io/kubernetes-id: toystore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: toystore
+  template:
+    metadata:
+      labels:
+        app: toystore
+    spec:
+      containers:
+        - name: toystore
+          image: quay.io/kuadrant/authorino-examples:talker-api
+          ports:
+            - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: toystore
+  namespace: toystore
+spec:
+  parentRefs:
+    - name: external
+      namespace: api-gateway
+  hostnames:
+    - api.toystore.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+          method: GET
+      backendRefs:
+        - name: toystore
+          port: 80
+---
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: toystore
+  namespace: toystore
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
+  rules:
+    authentication:
+      "api-key-users":
+        apiKey:
+          selector:
+            matchLabels:
+              app: toystore
+          allNamespaces: true
+        credentials:
+          authorizationHeader:
+            prefix: APIKEY
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alice-key
+  namespace: toystore
+  labels:
+    app: toystore
+  annotations:
+    secret.kuadrant.io/user-id: user:default/alice
+    secret.kuadrant.io/plan-id: gold
+stringData:
+  api_key: secret-alice-key
+type: Opaque
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bob-key
+  namespace: toystore
+  labels:
+    app: toystore
+  annotations:
+    secret.kuadrant.io/user-id: user:default/bob
+    secret.kuadrant.io/plan-id: silver
+stringData:
+  api_key: secret-bob-key
+type: Opaque
+---
+apiVersion: extensions.kuadrant.io/v1alpha1
+kind: PlanPolicy
+metadata:
+  name: toystore-plans
+  namespace: toystore
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
+  plans:
+    - tier: gold
+      predicate: |
+        has(auth.identity) && auth.identity.metadata.annotations["secret.kuadrant.io/plan-id"] == "gold"
+      limits:
+        daily: 100
+    - tier: silver
+      predicate: |
+        has(auth.identity) && auth.identity.metadata.annotations["secret.kuadrant.io/plan-id"] == "silver"
+      limits:
+        daily: 50
+    - tier: bronze
+      predicate: |
+        has(auth.identity) && auth.identity.metadata.annotations["secret.kuadrant.io/plan-id"] == "bronze"
+      limits:
+        daily: 10
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: toystore-api
+  namespace: toystore
+  annotations:
+    backstage.io/owner: user:default/owner1
+spec:
+  displayName: Toystore API
+  description: simple toy store api for demonstration
+  version: v1
+  approvalMode: manual
+  publishStatus: Published
+  tags:
+    - demo
+    - retail
+    - toys
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: api-owners
+    email: api-owners@example.com
+    slack: "#api-support"
+---
+

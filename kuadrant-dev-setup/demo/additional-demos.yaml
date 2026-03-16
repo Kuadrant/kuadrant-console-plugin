@@ -1,0 +1,181 @@
+---
+# owner1's payment api
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: owner1-payment-api
+  namespace: toystore
+  annotations:
+    backstage.io/owner: user:default/owner1
+spec:
+  displayName: Payment API (Owner1)
+  description: payment processing api owned by owner1
+  version: v1
+  approvalMode: manual
+  publishStatus: Published
+  tags:
+    - payments
+    - fintech
+    - owner1
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: owner1-team
+    email: owner1@kuadrant.local
+    slack: "#owner1-support"
+---
+# owner1's inventory api
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: owner1-inventory-api
+  namespace: toystore
+  annotations:
+    backstage.io/owner: user:default/owner1
+spec:
+  displayName: Inventory API (Owner1)
+  description: inventory management api owned by owner1
+  version: v1
+  approvalMode: automatic
+  publishStatus: Published
+  tags:
+    - inventory
+    - logistics
+    - owner1
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: owner1-team
+    email: owner1@kuadrant.local
+    slack: "#owner1-support"
+---
+# owner2's shipping api
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: owner2-shipping-api
+  namespace: toystore
+  annotations:
+    backstage.io/owner: user:default/owner2
+spec:
+  displayName: Shipping API (Owner2)
+  description: shipping and logistics api owned by owner2
+  version: v1
+  approvalMode: manual
+  publishStatus: Published
+  tags:
+    - shipping
+    - logistics
+    - owner2
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: owner2-team
+    email: owner2@kuadrant.local
+    slack: "#owner2-support"
+---
+# owner2's customer api
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: owner2-customer-api
+  namespace: toystore
+  annotations:
+    backstage.io/owner: user:default/owner2
+spec:
+  displayName: Customer API (Owner2)
+  description: customer management api owned by owner2
+  version: v1
+  approvalMode: automatic
+  publishStatus: Published
+  tags:
+    - customers
+    - crm
+    - owner2
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: owner2-team
+    email: owner2@kuadrant.local
+    slack: "#owner2-support"
+---
+# admin's analytics api
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: admin-analytics-api
+  namespace: toystore
+  annotations:
+    backstage.io/owner: user:default/admin
+spec:
+  displayName: Analytics API (Admin)
+  description: analytics and reporting api owned by admin
+  version: v1
+  approvalMode: manual
+  publishStatus: Published
+  tags:
+    - analytics
+    - reporting
+    - admin
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: admin-team
+    email: admin@kuadrant.local
+    slack: "#admin-support"
+---
+# draft api (not visible in catalog)
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: owner1-draft-api
+  namespace: toystore
+  annotations:
+    backstage.io/owner: user:default/owner1
+spec:
+  displayName: Draft API (Owner1)
+  description: work-in-progress api owned by owner1 (not yet published)
+  version: v1
+  approvalMode: manual
+  publishStatus: Draft
+  tags:
+    - draft
+    - wip
+    - owner1
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: owner1-team
+    email: owner1@kuadrant.local
+    slack: "#owner1-support"
+---

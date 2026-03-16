@@ -1,0 +1,261 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gamestore
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: external
+  namespace: gamestore
+spec:
+  gatewayClassName: istio
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: All
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gamestore
+  namespace: gamestore
+  labels:
+    backstage.io/kubernetes-id: gamestore
+spec:
+  selector:
+    app: gamestore
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gamestore
+  namespace: gamestore
+  labels:
+    app: gamestore
+    backstage.io/kubernetes-id: gamestore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gamestore
+  template:
+    metadata:
+      labels:
+        app: gamestore
+    spec:
+      containers:
+        - name: gamestore
+          image: quay.io/kuadrant/authorino-examples:talker-api
+          ports:
+            - containerPort: 3000
+          env:
+            - name: PORT
+              value: "3000"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: gamestore
+  namespace: gamestore
+spec:
+  parentRefs:
+    - name: external
+      namespace: gamestore
+  hostnames:
+    - api.gamestore.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+          method: GET
+      backendRefs:
+        - name: gamestore
+          port: 80
+---
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: gamestore
+  namespace: gamestore
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: gamestore
+  rules:
+    authentication:
+      "demo-realm":
+        jwt:
+          issuerUrl: https://oidc.example.com/realms/demo
+---
+apiVersion: kuadrant.io/v1
+kind: RateLimitPolicy
+metadata:
+  name: gamestore
+  namespace: gamestore
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: gamestore
+  limits:
+    "basic":
+      rates:
+      - limit: 100
+        window: 60s
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: gamestore-api
+  namespace: gamestore
+  annotations:
+    backstage.io/owner: user:default/owner2
+spec:
+  displayName: Gamestore API
+  description: Simple game store api for demonstration
+  version: v1
+  approvalMode: manual
+  publishStatus: Published
+  tags:
+    - demo
+    - retail
+    - games
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: gamestore
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: api-owners
+    email: api-owners@example.com
+    slack: "#api-support"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: gamestore-admin
+  namespace: gamestore
+spec:
+  parentRefs:
+    - name: external
+      namespace: gamestore
+  hostnames:
+    - admin.gamestore.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+          method: GET
+      backendRefs:
+        - name: gamestore
+          port: 80
+---
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: gamestore-admin
+  namespace: gamestore
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: gamestore-admin
+  rules:
+    authentication:
+      "demo-admin-realm":
+        jwt:
+          issuerUrl: https://oidc.example.com/realms/demo-admin
+      "vip-users":
+        apiKey:
+          selector:
+            matchLabels:
+              app: gamestore
+              role: admin
+          allNamespaces: true
+        credentials:
+          authorizationHeader:
+            prefix: APIKEY
+---
+apiVersion: extensions.kuadrant.io/v1alpha1
+kind: PlanPolicy
+metadata:
+  name: gamestore-admin-tiers
+  namespace: gamestore
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: gamestore-admin
+  plans:
+    - tier: admin
+      predicate: |
+        has(auth.identity) && auth.identity.metadata.annotations["secret.kuadrant.io/plan-id"] == "admin"
+      limits:
+        daily: 1000000
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: gamestore-admin
+  namespace: gamestore
+  annotations:
+    backstage.io/owner: user:default/admin
+spec:
+  displayName: Gamestore Admin API
+  description: Simple game store admin api for demonstration
+  version: v1
+  approvalMode: manual
+  publishStatus: Published
+  tags:
+    - demo
+    - admin
+    - retail
+    - games
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: gamestore-admin
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: api-owners
+    email: api-owners@example.com
+    slack: "#api-support"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: policy-free
+  namespace: gamestore
+  annotations:
+    info: This HTTPRoute should not be affected by any policy
+spec:
+  parentRefs:
+    - name: external
+      namespace: gamestore
+  hostnames:
+    - policy-free.gamestore.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+          method: GET
+      backendRefs:
+        - name: gamestore
+          port: 80
