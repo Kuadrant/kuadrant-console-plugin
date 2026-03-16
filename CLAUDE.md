@@ -91,6 +91,60 @@ const accessReviews = useAccessReviews(resourceAttributes);
 const canRead = accessReviews[0];
 ```
 
+### 5. Metrics Configuration
+
+The plugin supports configurable Prometheus metrics for gateway traffic monitoring. This allows the console to work with different Gateway API implementations (OpenShift 4.19+, OSSM, etc.).
+
+**Configuration is managed through:**
+- `src/utils/topology/configLoader.ts` - Configuration schema and defaults
+- `src/utils/metricsQueries.ts` - Query builder utilities
+- Environment variables in deployment manifests
+
+**Default Configuration (OpenShift 4.19+):**
+```yaml
+METRICS_METRIC_NAME: istio_request_duration_milliseconds_count
+METRICS_QUERY_FUNCTION: rate
+METRICS_TIME_WINDOW: 2m
+METRICS_WORKLOAD_SUFFIX: "" # no suffix
+METRICS_SUCCESS_CODE_PATTERN: "2(.*)|3(.*)"
+```
+
+**OSSM Compatibility Configuration:**
+```yaml
+METRICS_METRIC_NAME: istio_requests_total
+METRICS_QUERY_FUNCTION: increase
+METRICS_TIME_WINDOW: 24h
+METRICS_WORKLOAD_SUFFIX: "-istio"
+METRICS_SUCCESS_CODE_PATTERN: "2(.*)|3(.*)"
+```
+
+**Query Builders:**
+The `metricsQueries.ts` utility provides DRY query construction:
+- `buildTotalRequestsQuery(config)` - Total requests across all gateways
+- `buildErrorRequestsQuery(config)` - Error requests (non-2xx/3xx)
+- `buildErrorsByCodeQuery(config)` - Errors grouped by response code
+- `buildGatewayKey(namespace, name, suffix)` - Gateway metric lookup key
+
+**Usage in Components:**
+```typescript
+import { fetchConfig, MetricsConfig } from '../utils/topology/configLoader';
+import { buildTotalRequestsQuery } from '../utils/metricsQueries';
+
+const [config, setConfig] = React.useState<KuadrantConfig | null>(null);
+React.useEffect(() => {
+  fetchConfig().then(setConfig).catch(console.error);
+}, []);
+
+const metricsConfig: MetricsConfig = config?.METRICS || {
+  // fallback defaults
+};
+
+const [totalRequestsRes] = usePrometheusPoll({
+  endpoint: PrometheusEndpoint.QUERY,
+  query: buildTotalRequestsQuery(metricsConfig),
+});
+```
+
 ## Key Components
 
 - **KuadrantOverviewPage**: Main dashboard with gateway health status
