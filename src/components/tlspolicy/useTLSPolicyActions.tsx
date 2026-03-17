@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom-v5-compat';
 import { ExtensionHookResult } from '@openshift-console/dynamic-plugin-sdk/lib/api/common-types';
 import { Action } from '@openshift-console/dynamic-plugin-sdk/lib/extensions/actions';
 import {
@@ -15,7 +15,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 
 const useTLSPolicyActions = (obj: K8sResourceCommon): ExtensionHookResult<Action[]> => {
-  const history = useHistory();
+  const navigate = useNavigate();
   const gvk = obj ? getGroupVersionKindForResource(obj) : undefined;
   const [tlsPolicyModel] = useK8sModel(
     gvk
@@ -68,7 +68,7 @@ const useTLSPolicyActions = (obj: K8sResourceCommon): ExtensionHookResult<Action
         label: 'Edit',
         description: 'Edit via form',
         cta: () =>
-          history.push({
+          navigate({
             pathname: `/k8s/ns/${namespace}/tlspolicy/name/${name}/edit`,
           }),
         insertBefore: 'edit-yaml',
