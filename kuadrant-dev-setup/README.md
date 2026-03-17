@@ -6,13 +6,13 @@ Development environment for kuadrant console plugin.
 * [oc](https://console.redhat.com/openshift/downloads) are required.
 * `oc login` (requires [oc](https://console.redhat.com/openshift/downloads) and an [OpenShift cluster 4.19+](https://console.redhat.com/openshift/create))
 
-## quick start
+## Quick Start
 
 ```bash
 make local-setup
 ```
 
-## what gets installed
+## What Gets Installed
 
 ### Core Components
 
@@ -60,7 +60,7 @@ make local-setup
 - Mix of manual and automatic approval modes
 - Includes one Draft (unpublished) API product
 
-### verify installation
+### Verify Installation
 
 #### 1. Verify Toystore Demo Resources
 ```bash
