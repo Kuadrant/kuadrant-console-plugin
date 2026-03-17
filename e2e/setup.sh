@@ -186,7 +186,7 @@ metadata:
   name: kuadrant-ingressgateway
   namespace: gateway-system
 spec:
-  gatewayClassName: openshift-default
+  gatewayClassName: istio
   listeners:
   - name: http
     port: 80
