@@ -226,6 +226,110 @@ const PoliciesListPage: React.FC<{
   );
 };
 
+// Context to pass data to tab components without prop drilling
+const PolicyPageContext = React.createContext<{
+  activeNamespace: string;
+  defaultColumns: TableColumn<K8sResourceCommon>[];
+  resourceRBAC: RBACMap;
+} | null>(null);
+
+const usePolicyPageContext = () => {
+  const context = React.useContext(PolicyPageContext);
+  if (!context) {
+    throw new Error('usePolicyPageContext must be used within PolicyPageContext.Provider');
+  }
+  return context;
+};
+
+// Tab components that read from context - stable references
+const AllPoliciesTab: React.FC = () => {
+  const { activeNamespace, defaultColumns, resourceRBAC } = usePolicyPageContext();
+  return (
+    <AllPoliciesListPage
+      activeNamespace={activeNamespace}
+      columns={defaultColumns}
+      resourceRBAC={resourceRBAC}
+    />
+  );
+};
+
+const AuthPolicyTab: React.FC = () => {
+  const { activeNamespace, resourceRBAC } = usePolicyPageContext();
+  return (
+    <PoliciesListPage
+      resource={getResourceByKind('AuthPolicy')}
+      activeNamespace={activeNamespace}
+      resourceRBAC={resourceRBAC}
+    />
+  );
+};
+
+const RateLimitPolicyTab: React.FC = () => {
+  const { activeNamespace, resourceRBAC } = usePolicyPageContext();
+  return (
+    <PoliciesListPage
+      resource={getResourceByKind('RateLimitPolicy')}
+      activeNamespace={activeNamespace}
+      resourceRBAC={resourceRBAC}
+    />
+  );
+};
+
+const TokenRateLimitPolicyTab: React.FC = () => {
+  const { activeNamespace, resourceRBAC } = usePolicyPageContext();
+  return (
+    <PoliciesListPage
+      resource={getResourceByKind('TokenRateLimitPolicy')}
+      activeNamespace={activeNamespace}
+      resourceRBAC={resourceRBAC}
+    />
+  );
+};
+
+const OIDCPolicyTab: React.FC = () => {
+  const { activeNamespace, resourceRBAC } = usePolicyPageContext();
+  return (
+    <PoliciesListPage
+      resource={getResourceByKind('OIDCPolicy')}
+      activeNamespace={activeNamespace}
+      resourceRBAC={resourceRBAC}
+    />
+  );
+};
+
+const PlanPolicyTab: React.FC = () => {
+  const { activeNamespace, resourceRBAC } = usePolicyPageContext();
+  return (
+    <PoliciesListPage
+      resource={getResourceByKind('PlanPolicy')}
+      activeNamespace={activeNamespace}
+      resourceRBAC={resourceRBAC}
+    />
+  );
+};
+
+const DNSPolicyTab: React.FC = () => {
+  const { activeNamespace, resourceRBAC } = usePolicyPageContext();
+  return (
+    <PoliciesListPage
+      resource={getResourceByKind('DNSPolicy')}
+      activeNamespace={activeNamespace}
+      resourceRBAC={resourceRBAC}
+    />
+  );
+};
+
+const TLSPolicyTab: React.FC = () => {
+  const { activeNamespace, resourceRBAC } = usePolicyPageContext();
+  return (
+    <PoliciesListPage
+      resource={getResourceByKind('TLSPolicy')}
+      activeNamespace={activeNamespace}
+      resourceRBAC={resourceRBAC}
+    />
+  );
+};
+
 const KuadrantPoliciesPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const { ns } = useParams<{ ns: string }>();
@@ -295,85 +399,27 @@ const KuadrantPoliciesPage: React.FC = () => {
 
   const policyRBACNil = policyKinds.every((policy) => !resourceRBAC[policy]?.list);
 
-  const All: React.FC = () => (
-    <AllPoliciesListPage
-      activeNamespace={activeNamespace}
-      columns={defaultColumns}
-      resourceRBAC={resourceRBAC}
-    />
-  );
-
-  const Auth: React.FC = () => (
-    <PoliciesListPage
-      resource={getResourceByKind('AuthPolicy')}
-      activeNamespace={activeNamespace}
-      resourceRBAC={resourceRBAC}
-    />
-  );
-
-  const RateLimit: React.FC = () => (
-    <PoliciesListPage
-      resource={getResourceByKind('RateLimitPolicy')}
-      activeNamespace={activeNamespace}
-      resourceRBAC={resourceRBAC}
-    />
-  );
-  const TokenRateLimit: React.FC = () => (
-    <PoliciesListPage
-      resource={getResourceByKind('TokenRateLimitPolicy')}
-      activeNamespace={activeNamespace}
-      resourceRBAC={resourceRBAC}
-    />
-  );
-  const OIDC: React.FC = () => (
-    <PoliciesListPage
-      resource={getResourceByKind('OIDCPolicy')}
-      activeNamespace={activeNamespace}
-      resourceRBAC={resourceRBAC}
-    />
-  );
-  const Plan: React.FC = () => (
-    <PoliciesListPage
-      resource={getResourceByKind('PlanPolicy')}
-      activeNamespace={activeNamespace}
-      resourceRBAC={resourceRBAC}
-    />
-  );
+  // Use stable component references - these don't change on re-render
   let pages = [
     {
       href: '',
       name: t('All Policies'),
-      component: All,
+      component: AllPoliciesTab,
     },
   ];
 
   if (activePerspective === 'admin') {
-    const DNS: React.FC = () => (
-      <PoliciesListPage
-        resource={getResourceByKind('DNSPolicy')}
-        activeNamespace={activeNamespace}
-        resourceRBAC={resourceRBAC}
-      />
-    );
-    const TLS: React.FC = () => (
-      <PoliciesListPage
-        resource={getResourceByKind('TLSPolicy')}
-        activeNamespace={activeNamespace}
-        resourceRBAC={resourceRBAC}
-      />
-    );
-
     pages = [
       ...pages,
       {
         href: 'dns',
         name: t('DNS'),
-        component: DNS,
+        component: DNSPolicyTab,
       },
       {
         href: 'tls',
         name: t('TLS'),
-        component: TLS,
+        component: TLSPolicyTab,
       },
     ];
   }
@@ -383,27 +429,27 @@ const KuadrantPoliciesPage: React.FC = () => {
     {
       href: 'auth',
       name: t('Auth'),
-      component: Auth,
+      component: AuthPolicyTab,
     },
     {
       href: 'ratelimit',
       name: t('RateLimit'),
-      component: RateLimit,
+      component: RateLimitPolicyTab,
     },
     {
       href: 'tokenratelimit',
       name: t('TokenRateLimit'),
-      component: TokenRateLimit,
+      component: TokenRateLimitPolicyTab,
     },
     {
       href: 'oidc',
       name: t('OIDC'),
-      component: OIDC,
+      component: OIDCPolicyTab,
     },
     {
       href: 'plan',
       name: t('Plan'),
-      component: Plan,
+      component: PlanPolicyTab,
     },
   ];
 
@@ -423,6 +469,12 @@ const KuadrantPoliciesPage: React.FC = () => {
     navigate(currentTab, { replace: true });
   };
 
+  const contextValue = {
+    activeNamespace,
+    defaultColumns,
+    resourceRBAC,
+  };
+
   return (
     <>
       <NamespaceBar onNamespaceChange={handleNamespaceChange} />
@@ -432,7 +484,9 @@ const KuadrantPoliciesPage: React.FC = () => {
       {policyRBACNil ? (
         <NoPermissionsView primaryMessage={t('You do not have permission to view Policies')} />
       ) : (
-        <HorizontalNav pages={pages} />
+        <PolicyPageContext.Provider value={contextValue}>
+          <HorizontalNav pages={pages} />
+        </PolicyPageContext.Provider>
       )}
     </>
   );
