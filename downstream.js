@@ -22,13 +22,13 @@ const replacements = {
       // Direct string replacements for links.ts
       // Order matters: specific URLs first to prevent partial matches
       'https://docs.kuadrant.io/latest/kuadrant-operator/doc/user-guides/full-walkthrough/secure-protect-connect/':
-        `https://docs.redhat.com/en/documentation/red_hat_connectivity_link/${version}/html-single/configuring_and_deploying_gateway_policies_with_connectivity_link/index`,
+        `https://docs.redhat.com/en/documentation/red_hat_connectivity_link/${version}/html/configuring_and_deploying_gateway_policies/index`,
       'https://docs.kuadrant.io/latest/kuadrant-operator/doc/observability/examples/':
-        `https://docs.redhat.com/en/documentation/red_hat_connectivity_link/${version}/html-single/connectivity_link_observability_guide/index`,
+        `https://docs.redhat.com/en/documentation/red_hat_connectivity_link/${version}/html/observability/index`,
       'https://docs.kuadrant.io':
         `https://docs.redhat.com/en/documentation/red_hat_connectivity_link/${version}/`,
       'https://github.com/Kuadrant/kuadrant-operator/releases':
-        `https://docs.redhat.com/en/documentation/red_hat_connectivity_link/${version}/html-single/release_notes_for_connectivity_link/index`,
+        `https://docs.redhat.com/en/documentation/red_hat_connectivity_link/${version}/html/whats_new/rhcl-release-notes`,
       'Kuadrant': 'Connectivity Link',
     },
   },

@@ -105,6 +105,14 @@ interface Gateway extends K8sResourceCommon {
   };
 }
 
+interface ClusterVersion extends K8sResourceCommon {
+  status?: {
+    desired?: {
+      version?: string;
+    };
+  };
+}
+
 const KuadrantOverviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -647,6 +655,18 @@ const KuadrantOverviewPage: React.FC = () => {
     isList: true,
   });
 
+  const clusterVersionResource = {
+    groupVersionKind: { group: 'config.openshift.io', version: 'v1', kind: 'ClusterVersion' },
+    name: 'version', // ClusterVersion is always named 'version'
+    isList: false, // Single resource, not a list
+  };
+  const [clusterVersionObj, loaded] = useK8sWatchResource<ClusterVersion>(clusterVersionResource);
+
+  const clusterVersion =
+    loaded && clusterVersionObj?.status?.desired?.version
+      ? clusterVersionObj.status.desired.version
+      : null;
+
   const healthyCount = React.useMemo(() => {
     return gateways.filter((gw) => {
       const conditions = gw.status?.conditions ?? [];
@@ -774,7 +794,10 @@ const KuadrantOverviewPage: React.FC = () => {
                             <StackItem>
                               <Content
                                 component="a"
-                                href={INTERNAL_LINKS.certManagerOperator(activeNamespace)}
+                                href={INTERNAL_LINKS.certManagerOperator(
+                                  activeNamespace,
+                                  clusterVersion,
+                                )}
                                 className="kuadrant-dashboard-resource-link"
                               >
                                 {t('cert-manager Operator')} <ExternalLinkAltIcon />
