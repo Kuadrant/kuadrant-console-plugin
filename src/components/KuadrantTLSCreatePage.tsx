@@ -22,7 +22,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import { handleCancel } from '../utils/cancel';
-import { useHistory, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom-v5-compat';
 import yaml from 'js-yaml';
 import { useTranslation } from 'react-i18next';
 import ClusterIssuerSelect from './issuer/clusterIssuerSelect';
@@ -36,7 +36,7 @@ import { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
 import { resourceGVKMapping } from '../utils/resources';
 
 const KuadrantTLSCreatePage: React.FC = () => {
-  const history = useHistory();
+  const navigate = useNavigate();
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
   const [selectedGateway, setSelectedGateway] = React.useState<Gateway>({
@@ -210,7 +210,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
 
   //Cancel
   const handleCancelResource = () => {
-    handleCancel(selectedNamespace, tlsPolicy, history);
+    handleCancel(selectedNamespace, tlsPolicy, navigate);
   };
 
   if (
@@ -323,7 +323,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
                 model={tlsPolicyModel}
                 resource={tlsPolicy}
                 policyType="tls"
-                history={history}
+                navigate={navigate}
                 validation={isFormValid}
               />
               <Button variant="link" onClick={handleCancelResource}>
