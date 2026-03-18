@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom-v5-compat';
 import Helmet from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 import {
@@ -61,7 +61,6 @@ import ResourceList from './ResourceList';
 import { sortable } from '@patternfly/react-table';
 import { INTERNAL_LINKS, EXTERNAL_LINKS } from '../constants/links';
 import { RESOURCES, resourceGVKMapping } from '../utils/resources';
-import { useHistory } from 'react-router-dom';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
 import { KuadrantStatusAlert } from './KuadrantStatusAlert';
@@ -107,7 +106,7 @@ interface Gateway extends K8sResourceCommon {
 }
 
 const KuadrantOverviewPage: React.FC = () => {
-  const history = useHistory();
+  const navigate = useNavigate();
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const { ns } = useParams<{ ns: string }>();
   const [activeNamespace, setActiveNamespace] = useActiveNamespace();
@@ -396,12 +395,12 @@ const KuadrantOverviewPage: React.FC = () => {
 
     if (resource === 'Gateway') {
       const gateway = resourceGVKMapping['Gateway'];
-      history.push(
+      navigate(
         `/k8s/ns/${resolvedNamespace}/${gateway.group}~${gateway.version}~${gateway.kind}/~new`,
       );
     } else {
       const httpRoute = resourceGVKMapping['HTTPRoute'];
-      history.push(
+      navigate(
         `/k8s/ns/${resolvedNamespace}/${httpRoute.group}~${httpRoute.version}~${httpRoute.kind}/~new`,
       );
     }
@@ -411,7 +410,7 @@ const KuadrantOverviewPage: React.FC = () => {
     const resource = resourceGVKMapping[policyType];
     const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
     const targetUrl = `/k8s/ns/${resolvedNamespace}/${resource.group}~${resource.version}~${resource.kind}/~new`;
-    history.push(targetUrl);
+    navigate(targetUrl);
     setIsOpen(false);
   };
 

@@ -8,13 +8,13 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import { Button, AlertVariant, Alert, AlertGroup } from '@patternfly/react-core';
-import { History } from 'history';
+import { NavigateFunction } from 'react-router-dom-v5-compat';
 
 interface GenericPolicyForm {
   model: K8sModel;
   resource: K8sResourceCommon;
   policyType: string;
-  history: History;
+  navigate: NavigateFunction;
   validation: boolean;
 }
 
@@ -22,7 +22,7 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
   model,
   resource,
   policyType,
-  history,
+  navigate,
   validation,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -40,14 +40,14 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
           data: resource,
         });
         console.log(`${policyType} updated successfully:`, response);
-        history.push(`/kuadrant/all-namespaces/policies/${policyType}`);
+        navigate(`/kuadrant/all-namespaces/policies/${policyType}`);
       } else {
         const response = await k8sCreate({
           model: model,
           data: resource,
         });
         console.log(`${policyType} created successfully:`, response);
-        history.push(`/kuadrant/all-namespaces/policies/${policyType}`);
+        navigate(`/kuadrant/all-namespaces/policies/${policyType}`);
       }
     } catch (error) {
       if (update == true) {

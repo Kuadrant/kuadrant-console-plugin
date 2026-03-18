@@ -24,7 +24,7 @@ import {
   K8sResourceCommon,
   useActiveNamespace,
 } from '@openshift-console/dynamic-plugin-sdk';
-import { useHistory, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom-v5-compat';
 import { LoadBalancing, HealthCheck } from './dnspolicy/types';
 import LoadBalancingField from './dnspolicy/LoadBalancingField';
 import HealthCheckField from './dnspolicy/HealthCheckField';
@@ -135,7 +135,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
     kind: dnsPolicyGVK.kind,
   });
 
-  const history = useHistory();
+  const navigate = useNavigate();
 
   interface dnsPolicyEdit extends K8sResourceCommon {
     spec?: {
@@ -266,7 +266,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   };
 
   const handleCancelResource = () => {
-    handleCancel(selectedNamespace, dnsPolicy, history);
+    handleCancel(selectedNamespace, dnsPolicy, navigate);
   };
   const formValidation = () => {
     if (
@@ -391,7 +391,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
                 model={dnsPolicyModel}
                 resource={dnsPolicy}
                 policyType="dns"
-                history={history}
+                navigate={navigate}
                 validation={formValidation()}
               />
               <Button variant="link" onClick={handleCancelResource}>
