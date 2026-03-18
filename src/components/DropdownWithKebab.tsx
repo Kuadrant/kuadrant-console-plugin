@@ -16,7 +16,7 @@ import {
 } from '@patternfly/react-core';
 
 import { k8sDelete, K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
-import { useHistory } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom-v5-compat';
 import { RESOURCES, ResourceKind } from '../utils/resources';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getModelFromResource, getResourceNameFromKind } from '../utils/getModelFromResource';
@@ -27,7 +27,7 @@ type DropdownWithKebabProps = {
 const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
-  const history = useHistory();
+  const navigate = useNavigate();
   const model = getModelFromResource(obj);
 
   const onToggleClick = () => {
@@ -75,13 +75,13 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
       obj.kind === 'Gateway' ||
       obj.kind === 'HTTPRoute'
     ) {
-      history.push({
+      navigate({
         pathname: `/k8s/ns/${obj.metadata.namespace}/${obj.apiVersion.replace('/', '~')}~${
           obj.kind
         }/${obj.metadata.name}/yaml`,
       });
     } else {
-      history.push({
+      navigate({
         pathname: `/k8s/ns/${obj.metadata.namespace}/${policyType}/name/${obj.metadata.name}/edit`,
       });
     }

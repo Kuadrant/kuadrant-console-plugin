@@ -2,7 +2,7 @@ import * as React from 'react';
 import Helmet from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 import { PageSection, Title } from '@patternfly/react-core';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom-v5-compat';
 import './kuadrant.css';
 import AssociatedResourceList from './AssociatedResourceList';
 import {
