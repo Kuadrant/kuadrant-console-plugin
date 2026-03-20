@@ -15,3 +15,7 @@ test-results/
 !.yarn/sdks
 !.yarn/versions
 .pnp.*
+
+# IDEs
+.idea/
+.vs/
