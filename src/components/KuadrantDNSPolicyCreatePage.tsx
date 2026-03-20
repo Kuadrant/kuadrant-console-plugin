@@ -30,7 +30,7 @@ import LoadBalancingField from './dnspolicy/LoadBalancingField';
 import HealthCheckField from './dnspolicy/HealthCheckField';
 import { Gateway } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
 import { resourceGVKMapping } from '../utils/resources';
@@ -222,7 +222,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
 
   const handleYAMLChange = (yamlInput: string) => {
     try {
-      const parsedYaml = yaml.load(yamlInput);
+      const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
         name: parsedYaml.spec?.targetRef?.name || '',

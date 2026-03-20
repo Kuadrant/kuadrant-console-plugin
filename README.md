@@ -38,18 +38,18 @@ This will run the OpenShift console in a container connected to the cluster
 you've logged into. The plugin HTTP server runs on port 9001 with CORS enabled.
 Navigate to <http://localhost:9000/example> to see the running plugin.
 
-### Option 2: MINC (no cluster required)
+### Option 2: oinc (no cluster required)
 
-[MINC](https://github.com/minc-org/minc) (MicroShift in Container) provides a lightweight OpenShift-compatible cluster locally. This sets up a full environment with Kuadrant, Istio, cert-manager, and the OpenShift console, with hot reloading for plugin development.
+[oinc](https://github.com/jasonmadigan/oinc) (OKD in a container) provides a lightweight OpenShift-compatible cluster locally with the console built in. This sets up a full environment with Kuadrant, Istio, cert-manager, and the OpenShift console, with hot reloading for plugin development.
 
-Prerequisites: [MINC](https://github.com/minc-org/minc), [kubectl](https://kubernetes.io/docs/tasks/tools/), [Helm](https://helm.sh/docs/intro/install/), Docker or podman, Node.js.
+Prerequisites: [oinc](https://github.com/jasonmadigan/oinc), [kubectl](https://kubernetes.io/docs/tasks/tools/), Docker or podman, Node.js.
 
 ```bash
-yarn minc          # create cluster + start plugin dev server with hot reload
-yarn minc:teardown # tear it all down
+yarn oinc          # create cluster + start plugin dev server with hot reload
+yarn oinc:teardown # tear it all down
 ```
 
-Console runs at http://localhost:9000, plugin at http://localhost:9001. If the cluster already exists, `yarn minc` skips setup and just starts the plugin server.
+Console runs at http://localhost:9000, plugin at http://localhost:9001. If the cluster already exists, `yarn oinc` skips setup and just starts the plugin server.
 
 ### Option 3: Docker + VSCode Remote Container
 

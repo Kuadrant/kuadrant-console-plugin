@@ -23,7 +23,7 @@ import {
 import './kuadrant.css';
 import { handleCancel } from '../utils/cancel';
 import { useNavigate, useLocation } from 'react-router-dom-v5-compat';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { useTranslation } from 'react-i18next';
 import ClusterIssuerSelect from './issuer/clusterIssuerSelect';
 import IssuerSelect from './issuer/issuerSelect';
@@ -169,7 +169,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
 
   const handleYAMLChange = (yamlInput: string) => {
     try {
-      const parsedYaml = yaml.load(yamlInput);
+      const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
         name: parsedYaml.spec?.targetRef?.name || '',

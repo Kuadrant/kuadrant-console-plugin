@@ -1,26 +1,23 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# start a local kuadrant dev environment using MINC (MicroShift in Container).
-# sets up a full cluster with kuadrant, istio, metallb, and the openshift console
+# start a local kuadrant dev environment using oinc (OKD in a container).
+# sets up a cluster with kuadrant, istio, metallb, and the openshift console
 # pointing at the plugin dev server for hot reloading.
 #
-# prerequisites: minc, kubectl, helm, docker/podman, node
+# prerequisites: oinc, kubectl, node
 #
 # usage:
-#   yarn minc          # setup cluster + start plugin with hot reload
-#   yarn minc:teardown # tear it all down
+#   yarn oinc          # setup cluster + start plugin with hot reload
+#   yarn oinc:teardown # tear it all down
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # shellcheck source=e2e/lib.sh
 source "${SCRIPT_DIR}/e2e/lib.sh"
 
-export CONSOLE_PORT="${CONSOLE_PORT:-9000}"
-export PLUGIN_PORT="${PLUGIN_PORT:-9001}"
-export CONSOLE_IMAGE="${CONSOLE_IMAGE:-quay.io/openshift/origin-console:latest}"
-export RUNTIME
-RUNTIME=$(detect_runtime)
+CONSOLE_PORT="${CONSOLE_PORT:-9000}"
+PLUGIN_PORT="${PLUGIN_PORT:-9001}"
 
 CLEANED_UP=false
 cleanup() {
@@ -30,15 +27,16 @@ cleanup() {
   log "shutting down plugin dev server..."
   kill "$PLUGIN_PID" 2>/dev/null || true
   wait "$PLUGIN_PID" 2>/dev/null || true
-  log "cluster is still running. tear down with: yarn minc:teardown"
+  log "cluster is still running. tear down with: yarn oinc:teardown"
 }
 
 if kubectl get nodes &>/dev/null 2>&1; then
   if curl -sf "http://localhost:${CONSOLE_PORT}" >/dev/null 2>&1; then
     log "existing cluster and console detected, skipping setup"
   else
-    log "cluster running but console is down, restarting console..."
-    start_console "${SCRIPT_DIR}"
+    log "cluster running but console is down, recreating..."
+    oinc delete --force
+    "${SCRIPT_DIR}/e2e/setup.sh"
   fi
 else
   log "setting up local cluster with kuadrant..."
