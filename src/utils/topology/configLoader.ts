@@ -1,17 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-export interface MetricsConfig {
-  metricName: string;
-  queryFunction: string;
-  timeWindow: string;
-  workloadSuffix: string;
-  successCodePattern: string;
-}
-
 export interface KuadrantConfig {
   TOPOLOGY_CONFIGMAP_NAME: string;
   TOPOLOGY_CONFIGMAP_NAMESPACE: string;
-  METRICS?: MetricsConfig;
+  METRICS_WORKLOAD_SUFFIX: string;
 }
 
 // fetch the config.js file dynamically at runtime
@@ -20,13 +12,7 @@ export const fetchConfig = async (): Promise<KuadrantConfig> => {
   const defaultConfig: KuadrantConfig = {
     TOPOLOGY_CONFIGMAP_NAME: 'topology',
     TOPOLOGY_CONFIGMAP_NAMESPACE: 'kuadrant-system',
-    METRICS: {
-      metricName: 'istio_request_duration_milliseconds_count',
-      queryFunction: 'rate',
-      timeWindow: '2m',
-      workloadSuffix: '',
-      successCodePattern: '2(.*)|3(.*)',
-    },
+    METRICS_WORKLOAD_SUFFIX: '-openshift-default',
   };
 
   try {

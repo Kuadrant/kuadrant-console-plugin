@@ -64,13 +64,13 @@ import { RESOURCES, resourceGVKMapping } from '../utils/resources';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
 import { KuadrantStatusAlert } from './KuadrantStatusAlert';
-import { fetchConfig, KuadrantConfig, MetricsConfig } from '../utils/topology/configLoader';
 import {
-  buildTotalRequestsQuery,
-  buildErrorRequestsQuery,
-  buildErrorsByCodeQuery,
+  TOTAL_REQUESTS_QUERY,
+  ERROR_REQUEST_QUERY,
+  ERRORS_BY_CODE_QUERY,
   buildGatewayKey,
 } from '../utils/metricsQueries';
+import { fetchConfig, KuadrantConfig } from '../utils/topology/configLoader';
 
 export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
@@ -139,13 +139,7 @@ const KuadrantOverviewPage: React.FC = () => {
     fetchConfig().then(setConfig).catch(console.error);
   }, []);
 
-  const metricsConfig: MetricsConfig = config?.METRICS || {
-    metricName: 'istio_request_duration_milliseconds_count',
-    queryFunction: 'rate',
-    timeWindow: '2m',
-    workloadSuffix: '',
-    successCodePattern: '2(.*)|3(.*)',
-  };
+  const metricsWorkloadSuffix: string = config?.METRICS_WORKLOAD_SUFFIX || '-openshift-default';
 
   const onToggleClick = () => {
     setIsCreateOpen(!isCreateOpen);
@@ -448,16 +442,16 @@ const KuadrantOverviewPage: React.FC = () => {
   // Prometheus queries for gateway traffic
   const [totalRequestsRes, totalRequestsLoaded, totalRequestsError] = usePrometheusPoll({
     endpoint: PrometheusEndpoint.QUERY,
-    query: buildTotalRequestsQuery(metricsConfig),
+    query: TOTAL_REQUESTS_QUERY,
   });
   const [totalErrorsRes, totalErrorsLoaded, totalErrorsError] = usePrometheusPoll({
     endpoint: PrometheusEndpoint.QUERY,
-    query: buildErrorRequestsQuery(metricsConfig),
+    query: ERROR_REQUEST_QUERY,
   });
   const [totalErrorsByCodeRes, totalErrorsByCodeLoaded, totalErrorsByCodeError] = usePrometheusPoll(
     {
       endpoint: PrometheusEndpoint.QUERY,
-      query: buildErrorsByCodeQuery(metricsConfig),
+      query: ERRORS_BY_CODE_QUERY,
     },
   );
 
@@ -492,41 +486,25 @@ const KuadrantOverviewPage: React.FC = () => {
 
   // Helper functions to pull out metric values in correct format, given a gateway object
   const getTotalRequests = (obj: { metadata: { namespace: string; name: string } }): number => {
-    const key = buildGatewayKey(
-      obj.metadata.namespace,
-      obj.metadata.name,
-      metricsConfig.workloadSuffix,
-    );
+    const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
     const total = totalRequestsByGateway[key]?.total;
     return Number.isFinite(total) ? Math.round(total) : 0;
   };
   const getSuccessfulRequests = (obj: {
     metadata: { namespace: string; name: string };
   }): number => {
-    const key = buildGatewayKey(
-      obj.metadata.namespace,
-      obj.metadata.name,
-      metricsConfig.workloadSuffix,
-    );
+    const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
     const success = totalRequestsByGateway[key]?.total - totalRequestsByGateway[key]?.errors;
     return Number.isFinite(success) ? Math.round(success) : 0;
   };
   const getErrorRate = (obj: { metadata: { namespace: string; name: string } }): string => {
-    const key = buildGatewayKey(
-      obj.metadata.namespace,
-      obj.metadata.name,
-      metricsConfig.workloadSuffix,
-    );
+    const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
     const rate = (totalRequestsByGateway[key]?.errors / totalRequestsByGateway[key]?.total) * 100;
     return Number.isFinite(rate) ? rate.toFixed(1) : '-';
   };
   const getErrorCodes = (obj: { metadata: { namespace: string; name: string } }): Set<string> => {
     const codes = new Set<string>();
-    const key = buildGatewayKey(
-      obj.metadata.namespace,
-      obj.metadata.name,
-      metricsConfig.workloadSuffix,
-    );
+    const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
     if (totalRequestsByGateway[key]?.codes) {
       Object.entries(totalRequestsByGateway[key].codes).forEach(([key, value]) => {
         if (key.startsWith('4') && value > 0) {
@@ -548,11 +526,7 @@ const KuadrantOverviewPage: React.FC = () => {
     obj: { metadata: { namespace: string; name: string } },
     prefix: string,
   ): Array<[string, Distribution]> => {
-    const key = buildGatewayKey(
-      obj.metadata.namespace,
-      obj.metadata.name,
-      metricsConfig.workloadSuffix,
-    );
+    const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
     const codes = totalRequestsByGateway[key]?.codes ?? {};
     const filteredCodes = Object.entries(codes).filter(([code]) => code.startsWith(prefix));
 
