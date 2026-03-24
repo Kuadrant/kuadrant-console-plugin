@@ -51,11 +51,10 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
       }
     } catch (error) {
       if (update == true) {
-        console.error(t(`Cannot update ${policyType}`, error));
+        console.error(`Cannot update ${policyType}:`, error);
         setErrorAlertMsg(error.message);
-      }
-      {
-        console.error(t(`Cannot create ${policyType}`, error));
+      } else {
+        console.error(`Cannot create ${policyType}:`, error);
         setErrorAlertMsg(error.message);
       }
     }
@@ -64,7 +63,11 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
     <>
       {errorAlertMsg != '' && (
         <AlertGroup className="kuadrant-alert-group">
-          <Alert title={t(`Error creating ${policyType}`)} variant={AlertVariant.danger} isInline>
+          <Alert
+            title={t('Error creating {{policyType}}', { policyType })}
+            variant={AlertVariant.danger}
+            isInline
+          >
             {errorAlertMsg}
           </Alert>
         </AlertGroup>
