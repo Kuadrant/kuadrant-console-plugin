@@ -59,6 +59,7 @@
   "Error parsing topology:": "Error parsing topology:",
   "Error parsing YAML:": "Error parsing YAML:",
   "Error Rate": "Error Rate",
+  "Error updating {{policyType}}": "Error updating {{policyType}}",
   "Expand Getting Started": "Expand Getting Started",
   "Failure Threshold": "Failure Threshold",
   "Feature Highlights": "Feature Highlights",

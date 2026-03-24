@@ -64,7 +64,11 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
       {errorAlertMsg != '' && (
         <AlertGroup className="kuadrant-alert-group">
           <Alert
-            title={t('Error creating {{policyType}}', { policyType })}
+            title={
+              update
+                ? t('Error updating {{policyType}}', { policyType })
+                : t('Error creating {{policyType}}', { policyType })
+            }
             variant={AlertVariant.danger}
             isInline
           >
