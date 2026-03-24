@@ -34,7 +34,7 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
     setErrorAlertMsg('');
 
     try {
-      if (update == true) {
+      if (update) {
         const response = await k8sUpdate({
           model: model,
           data: resource,
@@ -49,14 +49,15 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
         console.log(`${policyType} created successfully:`, response);
         navigate(`/kuadrant/all-namespaces/policies/${policyType}`);
       }
-    } catch (error) {
-      if (update == true) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'An error occurred';
+
+      if (update) {
         console.error(`Cannot update ${policyType}:`, error);
-        setErrorAlertMsg(error.message);
       } else {
         console.error(`Cannot create ${policyType}:`, error);
-        setErrorAlertMsg(error.message);
       }
+      setErrorAlertMsg(message);
     }
   };
   return (
