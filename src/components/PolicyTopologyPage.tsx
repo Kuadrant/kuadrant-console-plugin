@@ -15,7 +15,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
 import NoPermissionsView from './NoPermissionsView';
-import { fetchConfig, KuadrantConfig } from '../utils/topology/configLoader';
+import { fetchConfig, KuadrantConfig } from '../utils/configLoader';
 import { useVisualizationController } from '../hooks/topology/useVisualizationController';
 import { useTopologyData } from '../hooks/topology/useTopologyData';
 import { ResourceFilterToolbar } from './topology/ResourceFilterToolbar';

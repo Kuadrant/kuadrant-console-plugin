@@ -70,7 +70,7 @@ import {
   ERRORS_BY_CODE_QUERY,
   buildGatewayKey,
 } from '../utils/metricsQueries';
-import { fetchConfig, KuadrantConfig } from '../utils/topology/configLoader';
+import { fetchConfig, KuadrantConfig } from '../utils/configLoader';
 
 export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
