@@ -54,7 +54,7 @@ export const KuadrantStatusAlert: React.FC = React.memo(() => {
   if (err) {
     return (
       <div style={{ display: 'flex' }}>
-        <Tooltip position="top" content={t(err.toString())}>
+        <Tooltip position="top" content={err.toString()}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
             <Icon status="danger">
               <ExclamationCircleIcon />
@@ -92,7 +92,7 @@ export const KuadrantStatusAlert: React.FC = React.memo(() => {
           position="top"
           content={
             <div>
-              <div>{t(missingDependency[0].message)}</div>
+              <div>{missingDependency[0].message}</div>
               <div>
                 {t('Reason: ')} {missingDependency[0].reason}
               </div>
@@ -123,7 +123,7 @@ export const KuadrantStatusAlert: React.FC = React.memo(() => {
           position="top"
           content={
             <div>
-              <div>{t(success[0].message)}</div>
+              <div>{success[0].message}</div>
               <div>
                 {t('Reason: ')} {success[0].reason}
               </div>
