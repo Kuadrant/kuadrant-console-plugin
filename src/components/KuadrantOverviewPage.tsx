@@ -1016,7 +1016,9 @@ const KuadrantOverviewPage: React.FC = () => {
                           ) : (
                             <Tooltip
                               key={policy}
-                              content={t(`You do not have permission to create a ${policy}`)}
+                              content={t('You do not have permission to create a {{policyType}}', {
+                                policyType: policy,
+                              })}
                             >
                               <DropdownItem value={policy} isAriaDisabled>
                                 {t(policy)}

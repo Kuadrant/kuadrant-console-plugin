@@ -135,7 +135,10 @@ export const AllPoliciesListPage: React.FC<{
         {t(policy)}
       </DropdownItem>
     ) : (
-      <Tooltip key={policy} content={t(`You do not have permission to create a ${policy}`)}>
+      <Tooltip
+        key={policy}
+        content={t('You do not have permission to create a {{policyType}}', { policyType: policy })}
+      >
         <DropdownItem value={policy} isAriaDisabled>
           {t(policy)}
         </DropdownItem>
@@ -197,6 +200,8 @@ const PoliciesListPage: React.FC<{
     );
   }
 
+  const createButtonText = t('Create {{policyType}}', { policyType: resource.gvk.kind });
+
   return (
     <>
       <ListPageBody>
@@ -207,15 +212,19 @@ const PoliciesListPage: React.FC<{
               <ListPageCreateLink
                 to={`/k8s/ns/${resolvedNamespace}/${resource.gvk.group}~${resource.gvk.version}~${resource.gvk.kind}/~new`}
               >
-                {t(`plugin__kuadrant-console-plugin~Create ${resource.gvk.kind}`)}
+                {createButtonText}
               </ListPageCreateLink>
             ) : (
-              <Tooltip content={t(`You do not have permission to create a ${resource.gvk.kind}`)}>
+              <Tooltip
+                content={t('You do not have permission to create a {{policyType}}', {
+                  policyType: resource.gvk.kind,
+                })}
+              >
                 <span
                   className="pf-c-button pf-m-primary pf-u-mt-md pf-u-mr-md"
                   aria-disabled="true"
                 >
-                  {t(`Create ${resource.gvk.kind}`)}
+                  {createButtonText}
                 </span>
               </Tooltip>
             )}
