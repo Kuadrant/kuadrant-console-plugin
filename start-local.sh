@@ -13,8 +13,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# shellcheck source=e2e/lib.sh
-source "${SCRIPT_DIR}/e2e/lib.sh"
+source "${SCRIPT_DIR}/scripts/lib.sh"
 
 CONSOLE_PORT="${CONSOLE_PORT:-9000}"
 PLUGIN_PORT="${PLUGIN_PORT:-9001}"
@@ -36,11 +35,11 @@ if kubectl get nodes &>/dev/null 2>&1; then
   else
     log "cluster running but console is down, recreating..."
     oinc delete --force
-    "${SCRIPT_DIR}/e2e/setup.sh"
+    "${SCRIPT_DIR}/scripts/cluster-setup.sh"
   fi
 else
   log "setting up local cluster with kuadrant..."
-  "${SCRIPT_DIR}/e2e/setup.sh"
+  "${SCRIPT_DIR}/scripts/cluster-setup.sh"
 fi
 
 # kill any leftover process on the plugin port

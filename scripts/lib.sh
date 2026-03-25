@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# shared helpers for e2e scripts and local dev
+# shared helpers for cluster scripts and local dev
 
 log() { echo "==> $*"; }
 
@@ -23,5 +23,12 @@ container_host() {
     echo "host.containers.internal"
   else
     echo "host.docker.internal"
+  fi
+}
+
+check_command() {
+  if ! command -v "$1" &>/dev/null; then
+    echo "error: '$1' not found. $2"
+    exit 1
   fi
 }
