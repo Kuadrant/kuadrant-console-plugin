@@ -22,7 +22,7 @@ metadata:
   name: api-admin
 rules:
   # Full access to API products across all namespaces
-  - apiGroups: ["extensions.kuadrant.io"]
+  - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
     verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
 
@@ -95,8 +95,11 @@ metadata:
   name: platform-engineer-full
 rules:
   # All API admin permissions
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
   - apiGroups: ["extensions.kuadrant.io"]
-    resources: ["apiproducts", "planpolicies", "oidcpolicies"]
+    resources: ["planpolicies", "oidcpolicies"]
     verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
 
   - apiGroups: ["devportal.kuadrant.io"]

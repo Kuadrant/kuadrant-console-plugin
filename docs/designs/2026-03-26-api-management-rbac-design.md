@@ -31,10 +31,19 @@ The design introduces three personas (API Consumer, API Owner, API Admin) with d
 
 **No breaking changes.** This is a new feature adding RBAC definitions for API Management resources that didn't previously have defined roles in the console plugin.
 
-Existing policy RBAC (AuthPolicy, RateLimitPolicy, DNSPolicy, TLSPolicy) remains unchanged. The new roles are additive and only affect access to API Management resources:
-- `APIProduct` (`extensions.kuadrant.io/v1alpha1`)
-- `APIKey` (`devportal.kuadrant.io/v1alpha1`)
-- `PlanPolicy` (`extensions.kuadrant.io/v1alpha1`)
+The new roles are additive and focus on API Management resources:
+- `APIProduct` (`devportal.kuadrant.io/v1alpha1`) - API catalog entries
+- `APIKey` (`devportal.kuadrant.io/v1alpha1`) - Consumer API access requests
+
+**API Consumer read permissions** include policies and routes:
+- `PlanPolicy` (`extensions.kuadrant.io/v1alpha1`) - Rate limiting plan templates
+- `AuthPolicy` (`kuadrant.io/v1`) - Authentication and authorization requirements
+- `RateLimitPolicy` (`kuadrant.io/v1`) - Rate limiting configurations
+- `HTTPRoute` (`gateway.networking.k8s.io/v1`) - API endpoints and routing rules
+
+All policies (PlanPolicy, AuthPolicy, RateLimitPolicy) are treated uniformly with read-only access for consumers.
+
+Existing RBAC for other policies (DNSPolicy, TLSPolicy) remains unchanged.
 
 ### Architecture Changes
 
@@ -103,9 +112,21 @@ User clicks "Create APIKey" → k8sCreate() → POST /apis/devportal.kuadrant.io
 
 ### API Changes
 
+**No API changes.** This design does not introduce new CRDs or modify existing API schemas. All resources (APIProduct, APIKey, PlanPolicy, AuthPolicy, RateLimitPolicy, HTTPRoute) already exist and are managed by their respective controllers:
+
+- **APIProduct** and **APIKey**: Defined and managed by the [Developer Portal Controller](https://github.com/Kuadrant/developer-portal-controller)
+- **PlanPolicy**, **AuthPolicy**, and **RateLimitPolicy**: Defined and managed by [Kuadrant Operator](https://github.com/Kuadrant/kuadrant-operator)
+- **HTTPRoute**: Part of Kubernetes Gateway API
+
+This design focuses exclusively on defining RBAC roles for console plugin users to interact with these existing resources.
+
+### API Management Resources
+
+This section describes the key resources managed by the RBAC roles and their implications for permission design.
+
 #### APIKey Resource (devportal.kuadrant.io/v1alpha1)
 
-The `APIKey` resource is the core of the consumer access request workflow:
+The `APIKey` resource is the core of the consumer access request workflow. Consumers create APIKeys to request access to published APIs.
 
 ```yaml
 apiVersion: devportal.kuadrant.io/v1alpha1
@@ -172,15 +193,28 @@ status:
       message: "API key secret created successfully"
 ```
 
-**Key fields for RBAC design:**
-- `spec.requestedBy.userId`: Used by UI to filter APIKeys (consumer sees only their own)
-- `status.phase`: Approval state, updated by API Owner
-- `status.canReadSecret`: One-time viewing flag, updated by consumer after viewing secret
+**RBAC implications:**
+- **Namespace placement**: APIKey must be created in the same namespace as the referenced APIProduct
+- **Consumer filtering**: `spec.requestedBy.userId` used by UI to filter list results (consumers see only their own APIKeys)
+- **Approval workflow**:
+  - API Owners update `status.phase` to "Approved" or "Rejected"
+  - Requires `update apikeys/status` permission
+  - Based on `APIProduct.spec.approvalMode` (automatic vs manual)
+- **One-time secret viewing**:
+  - `status.canReadSecret` flag prevents repeated viewing of API key secret
+  - Consumer needs `update apikeys/status` permission to mark secret as viewed
+  - UI enforcement only (not security boundary)
+- **Secret access**:
+  - Developer Portal Controller creates Secret in same namespace as APIKey
+  - Consumer needs `get secrets` permission in API owner's namespace
+  - `status.secretRef` points to the generated secret
 
-#### APIProduct Resource (extensions.kuadrant.io/v1alpha1)
+#### APIProduct Resource (devportal.kuadrant.io/v1alpha1)
+
+API Owners publish APIProducts to make their APIs discoverable in the developer portal catalog.
 
 ```yaml
-apiVersion: extensions.kuadrant.io/v1alpha1
+apiVersion: devportal.kuadrant.io/v1alpha1
 kind: APIProduct
 metadata:
   name: payment-api-v1
@@ -211,69 +245,61 @@ spec:
 ```
 
 **RBAC implications:**
-- `approvalMode: automatic` → APIKey approved immediately (no owner intervention)
-- `approvalMode: manual` → Owner must set `status.phase: Approved`
-- `publishStatus: Draft` → Can be used to hide products from catalog
+- **Namespace ownership**: API Owners can only create/update/delete APIProducts in their assigned namespaces
+- **Catalog visibility**: All personas have cluster-wide read access to enable API discovery
+- **Approval workflow**:
+  - `approvalMode: automatic` → APIKeys approved immediately by Developer Portal Controller (no owner intervention)
+  - `approvalMode: manual` → Owner must review and update `APIKey.status.phase` to approve/reject
+- **Draft products**: `publishStatus: Draft` can be used to hide products from catalog while in development (UI can filter by this field)
+- **HTTPRoute reference**: `spec.targetRef` must reference an HTTPRoute in the same namespace (namespace-local reference)
+- **Owner permissions**: Requires `create apiproducts` permission in namespace, plus `get httproutes` to select valid routes
 
-#### PlanPolicy Resource (extensions.kuadrant.io/v1alpha1)
+#### Policy and Route Resources
 
-```yaml
-apiVersion: extensions.kuadrant.io/v1alpha1
-kind: PlanPolicy
-metadata:
-  name: standard-rate-limits
-  namespace: kuadrant-system  # Platform-managed
-spec:
-  name: standard
-  displayName: "Standard Plan"
-  limits:
-    - period: 1m
-      requests: 100
-    - period: 1h
-      requests: 5000
-```
+In addition to APIProduct and APIKey, API consumers need read-only access to policies and routes to understand API requirements, endpoints, and rate limits.
+
+**Policies** (all read-only for consumers and owners)
+
+1. **PlanPolicy** (`extensions.kuadrant.io/v1alpha1`)
+   - Platform-managed rate limiting plan templates
+   - Defines tiers (e.g., free, basic, premium, enterprise)
+   - Typically in system namespace (e.g., `kuadrant-system`)
+
+2. **AuthPolicy** (`kuadrant.io/v1`)
+   - Authentication and authorization requirements
+   - Shows what credentials are needed (API key, OAuth, JWT, etc.)
+   - Applied to HTTPRoutes or Gateways
+
+3. **RateLimitPolicy** (`kuadrant.io/v1`)
+   - Route-specific rate limiting configurations
+   - May differ from PlanPolicy defaults
+   - Shows actual limits applied to specific APIs
+
+**Routes**
+
+4. **HTTPRoute** (`gateway.networking.k8s.io/v1`)
+   - API endpoints, paths, and HTTP methods
+   - Hostname and path prefixes
+   - Backend service references
+   - Referenced by APIProduct via `spec.targetRef`
 
 **RBAC implications:**
-- Platform-managed resource (typically cluster-scoped or system namespace)
-- Consumers and owners: read-only access
-- Admins: full CRUD access
+- All policies and routes: consumers and owners have cluster-wide read-only access
+- Owners may have write access to these resources in their own namespaces (separate policy management roles)
+- Admins have full access to all policies and routes
 
-### Component Changes
+### RBAC Enforcement
 
-#### Console Plugin UI Permission Checks
+#### Console Plugin Permission Checks
 
-The console plugin uses `SelfSubjectAccessReview` to conditionally render UI elements:
+The OpenShift Console plugin enforces RBAC using `SelfSubjectAccessReview` API calls. All operations are performed as the logged-in user via OAuth token - there is no backend service account.
 
-```typescript
-// Example: API Products page
-import { checkAccess } from '@openshift-console/dynamic-plugin-sdk';
+**Enforcement mechanism:**
+1. **Progressive disclosure**: UI checks permissions before rendering action buttons/menu items
+2. **Backend enforcement**: Kubernetes API server enforces RBAC on all resource operations
+3. **User identity preservation**: All API calls use the logged-in user's credentials
 
-const canCreateProduct = await checkAccess({
-  group: 'extensions.kuadrant.io',
-  resource: 'apiproducts',
-  verb: 'create',
-  namespace: activeNamespace,
-});
-
-// Conditionally render "Create Product" button
-{canCreateProduct && <Button onClick={handleCreate}>Create Product</Button>}
-```
-
-**Permission checks by page:**
-
-| Page/Component | UI Element | Permission Check |
-|----------------|------------|------------------|
-| API Catalog | Product list | `list apiproducts` (cluster-wide) |
-| API Catalog | "Request Access" button | `create apikeys` in product namespace |
-| My API Products | "Create Product" button | `create apiproducts` in active namespace |
-| My API Products | "Edit" action | `update apiproducts` on specific resource |
-| My API Products | "Delete" action | `delete apiproducts` on specific resource |
-| API Key Requests | Request list | `list apikeys` in namespace |
-| API Key Requests | "View Secret" button | `get secrets` + `apikey.status.canReadSecret: true` |
-| API Key Requests | "Approve/Reject" actions | `update apikeys/status` on specific resource |
-| API Key Requests | "Delete" action | `delete apikeys` on specific resource |
-| Plans | Plan list | `list planpolicies` (cluster-wide) |
-| Plans | "Create Plan" button | `create planpolicies` in namespace |
+**Key principle**: RBAC is enforced by Kubernetes, not just UI hints. Even if UI is bypassed (e.g., via kubectl), Kubernetes API server will deny unauthorized operations.
 
 #### Developer Portal Controller
 
@@ -366,83 +392,39 @@ The Developer Portal Controller (separate repository) handles:
 
 ## Implementation Plan
 
-### Phase 1: RBAC Role Definitions ✅ (Complete)
+This design has been implemented with the following deliverables:
 
-1. Create API Consumer role (`config/rbac/api-consumer-role.yaml`)
-2. Create API Owner role (`config/rbac/api-owner-role.yaml`)
-3. Create API Admin cluster role (`config/rbac/api-admin-clusterrole.yaml`)
-4. Document deployment patterns (`config/rbac/README.md`)
-5. Create E2E test personas (`e2e/manifests/api-management-rbac.yaml`)
+### ✅ Completed: RBAC Role Definitions
 
 **Deliverables:**
-- ✅ `config/rbac/api-consumer-role.yaml`
-- ✅ `config/rbac/api-owner-role.yaml`
-- ✅ `config/rbac/api-admin-clusterrole.yaml`
-- ✅ `config/rbac/README.md`
-- ✅ `e2e/manifests/api-management-rbac.yaml`
-- ✅ `docs/designs/2026-03-26-api-management-rbac-design.md` (this file)
-- ✅ `docs/api-management-rbac-validation.md`
+- ✅ `config/rbac/api-consumer-role.yaml` - Consumer role and catalog reader ClusterRole
+- ✅ `config/rbac/api-owner-role.yaml` - Owner role and catalog reader ClusterRole
+- ✅ `config/rbac/api-admin-clusterrole.yaml` - Admin ClusterRole
+- ✅ `config/rbac/README.md` - Deployment guide with common patterns
+- ✅ `e2e/manifests/api-management-rbac.yaml` - Test personas for validation
+- ✅ `docs/designs/2026-03-26-api-management-rbac-design.md` - This design document
+- ✅ `docs/api-management-rbac-validation.md` - Manual validation procedures
 
-### Phase 2: Console Plugin UI Implementation (TODO)
+### Future Work (Out of Scope for RBAC Design)
 
-1. Add API Management pages (API Catalog, My APIs, API Keys, Plans)
-2. Implement permission checks using `checkAccess()` and `useAccessReviews()`
-3. Filter APIKey lists by `spec.requestedBy.userId` for consumers
-4. Implement one-time secret viewing with `canReadSecret` workflow
-5. Add approval/rejection actions for API owners
-6. Update `console-extensions.json` for new routes
+**Console Plugin Implementation** (separate work):
+- UI components respecting RBAC permissions
+- Progressive disclosure via `SelfSubjectAccessReview`
+- Client-side filtering for APIKey lists
 
-**Deliverables:**
-- `src/components/apimanagement/APICatalogPage.tsx`
-- `src/components/apimanagement/MyAPIProductsPage.tsx`
-- `src/components/apimanagement/APIKeysPage.tsx`
-- `src/components/apimanagement/PlansPage.tsx`
-- Permission check utilities in `src/utils/apiManagementRBAC.tsx`
-
-### Phase 3: E2E Testing (TODO)
-
-1. Create E2E test suite (`e2e/tests/api-management-rbac.spec.ts`)
-2. Test consumer scenario: browse catalog, request access, view secret
-3. Test owner scenario: create product, approve request, manage namespace resources
-4. Test admin scenario: view all resources, cross-namespace operations
-5. Test negative scenarios: verify permission denials
-
-**Deliverables:**
-- `e2e/tests/api-management-rbac.spec.ts`
-- CI integration for RBAC tests
-
-### Phase 4: Documentation (TODO)
-
-1. Update main README with API Management RBAC section
-2. Create admin deployment guide
-3. Document user workflows for each persona
-4. Add examples to kuadrant-dev-setup repository
-
-**Deliverables:**
-- `README.md` updates
-- `docs/admin-guide-api-management-rbac.md`
-- User workflow documentation
-
-### Phase 5: Kuadrant Operator Integration (Future Enhancement)
-
-1. Add API Management RBAC roles to Kuadrant Operator deployment
-2. Auto-create roles when Kuadrant is installed
-3. Document how to bind roles to users/groups
-4. Consider namespace templates for auto-provisioning
-
-**Deliverables:**
-- Kuadrant Operator changes (separate repository)
-- Deployment manifests
+**Kuadrant Operator Integration** (future enhancement):
+- Include RBAC ClusterRoles in operator deployment
+- Auto-create roles during Kuadrant installation
+- Namespace templates for team onboarding
 
 ## Testing Strategy
 
-### Unit Tests
+RBAC testing focuses on verifying that Kubernetes enforces the defined permissions correctly.
 
-Not applicable for RBAC definitions (YAML manifests). Testing focuses on integration and E2E.
+### kubectl Impersonation Tests
 
-### Integration Tests
+Use `kubectl --as=<user>` to test permissions without creating real users:
 
-**kubectl impersonation tests:**
 ```bash
 # Test consumer permissions
 kubectl auth can-i list apiproducts --as=test-consumer --all-namespaces
@@ -459,20 +441,22 @@ kubectl auth can-i create planpolicies --as=test-admin -n kuadrant-system
 kubectl auth can-i delete apiproducts --as=test-admin -n any-namespace
 ```
 
-**Test script:** `docs/api-management-rbac-validation.md` contains manual validation procedures.
+### Manual Validation
 
-### E2E Tests
+Comprehensive validation procedures are documented in `docs/api-management-rbac-validation.md`:
 
-**Playwright/Cypress tests (future):**
-1. Consumer logs in → sees API catalog → requests access → views secret once
-2. Owner logs in → creates API product → approves request → sees approval in status
-3. Admin logs in → manages all resources across namespaces
-4. Permission denial tests → verify forbidden errors
+1. **Consumer scenario**: Browse catalog, create APIKey, verify denials
+2. **Owner scenario**: Create APIProduct in own namespace, approve APIKey, verify cross-namespace denials
+3. **Admin scenario**: Manage resources across all namespaces, create PlanPolicies
+4. **Negative tests**: Verify permission denials work as expected
 
-**Test data:**
-- Use `e2e/manifests/api-management-rbac.yaml` for test personas
-- Create sample APIProducts, APIKeys, PlanPolicies
-- Verify RBAC via actual API calls (not just permission checks)
+### Test Personas
+
+Test users and RoleBindings are available in `e2e/manifests/api-management-rbac.yaml`:
+- `test-api-consumer` - Consumer with access to `api-consumers` namespace
+- `test-api-owner-team-a` - Owner with access to `api-team-a` namespace
+- `test-api-owner-team-b` - Owner with access to `api-team-b` namespace
+- `test-api-admin` - Admin with cluster-wide access
 
 ## Open Questions
 
@@ -538,114 +522,45 @@ kubectl auth can-i delete apiproducts --as=test-admin -n any-namespace
 
 **Recommendation**: A - Operator creates ClusterRoles, admin creates bindings based on deployment guide.
 
-## Execution
+## Validation and Next Steps
 
-### Todo
+### RBAC Validation
 
-Ordered by dependency — workable top to bottom.
+**Manual testing** (documented in `docs/api-management-rbac-validation.md`):
+- Use kubectl impersonation (`--as=<user>`) to test each persona
+- Verify positive permissions (consumer can list APIProducts, owner can create in own namespace)
+- Verify negative permissions (consumer cannot create APIProducts, owner cannot access other namespaces)
+- Test cross-namespace scenarios (consumer creates APIKey in owner's namespace)
 
-- [ ] Create UI components for API Management
-    - [ ] APICatalogPage component (browse published APIProducts)
-    - [ ] MyAPIProductsPage component (manage owned APIProducts)
-    - [ ] APIKeysPage component (view/create/approve APIKeys)
-    - [ ] PlansPage component (browse PlanPolicies)
-    - [ ] Unit tests for components
-    - [ ] Integration tests with permission checks
-- [ ] Implement permission checks in UI
-    - [ ] Add `useAccessReviews` hook for API Management resources
-    - [ ] Filter APIKey lists by `requestedBy.userId`
-    - [ ] Show/hide UI elements based on permissions
-    - [ ] Unit tests for permission logic
-    - [ ] Integration tests
-- [ ] Implement one-time secret viewing workflow
-    - [ ] Check `canReadSecret` flag before displaying secret
-    - [ ] Update `canReadSecret: false` after first view
-    - [ ] Display warning message about one-time viewing
-    - [ ] Unit tests
-    - [ ] Integration tests
-- [ ] Add approval/rejection actions for API owners
-    - [ ] Implement status.phase update UI
-    - [ ] Add reviewedBy and reviewedAt fields
-    - [ ] Handle approval mode (automatic vs manual)
-    - [ ] Unit tests
-    - [ ] Integration tests
-- [ ] Create E2E test suite
-    - [ ] Consumer scenario test
-    - [ ] Owner scenario test
-    - [ ] Admin scenario test
-    - [ ] Negative permission tests
-    - [ ] Integration tests
-- [ ] Update documentation
-    - [ ] README.md with API Management RBAC overview
-    - [ ] Admin deployment guide
-    - [ ] User workflow documentation
-    - [ ] Integration tests
-- [ ] Kuadrant Operator integration (future)
-    - [ ] Add API Management ClusterRoles to operator deployment
-    - [ ] Document binding creation process
-    - [ ] Add namespace template examples
-    - [ ] Integration tests
+**Automated testing**:
+- E2E test suite validating RBAC for consumer, owner, and admin personas
+- Negative test scenarios to verify permission denials
+- Test personas available in `e2e/manifests/api-management-rbac.yaml`
+
+### Next Steps
+
+1. **Console Plugin Integration** (separate from this design):
+   - Implement UI components respecting RBAC via `SelfSubjectAccessReview`
+   - Progressive disclosure based on user permissions
+   - Client-side filtering for APIKey lists by `requestedBy.userId`
+
+2. **Kuadrant Operator Integration** (future enhancement):
+   - Include API Management ClusterRoles in operator deployment manifests
+   - Auto-create roles when Kuadrant is installed
+   - Document RoleBinding creation for users/groups
+
+3. **Documentation**:
+   - Admin guide for deploying and configuring API Management RBAC
+   - User workflows for each persona (consumer, owner, admin)
+   - Troubleshooting guide for common RBAC issues
 
 ### Completed
 
-- ✅ 2026-03-26: Created RBAC role definitions for API Consumer, API Owner, API Admin
-- ✅ 2026-03-26: Documented deployment patterns in config/rbac/README.md
-- ✅ 2026-03-26: Created E2E test personas in e2e/manifests/api-management-rbac.yaml
-- ✅ 2026-03-26: Wrote validation guide in docs/api-management-rbac-validation.md
-- ✅ 2026-03-26: Created design document (this file)
-
-## Change Log
-
-### 2026-03-26 — Initial Design
-
-**Key decisions:**
-1. **Namespace-based isolation** instead of ownership annotations
-   - Leverages Kubernetes native RBAC
-   - Stronger boundaries than Backstage's annotation-based approach
-
-2. **Three personas model**
-   - API Consumer: Browse and consume APIs
-   - API Owner: Publish and manage APIs in assigned namespaces
-   - API Admin: Platform team with cluster-wide access
-
-3. **Cluster-wide read for discovery**
-   - All personas can list/get APIProducts globally
-   - Write operations are namespace-scoped
-
-4. **APIKey approval workflow**
-   - Owner updates `status.phase` directly (no intermediate spec field)
-   - Based on `APIProduct.spec.approvalMode` (automatic vs manual)
-
-5. **One-time secret viewing**
-   - `status.canReadSecret` flag enforced by UI
-   - Consumer needs `update apikeys/status` permission
-   - Not a security enforcement mechanism (UI convenience)
-
-6. **No service account impersonation**
-   - Console plugin makes all API calls as logged-in user
-   - RBAC rules apply to end users, not backend service account
-
-7. **Secret access pattern**
-   - Secrets created in same namespace as APIKey
-   - Consumer reads secret from API owner namespace
-   - Consumer needs `get secrets` permission in owner namespace
-   - Manual copy to workload namespace (future: automatic sync)
-
-8. **APIKey resource group**
-   - Uses `devportal.kuadrant.io/v1alpha1` (not `extensions.kuadrant.io`)
-   - Aligns with Developer Portal Controller repository
-
-**Differences from Backstage plugin:**
-- No `backstage.io/owner` annotations → namespace-based ownership
-- No `.own` vs `.all` permission scopes → namespace vs cluster scopes
-- Immutable ownership not needed → namespace access is the boundary
-
-**Future enhancements:**
-- Validation webhook for `status.phase` approval enforcement
-- Automatic secret synchronization to consumer workload namespaces
-- Kuadrant Operator integration for automatic role provisioning
-- Namespace templates for team onboarding
-- Audit logging for approval/rejection actions
+- ✅ RBAC role definitions for API Consumer, API Owner, API Admin
+- ✅ Deployment patterns documentation (`config/rbac/README.md`)
+- ✅ E2E test personas (`e2e/manifests/api-management-rbac.yaml`)
+- ✅ Validation guide (`docs/api-management-rbac-validation.md`)
+- ✅ Design document (this file)
 
 ## References
 

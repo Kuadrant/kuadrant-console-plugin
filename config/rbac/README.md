@@ -10,8 +10,10 @@ This directory contains Kubernetes RBAC role definitions for the Kuadrant Consol
 
 Grants permissions to:
 - Browse all API products (cluster-wide, read-only)
-- View rate limiting plans (read-only)
-- Create and manage API key requests in assigned namespace
+- View policies: PlanPolicy, AuthPolicy, RateLimitPolicy (read-only, to understand API requirements)
+- View HTTPRoutes (read-only, to understand API endpoints)
+- Create and manage API keys in any namespace where they can browse APIProducts
+- Read secrets (to retrieve API key values after approval)
 
 **How to deploy**:
 

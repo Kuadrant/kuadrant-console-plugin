@@ -51,13 +51,21 @@ metadata:
   name: api-consumer-catalog-reader
 rules:
   # Browse all API products for discovery
-  - apiGroups: ["extensions.kuadrant.io"]
+  - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
     verbs: ["get", "list"]
 
-  # View rate limiting plans (reference only)
+  # View policies (read-only, to understand API requirements)
   - apiGroups: ["extensions.kuadrant.io"]
     resources: ["planpolicies"]
+    verbs: ["get", "list"]
+  - apiGroups: ["kuadrant.io"]
+    resources: ["authpolicies", "ratelimitpolicies"]
+    verbs: ["get", "list"]
+
+  # View HTTPRoutes (read-only, to understand API endpoints)
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
     verbs: ["get", "list"]
 
 ---

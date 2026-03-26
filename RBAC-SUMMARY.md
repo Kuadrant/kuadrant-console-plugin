@@ -54,28 +54,37 @@ Located in `config/rbac/`:
 ## Three Personas
 
 ### 🟦 API Consumer
+
 ```
-Browse Catalog → Request Access → Use API
+Browse Catalog → Request Access → View Secret → Use API
 ```
-- **Can**: Browse all APIs, view plans, create API key requests
-- **Cannot**: Create APIs, approve requests
-- **Scope**: Namespace for requests, cluster-wide read for catalog
+
+- **Can**: Browse all APIs and policies (cluster-wide), create/update/delete own API keys, read secrets after approval
+- **Cannot**: Create APIs, approve requests (set status.phase), view other consumers' API keys
+- **Scope**: Cluster-wide read for catalog/policies, namespace-scoped write for APIKeys
+- **Key permissions**: `create/update/delete apikeys`, `update apikeys/status` (canReadSecret only), `get secrets`
 
 ### 🟨 API Owner
+
 ```
 Create API → Publish → Review Requests → Approve/Reject
 ```
-- **Can**: Manage APIs in own namespace(s), approve requests, browse catalog
-- **Cannot**: Access other teams' namespaces, create rate limit plans
-- **Scope**: Namespace for management, cluster-wide read for discovery
+
+- **Can**: Manage APIs in own namespace(s), approve/reject API keys (update status.phase), browse catalog cluster-wide
+- **Cannot**: Manage resources in other teams' namespaces, create PlanPolicies
+- **Scope**: Namespace-scoped write operations, cluster-wide read for discovery
+- **Key permissions**: `create/update/delete apiproducts`, `update apikeys/status` (approve/reject), `get httproutes/gateways`
 
 ### 🟥 API Admin
+
 ```
 Manage Everything → Troubleshoot → Override Decisions
 ```
-- **Can**: Full access to all APIs, all requests, create rate limit plans
-- **Cannot**: (Optional restrictions on infrastructure)
+
+- **Can**: Full CRUD on all API Management resources cluster-wide, create/manage PlanPolicies, troubleshoot on behalf of owners
+- **Cannot**: (Optional restrictions on infrastructure Gateways/HTTPRoutes - platform engineer role)
 - **Scope**: Cluster-wide full access
+- **Key permissions**: All verbs on `apiproducts`, `apikeys`, `apikeys/status`, `planpolicies`, plus `get/list secrets`
 
 ## Key Design Decisions
 
@@ -98,6 +107,7 @@ All personas can `list` and `get` APIProducts cluster-wide to enable API discove
 ### 3. Separate Roles for Namespace and Cluster Access
 
 Each persona has TWO bindings:
+
 - **Role + RoleBinding**: Namespace-scoped write operations
 - **ClusterRole + ClusterRoleBinding**: Cluster-wide read operations
 
@@ -105,11 +115,17 @@ Each persona has TWO bindings:
 
 ### 4. APIKey Namespace Placement
 
-Option A: Consumers create requests in their own namespace
-Option B: Consumers create requests in API owner's namespace
-Option C: Shared "api-requests" namespace
+**Design decision**: APIKeys must be created in the **same namespace as the APIProduct** they reference.
 
-**Recommended**: Option A (consumer namespace) with cross-namespace approval permissions for owners.
+**Why**:
+- APIKey has a local reference to APIProduct (no namespace field in `spec.apiProductRef`)
+- Simplifies approval workflow (owners manage APIKeys in their own namespace)
+- Secrets are created in same namespace as APIKey by Developer Portal Controller
+
+**Implications**:
+- Consumers need permissions in API owner namespaces to create APIKeys
+- UI filters APIKey lists by `spec.requestedBy.userId` so consumers see only their own
+- Secrets remain in owner namespace (consumer reads cross-namespace or copies manually)
 
 ## Quick Start
 
@@ -161,16 +177,39 @@ kubectl auth can-i create planpolicies --as=test-api-admin -n kuadrant-system
 
 ## Permission Matrix
 
+### Core API Management Resources
+
 | Resource | Action | Consumer | Owner (own NS) | Owner (other NS) | Admin |
 |----------|--------|:--------:|:--------------:|:----------------:|:-----:|
-| APIProduct | list | ✅ | ✅ | ✅ | ✅ |
+| **APIProduct** | get/list | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
 | APIProduct | create | ❌ | ✅ | ❌ | ✅ |
 | APIProduct | update | ❌ | ✅ | ❌ | ✅ |
 | APIProduct | delete | ❌ | ✅ | ❌ | ✅ |
+| **APIKey (spec)** | get/list | ✅ | ✅ | ❌ | ✅ Cluster-wide |
 | APIKey | create | ✅ | ✅ | ❌ | ✅ |
-| APIKey | approve | ❌ | ✅ | ❌ | ✅ |
-| PlanPolicy | list | ✅ | ✅ | ✅ | ✅ |
-| PlanPolicy | create | ❌ | ❌ | ❌ | ✅ |
+| APIKey | update | ✅ | ✅ | ❌ | ✅ |
+| APIKey | delete | ✅ | ✅ | ❌ | ✅ |
+| **APIKey (status)** | get | ✅ | ✅ | ❌ | ✅ |
+| APIKey (status) | update | ✅ (canReadSecret) | ✅ (approve/reject) | ❌ | ✅ |
+
+### Supporting Policies and Routes (Read-Only)
+
+| Resource | Action | Consumer | Owner | Admin |
+|----------|--------|:--------:|:-----:|:-----:|
+| PlanPolicy | get/list | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
+| PlanPolicy | create/update/delete | ❌ | ❌ | ✅ |
+| AuthPolicy | get/list | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
+| RateLimitPolicy | get/list | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
+| HTTPRoute | get/list | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
+| Gateway | get/list | ❌ | ✅ Cluster-wide | ✅ Cluster-wide |
+| Secret | get | ✅ | ✅ | ✅ |
+| Secret | list | ❌ | ❌ | ✅ |
+
+**Notes**:
+- **APIKey (spec)**: Consumer can update/delete their own APIKeys (UI filters by `spec.requestedBy.userId`)
+- **APIKey (status)**: Consumer updates `canReadSecret` (one-time viewing), Owner updates `phase` (approval/rejection)
+- **Policies/Routes**: Read-only for API Management role. Owners may have write access via separate policy management roles in their namespaces.
+- **Cluster-wide**: Permission applies across all namespaces (for discovery/catalog browsing)
 
 ## Deployment Patterns
 
@@ -217,18 +256,21 @@ done
 ## Next Steps
 
 ### Phase 1: RBAC Foundation (✅ Complete)
+
 - ✅ Design document
 - ✅ Role definitions
 - ✅ Test personas
 - ✅ Validation guide
 
 ### Phase 2: UI Implementation (TODO)
+
 - [ ] Add permission checks to API Management components
 - [ ] Hide/disable UI elements based on RBAC
 - [ ] Implement `SelfSubjectAccessReview` checks
 - [ ] Update console-extensions.json if needed
 
 ### Phase 3: E2E Testing (TODO)
+
 - [ ] Create `e2e/tests/api-management-rbac.spec.ts`
 - [ ] Test consumer scenario: browse + request access
 - [ ] Test owner scenario: create product + approve requests
@@ -236,47 +278,64 @@ done
 - [ ] Test negative scenarios: verify denials
 
 ### Phase 4: Documentation (TODO)
+
 - [ ] Update main RBAC docs (docs/rbac.md)
 - [ ] Add API management section to README
 - [ ] Create admin deployment guide
 - [ ] Add examples to kuadrant-dev-setup
 
-### Phase 5: Operator Integration (TODO)
-- [ ] Implement APIKey approval controller
-- [ ] Add validation webhooks for APIProduct
-- [ ] Auto-generate API keys on approval
-- [ ] Status updates on APIKey resources
+### Phase 5: Kuadrant Operator Integration (Future)
+
+- [ ] Include API Management ClusterRoles in Kuadrant Operator deployment
+- [ ] Auto-create RBAC roles when Kuadrant is installed
+- [ ] Document RoleBinding creation for users/groups
+- [ ] Namespace templates for team onboarding
+
+**Note**: APIKey approval controller and secret generation are handled by the [Developer Portal Controller](https://github.com/Kuadrant/developer-portal-controller), not the console plugin.
 
 ## Validation Checklist
 
 Use this checklist when testing the RBAC implementation:
 
 ### Consumer Testing
+
 - [ ] Can list all APIProducts cluster-wide
 - [ ] Can get specific APIProduct details
-- [ ] Can view PlanPolicies (read-only)
-- [ ] Can create APIKey in own namespace
+- [ ] Can view PlanPolicies, AuthPolicies, RateLimitPolicies, HTTPRoutes (read-only)
+- [ ] Can create APIKey in API owner's namespace
+- [ ] Can update own APIKey (UI filters by `requestedBy.userId`)
+- [ ] Can delete own APIKey
+- [ ] Can update APIKey status (`canReadSecret` flag only)
+- [ ] Can read Secret (after APIKey is approved)
 - [ ] Cannot create APIProducts
-- [ ] Cannot approve APIKeys
+- [ ] Cannot approve APIKeys (cannot set `status.phase`)
 - [ ] Cannot create PlanPolicies
 
 ### Owner Testing
+
 - [ ] Can list all APIProducts cluster-wide
 - [ ] Can create APIProduct in own namespace
 - [ ] Can update/delete APIProduct in own namespace
 - [ ] Cannot create APIProduct in other namespace
 - [ ] Cannot delete APIProduct in other namespace
-- [ ] Can approve APIKeys in own namespace
-- [ ] Can view HTTPRoutes and Gateways
+- [ ] Can list APIKeys in own namespace
+- [ ] Can update APIKey status (`status.phase`, `reviewedBy`, `reviewedAt`) to approve/reject
+- [ ] Can delete APIKeys in own namespace
+- [ ] Can read Secrets in own namespace (for troubleshooting)
+- [ ] Can view HTTPRoutes and Gateways cluster-wide
 - [ ] Cannot create PlanPolicies
 
 ### Admin Testing
+
 - [ ] Can list APIProducts cluster-wide
 - [ ] Can create APIProduct in any namespace
 - [ ] Can update/delete APIProduct in any namespace
-- [ ] Can approve APIKeys in any namespace
+- [ ] Can list APIKeys cluster-wide
+- [ ] Can update APIKey status in any namespace (approve/reject on behalf of owners)
+- [ ] Can delete APIKeys in any namespace
 - [ ] Can create/update/delete PlanPolicies
-- [ ] Can view all Kuadrant policies
+- [ ] Can list Secrets cluster-wide (for troubleshooting)
+- [ ] Can view all Kuadrant policies (AuthPolicy, RateLimitPolicy, etc.)
 - [ ] Can access topology ConfigMap
 
 ## Files Reference
@@ -317,4 +376,4 @@ For questions or feedback on this RBAC design:
 3. Test using the validation guide:
    - `docs/api-management-rbac-validation.md`
 
-4. Open an issue: https://github.com/Kuadrant/kuadrant-console-plugin/issues
+4. Open an issue: <https://github.com/Kuadrant/kuadrant-console-plugin/issues>

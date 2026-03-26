@@ -67,12 +67,19 @@ metadata:
   name: test-api-consumer-catalog-reader
 rules:
   # Browse all API products
-  - apiGroups: ["extensions.kuadrant.io"]
+  - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
     verbs: ["get", "list"]
-  # View rate limiting plans
+  # View policies (to understand API requirements)
   - apiGroups: ["extensions.kuadrant.io"]
     resources: ["planpolicies"]
+    verbs: ["get", "list"]
+  - apiGroups: ["kuadrant.io"]
+    resources: ["authpolicies", "ratelimitpolicies"]
+    verbs: ["get", "list"]
+  # View HTTPRoutes (to understand API endpoints)
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
     verbs: ["get", "list"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -100,7 +107,7 @@ metadata:
   namespace: api-team-a
 rules:
   # Manage API products in own namespace
-  - apiGroups: ["extensions.kuadrant.io"]
+  - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
   # Approve/reject API keys
@@ -145,7 +152,7 @@ metadata:
   name: test-api-owner-catalog-reader
 rules:
   # Browse all API products
-  - apiGroups: ["extensions.kuadrant.io"]
+  - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
     verbs: ["get", "list"]
   # View rate limiting plans
@@ -186,7 +193,7 @@ metadata:
   namespace: api-team-b
 rules:
   # Manage API products in own namespace
-  - apiGroups: ["extensions.kuadrant.io"]
+  - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
   # Approve/reject API keys
@@ -248,7 +255,7 @@ metadata:
   name: test-api-admin
 rules:
   # Full access to API products
-  - apiGroups: ["extensions.kuadrant.io"]
+  - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
     verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
   # Full access to API keys
