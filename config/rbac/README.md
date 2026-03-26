@@ -104,7 +104,7 @@ metadata:
   namespace: payment-services
 rules:
   - apiGroups: ["extensions.kuadrant.io"]
-    resources: ["apiproducts", "apikeyrequests"]
+    resources: ["apiproducts", "apikeys"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
   - apiGroups: ["kuadrant.io"]
     resources: ["authpolicies", "ratelimitpolicies"]
@@ -312,7 +312,7 @@ rules:
   - level: RequestResponse
     resources:
       - group: "extensions.kuadrant.io"
-        resources: ["apiproducts", "apikeyrequests", "planpolicies"]
+        resources: ["apiproducts", "apikeys", "planpolicies"]
 ```
 
 ### 4. Resource Quotas
@@ -327,7 +327,7 @@ metadata:
   namespace: consumer-team-x
 spec:
   hard:
-    count/apikeyrequests: "100"  # Max 100 API key requests per namespace
+    count/apikeys: "100"  # Max 100 API key requests per namespace
 ```
 
 ## Troubleshooting
@@ -368,6 +368,6 @@ kubectl auth can-i create planpolicies --as=<admin> -n kuadrant-system
 
 ## See Also
 
-- [API Management RBAC Design](../../docs/api-management-rbac.md) - Detailed design document
+- [API Management RBAC Design](../../docs/designs/2026-03-26-api-management-rbac-design.md) - Detailed design document
 - [RBAC Validation Guide](../../docs/api-management-rbac-validation.md) - Manual testing procedures
 - [Kuadrant RBAC Documentation](../../docs/rbac.md) - General RBAC for policies and gateways

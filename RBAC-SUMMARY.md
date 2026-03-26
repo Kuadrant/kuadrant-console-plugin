@@ -6,11 +6,13 @@ This document provides an overview of the RBAC system designed for Kuadrant Cons
 
 ### 1. Design Documentation
 
-- **[docs/api-management-rbac.md](docs/api-management-rbac.md)**
+- **[docs/designs/2026-03-26-api-management-rbac-design.md](docs/designs/2026-03-26-api-management-rbac-design.md)**
   - Complete RBAC design and architecture
   - Key differences from Backstage plugin approach
   - Permission mappings for all three personas
   - UI permission checks and implementation roadmap
+  - Full CRD schemas with examples
+  - Security considerations and open questions
 
 - **[docs/api-management-rbac-validation.md](docs/api-management-rbac-validation.md)**
   - Step-by-step manual validation procedures
@@ -101,7 +103,7 @@ Each persona has TWO bindings:
 
 **Why**: Enables discovery while maintaining namespace isolation for mutations.
 
-### 4. APIKeyRequest Namespace Placement
+### 4. APIKey Namespace Placement
 
 Option A: Consumers create requests in their own namespace
 Option B: Consumers create requests in API owner's namespace
@@ -165,8 +167,8 @@ kubectl auth can-i create planpolicies --as=test-api-admin -n kuadrant-system
 | APIProduct | create | ❌ | ✅ | ❌ | ✅ |
 | APIProduct | update | ❌ | ✅ | ❌ | ✅ |
 | APIProduct | delete | ❌ | ✅ | ❌ | ✅ |
-| APIKeyRequest | create | ✅ | ✅ | ❌ | ✅ |
-| APIKeyRequest | approve | ❌ | ✅ | ❌ | ✅ |
+| APIKey | create | ✅ | ✅ | ❌ | ✅ |
+| APIKey | approve | ❌ | ✅ | ❌ | ✅ |
 | PlanPolicy | list | ✅ | ✅ | ✅ | ✅ |
 | PlanPolicy | create | ❌ | ❌ | ❌ | ✅ |
 
@@ -240,10 +242,10 @@ done
 - [ ] Add examples to kuadrant-dev-setup
 
 ### Phase 5: Operator Integration (TODO)
-- [ ] Implement APIKeyRequest approval controller
+- [ ] Implement APIKey approval controller
 - [ ] Add validation webhooks for APIProduct
 - [ ] Auto-generate API keys on approval
-- [ ] Status updates on APIKeyRequest resources
+- [ ] Status updates on APIKey resources
 
 ## Validation Checklist
 
@@ -253,9 +255,9 @@ Use this checklist when testing the RBAC implementation:
 - [ ] Can list all APIProducts cluster-wide
 - [ ] Can get specific APIProduct details
 - [ ] Can view PlanPolicies (read-only)
-- [ ] Can create APIKeyRequest in own namespace
+- [ ] Can create APIKey in own namespace
 - [ ] Cannot create APIProducts
-- [ ] Cannot approve APIKeyRequests
+- [ ] Cannot approve APIKeys
 - [ ] Cannot create PlanPolicies
 
 ### Owner Testing
@@ -264,7 +266,7 @@ Use this checklist when testing the RBAC implementation:
 - [ ] Can update/delete APIProduct in own namespace
 - [ ] Cannot create APIProduct in other namespace
 - [ ] Cannot delete APIProduct in other namespace
-- [ ] Can approve APIKeyRequests in own namespace
+- [ ] Can approve APIKeys in own namespace
 - [ ] Can view HTTPRoutes and Gateways
 - [ ] Cannot create PlanPolicies
 
@@ -272,7 +274,7 @@ Use this checklist when testing the RBAC implementation:
 - [ ] Can list APIProducts cluster-wide
 - [ ] Can create APIProduct in any namespace
 - [ ] Can update/delete APIProduct in any namespace
-- [ ] Can approve APIKeyRequests in any namespace
+- [ ] Can approve APIKeys in any namespace
 - [ ] Can create/update/delete PlanPolicies
 - [ ] Can view all Kuadrant policies
 - [ ] Can access topology ConfigMap
@@ -287,7 +289,8 @@ kuadrant-console-plugin/
 │   ├── api-owner-role.yaml               # Owner role
 │   └── api-admin-clusterrole.yaml        # Admin cluster role
 ├── docs/
-│   ├── api-management-rbac.md            # Design document
+│   ├── designs/
+│   │   └── 2026-03-26-api-management-rbac-design.md  # Design document
 │   └── api-management-rbac-validation.md # Validation guide
 ├── e2e/manifests/
 │   └── api-management-rbac.yaml          # Test personas
@@ -309,7 +312,7 @@ For questions or feedback on this RBAC design:
    - `docs/api-management-rbac-validation.md`
 
 2. Review the design decisions in:
-   - `docs/api-management-rbac.md`
+   - `docs/designs/2026-03-26-api-management-rbac-design.md`
 
 3. Test using the validation guide:
    - `docs/api-management-rbac-validation.md`

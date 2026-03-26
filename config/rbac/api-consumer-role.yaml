@@ -18,10 +18,20 @@ metadata:
   name: api-consumer
   namespace: <consumer-namespace>
 rules:
-  # Create and manage API key requests in own namespace
-  - apiGroups: ["extensions.kuadrant.io"]
-    resources: ["apikeyrequests"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  # Create and manage API keys in any namespace (where consumer can browse APIProducts)
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys"]
+    verbs: ["get", "list", "create", "update", "delete"]
+
+  # Read and update APIKey status (needed for one-time secret viewing workflow)
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys/status"]
+    verbs: ["get", "update", "patch"]
+
+  # Read secrets to retrieve API key values
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
 
 ---
 # API Consumer ClusterRole (read-only catalog browsing)

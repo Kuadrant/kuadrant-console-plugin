@@ -33,10 +33,18 @@ metadata:
   name: test-api-consumer
   namespace: api-consumers
 rules:
-  # Create and manage API key requests in own namespace
-  - apiGroups: ["extensions.kuadrant.io"]
-    resources: ["apikeyrequests"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  # Create and manage API keys in any namespace
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # Read and update APIKey status (for one-time secret viewing)
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys/status"]
+    verbs: ["get", "update", "patch"]
+  # Read secrets to retrieve API key values
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -95,10 +103,18 @@ rules:
   - apiGroups: ["extensions.kuadrant.io"]
     resources: ["apiproducts"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
-  # Approve/reject API access requests
-  - apiGroups: ["extensions.kuadrant.io"]
-    resources: ["apikeyrequests"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  # Approve/reject API keys
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # Update APIKey status to approve/reject
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys/status"]
+    verbs: ["get", "update", "patch"]
+  # Read secrets to troubleshoot API keys
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
   # View HTTPRoutes to reference in APIProducts
   - apiGroups: ["gateway.networking.k8s.io"]
     resources: ["httproutes"]
@@ -173,10 +189,18 @@ rules:
   - apiGroups: ["extensions.kuadrant.io"]
     resources: ["apiproducts"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
-  # Approve/reject API access requests
-  - apiGroups: ["extensions.kuadrant.io"]
-    resources: ["apikeyrequests"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  # Approve/reject API keys
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # Update APIKey status to approve/reject
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys/status"]
+    verbs: ["get", "update", "patch"]
+  # Read secrets to troubleshoot API keys
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
   # View HTTPRoutes
   - apiGroups: ["gateway.networking.k8s.io"]
     resources: ["httproutes"]
@@ -227,14 +251,22 @@ rules:
   - apiGroups: ["extensions.kuadrant.io"]
     resources: ["apiproducts"]
     verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
-  # Full access to API key requests
-  - apiGroups: ["extensions.kuadrant.io"]
-    resources: ["apikeyrequests"]
-    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+  # Full access to API keys
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys"]
+    verbs: ["get", "list", "create", "update", "delete", "watch"]
+  # Full access to APIKey status
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys/status"]
+    verbs: ["get", "update", "patch", "watch"]
   # Full access to rate limiting plans
   - apiGroups: ["extensions.kuadrant.io"]
     resources: ["planpolicies", "oidcpolicies"]
     verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+  # Read secrets for troubleshooting
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
   # View all Kuadrant policies
   - apiGroups: ["kuadrant.io"]
     resources: ["authpolicies", "ratelimitpolicies", "dnspolicies", "tlspolicies", "tokenratelimitpolicies"]

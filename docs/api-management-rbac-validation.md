@@ -7,7 +7,7 @@ This guide shows how to validate the API Management RBAC roles using kubectl imp
 1. OpenShift cluster with Kuadrant installed
 2. kubectl or oc CLI configured
 3. Cluster admin access for setting up test personas
-4. API Management CRDs installed (APIProduct, APIKeyRequest, PlanPolicy)
+4. API Management CRDs installed (APIProduct, APIKey, PlanPolicy)
 
 ## Setup Test Environment
 
@@ -115,7 +115,7 @@ kubectl get planpolicies --all-namespaces --as=test-api-consumer
 # Test 1.4: Consumer can create API key request in own namespace
 kubectl apply --as=test-api-consumer -f - <<EOF
 apiVersion: extensions.kuadrant.io/v1alpha1
-kind: APIKeyRequest
+kind: APIKey
 metadata:
   name: consumer-payment-api-access
   namespace: api-consumers
@@ -142,7 +142,7 @@ EOF
 # Expected: FAILURE - "forbidden: User 'test-api-consumer' cannot create resource"
 
 # Test 1.6: Consumer CANNOT approve requests in other namespaces
-kubectl patch apikeyrequests consumer-payment-api-access \
+kubectl patch apikeys consumer-payment-api-access \
   -n api-consumers \
   --as=test-api-consumer \
   --type=merge \
@@ -152,7 +152,7 @@ kubectl patch apikeyrequests consumer-payment-api-access \
 # If status is part of spec, consumer can update (but operator should validate)
 
 # Cleanup
-kubectl delete apikeyrequests consumer-payment-api-access -n api-consumers
+kubectl delete apikeys consumer-payment-api-access -n api-consumers
 ```
 
 ### Test 2: API Owner Persona - Team A
@@ -223,7 +223,7 @@ EOF
 # First, create a request as consumer
 kubectl apply --as=test-api-consumer -f - <<EOF
 apiVersion: extensions.kuadrant.io/v1alpha1
-kind: APIKeyRequest
+kind: APIKey
 metadata:
   name: request-for-team-a-api
   namespace: api-team-a
@@ -235,7 +235,7 @@ spec:
 EOF
 
 # Now owner approves it
-kubectl patch apikeyrequests request-for-team-a-api \
+kubectl patch apikeys request-for-team-a-api \
   -n api-team-a \
   --as=test-api-owner-team-a \
   --type=merge \
@@ -243,7 +243,7 @@ kubectl patch apikeyrequests request-for-team-a-api \
 # Expected: SUCCESS - request approved
 
 # Cleanup
-kubectl delete apikeyrequests request-for-team-a-api -n api-team-a
+kubectl delete apikeys request-for-team-a-api -n api-team-a
 
 # Test 2.7: Owner CANNOT create PlanPolicy
 kubectl apply --as=test-api-owner-team-a -f - <<EOF
@@ -360,7 +360,7 @@ kubectl delete apiproduct admin-created-product \
 # Expected: SUCCESS
 
 # Test 4.5: Admin can view all API key requests
-kubectl get apikeyrequests --all-namespaces --as=test-api-admin
+kubectl get apikeys --all-namespaces --as=test-api-admin
 # Expected: SUCCESS
 
 # Test 4.6: Admin can create PlanPolicy
@@ -405,11 +405,11 @@ Use this table to systematically verify all permissions:
 | APIProduct | create | ❌ | ✅ | ❌ | ✅ |
 | APIProduct | update | ❌ | ✅ | ❌ | ✅ |
 | APIProduct | delete | ❌ | ✅ | ❌ | ✅ |
-| APIKeyRequest | list (own NS) | ✅ | ✅ | - | ✅ |
-| APIKeyRequest | list (other NS) | ❌ | ❌ | ❌ | ✅ |
-| APIKeyRequest | create | ✅ | ✅ | ❌ | ✅ |
-| APIKeyRequest | update (approve) | ❌ | ✅ | ❌ | ✅ |
-| APIKeyRequest | delete | ✅ (own) | ✅ | ❌ | ✅ |
+| APIKey | list (own NS) | ✅ | ✅ | - | ✅ |
+| APIKey | list (other NS) | ❌ | ❌ | ❌ | ✅ |
+| APIKey | create | ✅ | ✅ | ❌ | ✅ |
+| APIKey | update (approve) | ❌ | ✅ | ❌ | ✅ |
+| APIKey | delete | ✅ (own) | ✅ | ❌ | ✅ |
 | PlanPolicy | list | ✅ | ✅ | ✅ | ✅ |
 | PlanPolicy | get | ✅ | ✅ | ✅ | ✅ |
 | PlanPolicy | create | ❌ | ❌ | ❌ | ✅ |
@@ -519,11 +519,11 @@ kubectl describe role <role-name> -n <namespace>
 
 ### Issue: Owner can't approve API key requests
 
-**Cause**: APIKeyRequest might be in a different namespace than expected.
+**Cause**: APIKey might be in a different namespace than expected.
 
 **Solution**:
 - Verify the request is in the same namespace as the API product
-- Check that owner has update permission on apikeyrequests resource
+- Check that owner has update permission on apikeys resource
 
 ### Issue: Consumer can see all API key requests cluster-wide
 

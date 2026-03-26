@@ -23,10 +23,20 @@ rules:
     resources: ["apiproducts"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
 
-  # Approve/reject API access requests for own APIs
-  - apiGroups: ["extensions.kuadrant.io"]
-    resources: ["apikeyrequests"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  # Approve/reject API key requests for own APIs
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys"]
+    verbs: ["get", "list", "create", "update", "delete"]
+
+  # Update APIKey status to approve/reject requests
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys/status"]
+    verbs: ["get", "update", "patch"]
+
+  # Read secrets to troubleshoot API key issues
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
 
   # View HTTPRoutes to reference in APIProducts
   - apiGroups: ["gateway.networking.k8s.io"]
@@ -131,8 +141,16 @@ metadata:
 rules:
   # All API owner permissions
   - apiGroups: ["extensions.kuadrant.io"]
-    resources: ["apiproducts", "apikeyrequests"]
+    resources: ["apiproducts"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys"]
+    verbs: ["get", "list", "create", "update", "delete"]
+
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys/status"]
+    verbs: ["get", "update", "patch"]
 
   # Manage route-level policies
   - apiGroups: ["kuadrant.io"]
