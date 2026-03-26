@@ -1,0 +1,115 @@
+---
+# API Admin ClusterRole
+# Grants full access to API management resources across all namespaces
+# Used by platform team members who manage the API catalog and troubleshoot issues
+#
+# Usage:
+#   kubectl apply -f api-admin-clusterrole.yaml
+#
+#   Bind to admin users:
+#   kubectl create clusterrolebinding api-admin-alice \
+#     --clusterrole=api-admin \
+#     --user=alice
+#
+#   Bind to admin group:
+#   kubectl create clusterrolebinding api-admin-platform-team \
+#     --clusterrole=api-admin \
+#     --group=platform-team
+#
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: api-admin
+rules:
+  # Full access to API products across all namespaces
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+
+  # Full access to API key requests across all namespaces
+  # Allows admins to troubleshoot and approve/reject on behalf of owners
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apikeyrequests"]
+    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+
+  # Full access to rate limiting plans
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["planpolicies"]
+    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+
+  # View all route-level policies for troubleshooting
+  - apiGroups: ["kuadrant.io"]
+    resources: ["authpolicies", "ratelimitpolicies"]
+    verbs: ["get", "list", "watch"]
+
+  # View HTTPRoutes and Gateways
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes", "gateways"]
+    verbs: ["get", "list", "watch"]
+
+  # Read ConfigMaps for topology view
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+
+---
+# Example: ClusterRoleBinding for platform team
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: api-admin-platform-team
+subjects:
+  - kind: Group
+    name: platform-team
+    apiGroup: rbac.authorization.k8s.io
+  # Or bind to individual admin users:
+  # - kind: User
+  #   name: alice
+  #   apiGroup: rbac.authorization.k8s.io
+  # - kind: User
+  #   name: bob
+  #   apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: api-admin
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Alternative: Full Platform Engineer Role
+# Includes infrastructure management (gateways, gateway-level policies)
+# Use this for platform engineers who need to manage everything
+#
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: platform-engineer-full
+rules:
+  # All API admin permissions
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts", "apikeyrequests", "planpolicies", "oidcpolicies"]
+    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+
+  # Full Kuadrant policy management
+  - apiGroups: ["kuadrant.io"]
+    resources: ["authpolicies", "ratelimitpolicies", "dnspolicies", "tlspolicies", "tokenratelimitpolicies"]
+    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+
+  # Gateway API infrastructure
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways", "httproutes", "gatewayclasses"]
+    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+
+  # Certificate management
+  - apiGroups: ["cert-manager.io"]
+    resources: ["clusterissuers", "issuers", "certificates"]
+    verbs: ["get", "list", "watch"]
+
+  # ConfigMaps for topology
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list", "watch"]
+
+  # Secrets (for troubleshooting TLS, auth)
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]

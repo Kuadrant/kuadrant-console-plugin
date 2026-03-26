@@ -1,0 +1,150 @@
+---
+# API Owner Role
+# Allows teams to publish and manage APIs in their namespace
+#
+# Usage:
+#   Apply this role in the team's namespace:
+#   kubectl apply -f api-owner-role.yaml -n <team-namespace>
+#
+#   Bind to team users or groups:
+#   kubectl create rolebinding api-owner-binding \
+#     --role=api-owner \
+#     --group=team-payment-services \
+#     -n payment-services
+#
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: api-owner
+  namespace: <team-namespace>
+rules:
+  # Manage API products in own namespace
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+  # Approve/reject API access requests for own APIs
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apikeyrequests"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+  # View HTTPRoutes to reference in APIProducts
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list"]
+
+  # View Gateways for context
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways"]
+    verbs: ["get", "list"]
+
+---
+# API Owner ClusterRole (read-only catalog browsing)
+# Allows owners to discover all APIs for reference and competitive analysis
+#
+# Usage:
+#   kubectl apply -f api-owner-role.yaml
+#
+#   Grant cluster-wide catalog read access:
+#   kubectl create clusterrolebinding api-owner-catalog-reader-team-x \
+#     --clusterrole=api-owner-catalog-reader \
+#     --group=team-x
+#
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: api-owner-catalog-reader
+rules:
+  # Browse all API products for discovery
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list"]
+
+  # View rate limiting plans (reference when creating products)
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["planpolicies"]
+    verbs: ["get", "list"]
+
+  # View Gateways cluster-wide for reference
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways"]
+    verbs: ["get", "list"]
+
+  # View HTTPRoutes cluster-wide for discovery
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list"]
+
+---
+# Example: Combined binding for an API owner team
+# This creates both namespace-scoped (for managing APIs) and
+# cluster-scoped (for browsing catalog) permissions
+#
+# Usage:
+#   1. Create namespace for team: kubectl create namespace payment-services
+#   2. Apply role: kubectl apply -f api-owner-role.yaml -n payment-services
+#   3. Apply these bindings, replacing team name
+#
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: api-owner-binding
+  namespace: <team-namespace>
+subjects:
+  # Bind to OpenShift group
+  - kind: Group
+    name: <team-group-name>  # e.g., team-payment-services
+    apiGroup: rbac.authorization.k8s.io
+  # Or bind to individual users:
+  # - kind: User
+  #   name: alice
+  #   apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: api-owner
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: api-owner-catalog-reader-<team-name>
+subjects:
+  - kind: Group
+    name: <team-group-name>
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: api-owner-catalog-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# Optional: Extended API Owner Role with Policy Management
+# Use this if API owners should also manage route-level policies
+# (AuthPolicy, RateLimitPolicy) in their namespace
+#
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: api-owner-with-policies
+  namespace: <team-namespace>
+rules:
+  # All API owner permissions
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts", "apikeyrequests"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+  # Manage route-level policies
+  - apiGroups: ["kuadrant.io"]
+    resources: ["authpolicies", "ratelimitpolicies"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+  # View and create HTTPRoutes (full lifecycle)
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+  # View Gateways
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways"]
+    verbs: ["get", "list"]

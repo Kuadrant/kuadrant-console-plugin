@@ -1,0 +1,93 @@
+---
+# API Consumer Role
+# Allows developers to browse API catalog and request API access
+#
+# Usage:
+#   Apply this role in the consumer's namespace:
+#   kubectl apply -f api-consumer-role.yaml -n <consumer-namespace>
+#
+#   Bind to users or groups:
+#   kubectl create rolebinding api-consumer-binding \
+#     --role=api-consumer \
+#     --user=<username> \
+#     -n <consumer-namespace>
+#
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: api-consumer
+  namespace: <consumer-namespace>
+rules:
+  # Create and manage API key requests in own namespace
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apikeyrequests"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+---
+# API Consumer ClusterRole (read-only catalog browsing)
+# Allows consumers to discover all published APIs across namespaces
+#
+# Usage:
+#   kubectl apply -f api-consumer-role.yaml
+#
+#   Grant cluster-wide read access to a user:
+#   kubectl create clusterrolebinding api-consumer-catalog-reader-<username> \
+#     --clusterrole=api-consumer-catalog-reader \
+#     --user=<username>
+#
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: api-consumer-catalog-reader
+rules:
+  # Browse all API products for discovery
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list"]
+
+  # View rate limiting plans (reference only)
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["planpolicies"]
+    verbs: ["get", "list"]
+
+---
+# Example: Combined binding for a consumer
+# This creates both namespace-scoped (for creating requests) and
+# cluster-scoped (for browsing catalog) permissions
+#
+# Usage:
+#   1. Create namespace for consumer: kubectl create namespace consumer-team-x
+#   2. Apply role: kubectl apply -f api-consumer-role.yaml -n consumer-team-x
+#   3. Apply these bindings, replacing <username>
+#
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: api-consumer-binding
+  namespace: <consumer-namespace>
+subjects:
+  - kind: User
+    name: <username>
+    apiGroup: rbac.authorization.k8s.io
+  # Or bind to a group:
+  # - kind: Group
+  #   name: consumer-team-x
+  #   apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: api-consumer
+  apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: api-consumer-catalog-reader-<username>
+subjects:
+  - kind: User
+    name: <username>
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: api-consumer-catalog-reader
+  apiGroup: rbac.authorization.k8s.io

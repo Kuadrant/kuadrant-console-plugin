@@ -1,0 +1,262 @@
+# Test personas for API Management RBAC E2E verification
+# Uses kubectl --as=<username> impersonation for testing
+# Users don't need to exist - impersonation creates the RBAC context
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-team-a
+  labels:
+    team: team-a
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-team-b
+  labels:
+    team: team-b
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-consumers
+  labels:
+    purpose: consumer-requests
+---
+# ============================================================================
+# API CONSUMER TEST PERSONA
+# Can browse catalog and request API access, but cannot create API products
+# ============================================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: test-api-consumer
+  namespace: api-consumers
+rules:
+  # Create and manage API key requests in own namespace
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apikeyrequests"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: test-api-consumer
+  namespace: api-consumers
+subjects:
+  - kind: User
+    name: test-api-consumer
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: test-api-consumer
+  apiGroup: rbac.authorization.k8s.io
+---
+# API Consumer catalog reader (cluster-wide)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: test-api-consumer-catalog-reader
+rules:
+  # Browse all API products
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list"]
+  # View rate limiting plans
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["planpolicies"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: test-api-consumer-catalog-reader
+subjects:
+  - kind: User
+    name: test-api-consumer
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: test-api-consumer-catalog-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ============================================================================
+# API OWNER TEST PERSONA - TEAM A
+# Can manage API products and approve requests in team-a namespace only
+# ============================================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: test-api-owner-team-a
+  namespace: api-team-a
+rules:
+  # Manage API products in own namespace
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  # Approve/reject API access requests
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apikeyrequests"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  # View HTTPRoutes to reference in APIProducts
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list"]
+  # View Gateways
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: test-api-owner-team-a
+  namespace: api-team-a
+subjects:
+  - kind: User
+    name: test-api-owner-team-a
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: test-api-owner-team-a
+  apiGroup: rbac.authorization.k8s.io
+---
+# API Owner catalog reader (cluster-wide for discovery)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: test-api-owner-catalog-reader
+rules:
+  # Browse all API products
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list"]
+  # View rate limiting plans
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["planpolicies"]
+    verbs: ["get", "list"]
+  # View Gateways cluster-wide
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways"]
+    verbs: ["get", "list"]
+  # View HTTPRoutes cluster-wide
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: test-api-owner-team-a-catalog-reader
+subjects:
+  - kind: User
+    name: test-api-owner-team-a
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: test-api-owner-catalog-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ============================================================================
+# API OWNER TEST PERSONA - TEAM B
+# Can manage API products and approve requests in team-b namespace only
+# ============================================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: test-api-owner-team-b
+  namespace: api-team-b
+rules:
+  # Manage API products in own namespace
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  # Approve/reject API access requests
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apikeyrequests"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+  # View HTTPRoutes
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list"]
+  # View Gateways
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: test-api-owner-team-b
+  namespace: api-team-b
+subjects:
+  - kind: User
+    name: test-api-owner-team-b
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: test-api-owner-team-b
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: test-api-owner-team-b-catalog-reader
+subjects:
+  - kind: User
+    name: test-api-owner-team-b
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: test-api-owner-catalog-reader
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# ============================================================================
+# API ADMIN TEST PERSONA
+# Full access to all API management resources across all namespaces
+# ============================================================================
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: test-api-admin
+rules:
+  # Full access to API products
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+  # Full access to API key requests
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apikeyrequests"]
+    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+  # Full access to rate limiting plans
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["planpolicies", "oidcpolicies"]
+    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+  # View all Kuadrant policies
+  - apiGroups: ["kuadrant.io"]
+    resources: ["authpolicies", "ratelimitpolicies", "dnspolicies", "tlspolicies", "tokenratelimitpolicies"]
+    verbs: ["get", "list", "watch"]
+  # View Gateway API resources
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways", "httproutes", "gatewayclasses"]
+    verbs: ["get", "list", "watch"]
+  # Read ConfigMaps
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: test-api-admin
+subjects:
+  - kind: User
+    name: test-api-admin
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: test-api-admin
+  apiGroup: rbac.authorization.k8s.io
