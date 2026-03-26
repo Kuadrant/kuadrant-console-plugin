@@ -1,20 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-
 export interface KuadrantConfig {
   TOPOLOGY_CONFIGMAP_NAME: string;
   TOPOLOGY_CONFIGMAP_NAMESPACE: string;
   METRICS_WORKLOAD_SUFFIX: string;
 }
 
-// fetch the config.js file dynamically at runtime
-// normally served from <cluster-host>/api/plugins/kuadrant-console-plugin/config.js
-export const fetchConfig = async (): Promise<KuadrantConfig> => {
-  const defaultConfig: KuadrantConfig = {
-    TOPOLOGY_CONFIGMAP_NAME: 'topology',
-    TOPOLOGY_CONFIGMAP_NAMESPACE: 'kuadrant-system',
-    METRICS_WORKLOAD_SUFFIX: '-openshift-default',
-  };
+const DEFAULT_CONFIG: KuadrantConfig = {
+  TOPOLOGY_CONFIGMAP_NAME: 'topology',
+  TOPOLOGY_CONFIGMAP_NAMESPACE: 'kuadrant-system',
+  METRICS_WORKLOAD_SUFFIX: '-openshift-default',
+};
 
+// Module-level cache for boot-time configuration
+let configPromise: Promise<KuadrantConfig> | null = null;
+// Fetch the config.js file dynamically at runtime (once, then cached)
+// Normally served from <cluster-host>/api/plugins/kuadrant-console-plugin/config.js
+const loadConfig = async (): Promise<KuadrantConfig> => {
   try {
     const response = await fetch('/api/plugins/kuadrant-console-plugin/config.js');
     if (!response.ok) {
@@ -23,7 +24,7 @@ export const fetchConfig = async (): Promise<KuadrantConfig> => {
       } else {
         throw new Error(`Failed to fetch config.js: ${response.statusText}`);
       }
-      return defaultConfig;
+      return DEFAULT_CONFIG;
     }
 
     const script = await response.text();
@@ -32,9 +33,20 @@ export const fetchConfig = async (): Promise<KuadrantConfig> => {
     configScript.innerHTML = script;
     document.head.appendChild(configScript);
 
-    return (window as any).kuadrant_config || defaultConfig;
+    return (window as any).kuadrant_config || DEFAULT_CONFIG;
   } catch (error) {
     console.error('Error loading config.js:', error);
-    return defaultConfig;
+    return DEFAULT_CONFIG;
   }
+};
+
+/**
+ * Get Kuadrant configuration (singleton - fetched once per session)
+ * Safe to call from multiple components - all callers share the same promise
+ */
+export const fetchConfig = (): Promise<KuadrantConfig> => {
+  if (!configPromise) {
+    configPromise = loadConfig();
+  }
+  return configPromise;
 };
