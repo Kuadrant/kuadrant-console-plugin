@@ -9,7 +9,10 @@ local-setup:
 	@$(MAKE) cert-manager-install
 	@echo ""
 	@echo "installing default gatewayclass..."
-	@$(MAKE) gatewayclass 
+	@$(MAKE) gatewayclass
+	@echo ""
+	@echo "enabling observability user workload"
+	@$(MAKE) enable-user-metrics
 	@echo ""
 	@echo "installing kuadrant..."
 	@$(MAKE) kuadrant-install
@@ -20,11 +23,14 @@ local-setup:
 	@echo "cluster ready! kuadrant and demo resources installed."
 	@echo ""
 
-cert-manager-install: 
+cert-manager-install:
 	@oc apply -f $(PROJECT_PATH)/cert-manager-operator/manifests.yaml
 
-gatewayclass: 
+gatewayclass:
 	@oc apply -f $(PROJECT_PATH)/gatewayclass.yaml
+
+enable-user-metrics:
+	@oc apply -f $(PROJECT_PATH)/cluster-monitoring.yaml
 
 kuadrant-install:
 	@echo ""

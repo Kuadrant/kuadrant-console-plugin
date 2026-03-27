@@ -9,3 +9,7 @@ spec:
   name: kuadrant-operator
   source: kuadrant-operator-catalog
   sourceNamespace: kuadrant-system
+  config:
+    env:
+      - name: ISTIO_GATEWAY_CONTROLLER_NAMES
+        value: "openshift.io/gateway-controller/v1"

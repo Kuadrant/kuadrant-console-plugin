@@ -7,3 +7,5 @@ spec:
   components:
     developerPortal:
       enabled: true
+  observability:
+    enable: true
