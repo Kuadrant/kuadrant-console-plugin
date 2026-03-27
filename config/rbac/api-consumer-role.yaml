@@ -18,20 +18,22 @@ metadata:
   name: api-consumer
   namespace: <consumer-namespace>
 rules:
-  # Create and manage API keys in any namespace (where consumer can browse APIProducts)
+  # Create and manage API keys in consumer's own namespace
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apikeys"]
     verbs: ["get", "list", "create", "update", "delete"]
 
-  # Read and update APIKey status (needed for one-time secret viewing workflow)
+  # Read APIKey status to retrieve projected API key value
+  # NOTE: Consumers do NOT update status - controller manages all status fields
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apikeys/status"]
-    verbs: ["get", "update", "patch"]
-
-  # Read secrets to retrieve API key values
-  - apiGroups: [""]
-    resources: ["secrets"]
     verbs: ["get"]
+
+  # NOTE: Consumers do NOT have secret read permissions (architectural principle)
+  # API key values are delivered via status.apiKeyValue projection by the controller
+
+  # NOTE: Consumers do NOT have apikeyapprovals permissions (architectural principle)
+  # Only API owners can approve/reject requests
 
 ---
 # API Consumer ClusterRole (read-only catalog browsing)

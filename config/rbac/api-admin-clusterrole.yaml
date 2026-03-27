@@ -27,15 +27,15 @@ rules:
     verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
 
   # Full access to API keys across all namespaces
-  # Allows admins to troubleshoot and approve/reject on behalf of owners
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apikeys"]
     verbs: ["get", "list", "create", "update", "delete", "watch"]
 
-  # Full access to APIKey status for approval workflow
+  # Full access to API key approvals across all namespaces
+  # Allows admins to approve/reject on behalf of owners
   - apiGroups: ["devportal.kuadrant.io"]
-    resources: ["apikeys/status"]
-    verbs: ["get", "update", "patch", "watch"]
+    resources: ["apikeyapprovals"]
+    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
 
   # Read secrets for troubleshooting API key issues
   - apiGroups: [""]
@@ -107,8 +107,8 @@ rules:
     verbs: ["get", "list", "create", "update", "delete", "watch"]
 
   - apiGroups: ["devportal.kuadrant.io"]
-    resources: ["apikeys/status"]
-    verbs: ["get", "update", "patch", "watch"]
+    resources: ["apikeyapprovals"]
+    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
 
   # Full Kuadrant policy management
   - apiGroups: ["kuadrant.io"]

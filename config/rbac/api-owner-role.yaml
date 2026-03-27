@@ -23,20 +23,15 @@ rules:
     resources: ["apiproducts"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
 
-  # Approve/reject API key requests for own APIs
+  # Approve/reject API key requests via APIKeyApproval resource in own namespace
   - apiGroups: ["devportal.kuadrant.io"]
-    resources: ["apikeys"]
-    verbs: ["get", "list", "create", "update", "delete"]
+    resources: ["apikeyapprovals"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
 
-  # Update APIKey status to approve/reject requests
-  - apiGroups: ["devportal.kuadrant.io"]
-    resources: ["apikeys/status"]
-    verbs: ["get", "update", "patch"]
-
-  # Read secrets to troubleshoot API key issues
+  # Read secrets to troubleshoot API key issues in own namespace
   - apiGroups: [""]
     resources: ["secrets"]
-    verbs: ["get"]
+    verbs: ["get", "list"]
 
   # View HTTPRoutes to reference in APIProducts
   - apiGroups: ["gateway.networking.k8s.io"]
@@ -49,8 +44,8 @@ rules:
     verbs: ["get", "list"]
 
 ---
-# API Owner ClusterRole (read-only catalog browsing)
-# Allows owners to discover all APIs for reference and competitive analysis
+# API Owner ClusterRole (read-only catalog browsing and request discovery)
+# Allows owners to discover all APIs and view API key requests across namespaces
 #
 # Usage:
 #   kubectl apply -f api-owner-role.yaml
@@ -68,6 +63,12 @@ rules:
   # Browse all API products for discovery
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
+    verbs: ["get", "list"]
+
+  # View API key requests cluster-wide (to discover requests for own APIs)
+  # Owners filter by spec.apiProductRef.namespace matching their namespace
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys"]
     verbs: ["get", "list"]
 
   # View rate limiting plans (reference when creating products)
@@ -145,12 +146,8 @@ rules:
     verbs: ["get", "list", "create", "update", "patch", "delete"]
 
   - apiGroups: ["devportal.kuadrant.io"]
-    resources: ["apikeys"]
-    verbs: ["get", "list", "create", "update", "delete"]
-
-  - apiGroups: ["devportal.kuadrant.io"]
-    resources: ["apikeys/status"]
-    verbs: ["get", "update", "patch"]
+    resources: ["apikeyapprovals"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
 
   # Manage route-level policies
   - apiGroups: ["kuadrant.io"]
