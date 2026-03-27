@@ -36,6 +36,8 @@ spec:
             value: topology
           - name: TOPOLOGY_CONFIGMAP_NAMESPACE
             value: kuadrant-system
+          - name: METRICS_WORKLOAD_SUFFIX
+            value: -openshift-default
         volumeMounts:
         - name: plugin-serving-cert
           readOnly: true

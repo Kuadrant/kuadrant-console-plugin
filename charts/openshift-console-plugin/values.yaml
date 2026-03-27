@@ -33,6 +33,9 @@ plugin:
     create: true
     annotations: {}
     name: ""
+  topologyConfigMapName: "topology"
+  topologyConfigMapNamespace: "kuadrant-system"
+  metricsWorkloadSuffix: "-openshift-default"
   jobs:
     patchConsoles:
       enabled: true
