@@ -19,3 +19,4 @@ test-results/
 # IDEs
 .idea/
 .vs/
+.worktrees
