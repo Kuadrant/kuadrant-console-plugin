@@ -2,8 +2,22 @@ import { Page, expect } from '@playwright/test';
 
 const TEST_NAMESPACE = 'kuadrant-test';
 
+// dismiss any console welcome/tour modals that block interaction
+export async function dismissConsoleTour(page: Page): Promise<void> {
+  const dismissible = page
+    .locator('button:has-text("Skip tour"), button:has-text("Skip")')
+    .or(page.locator('.pf-v6-c-modal-box button[aria-label="Close"]'));
+  try {
+    await dismissible.first().click({ timeout: 3_000 });
+  } catch {
+    // no tour modal present
+  }
+}
+
 // start impersonating a user via the console masthead
 export async function impersonateUser(page: Page, username: string): Promise<void> {
+  await dismissConsoleTour(page);
+
   const userDropdown = page.locator('[data-test="user-dropdown-toggle"]');
   await userDropdown.waitFor({ state: 'visible', timeout: 30_000 });
   await userDropdown.click();

@@ -1,5 +1,45 @@
-# test fixtures for e2e RBAC tests.
-# these resources exist so the kebab menu (edit/delete) can be tested.
+# test fixtures for e2e tests
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: test-gateway
+  namespace: kuadrant-test
+spec:
+  gatewayClassName: istio
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: test-route
+  namespace: kuadrant-test
+spec:
+  parentRefs:
+  - name: test-gateway
+    namespace: kuadrant-test
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: test-service
+      port: 8080
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: test-selfsigned
+spec:
+  selfSigned: {}
+---
 apiVersion: kuadrant.io/v1
 kind: AuthPolicy
 metadata:

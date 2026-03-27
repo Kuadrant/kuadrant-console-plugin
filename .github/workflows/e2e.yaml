@@ -24,12 +24,15 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
-      - name: Install MINC
+      - name: Install oinc
         run: |
-          MINC_VERSION="${MINC_VERSION:-v0.1.0}"
-          curl -L -o minc "https://github.com/minc-org/minc/releases/download/${MINC_VERSION}/minc_linux_amd64"
-          chmod +x minc
-          sudo mv minc /usr/local/bin/
+          OINC_VERSION="${OINC_VERSION:-v0.1.1}"
+          curl -L -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
+          chmod +x oinc
+          sudo mv oinc /usr/local/bin/
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
 
       - name: Install Playwright
         run: npx playwright install --with-deps chromium
