@@ -15,7 +15,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
 import NoPermissionsView from './NoPermissionsView';
-import { fetchConfig, TopologyConfig } from '../utils/topology/configLoader';
+import { fetchConfig, KuadrantConfig } from '../utils/configLoader';
 import { useVisualizationController } from '../hooks/topology/useVisualizationController';
 import { useTopologyData } from '../hooks/topology/useTopologyData';
 import { ResourceFilterToolbar } from './topology/ResourceFilterToolbar';
@@ -25,7 +25,7 @@ const PolicyTopologyPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
   // config and state
-  const [config, setConfig] = React.useState<TopologyConfig | null>(null);
+  const [config, setConfig] = React.useState<KuadrantConfig | null>(null);
   const [selectedResourceTypes, setSelectedResourceTypes] = React.useState<string[]>([]);
   const [selectedNamespace, setSelectedNamespace] = React.useState<string | null>(null);
 
