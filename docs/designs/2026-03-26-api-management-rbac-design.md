@@ -515,7 +515,6 @@ The Developer Portal Controller (separate repository) handles:
 | APIKey | create | ✅ | ❌ | ❌ | ✅ |
 | APIKey | update | ✅ | ❌ | ❌ | ✅ |
 | APIKey | delete | ✅ | ❌ | ❌ | ✅ |
-| **APIKey (status)** | get | ✅ | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
 | **APIKeyApproval** | get/list | ❌ | ✅ | ❌ | ✅ Cluster-wide |
 | APIKeyApproval | create | ❌ | ✅ | ❌ | ✅ |
 | APIKeyApproval | update | ❌ | ✅ | ❌ | ✅ |
@@ -768,12 +767,14 @@ kubectl create namespace api-consumers
 ```
 
 **Benefits**:
+
 - ✅ Simple deployment (one ClusterRoleBinding for all consumers)
 - ✅ Consumers can access any APIProduct
 - ✅ Flexible namespace organization
 - ✅ Easier to manage at scale
 
 **Trade-offs**:
+
 - ⚠️ Consumer isolation via namespace organization (not RBAC-enforced)
 - ⚠️ In shared namespace: consumers can see each other's APIKey metadata (not secret values)
 - ⚠️ Requires trust that consumers use designated namespaces
@@ -806,12 +807,14 @@ kubectl create clusterrolebinding api-consumer-catalog-reader-mobile \
 ```
 
 **Benefits**:
+
 - ✅ **RBAC-enforced isolation** (architectural principle: "Consumers must have access only to their own api keys")
 - ✅ Team mobile can ONLY create/read APIKeys in consumer-team-mobile
 - ✅ Team backend can ONLY create/read APIKeys in consumer-team-backend
 - ✅ Kubernetes enforces boundaries (not trust-based)
 
 **Trade-offs**:
+
 - ⚠️ More complex deployment (RoleBinding per team per namespace)
 - ⚠️ Less flexible (consumers locked to specific namespaces)
 
