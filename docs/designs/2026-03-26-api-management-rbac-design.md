@@ -535,13 +535,14 @@ The Developer Portal Controller (separate repository) handles:
 
 **Notes**:
 
-- **Consumer deployment**: Typically deployed **cluster-wide** for simplicity (Pattern 1). Can be namespace-scoped for strict RBAC isolation (Pattern 2)
-- **APIKey namespace**: Consumers create APIKeys in their own namespace (architectural principle: "Consumers must have access only to their own api keys")
+- **Consumer APIKey access**: Always **namespace-scoped** (never cluster-wide). Consumers can only access APIKeys in namespaces where they have Role bindings
+- **Consumer catalog access**: Cluster-wide read access to APIProducts, policies, and routes for discovery
+- **APIKey namespace**: Consumers create APIKeys in designated namespace(s) - shared (Pattern 1) or per-team (Pattern 2)
 - **APIKey filtering**: Owners use cluster-wide read to discover requests by filtering `spec.apiProductRef.namespace`
 - **APIKeyApproval namespace**: Owners create APIKeyApproval in their own namespace with cross-namespace reference to consumer's APIKey
 - **Secret access**: Consumers do NOT have secret read permissions (architectural principle). API key values delivered via `status.apiKeyValue` projection
 - **Policies/Routes**: Read-only for API Management roles. Owners may have write access via separate policy management roles
-- **Cluster-wide**: Permission applies across all namespaces (for discovery/catalog browsing)
+- **Cluster-wide**: Permission applies across all namespaces (for discovery/catalog browsing only, not APIKey operations)
 
 ## Implementation Plan
 
@@ -609,19 +610,23 @@ RBAC testing focuses on verifying that Kubernetes enforces the defined permissio
 Use `kubectl --as=<user>` to test permissions without creating real users:
 
 ```bash
-# Test consumer permissions
-kubectl auth can-i list apiproducts --as=test-consumer --all-namespaces
-kubectl auth can-i create apikeys --as=test-consumer -n payment-services
-kubectl auth can-i create apiproducts --as=test-consumer -n payment-services  # Should fail
+# Test consumer permissions (assuming consumer has access to 'api-consumers' namespace)
+kubectl auth can-i list apiproducts --as=test-consumer --all-namespaces  # Should succeed (cluster-wide catalog)
+kubectl auth can-i create apikeys --as=test-consumer -n api-consumers  # Should succeed (own namespace)
+kubectl auth can-i create apikeys --as=test-consumer -n consumer-team-mobile  # Should fail (no binding)
+kubectl auth can-i list apikeys --as=test-consumer --all-namespaces  # Should fail (namespace-scoped only)
+kubectl auth can-i create apiproducts --as=test-consumer -n api-consumers  # Should fail
 
 # Test owner permissions
-kubectl auth can-i create apiproducts --as=test-owner -n payment-services
+kubectl auth can-i list apikeys --as=test-owner --all-namespaces  # Should succeed (cluster-wide discovery)
+kubectl auth can-i create apiproducts --as=test-owner -n payment-services  # Should succeed (own namespace)
 kubectl auth can-i create apiproducts --as=test-owner -n other-namespace  # Should fail
-kubectl auth can-i update apikeys/status --as=test-owner -n payment-services
+kubectl auth can-i create apikeyapprovals --as=test-owner -n payment-services  # Should succeed
 
 # Test admin permissions
-kubectl auth can-i create planpolicies --as=test-admin -n kuadrant-system
-kubectl auth can-i delete apiproducts --as=test-admin -n any-namespace
+kubectl auth can-i create planpolicies --as=test-admin -n kuadrant-system  # Should succeed
+kubectl auth can-i delete apiproducts --as=test-admin -n any-namespace  # Should succeed
+kubectl auth can-i list apikeys --as=test-admin --all-namespaces  # Should succeed
 ```
 
 ### Manual Validation
@@ -724,25 +729,22 @@ Test users and RoleBindings are available in `e2e/manifests/api-management-rbac.
 
 This section describes common patterns for deploying RBAC roles in different organizational structures.
 
-### Pattern 1: Cluster-Wide Consumer Permissions (Recommended)
+### Pattern 1: Single Shared Consumer Namespace (Simple)
 
-Deploy consumer permissions cluster-wide for operational simplicity.
+All consumers share one namespace and use catalog cluster-wide.
 
 ```bash
-# Convert Role to ClusterRole by changing the YAML
-# Create api-consumer ClusterRole
-kubectl create clusterrole api-consumer \
-  --verb=get,list,create,update,delete \
-  --resource=apikeys.devportal.kuadrant.io
+# Create shared consumer namespace
+kubectl create namespace api-consumers
 
-kubectl create clusterrole api-consumer-status \
-  --verb=get \
-  --resource=apikeys.devportal.kuadrant.io/status
+# Apply consumer role in shared namespace
+kubectl apply -f config/rbac/api-consumer-role.yaml -n api-consumers
 
-# Bind consumers cluster-wide
-kubectl create clusterrolebinding api-consumer-all \
-  --clusterrole=api-consumer \
-  --group=api-consumers
+# Bind all consumers to the shared namespace
+kubectl create rolebinding api-consumer-binding \
+  --role=api-consumer \
+  --group=api-consumers \
+  -n api-consumers
 
 # Grant cluster-wide catalog read access
 kubectl create clusterrolebinding api-consumer-catalog-reader \
@@ -750,36 +752,23 @@ kubectl create clusterrolebinding api-consumer-catalog-reader \
   --group=api-consumers
 ```
 
-**Consumer namespace organization** (administrators choose based on needs):
-
-```bash
-# Option A: Dedicated namespace per team (isolation via organization)
-kubectl create namespace consumer-team-mobile
-kubectl create namespace consumer-team-backend
-# Consumers have cluster-wide permissions but organize by convention
-# Team mobile creates APIKeys in consumer-team-mobile
-# Team backend creates APIKeys in consumer-team-backend
-
-# Option B: Shared consumer namespace
-kubectl create namespace api-consumers
-# All consumers create APIKeys in shared namespace
-# UI filters by spec.requestedBy.userId
-```
+**How it works**:
+- All consumers create APIKeys in `api-consumers` namespace
+- Consumers can see all APIKeys in the shared namespace
+- UI filters by `spec.requestedBy.userId` to show only user's own keys
+- Consumers browse catalog cluster-wide to discover APIs
 
 **Benefits**:
-
-- ✅ Simple deployment (one ClusterRoleBinding for all consumers)
-- ✅ Consumers can access any APIProduct
-- ✅ Flexible namespace organization
-- ✅ Easier to manage at scale
+- ✅ Simple deployment (one namespace, two bindings)
+- ✅ Easy to manage and troubleshoot
+- ✅ Good for small teams or trusted environments
 
 **Trade-offs**:
+- ⚠️ Consumers can see each other's APIKey metadata in shared namespace
+- ⚠️ API key values still protected (only in status, consumers see their own)
+- ⚠️ No RBAC enforcement between consumers (UI filtering only)
 
-- ⚠️ Consumer isolation via namespace organization (not RBAC-enforced)
-- ⚠️ In shared namespace: consumers can see each other's APIKey metadata (not secret values)
-- ⚠️ Requires trust that consumers use designated namespaces
-
-**Use when**: Operational simplicity preferred, standard deployment pattern
+**Use when**: Simple deployment, trusted consumer community, low security requirements
 
 ### Pattern 2: Namespace-Scoped Consumer Permissions (Strict Isolation)
 
@@ -925,27 +914,6 @@ kubectl create clusterrolebinding api-admin-platform-team \
 3. Payment team creates APIKeyApproval in `api-team-payments` namespace
 4. Controller projects API key to APIKey status in `consumer-team-mobile` namespace
 5. Mobile team reads API key from their APIKey resource
-
-## Open Questions
-
-### 1. Namespace Scoping for Consumers
-
-**Question**: Should consumer permissions be cluster-wide or namespace-scoped by default?
-
-**Current state**:
-
-- Design documents both patterns
-- Cluster-wide is simpler (one binding per consumer group)
-- Namespace-scoped is more secure (admin controls access per API)
-
-**Trade-offs**:
-
-| Pattern | Pros | Cons |
-|---------|------|------|
-| Cluster-wide | Simple deployment, consumers can access any API | Less secure, consumers see all namespaces |
-| Namespace-scoped | Admin controls access, better isolation | Complex deployment, many RoleBindings |
-
-**Recommendation**: Default to cluster-wide in documentation, provide namespace-scoped as security hardening option.
 
 ## Validation and Next Steps
 
