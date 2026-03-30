@@ -36,7 +36,6 @@ import { getStatusLabel } from '../utils/statusLabel';
 import DropdownWithKebab from './DropdownWithKebab';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
-import { RESOURCES } from '../utils/resources';
 
 type ResourceListProps = {
   resources: Array<{
@@ -77,23 +76,12 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
   const { userRBAC, loading: rbacLoading } = useAccessReviews(accessResources);
 
-  const resourceKinds = [
-    'AuthPolicy',
-    'RateLimitPolicy',
-    'TokenRateLimitPolicy',
-    'OIDCPolicy',
-    'PlanPolicy',
-    'DNSPolicy',
-    'TLSPolicy',
-    'Gateway',
-    'HTTPRoute',
-  ];
-
-  const resourceMappings = resourceKinds.map((kind) => ({
-    key: `${getResourceNameFromKind(kind)}-list`,
-    group: RESOURCES[kind].gvk.group,
-    version: RESOURCES[kind].gvk.version,
-    kind,
+  // Generate resource mappings dynamically from the resources prop
+  const resourceMappings = resources.map((resource) => ({
+    key: `${getResourceNameFromKind(resource.kind)}-list`,
+    group: resource.group,
+    version: resource.version,
+    kind: resource.kind,
   }));
 
   // filter out resources that the user doesn't have permission to list
