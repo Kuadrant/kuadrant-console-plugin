@@ -1,22 +1,23 @@
 ---
-# API Owner Role
+# API Owner ClusterRole (namespace-scoped API management)
 # Allows teams to publish and manage APIs in their namespace
 #
 # Usage:
-#   Apply this role in the team's namespace:
-#   kubectl apply -f api-owner-role.yaml -n <team-namespace>
+#   kubectl apply -f api-owner-role.yaml
 #
-#   Bind to team users or groups:
+#   Bind to team users or groups in their namespace using RoleBinding:
 #   kubectl create rolebinding api-owner-binding \
-#     --role=api-owner \
+#     --clusterrole=api-owner \
 #     --group=team-payment-services \
 #     -n payment-services
 #
+# Note: ClusterRole + RoleBinding = namespace-scoped permissions
+#       The owner can only manage resources in namespaces where they have a RoleBinding
+#
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: api-owner
-  namespace: <team-namespace>
 rules:
   # Manage API products in own namespace
   - apiGroups: ["devportal.kuadrant.io"]
@@ -87,14 +88,14 @@ rules:
     verbs: ["get", "list"]
 
 ---
-# Example: Combined binding for an API owner team
+# Example: Combined bindings for an API owner team
 # This creates both namespace-scoped (for managing APIs) and
 # cluster-scoped (for browsing catalog) permissions
 #
 # Usage:
 #   1. Create namespace for team: kubectl create namespace payment-services
-#   2. Apply role: kubectl apply -f api-owner-role.yaml -n payment-services
-#   3. Apply these bindings, replacing team name
+#   2. Apply ClusterRoles: kubectl apply -f api-owner-role.yaml
+#   3. Apply these bindings, replacing <team-namespace> and <team-group-name>
 #
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -111,7 +112,7 @@ subjects:
   #   name: alice
   #   apiGroup: rbac.authorization.k8s.io
 roleRef:
-  kind: Role
+  kind: ClusterRole  # ClusterRole + RoleBinding = namespace-scoped permissions
   name: api-owner
   apiGroup: rbac.authorization.k8s.io
 
@@ -130,15 +131,16 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
 
 ---
-# Optional: Extended API Owner Role with Policy Management
+# Optional: Extended API Owner ClusterRole with Policy Management
 # Use this if API owners should also manage route-level policies
 # (AuthPolicy, RateLimitPolicy) in their namespace
 #
+# Bind using RoleBinding for namespace-scoped permissions
+#
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: api-owner-with-policies
-  namespace: <team-namespace>
 rules:
   # All API owner permissions
   - apiGroups: ["devportal.kuadrant.io"]

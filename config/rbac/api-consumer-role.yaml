@@ -1,22 +1,23 @@
 ---
-# API Consumer Role
-# Allows developers to browse API catalog and request API access
+# API Consumer ClusterRole (namespace-scoped APIKey management)
+# Allows developers to create and manage API access requests in their own namespace
 #
 # Usage:
-#   Apply this role in the consumer's namespace:
-#   kubectl apply -f api-consumer-role.yaml -n <consumer-namespace>
+#   kubectl apply -f api-consumer-role.yaml
 #
-#   Bind to users or groups:
+#   Bind to users or groups in their namespace using RoleBinding:
 #   kubectl create rolebinding api-consumer-binding \
-#     --role=api-consumer \
+#     --clusterrole=api-consumer \
 #     --user=<username> \
 #     -n <consumer-namespace>
 #
+# Note: ClusterRole + RoleBinding = namespace-scoped permissions
+#       The consumer can only manage APIKeys in namespaces where they have a RoleBinding
+#
 apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
+kind: ClusterRole
 metadata:
   name: api-consumer
-  namespace: <consumer-namespace>
 rules:
   # Create and manage API keys in consumer's own namespace
   - apiGroups: ["devportal.kuadrant.io"]
@@ -71,14 +72,14 @@ rules:
     verbs: ["get", "list"]
 
 ---
-# Example: Combined binding for a consumer
+# Example: Combined bindings for a consumer
 # This creates both namespace-scoped (for creating requests) and
 # cluster-scoped (for browsing catalog) permissions
 #
 # Usage:
 #   1. Create namespace for consumer: kubectl create namespace consumer-team-x
-#   2. Apply role: kubectl apply -f api-consumer-role.yaml -n consumer-team-x
-#   3. Apply these bindings, replacing <username>
+#   2. Apply ClusterRoles: kubectl apply -f api-consumer-role.yaml
+#   3. Apply these bindings, replacing <username> and <consumer-namespace>
 #
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -94,7 +95,7 @@ subjects:
   #   name: consumer-team-x
   #   apiGroup: rbac.authorization.k8s.io
 roleRef:
-  kind: Role
+  kind: ClusterRole  # Reference ClusterRole for namespace-scoped permissions
   name: api-consumer
   apiGroup: rbac.authorization.k8s.io
 

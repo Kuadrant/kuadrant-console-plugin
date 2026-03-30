@@ -552,8 +552,8 @@ This design has been implemented with the following deliverables:
 
 **Deliverables:**
 
-- ✅ `config/rbac/api-consumer-role.yaml` - Consumer role and catalog reader ClusterRole
-- ✅ `config/rbac/api-owner-role.yaml` - Owner role and catalog reader ClusterRole
+- ✅ `config/rbac/api-consumer-role.yaml` - Consumer ClusterRole (for APIKey management) and catalog reader ClusterRole
+- ✅ `config/rbac/api-owner-role.yaml` - Owner ClusterRole (for API management) and catalog reader ClusterRole
 - ✅ `config/rbac/api-admin-clusterrole.yaml` - Admin ClusterRole
 - ✅ `config/rbac/README.md` - Deployment guide with common patterns
 - ✅ `e2e/manifests/api-management-rbac.yaml` - Test personas for validation
@@ -737,12 +737,12 @@ All consumers share one namespace and use catalog cluster-wide.
 # Create shared consumer namespace
 kubectl create namespace api-consumers
 
-# Apply consumer role in shared namespace
-kubectl apply -f config/rbac/api-consumer-role.yaml -n api-consumers
+# Apply consumer ClusterRoles (once, cluster-wide)
+kubectl apply -f config/rbac/api-consumer-role.yaml
 
-# Bind all consumers to the shared namespace
+# Bind all consumers to the shared namespace (ClusterRole + RoleBinding = namespace-scoped)
 kubectl create rolebinding api-consumer-binding \
-  --role=api-consumer \
+  --clusterrole=api-consumer \
   --group=api-consumers \
   -n api-consumers
 
@@ -779,13 +779,12 @@ Each consumer team gets namespace-scoped RBAC permissions for strict isolation.
 kubectl create namespace consumer-team-mobile
 kubectl create namespace consumer-team-backend
 
-# Apply consumer role in each namespace
-kubectl apply -f config/rbac/api-consumer-role.yaml -n consumer-team-mobile
-kubectl apply -f config/rbac/api-consumer-role.yaml -n consumer-team-backend
+# Apply consumer ClusterRoles (once, cluster-wide)
+kubectl apply -f config/rbac/api-consumer-role.yaml
 
-# Bind to teams/users (namespace-scoped)
+# Bind to teams/users (ClusterRole + RoleBinding = namespace-scoped)
 kubectl create rolebinding api-consumer-binding \
-  --role=api-consumer \
+  --clusterrole=api-consumer \
   --group=mobile-app-developers \
   -n consumer-team-mobile
 
@@ -818,13 +817,12 @@ Each API owner team gets their own namespace for publishing APIs and managing ap
 kubectl create namespace api-team-payments
 kubectl create namespace api-team-shipping
 
-# Apply owner role in each namespace
-kubectl apply -f config/rbac/api-owner-role.yaml -n api-team-payments
-kubectl apply -f config/rbac/api-owner-role.yaml -n api-team-shipping
+# Apply owner ClusterRoles (once, cluster-wide)
+kubectl apply -f config/rbac/api-owner-role.yaml
 
-# Bind to teams
+# Bind to teams (ClusterRole + RoleBinding = namespace-scoped)
 kubectl create rolebinding api-owner-binding \
-  --role=api-owner \
+  --clusterrole=api-owner \
   --group=team-payments \
   -n api-team-payments
 
@@ -876,14 +874,14 @@ kubectl create clusterrolebinding api-admin-alice \
 kubectl create namespace consumer-team-mobile
 kubectl create namespace api-team-payments
 
-# 2. Deploy RBAC roles
-kubectl apply -f config/rbac/api-consumer-role.yaml -n consumer-team-mobile
-kubectl apply -f config/rbac/api-owner-role.yaml -n api-team-payments
+# 2. Deploy RBAC ClusterRoles (once, cluster-wide)
+kubectl apply -f config/rbac/api-consumer-role.yaml
+kubectl apply -f config/rbac/api-owner-role.yaml
 kubectl apply -f config/rbac/api-admin-clusterrole.yaml
 
-# 3. Bind consumer team
+# 3. Bind consumer team (ClusterRole + RoleBinding = namespace-scoped)
 kubectl create rolebinding api-consumer-binding \
-  --role=api-consumer \
+  --clusterrole=api-consumer \
   --group=mobile-app-developers \
   -n consumer-team-mobile
 
@@ -891,9 +889,9 @@ kubectl create clusterrolebinding api-consumer-catalog-reader-mobile \
   --clusterrole=api-consumer-catalog-reader \
   --group=mobile-app-developers
 
-# 4. Bind owner team
+# 4. Bind owner team (ClusterRole + RoleBinding = namespace-scoped)
 kubectl create rolebinding api-owner-binding \
-  --role=api-owner \
+  --clusterrole=api-owner \
   --group=team-payments \
   -n api-team-payments
 
