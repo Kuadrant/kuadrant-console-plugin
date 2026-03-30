@@ -62,6 +62,20 @@
   {
     "type": "console.page/route",
     "properties": {
+      "path": "/kuadrant/all-namespaces/apiproducts",
+      "component": { "$codeRef": "APIProductsListPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "path": "/kuadrant/ns/:ns/apiproducts",
+      "component": { "$codeRef": "APIProductsListPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
       "exact": true,
       "path": "/k8s/ns/:ns/tlspolicy/name/:name/edit",
       "component": { "$codeRef": "KuadrantTLSCreatePage" }
@@ -205,6 +219,16 @@
   {
     "type": "console.navigation/href",
     "properties": {
+      "id": "kuadrant-apiproducts-admin",
+      "name": "%plugin__kuadrant-console-plugin~API Products%",
+      "href": "/kuadrant/all-namespaces/apiproducts",
+      "perspective": "admin",
+      "section": "kuadrant-section-admin"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
       "id": "kuadrant-policy-topology-admin",
       "name": "%plugin__kuadrant-console-plugin~Policy Topology%",
       "href": "/kuadrant/policy-topology",
@@ -237,6 +261,16 @@
       "id": "kuadrant-policies-dev",
       "name": "%plugin__kuadrant-console-plugin~Policies%",
       "href": "/kuadrant/all-namespaces/policies",
+      "perspective": "dev",
+      "section": "kuadrant-section-dev"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "kuadrant-apiproducts-dev",
+      "name": "%plugin__kuadrant-console-plugin~API Products%",
+      "href": "/kuadrant/all-namespaces/apiproducts",
       "perspective": "dev",
       "section": "kuadrant-section-dev"
     }

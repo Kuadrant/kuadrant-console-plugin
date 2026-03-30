@@ -8,6 +8,7 @@
   "All Policies": "All Policies",
   "All references for the resource have been resolved.": "All references for the resource have been resolved.",
   "An unhealthy gateway has a `false` status for the `Accepted` and/or `Programmed` conditions.": "An unhealthy gateway has a `false` status for the `Accepted` and/or `Programmed` conditions.",
+  "API Products": "API Products",
   "Auth": "Auth",
   "AuthPolicy": "AuthPolicy",
   "Cancel": "Cancel",
