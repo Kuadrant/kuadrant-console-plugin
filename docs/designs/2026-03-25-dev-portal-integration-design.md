@@ -108,33 +108,120 @@ status:
 - Watch APIProduct resources using `useK8sWatchResource`
 - Filter by namespace or all namespaces (#ALL_NS#)
 - RBAC: All personas can view, filtered by access
+
+**1. Empty State**:
+- Component: PF6 EmptyState
+- Display when no API Products exist
+
+**2. Loading State**:
+- Icon: PF6 Spinner
+- Title: Heading (H2) using PF6 Typography
+- Description: Body text (default) using PF6 Typography
+
+**3. Overview (Table with Data)**:
+- Table filters:
+  - Status filter: PF6 Toolbar with filter
+  - Other filters: PF6 Attribute search
+- Table headers: PF6 Header cell (default with sortable)
 - Columns: Name, Display Name, Namespace, HTTPRoute Target, Plans, Status, Actions
-- Components: Empty state (PF6 EmptyState), Loading state (PF6 Spinner), Table with filters (PF6 Toolbar with filter), API product lifecycle status labels (PF6 filled labels: Draft, Published, Deprecated, Retired), Tag labels (PF6 outlined labels)
+- API product lifecycle status labels: PF6 filled labels
+  - Draft: API is in draft state
+  - Published: API is live in API catalog
+  - Deprecated: API is still functional but scheduled to be retired
+  - Retired: API is no longer accessible
+- Tag labels: PF6 outlined labels
+
+**4. Table Actions**:
+- Table filter menu: PF6 Menu with actions
+- Table action buttons in actions column
+
+**5. Tooltips & Toolbar Menu**:
+- Tooltips for status labels and table elements
+- Toolbar menu for bulk actions
 
 **APIProductDetailsPage** (#320):
 - Figma design: https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=893-47728&m=draw
 - Microcopy: https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.dj9d75n0gfxu
 - Tabbed view: Overview, YAML, Policies
-- Overview tab: API product details, lifecycle status label (PF6 filled labels), simple list of properties (PF6 SimpleList), link buttons for adding spec/docs
-- Policies tab: Show PlanPolicy tiers if attached, or RateLimitPolicy if no PlanPolicy; display AuthPolicy
-- Publish/Unpublish action button (PF6 MenuToggle with custom icon)
+
+**1. Overview Tab**:
+- Action button: PF6 MenuToggle with custom icon
+- API product lifecycle label: PF6 filled labels (Draft, Published, Deprecated, Retired)
+- Properties list: PF6 SimpleList displaying API details
+- Link buttons: PF6 Link button (with icon) for adding API spec and API documentation
+  - Opens API editing modal on click
+- Publish/Unpublish button:
+  - Before publish: Shows "Publish API product"
+  - After publish: Changes to "Unpublish API product"
+  - Shows toast alert after publish action
 - Display discovered plans from status.plans
 - Show auth schemes from status.authSchemes
 - Link to referenced HTTPRoute
+
+**2. YAML Tab**:
+- YAML editor view for direct resource editing
+
+**3. Policies Tab**:
+- Show PlanPolicy and tiers if HTTPRoute has attached PlanPolicy
+- Show RateLimitPolicy and AuthPolicy if HTTPRoute does not have attached PlanPolicy
+- Display AuthPolicy in both scenarios
+
+**4. Tooltips & Toast Alerts**:
+- Tooltips for field explanations
+- Toast alerts for publish/unpublish actions
 - Status conditions display (Ready, Discovered)
 
 **APIProductForm** (#321):
 - Figma design: https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=893-47728&m=draw
 - Microcopy: https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.kyxh9rr7ffo4
-- Form/YAML toggle (tab component)
-- Auto-generated Kubernetes resource name from display name (editable)
-- Fields: Display Name, Description, Tags (optional, PF6 Menu with search filtering), HTTPRoute selector (PF6 Menu with actions), Lifecycle status (PF6 context selector menu: Draft, Published, Deprecated, Retired - Retired disabled in create mode), Owner
-- HTTPRoute policies: Display all policies attached to selected route including gateway-level policies (PF6 SimpleList)
+
+**1. API Product Creation Form**:
+- Tab: Switch between Form view and YAML view
+- Kubernetes resource name:
+  - Auto-generated from API product display name
+  - Editable manually
+- Form fields:
+  - Display Name (required)
+  - Description (optional)
+  - Tags: PF6 Menu with filtering/search input, uses PF6 Divider to visually separate options
+  - HTTPRoute selector: PF6 Menu with actions
+  - Owner (required)
+  - Lifecycle status: PF6 context selector menu (Draft, Published, Deprecated, Retired)
+    - Retired label is disabled in creation mode
+- HTTPRoute policies list:
+  - Component: PF6 SimpleList
+  - Shows all policies attached to selected route including gateway-level policies
 - Validation: Ensure HTTPRoute exists before creation
-- Edit mode: Resource name is read-only, show alert if API product is published
+
+**2. After Click [Create] Button**:
+- Toast alert: "API product created successfully"
+- Redirect to API product details page
+- Publish button is enabled on details page
+
+**3. Tooltips & Policy Text Area**:
+- HTTPRoute tooltip: "When an HTTPRoute is selected, the attached Plan Policies define the consumption rules. Note: The API Product and its policies must share the same namespace."
+- HTTPRoute policies tooltip: "A consolidated view of all policies attached to this route (including gateway-level policies)."
+
+**4. YAML View**:
+- Direct YAML editing capability
+- Toggle from Form view using tab
+
+**5. Edit Mode**:
+- Title: "Edit API product" (instead of "Create")
+- Resource name field: Read-only in edit mode
+- Published API product alert:
+  - Component: PF6 Notification drawer
+  - Shows alert if API product is already published to API catalog
+  - Shows different alert if already published to API consumers
+
+**6. Delete Action**:
+- Confirmation modal for API product deletion
+- Requires user confirmation before deleting
+
+**7. Alerts & Notifications**:
+- Toast alerts for create/update/publish/unpublish actions
+- Inline alerts for published API products during edit
 - Use `KuadrantCreateUpdate` component for save operations
-- Show toast alert after create/update
-- Redirect to detail view after success
 
 #### 2. APIKey Components (`src/components/apikey/`)
 
@@ -144,37 +231,173 @@ status:
 - Microcopy: https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.aoj7rlqap922
 - UX Prototype: https://my-api-keys-ux-demo.vercel.app/
 - User-scoped view showing only the requester's APIKeys
-- Components: Empty state, Loading state, Collapsed/expanded list view
+
+**1. My API Keys List Page**:
+
+**Empty State**:
+- Component: PF6 EmptyState
+- Display when user has no API keys
+
+**Loading State**:
+- Component: PF6 Spinner
+- Display while fetching API keys
+
+**Collapsed List**:
+- Table columns: API Product, Plan, Status, Requested Date, Actions
+- Hover on tier label to view details in tooltip
 - Filter by status: Approved, Rejected, Pending
-- Table columns: API Product, Plan (with tier tooltip), Status, Requested Date, Actions
 - Rejected items only have "delete" action
-- Reveal API key modal: Click mask area or eye icon to reveal, close button disabled until checkbox checked
-- "Request Access" button opens modal form
-- Request form fields:
-  - API Product selector (search with autocomplete, max 3.x visible items)
-  - Plan/tier selector (disabled until API selected, PF6 option single select menu)
-  - API key name (validation: blank error, duplicate name error)
-  - Use case/reason (text area)
-- Edit/Delete modals: Edit requires approval for changes, delete requires typing API key name for confirmation
-- Create APIKey resource on form submission
+
+**Expanded List**:
+- Shows additional details when row is expanded
+- Expandable rows pattern
+
+**2. Reveal API Key Modal**:
+- Trigger: Clicking mask area or eye icon
+- Modal displays the API key secret
+- Close icon and button disabled until user checks acknowledgment checkbox
+- Prevents accidental key exposure
+
+**3. API Key Details Page**:
+
+**Active API Key**:
+- Shows full API key details
+- Two options for API key field:
+  - Option 1: Masked with reveal on click
+  - Option 2: Eye icon to trigger reveal modal
+- Reveal process shows on the page
+
+**Pending API Key**:
+- Shows pending status
+- Limited actions available until approved
+
+**Rejected API Key**:
+- Shows rejection reason
+- "Request a new key" button opens request modal on current page
+
+**4. API Key Tab in API Details Page**:
+- Shows user's API keys for specific API product
+- Embedded view within API product details
+
+**5. API Key Request Modal**:
+
+**Step 1: Request API Key**:
+- API selector: PF6 Search with autocomplete
+  - Max 3.x visible menu items at once
+  - Fourth item partially visible to indicate scrollability
+- Tier field: Disabled until API is selected
+
+**Search for API**:
+- Search input with autocomplete functionality
+- Shows "No results" state if search yields nothing
+
+**Select Tier**:
+- Component: PF6 Option single select menu
+- Enabled only after API is selected
+- Shows available tiers for selected API
+
+**Provide API Key Name**:
+- Blank field error validation
+- Duplicate name error validation
+- Success state when valid name provided
+- Description hidden when field is configured
+
+**Request from API Details Page**:
+- API field is read-only (pre-selected)
+- Only tier and name fields are editable
+
+**View API Key from API Details Page**:
+- Breadcrumbs show third-level navigation
+- Opens API key details without returning to My API keys list
+
+**6. Edit / Delete API Keys**:
+
+**Edit API Key**:
+- Any pending/active API key is editable
+- Changes to API key name or use case require approval
+- If approval mode is manual, tier changes also require approval
+
+**Delete API Key**:
+- Confirmation modal with input field
+- User must type correct API key name to enable Delete button
+- Field shows warning state for incorrect input
+- Field shows success state for correct input
+- Delete button disabled until correct name entered
+
+**7. Notifications**:
+- Toast notifications for all key actions
+- Success/error states clearly communicated
 
 **APIKeyApprovalPage** (#318):
 - Figma design: https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=514-23096&t=gksvHbkczPbDoe9f-1
 - Microcopy: https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.ulo6upsfhvma
 - UX Prototype: https://api-key-approval-ux-demo.vercel.app/
 - RBAC: Only visible to Owner and Admin personas
-- Components: Empty state, Loading state, Table with checkboxes (PF6 table with checkboxes)
-- List APIKeys in "Pending" phase for products the user owns
-- Filter by API Product, requester, date
-- Table columns: Requester, API Product, Plan, Use Case (truncated with tooltip), Date, Actions, Status (sorted descending: pending > approved > rejected)
+
+**1. API Key Approval List Page**:
+
+**Empty State**:
+- Component: PF6 EmptyState
+- Display when no pending approvals exist
+
+**Loading State**:
+- Component: PF6 Spinner
+- Display while fetching approval requests
+
+**With Data**:
+- Component: PF6 Table with checkboxes, radio select, and actions
+- Table columns: Checkbox, Requester, API Product, Plan, Use Case, Date, Status, Actions
+- Status column: Sorted in descending order (pending > approved > rejected)
+- Use Case column: Truncated with PF6 Tooltip for full content
 - Table checkboxes for approved/rejected items are disabled
 - No action menu for approved/rejected items
-- Bulk selection: "Approve x selected" and "Reject x selected" buttons appear after bulk selection
-- Approve modal: Single or bulk approval with compact table (max 4 entries visible, scrollable, fixed header)
-- Reject modal: Single or bulk rejection, can remove items during process, modal closes when last item removed
-- Update APIKey status on approval/rejection
+- Filter by API Product, requester, date
+- List APIKeys in "Pending" phase for products the user owns
+
+**2. Bulk Selection**:
+- "Approve x selected" button appears after bulk selection
+- "Reject x selected" button appears after bulk selection
+- Buttons only visible when items are selected
+- Cannot select approved/rejected items (checkboxes disabled)
+
+**3. Approve API Key Modal**:
+
+**Single Approval**:
+- Displays single API key details
+- Confirmation required before approval
+
+**Bulk Approval**:
+- Compact table showing selected items
+- Max 4 entries visible at once
+- Table is scrollable for more items
+- Table header is fixed during scroll
+- API owners can remove items during approval process
+- Modal closes when last item is removed (assumes user abandons operation)
+- "Approve N API keys" title updates based on remaining items
+
+**4. Reject API Key Modal**:
+
+**Single Rejection**:
+- Displays single API key details
+- Optional rejection reason field
+- Confirmation required before rejection
+
+**Bulk Rejection**:
+- Compact table showing selected items
+- Max 4 entries visible at once
+- Table is scrollable for more items
+- Table header is fixed during scroll
+- API owners can remove items during rejection process
+- Modal closes when last item is removed (assumes user abandons operation)
+- "Reject N API keys" title updates based on remaining items
+- Optional rejection reason applies to all items
+
+**5. Notifications**:
+- Toast notifications for approval actions
+- Toast notifications for rejection actions
+- Success/error states clearly communicated
 - Controller creates Secret with actual key upon approval
-- Toast notifications for approval/rejection actions
+- Update APIKey status on approval/rejection
 
 ### Security Considerations
 
