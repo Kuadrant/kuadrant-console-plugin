@@ -94,6 +94,7 @@
       "HTTPRoutePoliciesPage": "./components/HTTPRoutePoliciesPage",
       "GatewayPoliciesPage": "./components/GatewayPoliciesPage",
       "APIProductsListPage": "./components/apiproduct/APIProductsListPage",
+      "APIProductPoliciesTab": "./components/apiproduct/APIProductPoliciesTab",
       "useDNSPolicyActions": "./components/dnspolicy/useDNSPolicyActions",
       "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions"
     },

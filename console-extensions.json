@@ -30,6 +30,21 @@
     }
   },
   {
+    "type": "console.tab/horizontalNav",
+    "properties": {
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIProduct"
+      },
+      "page": {
+        "name": "Policies",
+        "href": "policies"
+      },
+      "component": { "$codeRef": "APIProductPoliciesTab" }
+    }
+  },
+  {
     "type": "console.page/route",
     "properties": {
       "exact": true,
