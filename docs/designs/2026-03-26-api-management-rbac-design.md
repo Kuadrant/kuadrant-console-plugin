@@ -555,7 +555,6 @@ This design has been implemented with the following deliverables:
 - ✅ `config/rbac/api-consumer-role.yaml` - Consumer ClusterRole (for APIKey management) and catalog reader ClusterRole
 - ✅ `config/rbac/api-owner-role.yaml` - Owner ClusterRole (for API management) and catalog reader ClusterRole
 - ✅ `config/rbac/api-admin-clusterrole.yaml` - Admin ClusterRole
-- ✅ `config/rbac/README.md` - Deployment guide with common patterns
 - ✅ `e2e/manifests/api-management-rbac.yaml` - Test personas for validation
 - ✅ `docs/designs/2026-03-26-api-management-rbac-design.md` - This design document
 - ✅ `docs/api-management-rbac-validation.md` - Manual validation procedures
@@ -945,7 +944,6 @@ kubectl create clusterrolebinding api-admin-platform-team \
 ### Completed
 
 - ✅ RBAC role definitions for API Consumer, API Owner, API Admin
-- ✅ Deployment patterns documentation (`config/rbac/README.md`)
 - ✅ E2E test personas (`e2e/manifests/api-management-rbac.yaml`)
 - ✅ Validation guide (`docs/api-management-rbac-validation.md`)
 - ✅ Design document (this file)
