@@ -6,6 +6,11 @@ This design defines the RBAC system for developer portal capabilities in the Kua
 
 The design introduces three personas (API Consumer, API Owner, API Admin) with distinct permissions, leveraging Kubernetes native RBAC (Roles, ClusterRoles, RoleBindings, ClusterRoleBindings) to enforce access control. All operations are performed as the logged-in user via the OpenShift Console's authentication system.
 
+**Persona hierarchy:**
+- **API Consumer**: Namespace-scoped APIKey management + cluster-wide catalog browsing
+- **API Owner**: Namespace-scoped API management (APIProducts, APIKeyApprovals) + cluster-wide discovery (APIKeys, policies, routes)
+- **API Admin**: API Owner with cluster-wide permissions (ClusterRoleBinding) + additional troubleshooting capabilities (APIKeys write access)
+
 ## Goals
 
 - Define RBAC roles for three core personas: API Consumer, API Owner, and API Admin
@@ -403,9 +408,9 @@ In addition to APIProduct and APIKey, API consumers need read-only access to pol
 
 **RBAC implications:**
 
-- All policies and routes: consumers and owners have cluster-wide read-only access
+- All policies and routes: consumers, owners, and admins have cluster-wide read-only access
 - Owners may have write access to these resources in their own namespaces (separate policy management roles)
-- Admins have full access to all policies and routes
+- Admins have the same read-only access as owners (no write access to policies/routes via API Management roles)
 
 ### RBAC Enforcement
 
@@ -577,6 +582,7 @@ The Developer Portal Controller (separate repository) handles:
 
 **Notes**:
 
+- **Admin is Owner with cluster-wide scope**: API Admin has the same core permissions as API Owner, but bound cluster-wide (ClusterRoleBinding instead of RoleBinding). Additional admin capability: write access to APIKeys for troubleshooting.
 - **Consumer APIKey access**: Always **namespace-scoped** (never cluster-wide). Consumers can only access APIKeys in namespaces where they have Role bindings
 - **Consumer catalog access**: Cluster-wide read access to APIProducts, policies, and routes for discovery
 - **APIKey namespace**: Consumers create APIKeys in designated namespace(s) - shared (Pattern 1) or per-team (Pattern 2)
@@ -618,15 +624,11 @@ metadata:
   name: api-consumer
 rules:
   # Create and manage API keys in consumer's own namespace (namespace-scoped via RoleBinding)
+  # Note: get/list verbs automatically include reading status.apiKeyValue (projected API key)
+  # Consumers do NOT update status - controller manages all status fields
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apikeys"]
     verbs: ["get", "list", "create", "update", "delete"]
-
-  # Read APIKey status to retrieve projected API key value
-  # NOTE: Consumers do NOT update status - controller manages all status fields
-  - apiGroups: ["devportal.kuadrant.io"]
-    resources: ["apikeys/status"]
-    verbs: ["get"]
 
   # Browse all API products for discovery (cluster-wide)
   - apiGroups: ["devportal.kuadrant.io"]
@@ -725,13 +727,17 @@ rules:
 ```yaml
 ---
 # API Admin ClusterRole
-# Grants full access to API management resources across all namespaces
+# Essentially api-owner with cluster-wide permissions plus additional troubleshooting capabilities
+# Grants API owners full access to API management resources across all namespaces
 # Used by platform team members who manage the API catalog and troubleshoot issues
+#
+# Note: This is api-owner permissions bound cluster-wide (via ClusterRoleBinding)
+#       plus additional permissions for troubleshooting (apikeys write access)
 #
 # Usage:
 #   kubectl apply -f api-admin-clusterrole.yaml
 #
-#   Bind to admin users:
+#   Bind to admin users (ClusterRoleBinding grants cluster-wide access):
 #   kubectl create clusterrolebinding api-admin-alice \
 #     --clusterrole=api-admin \
 #     --user=alice
@@ -746,44 +752,45 @@ kind: ClusterRole
 metadata:
   name: api-admin
 rules:
-  # Full access to API products across all namespaces
+  # Manage API products cluster-wide (same as api-owner, but cluster-wide via ClusterRoleBinding)
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
-    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
 
-  # Full access to API keys across all namespaces
-  - apiGroups: ["devportal.kuadrant.io"]
-    resources: ["apikeys"]
-    verbs: ["get", "list", "create", "update", "delete", "watch"]
-
-  # Full access to API key approvals across all namespaces
-  # Allows admins to approve/reject on behalf of owners
+  # Manage API key approvals cluster-wide (same as api-owner, but cluster-wide via ClusterRoleBinding)
+  # Allows admins to approve/reject on behalf of owners in any namespace
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apikeyapprovals"]
-    verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
+    verbs: ["get", "list", "create", "update", "patch", "delete"]
+
+  # Additional troubleshooting permission: Full access to API keys cluster-wide
+  # Unlike api-owner (read-only), admins can create/update/delete APIKeys for troubleshooting
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys"]
+    verbs: ["get", "list", "create", "update", "delete"]
 
   # NOTE: Secrets are managed by Developer Portal Controller in kuadrant namespace
   # API key values are delivered to consumers via status.apiKeyValue projection
   # Admins do not need secret permissions for API Management
 
-  # View rate limiting plans (read-only - PlanPolicies are platform-managed)
+  # View rate limiting plans cluster-wide (same as api-owner)
   - apiGroups: ["extensions.kuadrant.io"]
     resources: ["planpolicies"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list"]
 
-  # View all route-level policies for troubleshooting
+  # View policies cluster-wide (same as api-owner)
   - apiGroups: ["kuadrant.io"]
     resources: ["authpolicies", "ratelimitpolicies"]
-    verbs: ["get", "list", "watch"]
+    verbs: ["get", "list"]
 
-  # View HTTPRoutes and Gateways
+  # View HTTPRoutes cluster-wide (same as api-owner)
   - apiGroups: ["gateway.networking.k8s.io"]
-    resources: ["httproutes", "gateways"]
-    verbs: ["get", "list", "watch"]
+    resources: ["httproutes"]
+    verbs: ["get", "list"]
 
-  # Read ConfigMaps for topology view
-  - apiGroups: [""]
-    resources: ["configmaps"]
+  # View Gateways cluster-wide (same as api-owner)
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways"]
     verbs: ["get", "list"]
 ```
 
@@ -798,7 +805,7 @@ This design has been implemented with the following deliverables:
 - ✅ RBAC ClusterRole manifests (see "RBAC Manifests" section above)
   - `api-consumer` - Consumer ClusterRole (includes namespace-scoped APIKey management and cluster-wide catalog browsing)
   - `api-owner` - Owner ClusterRole (includes namespace-scoped API management and cluster-wide catalog browsing)
-  - `api-admin` - Admin ClusterRole
+  - `api-admin` - Admin ClusterRole (api-owner with cluster-wide permissions + additional troubleshooting capabilities)
 - ✅ `docs/designs/2026-03-26-api-management-rbac-design.md` - This design document (includes all RBAC manifests and validation procedures)
 
 ### 🚧 Required Implementation
@@ -1108,13 +1115,15 @@ kubectl create rolebinding api-owner-binding \
 
 ### Pattern 4: Platform Admin
 
-Platform administrators manage API infrastructure and troubleshoot across all namespaces.
+Platform administrators are API owners with cluster-wide permissions, plus additional troubleshooting capabilities.
+
+**Key principle**: api-admin is api-owner with ClusterRoleBinding (cluster-wide scope) instead of RoleBinding (namespace-scoped).
 
 ```bash
 # Apply admin ClusterRole (cluster-wide)
 # Apply Admin ClusterRole (see "RBAC Manifests" section above for complete YAML)
 
-# Bind to platform team or admins
+# Bind to platform team (ClusterRoleBinding grants cluster-wide access)
 kubectl create clusterrolebinding api-admin-platform-team \
   --clusterrole=api-admin \
   --group=platform-team
@@ -1128,10 +1137,12 @@ kubectl create clusterrolebinding api-admin-alice \
 **Benefits**:
 
 - ✅ Full visibility and control across all namespaces
-- ✅ Can troubleshoot and override decisions
+- ✅ Same core permissions as api-owner, just cluster-wide
+- ✅ Additional troubleshooting capability (APIKeys write access)
+- ✅ Can troubleshoot and override decisions in any namespace
 - ✅ Can view all PlanPolicies (read-only - PlanPolicies are platform-managed)
 
-**Use when**: Central platform team manages API infrastructure
+**Use when**: Central platform team manages API infrastructure and needs cluster-wide access
 
 ### Combined Example: Complete Setup
 
