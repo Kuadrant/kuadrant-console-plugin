@@ -95,6 +95,7 @@
       "GatewayPoliciesPage": "./components/GatewayPoliciesPage",
       "APIProductsListPage": "./components/apiproduct/APIProductsListPage",
       "APIProductPoliciesTab": "./components/apiproduct/APIProductPoliciesTab",
+      "APIProductDefinitionTab": "./components/apiproduct/APIProductDefinitionTab",
       "useDNSPolicyActions": "./components/dnspolicy/useDNSPolicyActions",
       "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions"
     },
@@ -114,7 +115,9 @@
     "graphlib-dot": "^0.6.4",
     "i18next": "^25.8.0",
     "i18next-parser": "^9.0.1",
-    "pluralize": "^8.0.0"
+    "js-yaml": "^4.1.0",
+    "pluralize": "^8.0.0",
+    "swagger-ui-react": "^5.17.14"
   },
   "packageManager": "yarn@4.12.0"
 }
