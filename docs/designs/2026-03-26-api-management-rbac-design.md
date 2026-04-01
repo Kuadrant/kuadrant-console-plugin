@@ -581,12 +581,13 @@ The Developer Portal Controller (separate repository) handles:
 
 This section contains the complete Kubernetes RBAC manifests for API Management roles.
 
-### API Consumer ClusterRoles
+### API Consumer ClusterRole
 
 ```yaml
 ---
-# API Consumer ClusterRole (namespace-scoped APIKey management)
-# Allows developers to create and manage API access requests in their own namespace
+# API Consumer ClusterRole
+# Allows developers to create and manage API access requests and browse the API catalog
+# Includes namespace-scoped APIKey management and cluster-wide read access for catalog browsing
 #
 # Usage:
 #   kubectl apply -f api-consumer-role.yaml
@@ -597,15 +598,16 @@ This section contains the complete Kubernetes RBAC manifests for API Management 
 #     --user=<username> \
 #     -n <consumer-namespace>
 #
-# Note: ClusterRole + RoleBinding = namespace-scoped permissions
+# Note: ClusterRole + RoleBinding = namespace-scoped write permissions
 #       The consumer can only manage APIKeys in namespaces where they have a RoleBinding
+#       Cluster-wide read permissions allow consumers to discover all published APIs
 #
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: api-consumer
 rules:
-  # Create and manage API keys in consumer's own namespace
+  # Create and manage API keys in consumer's own namespace (namespace-scoped via RoleBinding)
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apikeys"]
     verbs: ["get", "list", "create", "update", "delete"]
@@ -616,35 +618,12 @@ rules:
     resources: ["apikeys/status"]
     verbs: ["get"]
 
-  # NOTE: Consumers do NOT have secret read permissions (architectural principle)
-  # API key values are delivered via status.apiKeyValue projection by the controller
-
-  # NOTE: Consumers do NOT have apikeyapprovals permissions (architectural principle)
-  # Only API owners can approve/reject requests
-
----
-# API Consumer ClusterRole (read-only catalog browsing)
-# Allows consumers to discover all published APIs across namespaces
-#
-# Usage:
-#   kubectl apply -f api-consumer-role.yaml
-#
-#   Grant cluster-wide read access to a user:
-#   kubectl create clusterrolebinding api-consumer-catalog-reader-<username> \
-#     --clusterrole=api-consumer-catalog-reader \
-#     --user=<username>
-#
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: api-consumer-catalog-reader
-rules:
-  # Browse all API products for discovery
+  # Browse all API products for discovery (cluster-wide)
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
     verbs: ["get", "list"]
 
-  # View policies (read-only, to understand API requirements)
+  # View policies cluster-wide (read-only, to understand API requirements)
   - apiGroups: ["extensions.kuadrant.io"]
     resources: ["planpolicies"]
     verbs: ["get", "list"]
@@ -652,10 +631,16 @@ rules:
     resources: ["authpolicies", "ratelimitpolicies"]
     verbs: ["get", "list"]
 
-  # View HTTPRoutes (read-only, to understand API endpoints)
+  # View HTTPRoutes cluster-wide (read-only, to understand API endpoints)
   - apiGroups: ["gateway.networking.k8s.io"]
     resources: ["httproutes"]
     verbs: ["get", "list"]
+
+  # NOTE: Consumers do NOT have secret read permissions (architectural principle)
+  # API key values are delivered via status.apiKeyValue projection by the controller
+
+  # NOTE: Consumers do NOT have apikeyapprovals permissions (architectural principle)
+  # Only API owners can approve/reject requests
 ```
 
 ### API Owner ClusterRole
@@ -703,6 +688,11 @@ rules:
   # View rate limiting plans cluster-wide (reference when creating products)
   - apiGroups: ["extensions.kuadrant.io"]
     resources: ["planpolicies"]
+    verbs: ["get", "list"]
+
+  # View policies cluster-wide (read-only, to understand API requirements)
+  - apiGroups: ["kuadrant.io"]
+    resources: ["authpolicies", "ratelimitpolicies"]
     verbs: ["get", "list"]
 
   # View HTTPRoutes cluster-wide (for discovery and referencing in APIProducts)
@@ -796,8 +786,7 @@ This design has been implemented with the following deliverables:
 **Deliverables:**
 
 - ✅ RBAC ClusterRole manifests (see "RBAC Manifests" section above)
-  - `api-consumer` - Consumer ClusterRole (for APIKey management)
-  - `api-consumer-catalog-reader` - Consumer catalog browsing ClusterRole
+  - `api-consumer` - Consumer ClusterRole (includes namespace-scoped APIKey management and cluster-wide catalog browsing)
   - `api-owner` - Owner ClusterRole (includes namespace-scoped API management and cluster-wide catalog browsing)
   - `api-admin` - Admin ClusterRole
 - ✅ `docs/designs/2026-03-26-api-management-rbac-design.md` - This design document (includes all RBAC manifests and validation procedures)
@@ -988,18 +977,14 @@ All consumers share one namespace and use catalog cluster-wide.
 kubectl create namespace api-consumers
 
 # Apply consumer ClusterRoles (once, cluster-wide)
-# Apply Consumer ClusterRoles (see "RBAC Manifests" section above for complete YAML)
+# Apply Consumer ClusterRole (see "RBAC Manifests" section above for complete YAML)
 
-# Bind all consumers to the shared namespace (ClusterRole + RoleBinding = namespace-scoped)
+# Bind all consumers to the shared namespace (ClusterRole + RoleBinding = namespace-scoped write permissions)
+# Cluster-wide read permissions already included in api-consumer ClusterRole
 kubectl create rolebinding api-consumer-binding \
   --clusterrole=api-consumer \
   --group=api-consumers \
   -n api-consumers
-
-# Grant cluster-wide catalog read access
-kubectl create clusterrolebinding api-consumer-catalog-reader \
-  --clusterrole=api-consumer-catalog-reader \
-  --group=api-consumers
 ```
 
 **How it works**:
@@ -1033,18 +1018,14 @@ kubectl create namespace consumer-team-mobile
 kubectl create namespace consumer-team-backend
 
 # Apply consumer ClusterRoles (once, cluster-wide)
-# Apply Consumer ClusterRoles (see "RBAC Manifests" section above for complete YAML)
+# Apply Consumer ClusterRole (see "RBAC Manifests" section above for complete YAML)
 
-# Bind to teams/users (ClusterRole + RoleBinding = namespace-scoped)
+# Bind to teams/users (ClusterRole + RoleBinding = namespace-scoped write permissions)
+# Cluster-wide read permissions already included in api-consumer ClusterRole
 kubectl create rolebinding api-consumer-binding \
   --clusterrole=api-consumer \
   --group=mobile-app-developers \
   -n consumer-team-mobile
-
-# Grant cluster-wide catalog read access
-kubectl create clusterrolebinding api-consumer-catalog-reader-mobile \
-  --clusterrole=api-consumer-catalog-reader \
-  --group=mobile-app-developers
 ```
 
 **Benefits**:
@@ -1125,19 +1106,16 @@ kubectl create namespace consumer-team-mobile
 kubectl create namespace api-team-payments
 
 # 2. Deploy RBAC ClusterRoles (once, cluster-wide)
-# Apply Consumer ClusterRoles (see "RBAC Manifests" section above for complete YAML)
-# Apply Owner ClusterRoles (see "RBAC Manifests" section above for complete YAML)
+# Apply Consumer ClusterRole (see "RBAC Manifests" section above for complete YAML)
+# Apply Owner ClusterRole (see "RBAC Manifests" section above for complete YAML)
 # Apply Admin ClusterRole (see "RBAC Manifests" section above for complete YAML)
 
-# 3. Bind consumer team (ClusterRole + RoleBinding = namespace-scoped)
+# 3. Bind consumer team (ClusterRole + RoleBinding = namespace-scoped write permissions)
+# Cluster-wide read permissions already included in api-consumer ClusterRole
 kubectl create rolebinding api-consumer-binding \
   --clusterrole=api-consumer \
   --group=mobile-app-developers \
   -n consumer-team-mobile
-
-kubectl create clusterrolebinding api-consumer-catalog-reader-mobile \
-  --clusterrole=api-consumer-catalog-reader \
-  --group=mobile-app-developers
 
 # 4. Bind owner team (ClusterRole + RoleBinding = namespace-scoped write, cluster-wide read)
 kubectl create rolebinding api-owner-binding \
