@@ -101,21 +101,23 @@ This section describes the high-level workflow for consumers to request and rece
 
 2. **Consumer requests access** - Consumer creates APIKey resource in **their own namespace** with cross-namespace reference to APIProduct in owner's namespace
 
-3. **Owner discovers requests** - API Owner lists APIKeys cluster-wide, filtering by `spec.apiProductRef.namespace` matching their namespace
+3. **APIKey enters Pending state** - The newly created APIKey has no conditions (`conditions: []`), indicating it's awaiting approval
 
-4. **Approval decision**:
+4. **Owner discovers requests** - API Owner lists APIKeys cluster-wide, filtering by `spec.apiProductRef.namespace` matching their namespace
+
+5. **Approval decision**:
    - **Automatic mode**: Controller automatically approves the request (no owner action needed)
    - **Manual mode**: API Owner creates APIKeyApproval resource in **their own namespace** with cross-namespace reference to consumer's APIKey
 
-5. **Controller reconciles approval** - Controller reads APIKeyApproval (manual mode) or auto-approves (automatic mode) and updates APIKey `status.conditions` (Approved or Denied)
+6. **Controller reconciles approval** - Controller reads APIKeyApproval (manual mode) or auto-approves (automatic mode) and updates APIKey `status.conditions` (Approved or Denied)
 
-6. **On approval**: Controller creates Secret in **kuadrant namespace** (centralized secret storage for policy enforcement)
+7. **On approval**: Controller creates Secret in **kuadrant namespace** (centralized secret storage for policy enforcement)
 
-7. **Controller projects API key** - Controller exposes the API key value to the consumer via APIKey `status.apiKeyValue` in **consumer's namespace**
+8. **Controller projects API key** - Controller exposes the API key value to the consumer via APIKey `status.apiKeyValue` in **consumer's namespace**
 
-8. **Consumer retrieves API key** - Consumer accesses the projected API key value from their APIKey resource in their own namespace
+9. **Consumer retrieves API key** - Consumer accesses the projected API key value from their APIKey resource in their own namespace
 
-9. **Consumer uses API** - Consumer authenticates API requests using the retrieved key
+10. **Consumer uses API** - Consumer authenticates API requests using the retrieved key
 
 #### Key Architectural Decisions
 
@@ -156,11 +158,14 @@ This section describes the high-level workflow for consumers to request and rece
 - **Simplified management** - Single location for all API key secrets (rotation, monitoring, cleanup)
 - **Clean separation** - Secret storage is infrastructure concern, managed by controller
 
-**4. Conditions Pattern**
+**4. Conditions Pattern (Following CertificateSigningRequest)**
 
 - Replace `status.phase` with `status.conditions` array
-- `Approved` condition type when approved
-- `Denied` condition type when rejected
+- **Lifecycle states**:
+  - `Pending`: The initial state. An APIKey is "Pending" if it has no conditions of type `Approved`, `Denied`, or `Failed`
+  - `Approved`: Condition type set to "True" when approved (via APIKeyApproval or automatic mode)
+  - `Denied`: Condition type set to "True" when rejected (via APIKeyApproval)
+  - `Failed`: Condition type set to "True" when controller encounters an error
 - Remove `status.reviewedBy`, `status.reviewedAt` - moved to APIKeyApproval spec
 
 ### API Management Resources
@@ -196,18 +201,29 @@ spec:
 
 status:
   # Approval conditions (following CertificateSigningRequest pattern)
+  # Lifecycle states:
+  #   - Pending: No conditions (initial state after creation)
+  #   - Approved: Approved condition with status "True"
+  #   - Denied: Denied condition with status "True"
+  #   - Failed: Failed condition with status "True"
+
+  # Example: Approved state
   conditions:
     - type: Approved
       status: "True"
       reason: "ApprovedByOwner"
       message: "Approved for mobile team's payment integration project"
       lastTransitionTime: "2026-03-30T14:00:00Z"
-    # OR for rejection:
+
+    # OR for Denied state:
     # - type: Denied
     #   status: "True"
     #   reason: "RejectedByOwner"
     #   message: "API product not available for external use"
     #   lastTransitionTime: "2026-03-30T14:00:00Z"
+
+    # OR for Pending state (initial):
+    # conditions: []  # Empty array = Pending state
 
   # API key value projection (set by Developer Portal Controller)
   # Exposes the secret value to consumer without requiring secret read permissions
@@ -247,8 +263,10 @@ status:
   - Consumers cannot approve/reject (architectural principle: consumers cannot create APIKeyApproval)
   - Controller reconciles approval and updates `status.conditions` based on APIKeyApproval or automatic mode
 - **Conditions pattern** (following CertificateSigningRequest):
+  - `Pending`: Initial state with no conditions (empty array)
   - `Approved` condition: Set to "True" when approved
   - `Denied` condition: Set to "True" when rejected
+  - `Failed` condition: Set to "True" on controller errors
   - Conditions set by controller only, not by users
 - **Secret projection**:
   - Controller creates Secret in **kuadrant namespace** for centralized policy enforcement
@@ -585,7 +603,11 @@ This design has been implemented with the following deliverables:
 **APIKey CRD Updates** (github.com/Kuadrant/developer-portal-controller):
 
 - Add `spec.apiProductRef.namespace` for cross-namespace reference
-- Replace `status.phase` with `status.conditions` (Approved/Denied following CSR pattern)
+- Replace `status.phase` with `status.conditions` (following CertificateSigningRequest pattern)
+  - `Pending`: Initial state (no conditions)
+  - `Approved`: Approved condition type
+  - `Denied`: Denied condition type
+  - `Failed`: Failed condition type (controller errors)
 - Remove `status.secretRef`, `status.canReadSecret`, `status.reviewedBy`, `status.reviewedAt`
 - Keep `status.apiKeyValue` for secret projection
 
