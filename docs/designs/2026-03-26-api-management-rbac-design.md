@@ -360,7 +360,10 @@ spec:
 - **Review metadata**: All approval/rejection metadata stored in APIKeyApproval (reviewedBy, reviewedAt, reason, message)
 - **Controller reconciliation**:
   - Controller watches APIKeyApproval resources cluster-wide
-  - If `spec.approved = true`: Sets `Approved` condition to "True" in APIKey status and creates Secret
+  - **Validation**: Controller verifies APIKeyApproval namespace matches the APIProduct namespace referenced in the APIKey
+    - If namespaces don't match: Sets `Failed` condition with reason "InvalidApproval" (prevents cross-namespace approval attacks)
+    - This ensures owners can only approve requests for API products they own
+  - If `spec.approved = true` and validation passes: Sets `Approved` condition to "True" in APIKey status and creates Secret
   - If `spec.approved = false`: Sets `Denied` condition to "True" in APIKey status
   - If no APIKeyApproval exists: No approval/denial conditions set (pending state)
   - Copies `reviewedBy`, `reason`, `message` into condition fields
@@ -426,6 +429,7 @@ The Developer Portal Controller (separate repository) handles:
 2. Creating `Secret` resources with generated API key values
 3. Updating `APIKey` status with secret reference
 4. Enforcing approval workflow based on `APIProduct.spec.approvalMode`
+5. **Validating APIKeyApproval namespace matches APIProduct namespace** - ensures owners can only approve requests for API products they own
 
 **Controller RBAC** (not part of this design, but documented for completeness):
 
@@ -498,9 +502,11 @@ The Developer Portal Controller (separate repository) handles:
 - **No validation webhook needed**: Clean RBAC separation via namespaces and separate resource type
 - **Controller responsibility**:
   - Watches APIKeyApproval resources cluster-wide
+  - **Validates namespace alignment**: Ensures APIKeyApproval.metadata.namespace == APIKey.spec.apiProductRef.namespace
   - Reconciles `status.conditions` (Approved/Denied) based on APIKeyApproval existence and `approved` field
-  - Creates Secret in kuadrant namespace only when approved (centralized storage)
+  - Creates Secret in kuadrant namespace only when approved and validation passes (centralized storage)
   - Projects secret value to consumer's APIKey status
+  - Sets `Failed` condition if APIKeyApproval namespace doesn't match APIProduct namespace
 
 #### 4. Cross-namespace References
 
@@ -519,6 +525,9 @@ The Developer Portal Controller (separate repository) handles:
 - APIKeyApproval contains `spec.apiKeyRef.namespace` referencing consumer's APIKey
 - **Owners have cluster-wide read on APIKeys** to discover requests for their APIs
 - Owners filter by `spec.apiProductRef.namespace` matching their namespace
+- **Controller validation**: APIKeyApproval.metadata.namespace MUST match APIKey.spec.apiProductRef.namespace
+  - Prevents owners from approving requests for API products owned by other teams
+  - Enforces ownership boundary at the controller level (defense in depth)
 
 #### 5. RBAC Privilege Escalation
 
@@ -527,6 +536,7 @@ The Developer Portal Controller (separate repository) handles:
 - Owners have namespace-scoped permissions only
 - Cannot create PlanPolicies (platform-managed resource - even admins cannot create)
 - Cannot modify products in other namespaces
+- **Cannot approve requests for other teams' APIs**: Controller validates APIKeyApproval namespace matches APIProduct namespace
 
 **Consumer cannot become owner:**
 
@@ -815,10 +825,15 @@ This design has been implemented with the following deliverables:
 
 - Watch APIKey resources cluster-wide (consumers create in their own namespaces)
 - Watch APIKeyApproval resources cluster-wide (owners create in their own namespaces)
-- Reconcile `status.conditions` (Approved/Denied) based on:
-  - APIKeyApproval existence and `approved` field (manual mode)
+- Watch APIProduct resources cluster-wide (to resolve cross-namespace references)
+- **Validate APIKeyApproval namespace alignment**:
+  - When processing APIKeyApproval, verify: `APIKeyApproval.metadata.namespace == APIKey.spec.apiProductRef.namespace`
+  - If validation fails: Set `Failed` condition in APIKey with reason "InvalidApproval: APIKeyApproval must be in same namespace as APIProduct"
+  - This ensures owners can only approve requests for API products they own (namespace-scoped ownership)
+- Reconcile `status.conditions` (Approved/Denied/Failed) based on:
+  - APIKeyApproval existence, `approved` field, and namespace validation (manual mode)
   - Automatic approval (automatic mode)
-- Create Secret in **kuadrant namespace** (centralized storage) when approved
+- Create Secret in **kuadrant namespace** (centralized storage) when approved and validation passes
 - Project API key value into `status.apiKeyValue` in **consumer's namespace** when approved
 - Handle cross-namespace references between APIKey, APIKeyApproval, and APIProduct
 
@@ -916,6 +931,7 @@ See the "Validation Checklist" section below for detailed test scenarios.
 - [ ] Cannot create APIProduct in other team namespaces
 - [ ] Cannot delete APIProduct in other team namespaces
 - [ ] Cannot create APIKeyApproval in other team namespaces
+- [ ] Cannot approve requests for other teams' API products (controller validation prevents cross-namespace approvals)
 - [ ] Cannot create APIKeys (consumers create in their own namespace)
 - [ ] Cannot update APIKey status (controller-managed)
 - [ ] Cannot read Secrets in kuadrant namespace (no secret access)
@@ -944,13 +960,32 @@ See the "Validation Checklist" section below for detailed test scenarios.
 4. [ ] Owner filters APIKeys: `kubectl get apikeys -A -o json | jq '.items[] | select(.spec.apiProductRef.namespace=="api-team-payments")'`
 5. [ ] Owner creates APIKeyApproval in `api-team-payments` namespace
 6. [ ] APIKeyApproval references APIKey in `consumer-team-mobile` namespace (cross-namespace ref)
-7. [ ] Controller reconciles: Sets `Approved` condition in APIKey status
-8. [ ] Controller creates Secret in `kuadrant` namespace (centralized storage)
-9. [ ] Controller projects secret value to APIKey `status.apiKeyValue` in `consumer-team-mobile` namespace
-10. [ ] Consumer reads `status.apiKeyValue` from their APIKey in own namespace
-11. [ ] Consumer CANNOT read Secret in `kuadrant` namespace (isolation verified)
-12. [ ] Owner CANNOT read Secret in `kuadrant` namespace (secrets managed by controller only)
-13. [ ] Admin CANNOT read Secret in `kuadrant` namespace (no secret permissions for API Management)
+7. [ ] Controller validates: APIKeyApproval namespace (`api-team-payments`) matches APIProduct namespace (`api-team-payments`)
+8. [ ] Controller reconciles: Sets `Approved` condition in APIKey status (validation passed)
+9. [ ] Controller creates Secret in `kuadrant` namespace (centralized storage)
+10. [ ] Controller projects secret value to APIKey `status.apiKeyValue` in `consumer-team-mobile` namespace
+11. [ ] Consumer reads `status.apiKeyValue` from their APIKey in own namespace
+12. [ ] Consumer CANNOT read Secret in `kuadrant` namespace (isolation verified)
+13. [ ] Owner CANNOT read Secret in `kuadrant` namespace (secrets managed by controller only)
+14. [ ] Admin CANNOT read Secret in `kuadrant` namespace (no secret permissions for API Management)
+
+#### Controller Validation Test (Negative)
+
+**Scenario**: Owner attempts to approve request for another team's API product
+
+This test verifies the controller's namespace validation prevents cross-team approval attacks:
+
+1. [ ] Consumer creates APIKey in `consumer-team-mobile` namespace
+2. [ ] APIKey references APIProduct in `api-team-payments` namespace (owned by Team Payments)
+3. [ ] **Malicious attempt**: Owner from Team Shipping creates APIKeyApproval in `api-team-shipping` namespace (wrong namespace)
+4. [ ] APIKeyApproval references APIKey in `consumer-team-mobile` namespace
+5. [ ] Controller validates: APIKeyApproval namespace (`api-team-shipping`) does NOT match APIProduct namespace (`api-team-payments`)
+6. [ ] Controller sets `Failed` condition in APIKey status with reason "InvalidApproval: APIKeyApproval must be in same namespace as APIProduct"
+7. [ ] Controller does NOT create Secret (validation failed)
+8. [ ] APIKey remains in `Failed` state, not `Approved`
+9. [ ] Consumer sees failure message in APIKey status conditions
+
+**Expected outcome**: Only owners in the same namespace as the APIProduct can successfully approve requests.
 
 ### Test Personas
 
@@ -1137,9 +1172,10 @@ kubectl create clusterrolebinding api-admin-platform-team \
 1. Mobile team creates APIKey in `consumer-team-mobile` namespace
 2. Payment team lists APIKeys cluster-wide, filters by `spec.apiProductRef.namespace: api-team-payments`
 3. Payment team creates APIKeyApproval in `api-team-payments` namespace
-4. Controller creates Secret in `kuadrant` namespace (centralized storage)
-5. Controller projects API key to APIKey status in `consumer-team-mobile` namespace
-6. Mobile team reads API key from their APIKey resource
+4. Controller validates APIKeyApproval namespace matches APIProduct namespace (`api-team-payments`)
+5. Controller creates Secret in `kuadrant` namespace (centralized storage) if validation passes
+6. Controller projects API key to APIKey status in `consumer-team-mobile` namespace
+7. Mobile team reads API key from their APIKey resource
 
 ## Validation and Next Steps
 
