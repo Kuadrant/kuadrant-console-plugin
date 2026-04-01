@@ -7,6 +7,7 @@ This design defines the RBAC system for developer portal capabilities in the Kua
 The design introduces three personas (API Consumer, API Owner, API Admin) with distinct permissions, leveraging Kubernetes native RBAC (Roles, ClusterRoles, RoleBindings, ClusterRoleBindings) to enforce access control. All operations are performed as the logged-in user via the OpenShift Console's authentication system.
 
 **Persona hierarchy:**
+
 - **API Consumer**: Namespace-scoped APIKey management + cluster-wide catalog browsing
 - **API Owner**: Namespace-scoped API management (APIProducts, APIKeyApprovals) + cluster-wide discovery (APIKeys, policies, routes)
 - **API Admin**: API Owner with cluster-wide permissions (ClusterRoleBinding) + additional troubleshooting capabilities (APIKeys write access)
@@ -30,12 +31,19 @@ The design introduces three personas (API Consumer, API Owner, API Admin) with d
 
 ### Backwards Compatibility
 
-**No breaking changes.** This is a new feature adding RBAC definitions for API Management resources that didn't previously have defined roles in the console plugin.
+**Breaking changes to APIKey CRD** (`devportal.kuadrant.io/v1alpha1`):
 
-The new roles are additive and focus on API Management resources:
+- `status.phase` → `status.conditions` (following Kubernetes conditions pattern)
+- Removed status fields: `secretRef`, `canReadSecret`, `reviewedBy`, `reviewedAt`
+- Added required field: `spec.apiProductRef.namespace` (cross-namespace reference)
 
-- `APIProduct` (`devportal.kuadrant.io/v1alpha1`) - API catalog entries
-- `APIKey` (`devportal.kuadrant.io/v1alpha1`) - Consumer API access requests
+**No migration required**: The current v1alpha1 API is in dev preview support mode, so breaking changes are acceptable. Consider bumping the API version to `v1alpha2` to signal these breaking changes to users.
+
+**New RBAC roles are additive** (no breaking changes to existing roles):
+
+- New ClusterRoles: `api-consumer`, `api-owner`, `api-admin`
+- New CRD: `APIKeyApproval` (`devportal.kuadrant.io/v1alpha1`)
+- New focus on API Management resources: `APIProduct`, `APIKey`, `APIKeyApproval`
 
 All policies (PlanPolicy, AuthPolicy, RateLimitPolicy) are treated uniformly with read-only access for the new three personas.
 
@@ -810,53 +818,61 @@ This design has been implemented with the following deliverables:
 
 ### 🚧 Required Implementation
 
-**APIKeyApproval CRD** (github.com/Kuadrant/developer-portal-controller):
+The following tasks are required to implement this RBAC design. Each task is actionable and can be converted to a GitHub issue.
 
-- New CRD to represent approval/rejection decisions
-- Owner creates APIKeyApproval in their namespace with cross-namespace reference to consumer's APIKey
-- Contains review metadata: reviewedBy, reviewedAt, reason, message
-- Provides clean RBAC separation (no validation webhook needed)
+#### Developer Portal Controller (github.com/Kuadrant/developer-portal-controller)
 
-**APIKey CRD Updates** (github.com/Kuadrant/developer-portal-controller):
+**APIKeyApproval CRD and Controller**
 
-- Add `spec.apiProductRef.namespace` for cross-namespace reference
-- Replace `status.phase` with `status.conditions` (following CertificateSigningRequest pattern)
-  - `Pending`: Initial state (no conditions)
-  - `Approved`: Approved condition type
-  - `Denied`: Denied condition type
-  - `Failed`: Failed condition type (controller errors)
-- Remove `status.secretRef`, `status.canReadSecret`, `status.reviewedBy`, `status.reviewedAt`
-- Keep `status.apiKeyValue` for secret projection
+**Task 1: Implement APIKeyApproval CRD and approval workflow controller**
 
-**Developer Portal Controller** (github.com/Kuadrant/developer-portal-controller):
+Define `APIKeyApproval` CRD (`devportal.kuadrant.io/v1alpha1`) with spec fields: `apiKeyRef.name`, `apiKeyRef.namespace`, `approved` (boolean), `reviewedBy`, `reviewedAt`, `reason`, `message`. Implement controller that watches APIKeyApproval resources cluster-wide with namespace validation (`APIKeyApproval.metadata.namespace == APIKey.spec.apiProductRef.namespace`). Implement approval logic: when `spec.approved = true` and validation passes, generate API key, create Secret in kuadrant namespace, set `Approved` condition in APIKey status, project value to `status.apiKeyValue`. Implement denial logic: when `spec.approved = false`, set `Denied` condition. Set `Failed` condition if validation fails. Handle pending state (no APIKeyApproval = empty conditions). Generate CRD manifests, add to operator deployment, document in README. Add unit, integration, and e2e tests for approval/denial workflows and namespace validation.
 
-- Watch APIKey resources cluster-wide (consumers create in their own namespaces)
-- Watch APIKeyApproval resources cluster-wide (owners create in their own namespaces)
-- Watch APIProduct resources cluster-wide (to resolve cross-namespace references)
-- **Validate APIKeyApproval namespace alignment**:
-  - When processing APIKeyApproval, verify: `APIKeyApproval.metadata.namespace == APIKey.spec.apiProductRef.namespace`
-  - If validation fails: Set `Failed` condition in APIKey with reason "InvalidApproval: APIKeyApproval must be in same namespace as APIProduct"
-  - This ensures owners can only approve requests for API products they own (namespace-scoped ownership)
-- Reconcile `status.conditions` (Approved/Denied/Failed) based on:
-  - APIKeyApproval existence, `approved` field, and namespace validation (manual mode)
-  - Automatic approval (automatic mode)
-- Create Secret in **kuadrant namespace** (centralized storage) when approved and validation passes
-- Project API key value into `status.apiKeyValue` in **consumer's namespace** when approved
-- Handle cross-namespace references between APIKey, APIKeyApproval, and APIProduct
+**APIKey CRD Schema Updates**
 
-### Future Work (Out of Scope for RBAC Design)
+**Task 2: Update APIKey CRD schema for RBAC design**
 
-**Console Plugin Implementation** (separate work):
+Add `spec.apiProductRef.namespace` field (string, required) for cross-namespace references. Replace `status.phase` with `status.conditions` array following Kubernetes conditions pattern (condition types: `Approved`, `Denied`, `Failed` with type, status, reason, message, lastTransitionTime). Remove deprecated status fields: `status.secretRef`, `status.canReadSecret`, `status.reviewedBy`, `status.reviewedAt`. Keep `status.apiKeyValue` (secret projection) and `status.limits`. Consider bumping API version to v1alpha2 to signal breaking changes. Update CRD manifests and OpenAPI schema.
 
-- UI reads API key from `status.apiKeyValue` instead of Secret
-- Progressive disclosure via `SelfSubjectAccessReview`
-- Client-side filtering for APIKey lists by `requestedBy.userId`
+**Controller Enhancements**
 
-**Kuadrant Operator Integration** (future enhancement):
+**Task 3: Update controller RBAC permissions and documentation**
 
-- Include RBAC ClusterRoles in operator deployment
-- Auto-create roles during Kuadrant installation
-- Namespace templates for team onboarding
+Update controller ServiceAccount ClusterRole with permissions: `apikeys` (get, list, watch), `apikeys/status` (update, patch), `apikeyapprovals` (get, list, watch), `apiproducts` (get, list, watch), all cluster-wide. Scope `secrets` permissions (create, update, delete, get, list) to kuadrant namespace only via RoleBinding. Document RBAC requirements in controller README.
+
+#### Console Plugin (github.com/Kuadrant/kuadrant-console-plugin)
+
+**Task 4: Implement APIKeyApproval UI components**
+
+Create APIKeyApproval form component for API owners showing pending APIKey requests (filtered by `spec.apiProductRef.namespace`) with approve/reject actions, reason/message fields, auto-populated `reviewedBy` (logged-in user) and `reviewedAt` (current timestamp). Add APIKeyApproval list view showing approval history with timestamps, reviewers, and cross-namespace references. Add permission checks via `SelfSubjectAccessReview` for `create apikeyapprovals`. Show visual indicators for Pending/Approved/Denied/Failed states.
+
+**Task 5: Update APIKey UI for conditions pattern and cross-namespace references**
+
+Update APIKey list view to derive status from `status.conditions` (Pending = no conditions, Approved/Denied/Failed states). Update detail view to display conditions with timestamps, reasons, messages, and `status.apiKeyValue`. Add client-side filtering by `requestedBy.userId`. Remove references to deprecated status fields (secretRef, canReadSecret, reviewedBy, reviewedAt). Update APIKey creation form with namespace selector for `spec.apiProductRef.namespace` enabling cluster-wide APIProduct discovery. Show APIProduct owner namespace in catalog view. Validate APIProduct reference exists before submission.
+
+#### Kuadrant Operator (github.com/Kuadrant/kuadrant-operator)
+
+**Task 8: Package and auto-deploy RBAC ClusterRoles**
+
+Create `config/rbac/api-management/` directory with ClusterRole manifests: `api-consumer.yaml`, `api-owner.yaml`, `api-admin.yaml` (copy from RBAC Manifests section in this design). Add to operator deployment kustomization, Helm chart, and OLM bundle. Implement auto-deployment on installation and upgrade logic to update ClusterRoles when operator is updated. Ensure ClusterRoles are created before console plugin installation.
+
+### Future Work (Out of Scope)
+
+The following items are identified but not required for initial RBAC implementation:
+
+**Advanced UI Features:**
+
+- Notification system for pending approval requests
+- Bulk approval/rejection operations
+- APIKey request templates
+- Usage analytics and rate limit monitoring
+
+**Advanced RBAC Features:**
+
+- Fine-grained permissions (per-APIProduct access control)
+- Custom ClusterRoles for specialized use cases
+- RBAC auditing and compliance reporting
+- Integration with external identity providers (LDAP, OIDC)
 
 ## Testing Strategy
 
