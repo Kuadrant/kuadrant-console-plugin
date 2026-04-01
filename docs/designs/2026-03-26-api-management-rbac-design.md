@@ -645,23 +645,23 @@ RBAC testing focuses on verifying that Kubernetes enforces the defined permissio
 Use `kubectl --as=<user>` to test permissions without creating real users:
 
 ```bash
-# Test consumer permissions (assuming consumer has access to 'api-consumers' namespace)
-kubectl auth can-i list apiproducts --as=test-consumer --all-namespaces  # Should succeed (cluster-wide catalog)
-kubectl auth can-i create apikeys --as=test-consumer -n api-consumers  # Should succeed (own namespace)
-kubectl auth can-i create apikeys --as=test-consumer -n consumer-team-mobile  # Should fail (no binding)
-kubectl auth can-i list apikeys --as=test-consumer --all-namespaces  # Should fail (namespace-scoped only)
-kubectl auth can-i create apiproducts --as=test-consumer -n api-consumers  # Should fail
+# Test consumer permissions (assuming consumer-a has access to 'api-consumer-a' namespace)
+kubectl auth can-i list apiproducts --as=test-api-consumer-a --all-namespaces  # Should succeed (cluster-wide catalog)
+kubectl auth can-i create apikeys --as=test-api-consumer-a -n api-consumer-a  # Should succeed (own namespace)
+kubectl auth can-i create apikeys --as=test-api-consumer-a -n api-consumer-b  # Should fail (no binding, isolation)
+kubectl auth can-i list apikeys --as=test-api-consumer-a --all-namespaces  # Should fail (namespace-scoped only)
+kubectl auth can-i create apiproducts --as=test-api-consumer-a -n api-consumer-a  # Should fail
 
 # Test owner permissions
-kubectl auth can-i list apikeys --as=test-owner --all-namespaces  # Should succeed (cluster-wide discovery)
-kubectl auth can-i create apiproducts --as=test-owner -n payment-services  # Should succeed (own namespace)
-kubectl auth can-i create apiproducts --as=test-owner -n other-namespace  # Should fail
-kubectl auth can-i create apikeyapprovals --as=test-owner -n payment-services  # Should succeed
+kubectl auth can-i list apikeys --as=test-api-owner-team-a --all-namespaces  # Should succeed (cluster-wide discovery)
+kubectl auth can-i create apiproducts --as=test-api-owner-team-a -n api-team-a  # Should succeed (own namespace)
+kubectl auth can-i create apiproducts --as=test-api-owner-team-a -n api-team-b  # Should fail
+kubectl auth can-i create apikeyapprovals --as=test-api-owner-team-a -n api-team-a  # Should succeed
 
 # Test admin permissions
-kubectl auth can-i create planpolicies --as=test-admin -n kuadrant-system  # Should succeed
-kubectl auth can-i delete apiproducts --as=test-admin -n any-namespace  # Should succeed
-kubectl auth can-i list apikeys --as=test-admin --all-namespaces  # Should succeed
+kubectl auth can-i create planpolicies --as=test-api-admin -n kuadrant-system  # Should succeed
+kubectl auth can-i delete apiproducts --as=test-api-admin -n api-team-a  # Should succeed
+kubectl auth can-i list apikeys --as=test-api-admin --all-namespaces  # Should succeed
 ```
 
 ### Manual Validation
@@ -758,10 +758,13 @@ Comprehensive validation procedures are documented in `docs/api-management-rbac-
 
 Test users and RoleBindings are available in `e2e/manifests/api-management-rbac.yaml`:
 
-- `test-api-consumer` - Consumer with access to `api-consumers` namespace
+- `test-api-consumer-a` - Consumer with access to `api-consumer-a` namespace (for isolation testing)
+- `test-api-consumer-b` - Consumer with access to `api-consumer-b` namespace (for isolation testing)
 - `test-api-owner-team-a` - Owner with access to `api-team-a` namespace
 - `test-api-owner-team-b` - Owner with access to `api-team-b` namespace
 - `test-api-admin` - Admin with cluster-wide access
+
+**Note**: Two consumer personas enable testing namespace isolation (Pattern 2). Consumer A cannot access Consumer B's APIKeys and vice versa.
 
 ## Deployment Patterns
 

@@ -11,7 +11,8 @@
 #   - api-admin ClusterRole (used with ClusterRoleBinding for cluster-wide administration)
 #
 # Test users (virtual, for impersonation only):
-#   - test-api-consumer (bound via RoleBinding to api-consumers namespace)
+#   - test-api-consumer-a (bound via RoleBinding to api-consumer-a namespace)
+#   - test-api-consumer-b (bound via RoleBinding to api-consumer-b namespace)
 #   - test-api-owner-team-a (bound via RoleBinding to api-team-a namespace)
 #   - test-api-owner-team-b (bound via RoleBinding to api-team-b namespace)
 #   - test-api-admin (bound via ClusterRoleBinding cluster-wide)
@@ -33,12 +34,22 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: api-consumers
+  name: api-consumer-a
   labels:
     purpose: consumer-requests
+    consumer: consumer-a
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-consumer-b
+  labels:
+    purpose: consumer-requests
+    consumer: consumer-b
 ---
 # ============================================================================
-# API CONSUMER TEST PERSONA
+# API CONSUMER TEST PERSONAS
+# Two consumers (A and B) for testing namespace isolation
 # Can browse catalog and request API access, but cannot create API products
 #
 # This uses the actual api-consumer ClusterRole from config/rbac/api-consumer-role.yaml
@@ -66,14 +77,30 @@ rules:
   # NOTE: Consumers do NOT have apikeyapprovals permissions (architectural principle)
   # Only API owners can approve/reject requests
 ---
+# Consumer A binding (ClusterRole + RoleBinding = namespace-scoped permissions)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: test-api-consumer-binding
-  namespace: api-consumers
+  name: test-api-consumer-a-binding
+  namespace: api-consumer-a
 subjects:
   - kind: User
-    name: test-api-consumer
+    name: test-api-consumer-a
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole  # ClusterRole + RoleBinding = namespace-scoped permissions
+  name: api-consumer
+  apiGroup: rbac.authorization.k8s.io
+---
+# Consumer B binding (ClusterRole + RoleBinding = namespace-scoped permissions)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: test-api-consumer-b-binding
+  namespace: api-consumer-b
+subjects:
+  - kind: User
+    name: test-api-consumer-b
     apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole  # ClusterRole + RoleBinding = namespace-scoped permissions
@@ -102,13 +129,28 @@ rules:
     resources: ["httproutes"]
     verbs: ["get", "list"]
 ---
+# Consumer A catalog reader binding (cluster-wide read access)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: test-api-consumer-catalog-reader-binding
+  name: test-api-consumer-a-catalog-reader-binding
 subjects:
   - kind: User
-    name: test-api-consumer
+    name: test-api-consumer-a
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: api-consumer-catalog-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+# Consumer B catalog reader binding (cluster-wide read access)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: test-api-consumer-b-catalog-reader-binding
+subjects:
+  - kind: User
+    name: test-api-consumer-b
     apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole

@@ -23,7 +23,7 @@ kubectl apply -f e2e/manifests/api-management-rbac.yaml
 
 # Verify namespaces were created
 kubectl get namespaces | grep api-
-# Expected: api-team-a, api-team-b, api-consumers
+# Expected: api-team-a, api-team-b, api-consumer-a, api-consumer-b
 ```
 
 ### 2. Create sample resources for testing
@@ -97,102 +97,147 @@ EOF
 
 ## Validation Tests
 
-### Test 1: API Consumer Persona
+### Test 1: API Consumer Persona - Consumer A
 
 **Expected capabilities:**
 
 - ✅ Browse all API products cluster-wide (read-only)
 - ✅ View rate limiting plans cluster-wide (read-only)
-- ✅ Create APIKey requests in own namespace (`api-consumers`)
+- ✅ Create APIKey requests in own namespace (`api-consumer-a`)
 - ✅ Read APIKey status to retrieve projected API key value
 - ❌ Cannot create API products
 - ❌ Cannot create APIKeyApproval resources (cannot approve)
 - ❌ Cannot read Secrets in kuadrant namespace (API keys delivered via status projection)
 - ❌ Cannot list APIKeys cluster-wide (namespace-scoped only)
+- ❌ Cannot read APIKeys in other consumer namespaces (`api-consumer-b`)
 
 ```bash
-# Test 1.1: Consumer can list all API products
-kubectl get apiproducts --all-namespaces --as=test-api-consumer
+# Test 1.1: Consumer A can list all API products
+kubectl get apiproducts --all-namespaces --as=test-api-consumer-a
 # Expected: SUCCESS - shows payment-api-v1 in api-team-a
 
-# Test 1.2: Consumer can get specific API product details
-kubectl get apiproduct payment-api-v1 -n api-team-a --as=test-api-consumer -o yaml
+# Test 1.2: Consumer A can get specific API product details
+kubectl get apiproduct payment-api-v1 -n api-team-a --as=test-api-consumer-a -o yaml
 # Expected: SUCCESS - shows full APIProduct spec
 
-# Test 1.3: Consumer can view rate limiting plans
-kubectl get planpolicies --all-namespaces --as=test-api-consumer
+# Test 1.3: Consumer A can view rate limiting plans
+kubectl get planpolicies --all-namespaces --as=test-api-consumer-a
 # Expected: SUCCESS - shows standard-rate-limits
 
-# Test 1.4: Consumer can create API key request in own namespace
-kubectl apply --as=test-api-consumer -f - <<EOF
+# Test 1.4: Consumer A can create API key request in own namespace
+kubectl apply --as=test-api-consumer-a -f - <<EOF
 apiVersion: devportal.kuadrant.io/v1alpha1
 kind: APIKey
 metadata:
-  name: consumer-payment-api-access
-  namespace: api-consumers  # Consumer's own namespace
+  name: consumer-a-payment-api-access
+  namespace: api-consumer-a  # Consumer A's own namespace
 spec:
   apiProductRef:
     name: payment-api-v1
     namespace: api-team-a  # Cross-namespace reference to owner's APIProduct
   planTier: "basic"
   requestedBy:
-    userId: "test-api-consumer"
-    email: "test-api-consumer@example.com"
+    userId: "test-api-consumer-a"
+    email: "test-api-consumer-a@example.com"
   useCase: "Need payment API access for mobile app integration"
 EOF
 # Expected: SUCCESS - APIKey request created in consumer's namespace
 
-# Test 1.5: Consumer CANNOT create API product
-kubectl apply --as=test-api-consumer -n api-consumers -f - <<EOF
+# Test 1.5: Consumer A CANNOT create API product
+kubectl apply --as=test-api-consumer-a -n api-consumer-a -f - <<EOF
 apiVersion: devportal.kuadrant.io/v1alpha1
 kind: APIProduct
 metadata:
   name: unauthorized-product
-  namespace: api-consumers
+  namespace: api-consumer-a
 spec:
   displayName: Unauthorized Product
   version: v1
   publishStatus: Draft
 EOF
-# Expected: FAILURE - "forbidden: User 'test-api-consumer' cannot create resource 'apiproducts'"
+# Expected: FAILURE - "forbidden: User 'test-api-consumer-a' cannot create resource 'apiproducts'"
 
-# Test 1.6: Consumer CANNOT create APIKeyApproval (cannot approve)
-kubectl apply --as=test-api-consumer -f - <<EOF
+# Test 1.6: Consumer A CANNOT create APIKeyApproval (cannot approve)
+kubectl apply --as=test-api-consumer-a -f - <<EOF
 apiVersion: devportal.kuadrant.io/v1alpha1
 kind: APIKeyApproval
 metadata:
-  name: consumer-payment-api-access-approval
-  namespace: api-consumers
+  name: consumer-a-payment-api-access-approval
+  namespace: api-consumer-a
 spec:
   apiKeyRef:
-    name: consumer-payment-api-access
-    namespace: api-consumers
+    name: consumer-a-payment-api-access
+    namespace: api-consumer-a
   approved: true
-  reviewedBy: "test-api-consumer"
+  reviewedBy: "test-api-consumer-a"
   reviewedAt: "2026-03-30T15:00:00Z"
   reason: "SelfApproval"
 EOF
-# Expected: FAILURE - "forbidden: User 'test-api-consumer' cannot create resource 'apikeyapprovals'"
+# Expected: FAILURE - "forbidden: User 'test-api-consumer-a' cannot create resource 'apikeyapprovals'"
 
-# Test 1.7: Consumer CANNOT list APIKeys cluster-wide (namespace-scoped only)
-kubectl get apikeys --all-namespaces --as=test-api-consumer
-# Expected: FAILURE - "forbidden: User 'test-api-consumer' cannot list resource 'apikeys' at the cluster scope"
+# Test 1.7: Consumer A CANNOT list APIKeys cluster-wide (namespace-scoped only)
+kubectl get apikeys --all-namespaces --as=test-api-consumer-a
+# Expected: FAILURE - "forbidden: User 'test-api-consumer-a' cannot list resource 'apikeys' at the cluster scope"
 
-# Test 1.8: Consumer CAN list APIKeys in own namespace
-kubectl get apikeys -n api-consumers --as=test-api-consumer
-# Expected: SUCCESS - shows consumer-payment-api-access
+# Test 1.8: Consumer A CAN list APIKeys in own namespace
+kubectl get apikeys -n api-consumer-a --as=test-api-consumer-a
+# Expected: SUCCESS - shows consumer-a-payment-api-access
 
-# Test 1.9: Consumer CAN read APIKey status (to get projected API key value)
-kubectl get apikey consumer-payment-api-access -n api-consumers --as=test-api-consumer -o jsonpath='{.status.apiKeyValue}'
+# Test 1.9: Consumer A CAN read APIKey status (to get projected API key value)
+kubectl get apikey consumer-a-payment-api-access -n api-consumer-a --as=test-api-consumer-a -o jsonpath='{.status.apiKeyValue}'
 # Expected: SUCCESS - shows projected API key value (if approved and projected by controller)
 # If not approved yet, this will be empty
 
-# Test 1.10: Consumer CANNOT read Secrets in kuadrant namespace
-kubectl get secrets -n kuadrant --as=test-api-consumer
-# Expected: FAILURE - "forbidden: User 'test-api-consumer' cannot list resource 'secrets' in API group '' in the namespace 'kuadrant'"
+# Test 1.10: Consumer A CANNOT read Secrets in kuadrant namespace
+kubectl get secrets -n kuadrant --as=test-api-consumer-a
+# Expected: FAILURE - "forbidden: User 'test-api-consumer-a' cannot list resource 'secrets' in API group '' in the namespace 'kuadrant'"
+
+# Test 1.11: Consumer A CANNOT read APIKeys in Consumer B's namespace (isolation test)
+kubectl get apikeys -n api-consumer-b --as=test-api-consumer-a
+# Expected: FAILURE - "forbidden: User 'test-api-consumer-a' cannot list resource 'apikeys' in namespace 'api-consumer-b'"
 
 # Cleanup
-kubectl delete apikeys consumer-payment-api-access -n api-consumers
+kubectl delete apikeys consumer-a-payment-api-access -n api-consumer-a
+```
+
+### Test 1B: API Consumer Persona - Consumer B (Isolation Verification)
+
+**Purpose**: Verify Consumer B is isolated from Consumer A's APIKeys
+
+```bash
+# Test 1B.1: Consumer B can create APIKey in own namespace
+kubectl apply --as=test-api-consumer-b -f - <<EOF
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: consumer-b-payment-api-access
+  namespace: api-consumer-b  # Consumer B's own namespace
+spec:
+  apiProductRef:
+    name: payment-api-v1
+    namespace: api-team-a
+  planTier: "premium"
+  requestedBy:
+    userId: "test-api-consumer-b"
+    email: "test-api-consumer-b@example.com"
+  useCase: "Backend service integration"
+EOF
+# Expected: SUCCESS - APIKey created in consumer-b namespace
+
+# Test 1B.2: Consumer B CAN list APIKeys in own namespace
+kubectl get apikeys -n api-consumer-b --as=test-api-consumer-b
+# Expected: SUCCESS - shows consumer-b-payment-api-access
+
+# Test 1B.3: Consumer B CANNOT read APIKeys in Consumer A's namespace (isolation test)
+kubectl get apikeys -n api-consumer-a --as=test-api-consumer-b
+# Expected: FAILURE - "forbidden: User 'test-api-consumer-b' cannot list resource 'apikeys' in namespace 'api-consumer-a'"
+
+# Test 1B.4: Consumer B CANNOT get specific APIKey from Consumer A's namespace
+kubectl get apikey consumer-a-payment-api-access -n api-consumer-a --as=test-api-consumer-b
+# Expected: FAILURE - "forbidden"
+
+# Cleanup
+kubectl delete apikeys consumer-b-payment-api-access -n api-consumer-b
 ```
 
 ### Test 2: API Owner Persona - Team A
@@ -268,21 +313,21 @@ kubectl get apikeys --all-namespaces --as=test-api-owner-team-a
 # Expected: SUCCESS - shows APIKeys from all namespaces
 
 # Test 2.7: Owner can approve API key request via APIKeyApproval
-# First, create a request as consumer
-kubectl apply --as=test-api-consumer -f - <<EOF
+# First, create a request as consumer A
+kubectl apply --as=test-api-consumer-a -f - <<EOF
 apiVersion: devportal.kuadrant.io/v1alpha1
 kind: APIKey
 metadata:
   name: request-for-team-a-api
-  namespace: api-consumers  # Consumer's namespace
+  namespace: api-consumer-a  # Consumer A's namespace
 spec:
   apiProductRef:
     name: payment-api-v1
     namespace: api-team-a  # Owner's namespace (cross-namespace reference)
   planTier: "basic"
   requestedBy:
-    userId: "test-api-consumer"
-    email: "test-api-consumer@example.com"
+    userId: "test-api-consumer-a"
+    email: "test-api-consumer-a@example.com"
   useCase: "Mobile app integration"
 EOF
 
@@ -301,7 +346,7 @@ metadata:
 spec:
   apiKeyRef:
     name: request-for-team-a-api
-    namespace: api-consumers  # Cross-namespace reference to consumer's APIKey
+    namespace: api-consumer-a  # Cross-namespace reference to consumer A's APIKey
   approved: true
   reviewedBy: "test-api-owner-team-a"
   reviewedAt: "2026-03-30T15:00:00Z"
@@ -316,7 +361,7 @@ kubectl get apikeyapproval request-for-team-a-api-approval -n api-team-a --as=te
 
 # Cleanup
 kubectl delete apikeyapproval request-for-team-a-api-approval -n api-team-a
-kubectl delete apikey request-for-team-a-api -n api-consumers
+kubectl delete apikey request-for-team-a-api -n api-consumer-a
 
 # Test 2.8: Owner CANNOT create PlanPolicy
 kubectl apply --as=test-api-owner-team-a -f - <<EOF
@@ -589,27 +634,30 @@ echo "✅ RBAC personas applied"
 echo ""
 
 # Test Consumer Permissions
-echo "2. Testing API Consumer permissions..."
-echo "  2.1 Consumer can list API products cluster-wide..."
-kubectl auth can-i get apiproducts --all-namespaces --as=test-api-consumer &>/dev/null && echo "    ✅ Pass" || echo "    ❌ Fail"
+echo "2. Testing API Consumer A permissions..."
+echo "  2.1 Consumer A can list API products cluster-wide..."
+kubectl auth can-i get apiproducts --all-namespaces --as=test-api-consumer-a &>/dev/null && echo "    ✅ Pass" || echo "    ❌ Fail"
 
-echo "  2.2 Consumer can create APIKey in own namespace..."
-kubectl auth can-i create apikeys -n api-consumers --as=test-api-consumer &>/dev/null && echo "    ✅ Pass" || echo "    ❌ Fail"
+echo "  2.2 Consumer A can create APIKey in own namespace..."
+kubectl auth can-i create apikeys -n api-consumer-a --as=test-api-consumer-a &>/dev/null && echo "    ✅ Pass" || echo "    ❌ Fail"
 
-echo "  2.3 Consumer CANNOT create APIKey in other namespace..."
-kubectl auth can-i create apikeys -n api-team-a --as=test-api-consumer &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
+echo "  2.3 Consumer A CANNOT create APIKey in owner namespace..."
+kubectl auth can-i create apikeys -n api-team-a --as=test-api-consumer-a &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
 
-echo "  2.4 Consumer CANNOT list APIKeys cluster-wide..."
-kubectl auth can-i list apikeys --all-namespaces --as=test-api-consumer &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
+echo "  2.4 Consumer A CANNOT list APIKeys cluster-wide..."
+kubectl auth can-i list apikeys --all-namespaces --as=test-api-consumer-a &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
 
-echo "  2.5 Consumer CANNOT create APIKeyApproval..."
-kubectl auth can-i create apikeyapprovals -n api-consumers --as=test-api-consumer &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
+echo "  2.5 Consumer A CANNOT create APIKeyApproval..."
+kubectl auth can-i create apikeyapprovals -n api-consumer-a --as=test-api-consumer-a &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
 
-echo "  2.6 Consumer CANNOT read Secrets in kuadrant namespace..."
-kubectl auth can-i get secrets -n kuadrant --as=test-api-consumer &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
+echo "  2.6 Consumer A CANNOT read Secrets in kuadrant namespace..."
+kubectl auth can-i get secrets -n kuadrant --as=test-api-consumer-a &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
 
-echo "  2.7 Consumer CANNOT create APIProduct..."
-kubectl auth can-i create apiproducts -n api-consumers --as=test-api-consumer &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
+echo "  2.7 Consumer A CANNOT create APIProduct..."
+kubectl auth can-i create apiproducts -n api-consumer-a --as=test-api-consumer-a &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
+
+echo "  2.8 Consumer A CANNOT read APIKeys in Consumer B's namespace (isolation)..."
+kubectl auth can-i list apikeys -n api-consumer-b --as=test-api-consumer-a &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
 echo ""
 
 # Test Owner Permissions
@@ -704,11 +752,11 @@ After validating kubectl permissions, test in the OpenShift console:
 
 ```bash
 # Remove test namespaces
-kubectl delete namespace api-team-a api-team-b api-consumers
+kubectl delete namespace api-team-a api-team-b api-consumer-a api-consumer-b
 
 # Remove cluster roles and bindings
 kubectl delete clusterrole api-consumer-catalog-reader api-owner-catalog-reader api-admin
-kubectl delete clusterrolebinding test-api-consumer-catalog-reader-binding test-api-owner-team-a-catalog-reader-binding test-api-owner-team-b-catalog-reader-binding test-api-admin-binding
+kubectl delete clusterrolebinding test-api-consumer-a-catalog-reader-binding test-api-consumer-b-catalog-reader-binding test-api-owner-team-a-catalog-reader-binding test-api-owner-team-b-catalog-reader-binding test-api-admin-binding
 ```
 
 ## Troubleshooting
