@@ -29,10 +29,9 @@ rules:
     resources: ["apikeyapprovals"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
 
-  # Read secrets to troubleshoot API key issues in own namespace
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "list"]
+  # NOTE: Secrets are managed by Developer Portal Controller in kuadrant namespace
+  # API key values are delivered to consumers via status.apiKeyValue projection
+  # Owners do not need secret permissions for API Management
 
   # View HTTPRoutes to reference in APIProducts
   - apiGroups: ["gateway.networking.k8s.io"]

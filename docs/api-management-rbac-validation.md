@@ -107,7 +107,7 @@ EOF
 - ✅ Read APIKey status to retrieve projected API key value
 - ❌ Cannot create API products
 - ❌ Cannot create APIKeyApproval resources (cannot approve)
-- ❌ Cannot read Secrets (API keys delivered via status projection)
+- ❌ Cannot read Secrets in kuadrant namespace (API keys delivered via status projection)
 - ❌ Cannot list APIKeys cluster-wide (namespace-scoped only)
 
 ```bash
@@ -187,9 +187,9 @@ kubectl get apikey consumer-payment-api-access -n api-consumers --as=test-api-co
 # Expected: SUCCESS - shows projected API key value (if approved and projected by controller)
 # If not approved yet, this will be empty
 
-# Test 1.10: Consumer CANNOT read Secrets in owner's namespace
-kubectl get secrets -n api-team-a --as=test-api-consumer
-# Expected: FAILURE - "forbidden: User 'test-api-consumer' cannot list resource 'secrets' in API group '' in the namespace 'api-team-a'"
+# Test 1.10: Consumer CANNOT read Secrets in kuadrant namespace
+kubectl get secrets -n kuadrant --as=test-api-consumer
+# Expected: FAILURE - "forbidden: User 'test-api-consumer' cannot list resource 'secrets' in API group '' in the namespace 'kuadrant'"
 
 # Cleanup
 kubectl delete apikeys consumer-payment-api-access -n api-consumers
@@ -203,7 +203,7 @@ kubectl delete apikeys consumer-payment-api-access -n api-consumers
 - ✅ Browse all APIProducts cluster-wide (read-only)
 - ✅ List APIKeys cluster-wide (to discover requests for own APIs)
 - ✅ Create APIKeyApproval resources in own namespace to approve/reject
-- ✅ Read Secrets in own namespace (for troubleshooting)
+- ❌ Cannot read Secrets (centralized in kuadrant namespace, managed by controller)
 - ❌ Cannot manage APIProducts in `api-team-b` namespace
 - ❌ Cannot create APIKeys (consumers create in their own namespaces)
 - ❌ Cannot create PlanPolicies
@@ -342,9 +342,9 @@ kubectl get httproutes -n api-team-a --as=test-api-owner-team-a
 kubectl get httproutes --all-namespaces --as=test-api-owner-team-a
 # Expected: SUCCESS - shows routes from all namespaces
 
-# Test 2.11: Owner can read Secrets in own namespace (for troubleshooting)
-kubectl get secrets -n api-team-a --as=test-api-owner-team-a
-# Expected: SUCCESS - shows secrets in team-a namespace
+# Test 2.11: Owner CANNOT read Secrets (centralized in kuadrant namespace, managed by controller)
+kubectl get secrets -n kuadrant --as=test-api-owner-team-a
+# Expected: FAILURE - "forbidden: User 'test-api-owner-team-a' cannot list resource 'secrets' in namespace 'kuadrant'"
 
 # Test 2.12: Owner CANNOT create APIKeys (consumers create in their namespaces)
 kubectl apply --as=test-api-owner-team-a -f - <<EOF
@@ -423,7 +423,7 @@ kubectl delete apiproduct shipping-api-v1 -n api-team-b
 - ✅ Full access to all APIKeys across all namespaces
 - ✅ Full access to all APIKeyApprovals across all namespaces
 - ✅ Create/update/delete PlanPolicies
-- ✅ List Secrets cluster-wide (for troubleshooting)
+- ❌ Do NOT need Secret read permissions (API keys managed by controller in kuadrant namespace)
 
 ```bash
 # Test 4.1: Admin can list all API products
@@ -519,9 +519,9 @@ kubectl delete planpolicy premium-plan \
   --as=test-api-admin
 # Expected: SUCCESS
 
-# Test 4.11: Admin can list Secrets cluster-wide (for troubleshooting)
-kubectl get secrets --all-namespaces --as=test-api-admin | head -5
-# Expected: SUCCESS - shows secrets from all namespaces
+# Test 4.11: Admin does NOT need Secret permissions for API Management
+# Secrets are managed by Developer Portal Controller in kuadrant namespace
+# (TLS/auth secrets may require separate roles, but not for API Management)
 ```
 
 ## Permission Matrix Validation
@@ -546,8 +546,8 @@ Use this table to systematically verify all permissions:
 | APIKeyApproval | create | ❌ | ✅ | ❌ | ✅ |
 | APIKeyApproval | update | ❌ | ✅ | ❌ | ✅ |
 | APIKeyApproval | delete | ❌ | ✅ | ❌ | ✅ |
-| **Secret** | get | ❌ | ✅ | ❌ | ✅ (cluster-wide) |
-| Secret | list | ❌ | ✅ | ❌ | ✅ (cluster-wide) |
+| **Secret** (kuadrant NS) | get | ❌ | ❌ | ❌ | ❌ |
+| Secret (kuadrant NS) | list | ❌ | ❌ | ❌ | ❌ |
 
 ### Supporting Policies and Routes (Read-Only)
 
@@ -565,7 +565,10 @@ Use this table to systematically verify all permissions:
 - ✅ Consumers create APIKeys in **own namespace** (not owner's namespace)
 - ✅ Owners have **cluster-wide read** on APIKeys (to discover requests)
 - ✅ Owners create **APIKeyApproval** (not patch APIKey status)
+- ✅ Secrets stored in **kuadrant namespace** (centralized, managed by controller)
 - ❌ Consumers do NOT have secret read permissions (API keys via status projection)
+- ❌ Owners do NOT have secret read permissions (centralized management)
+- ❌ Admins do NOT need secret permissions for API Management
 - ❌ Owners do NOT create APIKeys (consumers create in their namespaces)
 
 ## Automated Validation Script
@@ -602,8 +605,8 @@ kubectl auth can-i list apikeys --all-namespaces --as=test-api-consumer &>/dev/n
 echo "  2.5 Consumer CANNOT create APIKeyApproval..."
 kubectl auth can-i create apikeyapprovals -n api-consumers --as=test-api-consumer &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
 
-echo "  2.6 Consumer CANNOT read Secrets..."
-kubectl auth can-i get secrets -n api-consumers --as=test-api-consumer &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
+echo "  2.6 Consumer CANNOT read Secrets in kuadrant namespace..."
+kubectl auth can-i get secrets -n kuadrant --as=test-api-consumer &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
 
 echo "  2.7 Consumer CANNOT create APIProduct..."
 kubectl auth can-i create apiproducts -n api-consumers --as=test-api-consumer &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
@@ -632,11 +635,8 @@ kubectl auth can-i create apikeyapprovals -n api-team-a --as=test-api-owner-team
 echo "  3.7 Owner CANNOT create APIKeyApproval in other namespace..."
 kubectl auth can-i create apikeyapprovals -n api-team-b --as=test-api-owner-team-a &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
 
-echo "  3.8 Owner can read Secrets in own namespace..."
-kubectl auth can-i get secrets -n api-team-a --as=test-api-owner-team-a &>/dev/null && echo "    ✅ Pass" || echo "    ❌ Fail"
-
-echo "  3.9 Owner CANNOT read Secrets in other namespace..."
-kubectl auth can-i get secrets -n api-team-b --as=test-api-owner-team-a &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
+echo "  3.8 Owner CANNOT read Secrets in kuadrant namespace..."
+kubectl auth can-i get secrets -n kuadrant --as=test-api-owner-team-a &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
 echo ""
 
 # Test Admin Permissions
@@ -656,11 +656,11 @@ kubectl auth can-i list apikeyapprovals --all-namespaces --as=test-api-admin &>/
 echo "  4.5 Admin can create PlanPolicy..."
 kubectl auth can-i create planpolicies -n kuadrant-system --as=test-api-admin &>/dev/null && echo "    ✅ Pass" || echo "    ❌ Fail"
 
-echo "  4.6 Admin can read Secrets cluster-wide..."
-kubectl auth can-i get secrets --all-namespaces --as=test-api-admin &>/dev/null && echo "    ✅ Pass" || echo "    ❌ Fail"
-
-echo "  4.7 Admin can delete APIProduct in any namespace..."
+echo "  4.6 Admin can delete APIProduct in any namespace..."
 kubectl auth can-i delete apiproducts -n api-team-a --as=test-api-admin &>/dev/null && echo "    ✅ Pass" || echo "    ❌ Fail"
+
+echo "  4.7 Admin does NOT need Secret permissions for API Management..."
+kubectl auth can-i get secrets -n kuadrant --as=test-api-admin &>/dev/null && echo "    ❌ FAIL - should be denied" || echo "    ✅ Pass"
 echo ""
 
 echo "=== Validation Complete ==="

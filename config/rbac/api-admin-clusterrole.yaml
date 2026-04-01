@@ -37,10 +37,9 @@ rules:
     resources: ["apikeyapprovals"]
     verbs: ["get", "list", "create", "update", "patch", "delete", "watch"]
 
-  # Read secrets for troubleshooting API key issues
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "list"]
+  # NOTE: Secrets are managed by Developer Portal Controller in kuadrant namespace
+  # API key values are delivered to consumers via status.apiKeyValue projection
+  # Admins do not need secret permissions for API Management
 
   # Full access to rate limiting plans
   - apiGroups: ["extensions.kuadrant.io"]
@@ -130,7 +129,7 @@ rules:
     resources: ["configmaps"]
     verbs: ["get", "list", "watch"]
 
-  # Secrets (for troubleshooting TLS, auth)
-  - apiGroups: [""]
-    resources: ["secrets"]
-    verbs: ["get", "list"]
+  # NOTE: Secrets are managed by Developer Portal Controller in kuadrant namespace
+  # API key values are delivered to consumers via status.apiKeyValue projection
+  # Platform engineers do not need secret permissions for API Management
+  # (TLS/auth secrets are managed separately via other roles)
