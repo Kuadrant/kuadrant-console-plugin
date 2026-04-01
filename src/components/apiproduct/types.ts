@@ -41,6 +41,11 @@ export interface APIProductStatus {
     reason?: string;
     message?: string;
   }[];
+  openapi?: {
+    lastSyncTime?: string;
+    maxSizeUsed: number;
+    raw?: string;
+  };
 }
 
 export interface APIProduct extends K8sResourceCommon {
