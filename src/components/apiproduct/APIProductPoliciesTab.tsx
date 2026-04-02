@@ -60,12 +60,32 @@ const APIProductPoliciesTab: React.FC = () => {
 
   // Extract target HTTPRoute reference
   const targetRef = apiProduct?.spec?.targetRef;
-  const httprouteNamespace = targetRef?.namespace || activeNamespace;
-  const httprouteName = targetRef?.name;
+
+  // Cache the targetRef to handle watch reconnections where spec might temporarily be missing
+  const [cachedTargetRef, setCachedTargetRef] = React.useState<
+    | {
+        group?: string;
+        kind?: string;
+        name?: string;
+        namespace?: string;
+      }
+    | undefined
+  >(undefined);
+
+  React.useEffect(() => {
+    if (targetRef) {
+      setCachedTargetRef(targetRef);
+    }
+  }, [targetRef]);
+
+  const targetRefToUse = targetRef || cachedTargetRef;
+
+  const httprouteNamespace = targetRefToUse?.namespace || activeNamespace;
+  const httprouteName = targetRefToUse?.name;
 
   // Fetch the target HTTPRoute
   const [httpRoute, httprouteLoaded, httprouteLoadError] = useK8sWatchResource<K8sResourceCommon>(
-    targetRef && targetRef.kind === 'HTTPRoute'
+    targetRefToUse && targetRefToUse.kind === 'HTTPRoute'
       ? {
           groupVersionKind: RESOURCES.HTTPRoute.gvk,
           namespace: httprouteNamespace,
@@ -184,7 +204,8 @@ const APIProductPoliciesTab: React.FC = () => {
     );
   }
 
-  if (!targetRef || targetRef.kind !== 'HTTPRoute') {
+  // Only show empty state if we've never had a targetRef (initial load with no data)
+  if (!targetRefToUse || targetRefToUse.kind !== 'HTTPRoute') {
     return (
       <PageSection hasBodyWrapper={false}>
         <EmptyState

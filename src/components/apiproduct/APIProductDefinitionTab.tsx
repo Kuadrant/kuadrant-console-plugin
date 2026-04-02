@@ -35,25 +35,37 @@ const APIProductDefinitionTab: React.FC = () => {
     isList: false,
   });
 
+  // Extract the OpenAPI spec
   const openapiSpec = apiProduct?.status?.openapi?.raw;
+
+  // Cache the spec to handle watch reconnections where status might temporarily be missing
+  const [cachedSpec, setCachedSpec] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (openapiSpec) {
+      setCachedSpec(openapiSpec);
+    }
+  }, [openapiSpec]);
+
+  const specToUse = openapiSpec || cachedSpec;
 
   // Parse the OpenAPI spec (could be JSON or YAML string)
   const parsedSpec = React.useMemo(() => {
-    if (!openapiSpec) return null;
+    if (!specToUse) return null;
 
     try {
       // Try to parse as JSON first
-      return JSON.parse(openapiSpec);
+      return JSON.parse(specToUse);
     } catch {
       // If JSON parsing fails, try YAML
       try {
-        return yaml.load(openapiSpec);
+        return yaml.load(specToUse);
       } catch (error) {
         console.error('Failed to parse OpenAPI spec:', error);
         return null;
       }
     }
-  }, [openapiSpec]);
+  }, [specToUse]);
 
   if (loadError) {
     return (
@@ -73,7 +85,8 @@ const APIProductDefinitionTab: React.FC = () => {
     );
   }
 
-  if (!openapiSpec) {
+  // Only show empty state if we've never had a spec (initial load with no data)
+  if (!specToUse) {
     return (
       <PageSection hasBodyWrapper={false}>
         <EmptyState
