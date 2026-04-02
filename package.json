@@ -117,7 +117,7 @@
     "i18next-parser": "^9.0.1",
     "js-yaml": "^4.1.0",
     "pluralize": "^8.0.0",
-    "swagger-ui-react": "^5.17.14"
+    "swagger-ui-react": "5.10.5"
   },
   "packageManager": "yarn@4.12.0"
 }
