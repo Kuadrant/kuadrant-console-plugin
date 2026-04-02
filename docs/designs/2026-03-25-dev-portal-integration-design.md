@@ -216,7 +216,25 @@ status:
 
 **6. Delete Action**:
 - Confirmation modal for API product deletion
-- Requires user confirmation before deleting
+- **IMPORTANT:** Modal must show count of dependent APIKeys that will be cascade-deleted
+- Modal layout:
+  ```
+  Warning: Deleting this API Product will revoke access for active API keys
+
+  Are you sure you want to delete "Petstore API"?
+  - X approved API keys will be revoked immediately
+  - X pending requests will be cancelled
+  - X rejected requests will be deleted
+  - This action cannot be undone
+
+  Type "petstore-api" to confirm:
+  [__________________]
+
+  [Cancel] [Delete API Product]
+  ```
+- Implementation: Query dependent APIKeys using `useK8sWatchResource` filtered by `spec.apiProductRef.name`
+- Delete button disabled until user types exact resource name
+- Kubernetes garbage collection will automatically delete all child APIKeys and their Secrets (see Edge Cases section)
 
 **7. Alerts & Notifications**:
 - Toast alerts for create/update/publish/unpublish actions
@@ -310,12 +328,9 @@ status:
 - Breadcrumbs show third-level navigation
 - Opens API key details without returning to My API keys list
 
-**6. Edit / Delete API Keys**:
+**6. Delete API Keys**:
 
-**Edit API Key**:
-- Any pending/active API key is editable
-- Changes to API key name or use case require approval
-- If approval mode is manual, tier changes also require approval
+> **Note:** APIKey editing is not supported in the initial release. Users must delete and create a new APIKey if changes are needed.
 
 **Delete API Key**:
 - Confirmation modal with input field
@@ -443,6 +458,229 @@ Three personas aligned with Backstage plugin:
 - API key secrets only readable by the requester (enforced by controller)
 - Audit logging of approval/rejection actions via Kubernetes events
 
+### Edge Cases and Lifecycle Behaviors
+
+This section addresses critical lifecycle behaviors that emerged during design review.
+
+#### 1. APIKey Editing (Not Implemented)
+
+**Decision:** APIKey editing is **not supported** in the initial release due to complexity around re-approval workflows and controller reconciliation logic.
+
+**Current Behavior:**
+- Users cannot edit existing APIKeys (no edit button in UI)
+- To change tier, use case, or other fields: user must delete the old APIKey and create a new one
+- Deletion of an approved APIKey immediately revokes access (deletes the Secret)
+
+**Rationale:**
+- The `developer-portal-controller` has no reconciliation logic for handling spec changes after initial approval
+- Re-approval workflows introduce complexity around:
+  - Whether old key remains active during pending state
+  - How to transition between Secrets without downtime
+  - Validation of which fields can/cannot be edited
+- Initial release focuses on create, approve/reject, and delete workflows
+
+**Future Enhancement:**
+If editing is needed in future releases, recommend "Safe Re-approval" approach:
+- Editing transitions APIKey back to `Pending` phase
+- Old Secret remains active until new request is approved
+- Upon approval, controller creates new Secret and deletes old one
+- Zero downtime for the developer
+- Requires controller enhancement to track "previous Secret" reference
+
+#### 2. APIProduct Deletion and Cascade Effects
+
+**Design Decision:** APIProduct uses a finalizer to ensure clean deletion order. The resource cannot be deleted until all child APIKeys and Secrets are cleaned up.
+
+**Deletion Flow:**
+```
+1. User initiates delete → APIProduct gets deletionTimestamp
+2. Controller detects deletionTimestamp, starts cleanup:
+   - Deletes all child APIKeys (Pending, Approved, Rejected)
+   - Waits for Kubernetes garbage collection to delete Secrets
+3. Once all APIKeys are gone → Controller removes finalizer
+4. APIProduct is finally deleted
+
+Result: All API access revoked, no orphaned resources
+```
+
+**Current Implementation Status:**
+- Controller has RBAC for finalizers (`apiproducts/finalizers,verbs=update`)
+- Controller sets `OwnerReference` on APIKeys ([apikey_controller.go:130-138](https://github.com/Kuadrant/developer-portal-controller/blob/main/internal/controller/apikey_controller.go#L130-L138))
+- **Missing:** Finalizer add/remove logic in reconcile loop (needs implementation)
+
+**UX Requirements:**
+
+The deletion modal (section 6 under APIProductForm) **must** show dependent resource counts:
+
+**Enhanced Delete Confirmation Modal:**
+```jsx
+Warning: Deleting this API Product will revoke access for active API keys
+
+Are you sure you want to delete "Petstore API"?
+- 47 approved API keys will be revoked immediately
+- 12 pending requests will be cancelled
+- 8 rejected requests will be deleted
+- This action cannot be undone
+
+Type "petstore-api" to confirm:
+[__________________]
+
+[Cancel] [Delete API Product]
+```
+
+**Implementation:** Query dependent APIKeys using `useK8sWatchResource` filtered by `spec.apiProductRef.name` and count by phase (Approved, Pending, Rejected).
+
+**Note:**
+- APIProducts can be deleted at any lifecycle stage
+- Finalizer ensures clean deletion order (APIKeys/Secrets cleaned up before APIProduct removal)
+- Retirement (section 4) is **recommended** before deletion to give developers migration time
+- Deletion modal shows warning and key counts before user confirms
+- Deletion is asynchronous - resource gets `deletionTimestamp` immediately, actual removal happens after cleanup
+
+#### 3. APIProduct Lifecycle States (Draft → Published → Deprecated → Retired)
+
+**Critical Finding:** The design doc shows four lifecycle states (`Draft | Published | Deprecated | Retired`), but the actual CRD only supports two:
+
+```go
+// From apiproduct_types.go:102-104
+// +kubebuilder:validation:Enum=Draft;Published
+// +kubebuilder:default=Draft
+PublishStatus string `json:"publishStatus"`
+```
+
+**There is no "Retired" or "Deprecated" state in the controller!**
+
+**Decision:** Extend the CRD to support all four lifecycle states.
+
+**Required CRD Change:**
+```go
+// developer-portal-controller/api/v1alpha1/apiproduct_types.go
+// +kubebuilder:validation:Enum=Draft;Published;Deprecated;Retired
+PublishStatus string `json:"publishStatus"`
+```
+
+**State Definitions:**
+- **Draft**: Not visible in API catalog, cannot request keys
+- **Published**: Visible in catalog, accepting new requests
+- **Deprecated**: Visible with warning, new requests blocked, existing keys continue working (grace period)
+- **Retired**: Not visible, blocks new requests, all existing keys revoked (see section 4)
+
+#### 4. Retired APIProducts and Existing APIKeys
+
+**Decision:** Two-stage retirement with hard revocation
+
+When an APIProduct is retired, all existing API keys are revoked immediately. This ensures clean state management and prevents orphaned access.
+
+**Retirement Workflow:**
+
+```yaml
+# Stage 1: Deprecation (Warning Phase)
+1. Owner sets publishStatus: Deprecated
+   - API catalog shows "Deprecated" badge
+   - New APIKey requests are blocked with warning
+   - Existing approved keys continue working (grace period)
+   - UI displays sunset date to developers
+
+# Stage 2: Retirement (Revocation Phase)
+2. Owner sets publishStatus: Retired
+   - API removed from catalog
+   - Controller reconciles all APIKeys for this product:
+     - Approved → Rejected (Secrets deleted)
+     - Pending → Rejected
+   - All API access immediately revoked
+   - New requests return validation error
+
+# Stage 3: Deletion (Cleanup)
+3. Owner deletes APIProduct (optional)
+   - Cascade deletion removes all APIKey resources
+   - Requires deletion modal confirmation with counts
+```
+
+**UI Behavior for Lifecycle States:**
+
+**During Deprecation (Stage 1 - Warning Phase):**
+
+In My API Keys Page:
+```
+Warning: This API is deprecated
+
+The "Petstore API" is scheduled for retirement on 2026-12-31.
+Please migrate to "Petstore API v2" before this date.
+Your current API key will stop working when this API is retired.
+
+[View Migration Guide]
+```
+
+**After Retirement (Stage 2 - Keys Revoked):**
+
+In APIProduct Details Page (for admins/owners):
+```
+Retired API Product
+
+This API has been retired. All API keys have been revoked.
+
+[View Revoked Keys (47)] [Delete API Product]
+```
+
+In My API Keys Page:
+```
+Status: Rejected
+Reason: Parent API Product "Petstore API" was retired on 2026-12-31
+
+[Request Access to Petstore API v2]
+```
+
+#### 5. Un-retiring APIProducts
+
+**Decision:** Retired products can be un-retired, but revoked keys are NOT restored.
+
+**State Transition Rules:**
+```
+Draft ⟷ Published ⟷ Deprecated ⟷ Retired
+  ↑                                    ↓
+  └────────────────────────────────────┘
+       (allowed but requires confirmation)
+```
+
+**Un-retirement Confirmation Modal:**
+```
+Un-retire "Petstore API"?
+
+This will:
+- Make the API visible in the catalog again
+- Allow new API key requests
+
+Important: Previously approved API keys (47) were revoked during retirement and will NOT be restored.
+Users must request new API keys to regain access.
+
+Previously rejected requests (12) will remain rejected.
+
+[Cancel] [Un-retire API]
+```
+
+**Implementation:**
+- Change `publishStatus: Retired` → `publishStatus: Published`
+- UI must re-enable "Request Access" buttons
+- Revoked APIKeys remain in "Rejected" state (Secrets were deleted during retirement)
+- Users must create new APIKey requests to regain access
+
+#### 6. Validation and Enforcement
+
+**Required Validation Rules:**
+
+1. **APIKey Creation Validation:**
+   - Block new APIKey creation if `publishStatus: Retired`
+   - Show error: "Cannot request access to retired API"
+
+2. **APIProduct Deletion Validation:**
+   - Require confirmation modal with dependent key counts (see section 6 under APIProductForm)
+   - User must type resource name to confirm deletion
+
+**Implementation Approach:**
+- **Client-side:** UI prevents actions (better UX)
+- **Server-side:** Validating webhook enforces rules (security)
+- **Both required** for defense-in-depth
+
 ## Implementation Plan
 
 1. **RBAC foundation** (#340): Define roles and personas, create RBAC manifests
@@ -461,6 +699,10 @@ Three personas aligned with Backstage plugin:
 ## Open Questions
 
 - **RBAC personas and implementation**: Three-persona model (Consumer, Owner, Admin) needs further discussion with UXD and engineering. Design docs being created to clarify the model. Issue #340 is blocked pending resolution.
+
+## Implementation Dependencies
+
+- **APIProduct CRD Extension Required**: The design assumes `publishStatus` supports `Draft | Published | Deprecated | Retired`, but the current CRD only supports `Draft | Published`. The `developer-portal-controller` team must extend the enum before lifecycle features can be implemented (see Edge Cases #3).
 
 ## Execution
 
@@ -488,6 +730,15 @@ Three personas aligned with Backstage plugin:
 ### Completed
 
 ## Change Log
+
+### 2026-04-02 — Added edge cases and lifecycle behaviors section
+
+- **Decision:** APIKey editing is not supported in initial release (users must delete and recreate)
+- **Enhanced deletion modal:** Added requirement to show dependent APIKey counts before deletion (see section 6 under APIProductForm)
+- Clarified APIProduct deletion cascade effects and OwnerReference behavior (Kubernetes garbage collection)
+- Identified CRD gap: `publishStatus` enum missing Deprecated/Retired states (design assumes 4 states, CRD only has 2)
+- Defined retirement and un-retirement behaviors for APIProducts (soft/hard retirement options)
+- Specified validation rules for blocking actions on retired products
 
 ### 2026-03-30 — Enhanced with detailed Figma design references
 
