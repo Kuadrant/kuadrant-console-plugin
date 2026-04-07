@@ -52,19 +52,26 @@ const APIProductDefinitionTab: React.FC = () => {
   // Parse the OpenAPI spec (could be JSON or YAML string)
   const parsedSpec = React.useMemo(() => {
     if (!specToUse) return null;
-
+    let result: unknown;
     try {
       // Try to parse as JSON first
-      return JSON.parse(specToUse);
+      result = JSON.parse(specToUse);
     } catch {
       // If JSON parsing fails, try YAML
       try {
-        return yaml.load(specToUse);
+        result = yaml.load(specToUse);
       } catch (error) {
         console.error('Failed to parse OpenAPI spec:', error);
         return null;
       }
     }
+
+    // Validate that the result is an object (OpenAPI spec should be an object)
+    if (typeof result !== 'object' || result === null || Array.isArray(result)) {
+      console.error('Parsed OpenAPI spec is not a valid object');
+      return null;
+    }
+    return result;
   }, [specToUse]);
 
   if (loadError) {
