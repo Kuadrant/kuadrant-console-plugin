@@ -1204,36 +1204,6 @@ kubectl create clusterrolebinding api-admin-platform-team \
 6. Controller projects API key to APIKey status in `consumer-team-mobile` namespace
 7. Mobile team reads API key from their APIKey resource
 
-## Validation and Next Steps
-
-### RBAC Validation
-
-**Manual testing** (see "Testing Strategy" section above):
-
-- Use kubectl impersonation (`--as=<user>`) to test each persona
-- Verify positive permissions (consumer can list APIProducts, owner can create in own namespace)
-- Verify negative permissions (consumer cannot create APIProducts, owner cannot access other namespaces)
-- Test cross-namespace scenarios (consumer creates APIKey referencing owner's APIProduct)
-- All validation procedures and test personas are documented in this design document
-
-### Next Steps
-
-1. **Console Plugin Integration** (separate from this design):
-   - Implement UI components respecting RBAC via `SelfSubjectAccessReview`
-   - Progressive disclosure based on user permissions
-   - Client-side filtering for APIKey lists by `requestedBy.userId`
-
-2. **Documentation**:
-   - Admin guide for deploying and configuring API Management RBAC
-   - User workflows for each persona (consumer, owner, admin)
-   - Troubleshooting guide for common RBAC issues
-
-### Completed
-
-- ✅ RBAC role definitions for API Consumer, API Owner, API Admin (see "RBAC Manifests" section)
-- ✅ Validation guide and test procedures (see "Testing Strategy" section)
-- ✅ Design document (this file) - comprehensive documentation including manifests, validation, and deployment patterns
-
 ## References
 
 - [Kuadrant Developer Portal Controller](https://github.com/Kuadrant/developer-portal-controller) - APIKey CRD source of truth
