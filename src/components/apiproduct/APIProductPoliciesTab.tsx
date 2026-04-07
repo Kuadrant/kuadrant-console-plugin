@@ -142,6 +142,17 @@ const APIProductPoliciesTab: React.FC = () => {
 
   const allPoliciesLoaded = Object.values(watchedPolicies).every((res) => res.loaded);
 
+  // Aggregate watch errors
+  const policyWatchErrors = React.useMemo(() => {
+    const errors: { kind: string; error: Error }[] = [];
+    Object.entries(watchedPolicies).forEach(([kind, res]) => {
+      if (res.loadError) {
+        errors.push({ kind, error: res.loadError });
+      }
+    });
+    return errors;
+  }, [watchedPolicies]);
+
   // Table columns
   const columns: TableColumn<PolicyResource>[] = [
     {
@@ -245,6 +256,21 @@ const APIProductPoliciesTab: React.FC = () => {
   // Main render
   return (
     <PageSection hasBodyWrapper={false} className="apiproduct-policies-page">
+      {policyWatchErrors.length > 0 && (
+        <>
+          {policyWatchErrors.map(({ kind, error }) => (
+            <Alert
+              key={kind}
+              variant="warning"
+              isInline
+              title={t('Error loading {{kind}}', { kind })}
+              style={{ marginBottom: 'var(--pf-v6-global--spacer--md)' }}
+            >
+              {error.message}
+            </Alert>
+          ))}
+        </>
+      )}
       {discoveredPolicies.length === 0 && allPoliciesLoaded ? (
         <EmptyState
           titleText={
@@ -254,7 +280,11 @@ const APIProductPoliciesTab: React.FC = () => {
           }
           icon={SearchIcon}
         >
-          <EmptyStateBody>{t('No policies are attached to the target HTTPRoute.')}</EmptyStateBody>
+          <EmptyStateBody>
+            {policyWatchErrors.length > 0
+              ? t('Some policy types could not be loaded. Check the errors above for details.')
+              : t('No policies are attached to the target HTTPRoute.')}
+          </EmptyStateBody>
         </EmptyState>
       ) : (
         <VirtualizedTable<PolicyResource>
