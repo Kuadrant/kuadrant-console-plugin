@@ -702,7 +702,10 @@ Previously rejected requests (12) will remain rejected.
 
 ## Implementation Dependencies
 
-- **APIProduct CRD Extension Required**: The design assumes `publishStatus` supports `Draft | Published | Deprecated | Retired`, but the current CRD only supports `Draft | Published`. The `developer-portal-controller` team must extend the enum before lifecycle features can be implemented (see Edge Cases #3).
+- **⏸️ BLOCKED: [developer-portal-controller#38](https://github.com/Kuadrant/developer-portal-controller/issues/38)** - APIProduct lifecycle enhancements required before console-plugin can implement:
+  - **CRD Extension**: Extend `publishStatus` enum to support `Draft | Published | Deprecated | Retired` (currently only supports `Draft | Published`)
+  - **Finalizer Implementation**: Add finalizer for clean cascade deletion of APIProducts with dependent APIKeys
+  - Blocks: Full lifecycle management (#321) and deletion flow (#320, #321)
 
 ## Execution
 
