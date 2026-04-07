@@ -129,8 +129,7 @@ const APIProductPoliciesTab: React.FC = () => {
           return (
             policyTargetRef.kind === 'HTTPRoute' &&
             policyTargetRef.name === httprouteName &&
-            (policyTargetRef.namespace === httprouteNamespace ||
-              item.metadata.namespace === httprouteNamespace)
+            (policyTargetRef.namespace ?? item.metadata.namespace) === httprouteNamespace
           );
         });
         policies.push(...matchingItems);
