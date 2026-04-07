@@ -9,8 +9,8 @@ The design introduces three personas (API Consumer, API Owner, API Admin) with d
 **Persona hierarchy:**
 
 - **API Consumer**: Namespace-scoped APIKey management + cluster-wide catalog browsing
-- **API Owner**: Namespace-scoped API management (APIProducts, APIKeyApprovals) + cluster-wide discovery (APIKeys, policies, routes)
-- **API Admin**: API Owner with cluster-wide permissions (ClusterRoleBinding) + additional troubleshooting capabilities (APIKeys write access)
+- **API Owner**: Namespace-scoped API management (APIProducts, APIKeyApprovals, APIKeyRequests) + cluster-wide catalog browsing (APIProducts, policies, routes)
+- **API Admin**: API Owner with cluster-wide permissions (ClusterRoleBinding) + additional troubleshooting capabilities (APIKeys/APIKeyRequests write access)
 
 ## Goals
 
@@ -83,14 +83,17 @@ graph TB
 - Consumers must not have secret read permissions out of their namespaces
 - Consumer should not create secrets. The controller should always create the secret.
 - Consumers must have access only to their own api keys.
+- Owners must only see API access requests for their own API products (enforced by namespace boundaries via APIKeyRequest shadow resources)
+- Owners and admins must not have access to API key values (status.apiKeyValue) for consumer APIKeys (security isolation)
 
 ### API Changes
 
-This design requires changes to existing CRDs and introduces a new CRD:
+This design requires changes to existing CRDs and introduces new CRDs:
 
-**New CRD**:
+**New CRDs**:
 
-- **APIKeyApproval** (`devportal.kuadrant.io/v1alpha1`) - New resource for approval/rejection workflow
+- **APIKeyApproval** (`devportal.kuadrant.io/v1alpha1`) - Resource for approval/rejection workflow
+- **APIKeyRequest** (`devportal.kuadrant.io/v1alpha1`) - Shadow resource auto-created by controller in owner's namespace to enable RBAC-enforced request discovery
 
 **Modified CRDs**:
 
@@ -116,21 +119,23 @@ This section describes the high-level workflow for consumers to request and rece
 
 3. **APIKey enters Pending state** - The newly created APIKey has no conditions (`conditions: []`), indicating it's awaiting approval
 
-4. **Owner discovers requests** - API Owner lists APIKeys cluster-wide, filtering by `spec.apiProductRef.namespace` matching their namespace
+4. **Controller creates shadow resource** - Controller automatically creates **APIKeyRequest** resource in **owner's namespace** (mirroring the APIKey request for RBAC-enforced discovery)
 
-5. **Approval decision**:
+5. **Owner discovers requests** - API Owner lists APIKeyRequest resources in **their own namespace** (namespace-scoped, RBAC-enforced - owners only see requests for their API products)
+
+6. **Approval decision**:
    - **Automatic mode**: Controller automatically approves the request (no owner action needed)
    - **Manual mode**: API Owner creates APIKeyApproval resource in **their own namespace** with cross-namespace reference to consumer's APIKey
 
-6. **Controller reconciles approval** - Controller reads APIKeyApproval (manual mode) or auto-approves (automatic mode) and updates APIKey `status.conditions` (Approved or Denied)
+7. **Controller reconciles approval** - Controller reads APIKeyApproval (manual mode) or auto-approves (automatic mode) and updates APIKey `status.conditions` (Approved or Denied)
 
-7. **On approval**: Controller creates Secret in **kuadrant namespace** (centralized secret storage for policy enforcement)
+8. **On approval**: Controller creates Secret in **kuadrant namespace** (centralized secret storage for policy enforcement)
 
-8. **Controller projects API key** - Controller exposes the API key value to the consumer via APIKey `status.apiKeyValue` in **consumer's namespace**
+9. **Controller projects API key** - Controller exposes the API key value to the consumer via APIKey `status.apiKeyValue` in **consumer's namespace**
 
-9. **Consumer retrieves API key** - Consumer accesses the projected API key value from their APIKey resource in their own namespace
+10. **Consumer retrieves API key** - Consumer accesses the projected API key value from their APIKey resource in their own namespace
 
-10. **Consumer uses API** - Consumer authenticates API requests using the retrieved key
+11. **Consumer uses API** - Consumer authenticates API requests using the retrieved key
 
 #### Key Architectural Decisions
 
@@ -145,7 +150,22 @@ This section describes the high-level workflow for consumers to request and rece
 - Kubernetes RBAC naturally enforces consumer isolation via namespace boundaries
 - API key value projected to `status.apiKeyValue` is only accessible in consumer's namespace
 
-**2. APIKeyApproval CRD for Approval Workflow**
+**2. APIKeyRequest Shadow Resource for RBAC-Enforced Discovery**
+
+**Problem**: Kubernetes RBAC cannot filter resources by field values. If owners have cluster-wide read on APIKeys, they can see ALL requests (not just for their APIs) AND can read `status.apiKeyValue` for all consumer APIKeys (security violation).
+
+**Solution**:
+
+- Controller automatically creates **APIKeyRequest** resource in **owner's namespace** when APIKey is created
+- APIKeyRequest is a lightweight mirror containing request metadata (requestedBy, useCase, planTier) but NOT apiKeyValue
+- Owner has: `get/list apikeyrequests` permission in their namespace only (namespace-scoped via RoleBinding)
+- Owner does NOT have: cluster-wide read on `apikeys` (no access to consumer APIKeys or apiKeyValue)
+- **RBAC-enforced discovery**: Namespace boundaries ensure owners only see requests for their API products
+- **Security isolation**: Owners never interact with APIKey resources directly, cannot access apiKeyValue
+- **Explicit cleanup required**: OwnerReferences cannot be cross-namespace. Controller must explicitly handle cleanup when APIKey is deleted, ensuring corresponding APIKeyRequest in owner's namespace is also removed.
+- Controller manages APIKeyRequest lifecycle automatically (create, sync status, delete on APIKey deletion)
+
+**3. APIKeyApproval CRD for Approval Workflow**
 
 **Problem**: Kubernetes RBAC cannot enforce field-level permissions. If consumers update `status`, they could set approval conditions themselves.
 
@@ -158,7 +178,7 @@ This section describes the high-level workflow for consumers to request and rece
 - Controller derives `status.conditions` (Approved/Denied) from APIKeyApproval existence
 - **No validation webhook needed** - Clean RBAC separation via namespaces
 
-**3. Centralized Secret Storage in Kuadrant Namespace**
+**4. Centralized Secret Storage in Kuadrant Namespace**
 
 **Problem**: Where should API key secrets be stored? Options include consumer's namespace, owner's namespace, or centralized storage.
 
@@ -171,7 +191,7 @@ This section describes the high-level workflow for consumers to request and rece
 - **Simplified management** - Single location for all API key secrets (rotation, monitoring, cleanup)
 - **Clean separation** - Secret storage is infrastructure concern, managed by controller
 
-**4. Conditions Pattern (Following CertificateSigningRequest)**
+**5. Conditions Pattern (Following CertificateSigningRequest)**
 
 - Replace `status.phase` with `status.conditions` array
 - **Lifecycle states**:
@@ -386,6 +406,70 @@ spec:
   - **No validation webhook needed** - Kubernetes RBAC enforces separation via namespaces
 - **Automatic approval mode**: APIKeyApproval resource not needed when `APIProduct.spec.approvalMode = automatic`
 
+#### APIKeyRequest Resource (devportal.kuadrant.io/v1alpha1)
+
+**Shadow resource** automatically created by the Developer Portal Controller in the owner's namespace to enable RBAC-enforced request discovery without exposing API key values.
+
+```yaml
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKeyRequest
+metadata:
+  name: mobile-app-payment-key-request
+  namespace: payment-services  # Owner's namespace (same as APIProduct)
+  # NOTE: ownerReferences cannot be cross-namespace
+  # Controller must explicitly handle cleanup when APIKey is deleted
+spec:
+  # Cross-namespace reference to original APIKey in consumer's namespace
+  apiKeyRef:
+    name: mobile-app-payment-key
+    namespace: consumer-team-mobile
+
+  # Copied from APIKey.spec for display purposes (read-only for owners)
+  requestedBy:
+    userId: "alice"
+    email: "alice@mobile-team.example.com"
+
+  useCase: "Mobile app integration for payment processing"
+  planTier: "basic"
+
+  # Reference to APIProduct (for UI context, redundant with namespace placement)
+  apiProductRef:
+    name: payment-api-v1
+    namespace: payment-services  # Same as APIKeyRequest.metadata.namespace
+
+status:
+  # Synced from original APIKey.status.conditions by controller
+  # Does NOT include apiKeyValue (security isolation)
+  conditions:
+    - type: Pending
+      status: "True"
+      lastTransitionTime: "2026-03-30T13:45:00Z"
+
+    # OR when approved/denied:
+    # - type: Approved
+    #   status: "True"
+    #   reason: "ApprovedByOwner"
+    #   message: "Approved for mobile team's payment integration project"
+    #   lastTransitionTime: "2026-03-30T14:00:00Z"
+```
+
+**RBAC implications:**
+
+- **Controller-managed lifecycle**: APIKeyRequest resources are automatically created/updated/deleted by the controller - owners and consumers do NOT create these resources directly
+- **Namespace placement**: Created in **owner's namespace** (same as APIProduct) to enable namespace-scoped RBAC
+- **RBAC-enforced discovery**: Owners have `get/list apikeyrequests` permission in their own namespace only (namespace-scoped via RoleBinding)
+- **Security isolation**: APIKeyRequest does NOT contain `status.apiKeyValue` - owners cannot see API key values
+- **Cross-namespace reference**: `spec.apiKeyRef.namespace` references original APIKey in consumer's namespace
+- **Status synchronization**: Controller syncs conditions from APIKey to APIKeyRequest, excluding apiKeyValue
+- **Explicit cleanup required**: OwnerReferences cannot be cross-namespace. Controller must explicitly handle APIKey deletions and remove corresponding APIKeyRequest resources in owner's namespace.
+- **Request metadata**: Contains requestedBy, useCase, planTier for owner review (copied from APIKey.spec)
+- **Owner workflow**:
+  1. Owner lists APIKeyRequest resources in their own namespace (namespace-scoped, RBAC-enforced)
+  2. Owner reviews request metadata (who, why, which plan tier)
+  3. Owner creates APIKeyApproval in their namespace to approve/reject
+  4. Controller updates both APIKey (consumer's namespace) and APIKeyRequest (owner's namespace) with approval decision
+- **No cluster-wide access needed**: Owners never need cluster-wide read on APIKeys - namespace boundaries enforce that owners only see requests for their API products
+
 #### Policy and Route Resources
 
 In addition to APIProduct and APIKey, API consumers need read-only access to policies and routes to understand API requirements, endpoints, and rate limits.
@@ -433,7 +517,7 @@ In addition to APIProduct and APIKey, API consumers need read-only access to pol
 - **API key value protection**: `status.apiKeyValue` is only readable in consumer's own namespace
 - **No cross-consumer leakage**: Architectural principle "Consumers must have access only to their own api keys" enforced by namespace boundaries
 
-#### 2. Secret Projection
+#### 2. Secret Projection and Owner Isolation
 
 **API key delivery via status:**
 
@@ -444,6 +528,18 @@ In addition to APIProduct and APIKey, API consumers need read-only access to pol
 - Centralized secret management in kuadrant namespace simplifies policy enforcement and secret rotation
 - Owners do not need secret read permissions (secrets managed centrally by controller)
 - **No one-time viewing complexity**: Removed `canReadSecret` flag - consumers can view their API key anytime from their own APIKey resource. This can be implemented in the UI via annotations, but annotations do not provide actual enforcement.
+
+**Owner isolation from API key values:**
+
+- **Problem**: Kubernetes RBAC cannot filter by field values. If owners have cluster-wide read on APIKeys, they can see `status.apiKeyValue` for ALL consumer APIKeys.
+- **Solution**: APIKeyRequest shadow resource pattern
+  - Controller creates APIKeyRequest in **owner's namespace** when consumer creates APIKey
+  - APIKeyRequest contains request metadata (requestedBy, useCase, planTier) but NOT apiKeyValue
+  - Owners have `get/list apikeyrequests` permission in their namespace only (namespace-scoped via RoleBinding)
+  - Owners do NOT have `get/list apikeys` permission (no access to consumer APIKeys or apiKeyValue)
+  - **RBAC-enforced discovery**: Namespace boundaries ensure owners only see requests for their API products
+  - **Security isolation**: Owners never interact with APIKey resources directly, cannot access apiKeyValue
+- **Admin exception**: Admins retain cluster-wide read on APIKeys for troubleshooting. This is an accepted trade-off for trusted platform operators who may need to debug consumer API key issues. Admins are expected to follow organizational policies regarding access to sensitive data.
 
 **Secret rotation:**
 
@@ -486,12 +582,20 @@ In addition to APIProduct and APIKey, API consumers need read-only access to pol
 - **Security**: Consumers do NOT have `get secrets` permission in kuadrant namespace (architectural principle)
 - Secrets stored centrally in kuadrant namespace for policy enforcement
 
+**APIKeyRequest shadow resource (owner discovery):**
+
+- Controller automatically creates APIKeyRequest in **owner's namespace** when consumer creates APIKey
+- APIKeyRequest contains cross-namespace reference to original APIKey (`spec.apiKeyRef.namespace`)
+- **Owners have read on APIKeyRequests in their own namespace** (namespace-scoped via RoleBinding)
+- Owners do NOT have read on APIKeys (no access to consumer namespaces or apiKeyValue)
+- **RBAC-enforced filtering**: Namespace boundaries ensure owners only see requests for their API products
+- **Security**: APIKeyRequest does not contain apiKeyValue - owners cannot see API key values
+
 **APIKeyApproval cross-namespace references:**
 
 - Owners create APIKeyApproval in **their own namespace**
 - APIKeyApproval contains `spec.apiKeyRef.namespace` referencing consumer's APIKey
-- **Owners have cluster-wide read on APIKeys** to discover requests for their APIs
-- Owners filter by `spec.apiProductRef.namespace` matching their namespace
+- Owners discover requests via APIKeyRequest (namespace-scoped), not via cluster-wide APIKey read
 - **Controller validation**: APIKeyApproval.metadata.namespace MUST match APIKey.spec.apiProductRef.namespace
   - Prevents owners from approving requests for API products owned by other teams
   - Enforces ownership boundary at the controller level (defense in depth)
@@ -516,20 +620,22 @@ In addition to APIProduct and APIKey, API consumers need read-only access to pol
 
 ### Core API Management Resources
 
-| Resource | Action | Consumer (own NS) | Owner (own NS) | Owner (other NS) | Admin |
-|----------|--------|:--------:|:--------------:|:----------------:|:-----:|
-| **APIProduct** | get/list | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
-| APIProduct | create | ❌ | ✅ | ❌ | ✅ |
-| APIProduct | update | ❌ | ✅ | ❌ | ✅ |
-| APIProduct | delete | ❌ | ✅ | ❌ | ✅ |
-| **APIKey** | get/list | ✅ | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
-| APIKey | create | ✅ | ❌ | ❌ | ✅ |
-| APIKey | update | ✅ | ❌ | ❌ | ✅ |
-| APIKey | delete | ✅ | ❌ | ❌ | ✅ |
-| **APIKeyApproval** | get/list | ❌ | ✅ | ❌ | ✅ Cluster-wide |
-| APIKeyApproval | create | ❌ | ✅ | ❌ | ✅ |
-| APIKeyApproval | update | ❌ | ✅ | ❌ | ✅ |
-| APIKeyApproval | delete | ❌ | ✅ | ❌ | ✅ |
+| Resource | Action | Consumer (own NS) | Consumer (other NS) | Owner (own NS) | Owner (other NS) | Admin |
+|----------|--------|:--------:|:--------:|:--------------:|:----------------:|:-----:|
+| **APIProduct** | get/list | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
+| APIProduct | create | ❌ | ❌ | ✅ | ❌ | ✅ |
+| APIProduct | update | ❌ | ❌ | ✅ | ❌ | ✅ |
+| APIProduct | delete | ❌ | ❌ | ✅ | ❌ | ✅ |
+| **APIKey** | get/list | ✅ | ❌ | ❌ | ❌ | ✅ Cluster-wide |
+| APIKey | create | ✅ | ❌ | ❌ | ❌ | ✅ |
+| APIKey | update | ✅ | ❌ | ❌ | ❌ | ✅ |
+| APIKey | delete | ✅ | ❌ | ❌ | ❌ | ✅ |
+| **APIKeyRequest** | get/list | ❌ | ❌ | ✅ | ❌ | ✅ Cluster-wide |
+| APIKeyRequest | create/update/delete | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **APIKeyApproval** | get/list | ❌ | ❌ | ✅ | ❌ | ✅ Cluster-wide |
+| APIKeyApproval | create | ❌ | ❌ | ✅ | ❌ | ✅ |
+| APIKeyApproval | update | ❌ | ❌ | ✅ | ❌ | ✅ |
+| APIKeyApproval | delete | ❌ | ❌ | ✅ | ❌ | ✅ |
 
 ### Supporting Policies and Routes (Read-Only)
 
@@ -544,13 +650,17 @@ In addition to APIProduct and APIKey, API consumers need read-only access to pol
 
 **Notes**:
 
-- **Admin is Owner with cluster-wide scope**: API Admin has the same core permissions as API Owner, but bound cluster-wide (ClusterRoleBinding instead of RoleBinding). Additional admin capability: write access to APIKeys for troubleshooting.
-- **Consumer APIKey access**: Always **namespace-scoped** (never cluster-wide). Consumers can only access APIKeys in namespaces where they have Role bindings
+- **Consumer (own NS)**: Permissions in namespaces where consumer has RoleBinding for api-consumer ClusterRole
+- **Consumer (other NS)**: Permissions in namespaces where consumer does NOT have RoleBinding. **RBAC-enforced isolation**: Consumers cannot access APIKeys in other consumer namespaces, enforcing the architectural principle "Consumers must have access only to their own api keys"
+- **Admin is Owner with cluster-wide scope**: API Admin has the same core permissions as API Owner, but bound cluster-wide (ClusterRoleBinding instead of RoleBinding). Additional admin capability: write access to APIKeys and cluster-wide read on APIKeyRequests for troubleshooting.
+- **Consumer APIKey access**: Always **namespace-scoped** (never cluster-wide). Consumers can only access APIKeys in namespaces where they have RoleBindings. See "Consumer (other NS)" column for isolation verification.
 - **Consumer catalog access**: Cluster-wide read access to APIProducts, policies, and routes for discovery
 - **APIKey namespace**: Consumers create APIKeys in designated namespace(s) - shared (Pattern 1) or per-team (Pattern 2)
-- **APIKey filtering**: Owners use cluster-wide read to discover requests by filtering `spec.apiProductRef.namespace`
+- **APIKeyRequest discovery**: Owners discover requests via APIKeyRequest resources in **their own namespace** (namespace-scoped, RBAC-enforced). APIKeyRequest is a controller-managed shadow resource mirroring APIKey requests - owners/consumers do NOT create/update/delete these directly.
+- **RBAC-enforced filtering**: Namespace boundaries ensure owners only see requests for their API products. No cluster-wide APIKey access needed for owners.
+- **Security isolation**: Owners do NOT have access to APIKey resources or `status.apiKeyValue`. APIKeyRequest does not contain API key values.
 - **APIKeyApproval namespace**: Owners create APIKeyApproval in their own namespace with cross-namespace reference to consumer's APIKey
-- **Secret access**: NO personas (consumers, owners, admins) need secret read permissions for API Management. API key values delivered via `status.apiKeyValue` projection. Secrets stored centrally in kuadrant namespace and managed exclusively by Developer Portal Controller.
+- **Secret access**: NO personas (consumers, owners, admins) need secret read permissions for API Management. API key values delivered via `status.apiKeyValue` projection in consumer's APIKey. Secrets stored centrally in kuadrant namespace and managed exclusively by Developer Portal Controller.
 - **PlanPolicies**: Read-only for all API Management personas (consumers, owners, admins). PlanPolicies are platform-managed resources, not controlled by API Management roles.
 - **Policies/Routes**: AuthPolicy, RateLimitPolicy, HTTPRoute, Gateway are read-only for API Management roles. Owners may have write access via separate non-API-Management roles if needed.
 - **Cluster-wide**: Permission applies across all namespaces (for discovery/catalog browsing only, not APIKey operations)
@@ -623,7 +733,7 @@ rules:
 ---
 # API Owner ClusterRole
 # Allows teams to publish and manage APIs in their namespace
-# Includes cluster-wide read access for catalog browsing and request discovery
+# Includes cluster-wide read access for catalog browsing
 #
 # Usage:
 #   kubectl apply -f api-owner-role.yaml
@@ -635,8 +745,8 @@ rules:
 #     -n payment-services
 #
 # Note: ClusterRole + RoleBinding = namespace-scoped write permissions
-#       The owner can only manage APIProducts and APIKeyApprovals in namespaces where they have a RoleBinding
-#       Cluster-wide read permissions allow owners to discover all APIs and view all APIKey requests
+#       The owner can only manage APIProducts, APIKeyApprovals, and view APIKeyRequests in namespaces where they have a RoleBinding
+#       Cluster-wide read permissions allow owners to discover all APIs (catalog browsing)
 #
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -653,11 +763,16 @@ rules:
     resources: ["apikeyapprovals"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
 
-  # View API key requests cluster-wide (to discover requests for own APIs)
-  # Owners filter by spec.apiProductRef.namespace matching their namespace
+  # Discover API key requests via APIKeyRequest shadow resources (namespace-scoped via RoleBinding)
+  # Controller automatically creates APIKeyRequest in owner's namespace when consumer creates APIKey
+  # APIKeyRequest does NOT contain apiKeyValue (security isolation)
+  # Namespace boundaries ensure owners only see requests for their API products
   - apiGroups: ["devportal.kuadrant.io"]
-    resources: ["apikeys"]
+    resources: ["apikeyrequests"]
     verbs: ["get", "list"]
+
+  # NOTE: Owners do NOT have access to apikeys resources (consumers own these)
+  # Owners discover requests via apikeyrequests in their own namespace only
 
   # View rate limiting plans cluster-wide (reference when creating products)
   - apiGroups: ["extensions.kuadrant.io"]
@@ -682,6 +797,7 @@ rules:
   # NOTE: Secrets are managed by Developer Portal Controller in kuadrant namespace
   # API key values are delivered to consumers via status.apiKeyValue projection
   # Owners do not need secret permissions for API Management
+  # Owners do not have access to consumer APIKey resources or apiKeyValue field
 ```
 
 ### API Admin ClusterRole
@@ -725,8 +841,16 @@ rules:
     resources: ["apikeyapprovals"]
     verbs: ["get", "list", "create", "update", "patch", "delete"]
 
+  # View API key requests cluster-wide (same as api-owner, but cluster-wide via ClusterRoleBinding)
+  # Allows admins to see all APIKeyRequest shadow resources across all namespaces
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeyrequests"]
+    verbs: ["get", "list"]
+
   # Additional troubleshooting permission: Full access to API keys cluster-wide
-  # Unlike api-owner (read-only), admins can create/update/delete APIKeys for troubleshooting
+  # Unlike api-owner (no apikeys access), admins can create/update/delete APIKeys for troubleshooting
+  # WARNING: This grants access to status.apiKeyValue across all consumer APIKeys
+  # Admins are trusted platform operators who may need to troubleshoot consumer API key issues
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apikeys"]
     verbs: ["get", "list", "create", "update", "delete"]
@@ -734,6 +858,7 @@ rules:
   # NOTE: Secrets are managed by Developer Portal Controller in kuadrant namespace
   # API key values are delivered to consumers via status.apiKeyValue projection
   # Admins do not need secret permissions for API Management
+  # Admins have access to apiKeyValue via APIKey resources for troubleshooting purposes
 
   # View rate limiting plans cluster-wide (same as api-owner)
   - apiGroups: ["extensions.kuadrant.io"]
@@ -782,33 +907,47 @@ The following tasks are required to implement this RBAC design. Each task is act
 
 Define `APIKeyApproval` CRD (`devportal.kuadrant.io/v1alpha1`) with spec fields: `apiKeyRef.name`, `apiKeyRef.namespace`, `approved` (boolean), `reviewedBy`, `reviewedAt`, `reason`, `message`. Implement controller that watches APIKeyApproval resources cluster-wide with namespace validation (`APIKeyApproval.metadata.namespace == APIKey.spec.apiProductRef.namespace`). Implement approval logic: when `spec.approved = true` and validation passes, generate API key, create Secret in kuadrant namespace, set `Approved` condition in APIKey status, project value to `status.apiKeyValue`. Implement denial logic: when `spec.approved = false`, set `Denied` condition. Set `Failed` condition if validation fails. Handle pending state (no APIKeyApproval = empty conditions). Generate CRD manifests, add to operator deployment, document in README. Add unit, integration, and e2e tests for approval/denial workflows and namespace validation.
 
+**APIKeyRequest CRD and Controller**
+
+**Task 2: Implement APIKeyRequest CRD and shadow resource controller**
+
+Define `APIKeyRequest` CRD (`devportal.kuadrant.io/v1alpha1`) with spec fields: `apiKeyRef.name`, `apiKeyRef.namespace`, `requestedBy`, `useCase`, `planTier`, `apiProductRef`. Implement controller that watches APIKey resources cluster-wide and automatically creates APIKeyRequest in owner's namespace (`APIKey.spec.apiProductRef.namespace`) when APIKey is created. **CRITICAL**: OwnerReferences cannot be cross-namespace - implement explicit cleanup mechanism to ensure APIKeyRequest is deleted when corresponding APIKey is deleted. Sync `status.conditions` from APIKey to APIKeyRequest (excluding `apiKeyValue` - security isolation). Handle updates to APIKey by syncing to APIKeyRequest. Generate CRD manifests, add to operator deployment, document in README. Add tests for shadow resource creation, synchronization, and cleanup.
+
 **APIKey CRD Schema Updates**
 
-**Task 2: Update APIKey CRD schema for RBAC design**
+**Task 3: Update APIKey CRD schema for RBAC design**
 
 Add `spec.apiProductRef.namespace` field (string, required) for cross-namespace references. Replace `status.phase` with `status.conditions` array following Kubernetes conditions pattern (condition types: `Approved`, `Denied`, `Failed` with type, status, reason, message, lastTransitionTime). Remove deprecated status fields: `status.secretRef`, `status.canReadSecret`, `status.reviewedBy`, `status.reviewedAt`. Keep `status.apiKeyValue` (secret projection) and `status.limits`. Consider bumping API version to v1alpha2 to signal breaking changes. Update CRD manifests and OpenAPI schema.
 
 **Controller Enhancements**
 
-**Task 3: Update controller RBAC permissions and documentation**
+**Task 4: Update controller RBAC permissions and documentation**
 
-Update controller ServiceAccount ClusterRole with permissions: `apikeys` (get, list, watch), `apikeys/status` (update, patch), `apikeyapprovals` (get, list, watch), `apiproducts` (get, list, watch), all cluster-wide. Scope `secrets` permissions (create, update, delete, get, list) to kuadrant namespace only via RoleBinding. Document RBAC requirements in controller README.
+Update controller ServiceAccount ClusterRole with permissions: `apikeys` (get, list, watch), `apikeys/status` (update, patch), `apikeyapprovals` (get, list, watch), `apikeyrequests` (create, update, delete, get, list, watch), `apiproducts` (get, list, watch), all cluster-wide. Add any additional APIKey permissions needed for chosen cleanup implementation. Scope `secrets` permissions (create, update, delete, get, list) to kuadrant namespace only via RoleBinding. Document RBAC requirements in controller README including cleanup mechanism for cross-namespace APIKeyRequest resources.
 
 #### Console Plugin (github.com/Kuadrant/kuadrant-console-plugin)
 
-**Task 4: Implement APIKeyApproval UI components**
+**Task 5: Implement APIKeyApproval and APIKeyRequest UI components**
 
-Create APIKeyApproval form component for API owners showing pending APIKey requests (filtered by `spec.apiProductRef.namespace`) with approve/reject actions, reason/message fields, auto-populated `reviewedBy` (logged-in user) and `reviewedAt` (current timestamp). Add APIKeyApproval list view showing approval history with timestamps, reviewers, and cross-namespace references. Add permission checks via `SelfSubjectAccessReview` for `create apikeyapprovals`. Show visual indicators for Pending/Approved/Denied/Failed states.
+Create APIKeyApproval form component for API owners showing pending APIKeyRequest resources (namespace-scoped list in owner's namespace) with approve/reject actions, reason/message fields, auto-populated `reviewedBy` (logged-in user) and `reviewedAt` (current timestamp). Add APIKeyApproval list view showing approval history. Add APIKeyRequest list view for owners showing request metadata (requestedBy, useCase, planTier, status conditions) with links to create APIKeyApproval. Add permission checks via `SelfSubjectAccessReview` for `create apikeyapprovals` and `get apikeyrequests`. Show visual indicators for Pending/Approved/Denied/Failed states.
 
-**Task 5: Update APIKey UI for conditions pattern and cross-namespace references**
+**Task 6: Update APIKey UI for conditions pattern and cross-namespace references**
 
 Update APIKey list view to derive status from `status.conditions` (Pending = no conditions, Approved/Denied/Failed states). Update detail view to display conditions with timestamps, reasons, messages, and `status.apiKeyValue`. Add client-side filtering by `requestedBy.userId`. Remove references to deprecated status fields (secretRef, canReadSecret, reviewedBy, reviewedAt). Update APIKey creation form with namespace selector for `spec.apiProductRef.namespace` enabling cluster-wide APIProduct discovery. Show APIProduct owner namespace in catalog view. Validate APIProduct reference exists before submission.
+
+**Task 7: Implement RBAC-aware progressive disclosure**
+
+Use `SelfSubjectAccessReview` to check permissions before rendering actions: Consumer (create/update/delete apikeys in own namespace), Owner (create/update/delete apiproducts and apikeyapprovals, get/list apikeyrequests in own namespace), Admin (all operations cluster-wide). Hide/disable buttons based on RBAC checks. Show informative messages when user lacks permission. Apply progressive disclosure across all API Management UI components (APIKey, APIProduct, APIKeyApproval, APIKeyRequest).
 
 #### Kuadrant Operator (github.com/Kuadrant/kuadrant-operator)
 
 **Task 8: Package and auto-deploy RBAC ClusterRoles**
 
 Create `config/rbac/api-management/` directory with ClusterRole manifests: `api-consumer.yaml`, `api-owner.yaml`, `api-admin.yaml` (copy from RBAC Manifests section in this design). Add to operator deployment kustomization, Helm chart, and OLM bundle. Implement auto-deployment on installation and upgrade logic to update ClusterRoles when operator is updated. Ensure ClusterRoles are created before console plugin installation.
+
+**Task 9: Add namespace onboarding templates and RBAC validation**
+
+Create `NamespaceTemplate` CRD (or use existing solution) with templates for deployment patterns: consumer namespace (RoleBinding for api-consumer), owner namespace (RoleBinding for api-owner), shared consumer namespace (Pattern 1). Add operator validation logic to check if required ClusterRoles exist, set status condition if missing, add reconciliation to recreate if deleted. Document template usage, troubleshooting, ClusterRole deployment, and RoleBinding creation with examples for Patterns 1-4. Add RBAC section to operator README linking to this design document.
 
 ### Future Work (Out of Scope)
 
@@ -840,12 +979,17 @@ Use `kubectl --as=<user>` to test permissions without creating real users:
 # Test consumer permissions (assuming consumer-a has access to 'api-consumer-a' namespace)
 kubectl auth can-i list apiproducts --as=test-api-consumer-a --all-namespaces  # Should succeed (cluster-wide catalog)
 kubectl auth can-i create apikeys --as=test-api-consumer-a -n api-consumer-a  # Should succeed (own namespace)
-kubectl auth can-i create apikeys --as=test-api-consumer-a -n api-consumer-b  # Should fail (no binding, isolation)
+kubectl auth can-i list apikeys --as=test-api-consumer-a -n api-consumer-a  # Should succeed (own namespace)
+kubectl auth can-i create apikeys --as=test-api-consumer-a -n api-consumer-b  # Should fail (other consumer NS - isolation)
+kubectl auth can-i list apikeys --as=test-api-consumer-a -n api-consumer-b  # Should fail (other consumer NS - isolation)
 kubectl auth can-i list apikeys --as=test-api-consumer-a --all-namespaces  # Should fail (namespace-scoped only)
 kubectl auth can-i create apiproducts --as=test-api-consumer-a -n api-consumer-a  # Should fail
+kubectl auth can-i list apikeyrequests --as=test-api-consumer-a -n api-consumer-a  # Should fail (owners only)
 
 # Test owner permissions
-kubectl auth can-i list apikeys --as=test-api-owner-team-a --all-namespaces  # Should succeed (cluster-wide discovery)
+kubectl auth can-i list apikeys --as=test-api-owner-team-a --all-namespaces  # Should fail (no apikeys permission - use apikeyrequests)
+kubectl auth can-i list apikeyrequests --as=test-api-owner-team-a -n api-team-a  # Should succeed (own namespace)
+kubectl auth can-i list apikeyrequests --as=test-api-owner-team-a -n api-team-b  # Should fail (namespace-scoped)
 kubectl auth can-i create apiproducts --as=test-api-owner-team-a -n api-team-a  # Should succeed (own namespace)
 kubectl auth can-i create apiproducts --as=test-api-owner-team-a -n api-team-b  # Should fail
 kubectl auth can-i create apikeyapprovals --as=test-api-owner-team-a -n api-team-a  # Should succeed
@@ -895,8 +1039,8 @@ See the "Validation Checklist" section below for detailed test scenarios.
 **Positive Permissions** (should succeed):
 
 - [ ] Can list all APIProducts cluster-wide
-- [ ] Can list all APIKeys cluster-wide (to discover requests)
-- [ ] Can filter APIKeys by `spec.apiProductRef.namespace` matching own namespace
+- [ ] Can list APIKeyRequests in own namespace: `kubectl get apikeyrequests -n api-team-a`
+- [ ] Can view APIKeyRequest details (requestedBy, useCase, planTier, status conditions)
 - [ ] Can create APIProduct in own namespace
 - [ ] Can update/delete APIProduct in own namespace
 - [ ] Can create APIKeyApproval in own namespace with cross-namespace reference to consumer's APIKey
@@ -905,6 +1049,11 @@ See the "Validation Checklist" section below for detailed test scenarios.
 
 **Negative Permissions** (should fail):
 
+- [ ] Cannot list APIKeys cluster-wide (no apikeys permission - RBAC enforced)
+- [ ] Cannot read APIKey resources in consumer namespaces (security isolation)
+- [ ] Cannot read `status.apiKeyValue` from any APIKey (no apikeys access)
+- [ ] Cannot list APIKeyRequests in other owner namespaces
+- [ ] Cannot create/update/delete APIKeyRequest resources (controller-managed only)
 - [ ] Cannot create APIProduct in other team namespaces
 - [ ] Cannot delete APIProduct in other team namespaces
 - [ ] Cannot create APIKeyApproval in other team namespaces
@@ -933,18 +1082,24 @@ See the "Validation Checklist" section below for detailed test scenarios.
 
 1. [ ] Consumer creates APIKey in `consumer-team-mobile` namespace
 2. [ ] APIKey references APIProduct in `api-team-payments` namespace (cross-namespace ref)
-3. [ ] Owner in `api-team-payments` lists APIKeys cluster-wide
-4. [ ] Owner filters APIKeys: `kubectl get apikeys -A -o json | jq '.items[] | select(.spec.apiProductRef.namespace=="api-team-payments")'`
-5. [ ] Owner creates APIKeyApproval in `api-team-payments` namespace
-6. [ ] APIKeyApproval references APIKey in `consumer-team-mobile` namespace (cross-namespace ref)
-7. [ ] Controller validates: APIKeyApproval namespace (`api-team-payments`) matches APIProduct namespace (`api-team-payments`)
-8. [ ] Controller reconciles: Sets `Approved` condition in APIKey status (validation passed)
-9. [ ] Controller creates Secret in `kuadrant` namespace (centralized storage)
-10. [ ] Controller projects secret value to APIKey `status.apiKeyValue` in `consumer-team-mobile` namespace
-11. [ ] Consumer reads `status.apiKeyValue` from their APIKey in own namespace
-12. [ ] Consumer CANNOT read Secret in `kuadrant` namespace (isolation verified)
-13. [ ] Owner CANNOT read Secret in `kuadrant` namespace (secrets managed by controller only)
-14. [ ] Admin CANNOT read Secret in `kuadrant` namespace (no secret permissions for API Management)
+3. [ ] Controller automatically creates APIKeyRequest in `api-team-payments` namespace (shadow resource)
+4. [ ] APIKeyRequest contains request metadata (requestedBy, useCase, planTier) but NOT apiKeyValue
+5. [ ] Owner in `api-team-payments` lists APIKeyRequests in their own namespace: `kubectl get apikeyrequests -n api-team-payments`
+6. [ ] Owner CANNOT list APIKeys cluster-wide (no cluster-wide apikeys permission - RBAC enforced)
+7. [ ] Owner reviews APIKeyRequest details (sees who requested, use case, plan tier)
+8. [ ] Owner creates APIKeyApproval in `api-team-payments` namespace
+9. [ ] APIKeyApproval references APIKey in `consumer-team-mobile` namespace (cross-namespace ref)
+10. [ ] Controller validates: APIKeyApproval namespace (`api-team-payments`) matches APIProduct namespace (`api-team-payments`)
+11. [ ] Controller reconciles: Sets `Approved` condition in APIKey status (validation passed)
+12. [ ] Controller creates Secret in `kuadrant` namespace (centralized storage)
+13. [ ] Controller projects secret value to APIKey `status.apiKeyValue` in `consumer-team-mobile` namespace
+14. [ ] Controller syncs `Approved` condition to APIKeyRequest status (in owner's namespace)
+15. [ ] Consumer reads `status.apiKeyValue` from their APIKey in own namespace
+16. [ ] Consumer CANNOT read Secret in `kuadrant` namespace (isolation verified)
+17. [ ] Owner CANNOT read Secret in `kuadrant` namespace (secrets managed by controller only)
+18. [ ] Owner CANNOT read APIKey resource (no apikeys permission - cannot see apiKeyValue)
+19. [ ] Owner CANNOT read `status.apiKeyValue` from APIKeyRequest (field not synced - security isolation)
+20. [ ] Admin CAN read Secret in `kuadrant` namespace (troubleshooting capability - accepted trade-off)
 
 #### Controller Validation Test (Negative)
 
@@ -963,6 +1118,23 @@ This test verifies the controller's namespace validation prevents cross-team app
 9. [ ] Consumer sees failure message in APIKey status conditions
 
 **Expected outcome**: Only owners in the same namespace as the APIProduct can successfully approve requests.
+
+#### APIKeyRequest Cleanup Test
+
+**Scenario**: Verify APIKeyRequest is properly cleaned up when APIKey is deleted
+
+This test verifies the controller properly handles cleanup of cross-namespace APIKeyRequest resources:
+
+1. [ ] Consumer creates APIKey in `consumer-team-mobile` namespace
+2. [ ] Controller automatically creates APIKeyRequest in `api-team-payments` namespace
+3. [ ] Verify APIKeyRequest exists: `kubectl get apikeyrequests -n api-team-payments`
+4. [ ] Consumer deletes APIKey: `kubectl delete apikey mobile-app-payment-key -n consumer-team-mobile`
+5. [ ] Controller detects APIKey deletion event
+6. [ ] Controller deletes corresponding APIKeyRequest in owner's namespace
+7. [ ] Verify APIKey is fully deleted: `kubectl get apikey mobile-app-payment-key -n consumer-team-mobile` (should not exist)
+8. [ ] Verify APIKeyRequest is fully deleted: `kubectl get apikeyrequests -n api-team-payments` (should not exist)
+
+**Expected outcome**: APIKeyRequest is cleaned up when APIKey is deleted, despite being in different namespaces (explicit cleanup mechanism works correctly).
 
 ### Test Personas
 
@@ -1065,21 +1237,22 @@ kubectl create namespace api-team-shipping
 
 # Apply Owner ClusterRole (see "RBAC Manifests" section above for complete YAML)
 
-# Bind to teams (ClusterRole + RoleBinding = namespace-scoped write, cluster-wide read)
+# Bind to teams (ClusterRole + RoleBinding = namespace-scoped write)
 kubectl create rolebinding api-owner-binding \
   --clusterrole=api-owner \
   --group=team-payments \
   -n api-team-payments
 
-# Note: api-owner includes cluster-wide read permissions for catalog browsing and request discovery
-# No separate ClusterRoleBinding needed
+# Note: api-owner includes cluster-wide read permissions for catalog browsing (APIProducts)
+# Owners discover requests via APIKeyRequest resources in their own namespace (namespace-scoped)
 ```
 
 **Benefits**:
 
 - ✅ Teams manage APIs independently in their namespaces
 - ✅ Secrets stored centrally in kuadrant namespace (simplified management)
-- ✅ Owners can discover requests across all consumer namespaces
+- ✅ Owners discover requests via APIKeyRequest shadow resources (RBAC-enforced, namespace-scoped)
+- ✅ Owners cannot see API key values (security isolation via APIKeyRequest)
 
 **Use when**: Multiple teams independently manage their own APIs
 
@@ -1133,14 +1306,14 @@ kubectl create rolebinding api-consumer-binding \
   --group=mobile-app-developers \
   -n consumer-team-mobile
 
-# 4. Bind owner team (ClusterRole + RoleBinding = namespace-scoped write, cluster-wide read)
+# 4. Bind owner team (ClusterRole + RoleBinding = namespace-scoped write)
 kubectl create rolebinding api-owner-binding \
   --clusterrole=api-owner \
   --group=team-payments \
   -n api-team-payments
 
-# Note: api-owner includes cluster-wide read permissions for catalog browsing and request discovery
-# No separate ClusterRoleBinding needed
+# Note: api-owner includes cluster-wide read permissions for catalog browsing (APIProducts)
+# Owners discover requests via APIKeyRequest resources in their own namespace (namespace-scoped)
 
 # 5. Bind platform admins
 kubectl create clusterrolebinding api-admin-platform-team \
@@ -1151,12 +1324,15 @@ kubectl create clusterrolebinding api-admin-platform-team \
 **Workflow**:
 
 1. Mobile team creates APIKey in `consumer-team-mobile` namespace
-2. Payment team lists APIKeys cluster-wide, filters by `spec.apiProductRef.namespace: api-team-payments`
-3. Payment team creates APIKeyApproval in `api-team-payments` namespace
-4. Controller validates APIKeyApproval namespace matches APIProduct namespace (`api-team-payments`)
-5. Controller creates Secret in `kuadrant` namespace (centralized storage) if validation passes
-6. Controller projects API key to APIKey status in `consumer-team-mobile` namespace
-7. Mobile team reads API key from their APIKey resource
+2. Controller automatically creates APIKeyRequest in `api-team-payments` namespace (shadow resource)
+3. Payment team lists APIKeyRequests in their own namespace: `kubectl get apikeyrequests -n api-team-payments`
+4. Payment team reviews request metadata (requestedBy, useCase, planTier) - does NOT see apiKeyValue
+5. Payment team creates APIKeyApproval in `api-team-payments` namespace
+6. Controller validates APIKeyApproval namespace matches APIProduct namespace (`api-team-payments`)
+7. Controller creates Secret in `kuadrant` namespace (centralized storage) if validation passes
+8. Controller projects API key to APIKey `status.apiKeyValue` in `consumer-team-mobile` namespace
+9. Controller syncs approval status to APIKeyRequest in `api-team-payments` namespace (does NOT include apiKeyValue)
+10. Mobile team reads API key from their APIKey resource
 
 ## References
 
