@@ -241,7 +241,7 @@ status:
   # API key value projection (set by Developer Portal Controller)
   # Exposes the secret value to consumer without requiring secret read permissions
   # Secret is created in kuadrant namespace for centralized policy enforcement
-  apiKeyValue: "sk_live_51MqPpGHl..."
+  apiKeyValue: "<projected-api-key-value>"
 
   # Rate limits from selected plan
   limits:
@@ -420,52 +420,6 @@ In addition to APIProduct and APIKey, API consumers need read-only access to pol
 - Owners may have write access to these resources in their own namespaces (separate policy management roles)
 - Admins have the same read-only access as owners (no write access to policies/routes via API Management roles)
 
-### RBAC Enforcement
-
-#### Console Plugin Permission Checks
-
-The OpenShift Console plugin enforces RBAC using `SelfSubjectAccessReview` API calls. All operations are performed as the logged-in user via OAuth token - there is no backend service account.
-
-**Enforcement mechanism:**
-
-1. **Progressive disclosure**: UI checks permissions before rendering action buttons/menu items
-2. **Backend enforcement**: Kubernetes API server enforces RBAC on all resource operations
-3. **User identity preservation**: All API calls use the logged-in user's credentials
-
-**Key principle**: RBAC is enforced by Kubernetes, not just UI hints. Even if UI is bypassed (e.g., via kubectl), Kubernetes API server will deny unauthorized operations.
-
-#### Developer Portal Controller
-
-The Developer Portal Controller (separate repository) handles:
-
-1. Watching `APIKey` resources
-2. Creating `Secret` resources with generated API key values
-3. Updating `APIKey` status with secret reference
-4. Enforcing approval workflow based on `APIProduct.spec.approvalMode`
-5. **Validating APIKeyApproval namespace matches APIProduct namespace** - ensures owners can only approve requests for API products they own
-
-**Controller RBAC** (not part of this design, but documented for completeness):
-
-```yaml
-# Controller service account needs cluster-wide permissions:
-- apiGroups: ["devportal.kuadrant.io"]
-  resources: ["apikeys"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["devportal.kuadrant.io"]
-  resources: ["apikeys/status"]
-  verbs: ["update", "patch"]
-- apiGroups: ["devportal.kuadrant.io"]
-  resources: ["apikeyapprovals"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["devportal.kuadrant.io"]
-  resources: ["apiproducts"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: [""]
-  resources: ["secrets"]
-  verbs: ["create", "update", "delete", "get", "list"]
-  # Secrets created in kuadrant namespace only (centralized storage)
-```
-
 ### Security Considerations
 
 #### 1. Namespace Isolation
@@ -489,7 +443,7 @@ The Developer Portal Controller (separate repository) handles:
 - **Security benefit**: Consumer never needs `get secrets` permission in kuadrant namespace
 - Centralized secret management in kuadrant namespace simplifies policy enforcement and secret rotation
 - Owners do not need secret read permissions (secrets managed centrally by controller)
-- **No one-time viewing complexity**: Removed `canReadSecret` flag - consumers can view their API key anytime from their own APIKey resource. Can be implemented in the UI via annotations, but not real enforcement.
+- **No one-time viewing complexity**: Removed `canReadSecret` flag - consumers can view their API key anytime from their own APIKey resource. This can be implemented in the UI via annotations, but annotations do not provide actual enforcement.
 
 **Secret rotation:**
 
