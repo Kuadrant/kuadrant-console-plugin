@@ -1099,7 +1099,6 @@ See the "Validation Checklist" section below for detailed test scenarios.
 17. [ ] Owner CANNOT read Secret in `kuadrant` namespace (secrets managed by controller only)
 18. [ ] Owner CANNOT read APIKey resource (no apikeys permission - cannot see apiKeyValue)
 19. [ ] Owner CANNOT read `status.apiKeyValue` from APIKeyRequest (field not synced - security isolation)
-20. [ ] Admin CAN read Secret in `kuadrant` namespace (troubleshooting capability - accepted trade-off)
 
 #### Controller Validation Test (Negative)
 
