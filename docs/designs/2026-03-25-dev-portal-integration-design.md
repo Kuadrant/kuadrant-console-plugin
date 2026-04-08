@@ -40,6 +40,7 @@ OpenShift Console Plugin (New Components)
 ```
 
 **Integration with Existing Ecosystem:**
+
 - **developer-portal-controller**: Reconciles APIProduct and APIKey CRDs
 - **kuadrant-backstage-plugin**: Developer-facing portal for browsing APIs
 - **console-plugin** (this repo): Admin and owner interface for API management
@@ -49,6 +50,7 @@ OpenShift Console Plugin (New Components)
 Uses existing CRDs from `developer-portal-controller`:
 
 **APIProduct** (`devportal.kuadrant.io/v1alpha1`):
+
 ```yaml
 apiVersion: devportal.kuadrant.io/v1alpha1
 kind: APIProduct
@@ -79,6 +81,7 @@ status:
 ```
 
 **APIKey** (`devportal.kuadrant.io/v1alpha1`):
+
 ```yaml
 apiVersion: devportal.kuadrant.io/v1alpha1
 kind: APIKey
@@ -103,22 +106,26 @@ status:
 #### 1. APIProduct Components (`src/components/apiproduct/`)
 
 **APIProductListPage** (#316):
-- Figma design: https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=893-47728&m=draw
-- Microcopy: https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.dj9d75n0gfxu
+
+- Figma design: <https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=893-47728&m=draw>
+- Microcopy: <https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.dj9d75n0gfxu>
 - Watch APIProduct resources using `useK8sWatchResource`
 - Filter by namespace or all namespaces (#ALL_NS#)
 - RBAC: All personas can view, filtered by access
 
 **1. Empty State**:
+
 - Component: PF6 EmptyState
 - Display when no API Products exist
 
 **2. Loading State**:
+
 - Icon: PF6 Spinner
 - Title: Heading (H2) using PF6 Typography
 - Description: Body text (default) using PF6 Typography
 
 **3. Overview (Table with Data)**:
+
 - Table filters:
   - Status filter: PF6 Toolbar with filter
   - Other filters: PF6 Attribute search
@@ -132,19 +139,23 @@ status:
 - Tag labels: PF6 outlined labels
 
 **4. Table Actions**:
+
 - Table filter menu: PF6 Menu with actions
 - Table action buttons in actions column
 
 **5. Tooltips & Toolbar Menu**:
+
 - Tooltips for status labels and table elements
 - Toolbar menu for bulk actions
 
 **APIProductDetailsPage** (#320):
-- Figma design: https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=893-47728&m=draw
-- Microcopy: https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.dj9d75n0gfxu
+
+- Figma design: <https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=893-47728&m=draw>
+- Microcopy: <https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.dj9d75n0gfxu>
 - Tabbed view: Overview, YAML, Policies
 
 **1. Overview Tab**:
+
 - Action button: PF6 MenuToggle with custom icon
 - API product lifecycle label: PF6 filled labels (Draft, Published, Deprecated, Retired)
 - Properties list: PF6 SimpleList displaying API details
@@ -159,23 +170,28 @@ status:
 - Link to referenced HTTPRoute
 
 **2. YAML Tab**:
+
 - YAML editor view for direct resource editing
 
 **3. Policies Tab**:
+
 - Show PlanPolicy and tiers if HTTPRoute has attached PlanPolicy
 - Show RateLimitPolicy and AuthPolicy if HTTPRoute does not have attached PlanPolicy
 - Display AuthPolicy in both scenarios
 
 **4. Tooltips & Toast Alerts**:
+
 - Tooltips for field explanations
 - Toast alerts for publish/unpublish actions
 - Status conditions display (Ready, Discovered)
 
 **APIProductForm** (#321):
-- Figma design: https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=893-47728&m=draw
-- Microcopy: https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.kyxh9rr7ffo4
+
+- Figma design: <https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=893-47728&m=draw>
+- Microcopy: <https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.kyxh9rr7ffo4>
 
 **1. API Product Creation Form**:
+
 - Tab: Switch between Form view and YAML view
 - Kubernetes resource name:
   - Auto-generated from API product display name
@@ -194,19 +210,23 @@ status:
 - Validation: Ensure HTTPRoute exists before creation
 
 **2. After Click [Create] Button**:
+
 - Toast alert: "API product created successfully"
 - Redirect to API product details page
 - Publish button is enabled on details page
 
 **3. Tooltips & Policy Text Area**:
+
 - HTTPRoute tooltip: "When an HTTPRoute is selected, the attached Plan Policies define the consumption rules. Note: The API Product and its policies must share the same namespace."
 - HTTPRoute policies tooltip: "A consolidated view of all policies attached to this route (including gateway-level policies)."
 
 **4. YAML View**:
+
 - Direct YAML editing capability
 - Toggle from Form view using tab
 
 **5. Edit Mode**:
+
 - Title: "Edit API product" (instead of "Create")
 - Resource name field: Read-only in edit mode
 - Published API product alert:
@@ -215,9 +235,11 @@ status:
   - Shows different alert if already published to API consumers
 
 **6. Delete Action**:
+
 - Confirmation modal for API product deletion
 - **IMPORTANT:** Modal must show count of dependent APIKeys that will be cascade-deleted
 - Modal layout:
+
   ```
   Warning: Deleting this API Product will revoke access for active API keys
 
@@ -232,11 +254,13 @@ status:
 
   [Cancel] [Delete API Product]
   ```
+
 - Implementation: Query dependent APIKeys using `useK8sWatchResource` filtered by `spec.apiProductRef.name`
 - Delete button disabled until user types exact resource name
 - Kubernetes garbage collection will automatically delete all child APIKeys and their Secrets (see Edge Cases section)
 
 **7. Alerts & Notifications**:
+
 - Toast alerts for create/update/publish/unpublish actions
 - Inline alerts for published API products during edit
 - Use `KuadrantCreateUpdate` component for save operations
@@ -244,33 +268,39 @@ status:
 #### 2. APIKey Components (`src/components/apikey/`)
 
 **MyAPIKeysPage** (#317):
-- Figma design: https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=68-19935&t=F2Yvq6iI78uOWRoO-1
-- Request modal design: https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=514-22090&t=pZkUvO5i7wWS87B5-1
-- Microcopy: https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.aoj7rlqap922
-- UX Prototype: https://my-api-keys-ux-demo.vercel.app/
+
+- Figma design: <https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=68-19935&t=F2Yvq6iI78uOWRoO-1>
+- Request modal design: <https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=514-22090&t=pZkUvO5i7wWS87B5-1>
+- Microcopy: <https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.aoj7rlqap922>
+- UX Prototype: <https://my-api-keys-ux-demo.vercel.app/>
 - User-scoped view showing only the requester's APIKeys
 
 **1. My API Keys List Page**:
 
 **Empty State**:
+
 - Component: PF6 EmptyState
 - Display when user has no API keys
 
 **Loading State**:
+
 - Component: PF6 Spinner
 - Display while fetching API keys
 
 **Collapsed List**:
+
 - Table columns: API Product, Plan, Status, Requested Date, Actions
 - Hover on tier label to view details in tooltip
 - Filter by status: Approved, Rejected, Pending
 - Rejected items only have "delete" action
 
 **Expanded List**:
+
 - Shows additional details when row is expanded
 - Expandable rows pattern
 
 **2. Reveal API Key Modal**:
+
 - Trigger: Clicking mask area or eye icon
 - Modal displays the API key secret
 - Close icon and button disabled until user checks acknowledgment checkbox
@@ -279,6 +309,7 @@ status:
 **3. API Key Details Page**:
 
 **Active API Key**:
+
 - Shows full API key details
 - Two options for API key field:
   - Option 1: Masked with reveal on click
@@ -286,45 +317,54 @@ status:
 - Reveal process shows on the page
 
 **Pending API Key**:
+
 - Shows pending status
 - Limited actions available until approved
 
 **Rejected API Key**:
+
 - Shows rejection reason
 - "Request a new key" button opens request modal on current page
 
 **4. API Key Tab in API Details Page**:
+
 - Shows user's API keys for specific API product
 - Embedded view within API product details
 
 **5. API Key Request Modal**:
 
 **Step 1: Request API Key**:
+
 - API selector: PF6 Search with autocomplete
   - Max 3.x visible menu items at once
   - Fourth item partially visible to indicate scrollability
 - Tier field: Disabled until API is selected
 
 **Search for API**:
+
 - Search input with autocomplete functionality
 - Shows "No results" state if search yields nothing
 
 **Select Tier**:
+
 - Component: PF6 Option single select menu
 - Enabled only after API is selected
 - Shows available tiers for selected API
 
 **Provide API Key Name**:
+
 - Blank field error validation
 - Duplicate name error validation
 - Success state when valid name provided
 - Description hidden when field is configured
 
 **Request from API Details Page**:
+
 - API field is read-only (pre-selected)
 - Only tier and name fields are editable
 
 **View API Key from API Details Page**:
+
 - Breadcrumbs show third-level navigation
 - Opens API key details without returning to My API keys list
 
@@ -333,6 +373,7 @@ status:
 > **Note:** APIKey editing is not supported in the initial release. Users must delete and create a new APIKey if changes are needed.
 
 **Delete API Key**:
+
 - Confirmation modal with input field
 - User must type correct API key name to enable Delete button
 - Field shows warning state for incorrect input
@@ -340,26 +381,31 @@ status:
 - Delete button disabled until correct name entered
 
 **7. Notifications**:
+
 - Toast notifications for all key actions
 - Success/error states clearly communicated
 
 **APIKeyApprovalPage** (#318):
-- Figma design: https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=514-23096&t=gksvHbkczPbDoe9f-1
-- Microcopy: https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.ulo6upsfhvma
-- UX Prototype: https://api-key-approval-ux-demo.vercel.app/
+
+- Figma design: <https://www.figma.com/design/nDsKwCU06OyhXH7bvOHxap/-Latest--RHCL-dev-portal-in-OCP?node-id=514-23096&t=gksvHbkczPbDoe9f-1>
+- Microcopy: <https://docs.google.com/document/d/11iB4C68KV4LVzoEnOVTXzcc4qVDaAuAtF_inbpKZcOs/edit?tab=t.ulo6upsfhvma>
+- UX Prototype: <https://api-key-approval-ux-demo.vercel.app/>
 - RBAC: Only visible to Owner and Admin personas
 
 **1. API Key Approval List Page**:
 
 **Empty State**:
+
 - Component: PF6 EmptyState
 - Display when no pending approvals exist
 
 **Loading State**:
+
 - Component: PF6 Spinner
 - Display while fetching approval requests
 
 **With Data**:
+
 - Component: PF6 Table with checkboxes, radio select, and actions
 - Table columns: Checkbox, Requester, API Product, Plan, Use Case, Date, Status, Actions
 - Status column: Sorted in descending order (pending > approved > rejected)
@@ -370,6 +416,7 @@ status:
 - List APIKeys in "Pending" phase for products the user owns
 
 **2. Bulk Selection**:
+
 - "Approve x selected" button appears after bulk selection
 - "Reject x selected" button appears after bulk selection
 - Buttons only visible when items are selected
@@ -378,10 +425,12 @@ status:
 **3. Approve API Key Modal**:
 
 **Single Approval**:
+
 - Displays single API key details
 - Confirmation required before approval
 
 **Bulk Approval**:
+
 - Compact table showing selected items
 - Max 4 entries visible at once
 - Table is scrollable for more items
@@ -393,11 +442,13 @@ status:
 **4. Reject API Key Modal**:
 
 **Single Rejection**:
+
 - Displays single API key details
 - Optional rejection reason field
 - Confirmation required before rejection
 
 **Bulk Rejection**:
+
 - Compact table showing selected items
 - Max 4 entries visible at once
 - Table is scrollable for more items
@@ -408,6 +459,7 @@ status:
 - Optional rejection reason applies to all items
 
 **5. Notifications**:
+
 - Toast notifications for approval actions
 - Toast notifications for rejection actions
 - Success/error states clearly communicated
@@ -421,11 +473,13 @@ status:
 > **Note**: RBAC model is pending further discussion. The three-persona model below is a starting point but may be refined.
 
 Three personas aligned with Backstage plugin:
+
 1. **Consumer**: Can view API Products, request API keys, view own keys
 2. **Owner**: Can manage API Products they own, approve/reject access requests
 3. **Admin**: Can manage all API Products, approve/reject all requests
 
 **Kubernetes RBAC Mapping**:
+
 ```yaml
 # Consumer role
 - apiGroups: ["devportal.kuadrant.io"]
@@ -453,6 +507,7 @@ Three personas aligned with Backstage plugin:
 ```
 
 **Security Measures**:
+
 - Double-confirmation modal for approve/reject actions to prevent accidental changes
 - RBAC checks before rendering create/edit/approve buttons using `useAccessReviews`
 - API key secrets only readable by the requester (enforced by controller)
@@ -467,11 +522,13 @@ This section addresses critical lifecycle behaviors that emerged during design r
 **Decision:** APIKey editing is **not supported** in the initial release due to complexity around re-approval workflows and controller reconciliation logic.
 
 **Current Behavior:**
+
 - Users cannot edit existing APIKeys (no edit button in UI)
 - To change tier, use case, or other fields: user must delete the old APIKey and create a new one
 - Deletion of an approved APIKey immediately revokes access (deletes the Secret)
 
 **Rationale:**
+
 - The `developer-portal-controller` has no reconciliation logic for handling spec changes after initial approval
 - Re-approval workflows introduce complexity around:
   - Whether old key remains active during pending state
@@ -481,6 +538,7 @@ This section addresses critical lifecycle behaviors that emerged during design r
 
 **Future Enhancement:**
 If editing is needed in future releases, recommend "Safe Re-approval" approach:
+
 - Editing transitions APIKey back to `Pending` phase
 - Old Secret remains active until new request is approved
 - Upon approval, controller creates new Secret and deletes old one
@@ -492,6 +550,7 @@ If editing is needed in future releases, recommend "Safe Re-approval" approach:
 **Design Decision:** APIProduct uses a finalizer to ensure clean deletion order. The resource cannot be deleted until all child APIKeys and Secrets are cleaned up.
 
 **Deletion Flow:**
+
 ```
 1. User initiates delete → APIProduct gets deletionTimestamp
 2. Controller detects deletionTimestamp, starts cleanup:
@@ -504,6 +563,7 @@ Result: All API access revoked, no orphaned resources
 ```
 
 **Current Implementation Status:**
+
 - Controller has RBAC for finalizers (`apiproducts/finalizers,verbs=update`)
 - Controller sets `OwnerReference` on APIKeys ([apikey_controller.go:130-138](https://github.com/Kuadrant/developer-portal-controller/blob/main/internal/controller/apikey_controller.go#L130-L138))
 - **Missing:** Finalizer add/remove logic in reconcile loop (needs implementation)
@@ -513,6 +573,7 @@ Result: All API access revoked, no orphaned resources
 The deletion modal (section 6 under APIProductForm) **must** show dependent resource counts:
 
 **Enhanced Delete Confirmation Modal:**
+
 ```jsx
 Warning: Deleting this API Product will revoke access for active API keys
 
@@ -531,6 +592,7 @@ Type "petstore-api" to confirm:
 **Implementation:** Query dependent APIKeys using `useK8sWatchResource` filtered by `spec.apiProductRef.name` and count by phase (Approved, Pending, Rejected).
 
 **Note:**
+
 - APIProducts can be deleted at any lifecycle stage
 - Finalizer ensures clean deletion order (APIKeys/Secrets cleaned up before APIProduct removal)
 - Retirement (section 4) is **recommended** before deletion to give developers migration time
@@ -553,6 +615,7 @@ PublishStatus string `json:"publishStatus"`
 **Decision:** Extend the CRD to support all four lifecycle states.
 
 **Required CRD Change:**
+
 ```go
 // developer-portal-controller/api/v1alpha1/apiproduct_types.go
 // +kubebuilder:validation:Enum=Draft;Published;Deprecated;Retired
@@ -560,6 +623,7 @@ PublishStatus string `json:"publishStatus"`
 ```
 
 **State Definitions:**
+
 - **Draft**: Not visible in API catalog, cannot request keys
 - **Published**: Visible in catalog, accepting new requests
 - **Deprecated**: Visible with warning, new requests blocked, existing keys continue working (grace period)
@@ -601,6 +665,7 @@ When an APIProduct is retired, all existing API keys are revoked immediately. Th
 **During Deprecation (Stage 1 - Warning Phase):**
 
 In My API Keys Page:
+
 ```
 Warning: This API is deprecated
 
@@ -614,6 +679,7 @@ Your current API key will stop working when this API is retired.
 **After Retirement (Stage 2 - Keys Revoked):**
 
 In APIProduct Details Page (for admins/owners):
+
 ```
 Retired API Product
 
@@ -623,6 +689,7 @@ This API has been retired. All API keys have been revoked.
 ```
 
 In My API Keys Page:
+
 ```
 Status: Rejected
 Reason: Parent API Product "Petstore API" was retired on 2026-12-31
@@ -635,6 +702,7 @@ Reason: Parent API Product "Petstore API" was retired on 2026-12-31
 **Decision:** Retired products can be un-retired, but revoked keys are NOT restored.
 
 **State Transition Rules:**
+
 ```
 Draft ⟷ Published ⟷ Deprecated ⟷ Retired
   ↑                                    ↓
@@ -643,6 +711,7 @@ Draft ⟷ Published ⟷ Deprecated ⟷ Retired
 ```
 
 **Un-retirement Confirmation Modal:**
+
 ```
 Un-retire "Petstore API"?
 
@@ -659,6 +728,7 @@ Previously rejected requests (12) will remain rejected.
 ```
 
 **Implementation:**
+
 - Change `publishStatus: Retired` → `publishStatus: Published`
 - UI must re-enable "Request Access" buttons
 - Revoked APIKeys remain in "Rejected" state (Secrets were deleted during retirement)
@@ -677,6 +747,7 @@ Previously rejected requests (12) will remain rejected.
    - User must type resource name to confirm deletion
 
 **Implementation Approach:**
+
 - **Client-side:** UI prevents actions (better UX)
 - **Server-side:** Validating webhook enforces rules (security)
 - **Both required** for defense-in-depth
@@ -708,9 +779,7 @@ Previously rejected requests (12) will remain rejected.
 
 ### Todo
 
-- [ ] [RBAC for personas/users](https://github.com/Kuadrant/kuadrant-console-plugin/issues/340) **⏸️ BLOCKED: Pending RBAC model discussion**
-  - [ ] Unit tests for persona role mapping
-  - [ ] Integration tests for RBAC enforcement
+- [ ] [RBAC system for developer portal capabilities](https://github.com/Kuadrant/kuadrant-console-plugin/issues/353) ~**⏸️ BLOCKED: Pending RBAC model discussion**~
 - [ ] [API Products List page](https://github.com/Kuadrant/kuadrant-console-plugin/issues/316)
   - [ ] Unit tests for list component rendering
   - [ ] Integration tests for resource watching and filtering
