@@ -254,7 +254,7 @@ const APIProductPoliciesTab: React.FC = () => {
 
   // Main render
   return (
-    <PageSection hasBodyWrapper={false} className="apiproduct-policies-page">
+    <PageSection hasBodyWrapper={false}>
       {policyWatchErrors.length > 0 && (
         <>
           {policyWatchErrors.map(({ kind, error }) => (

@@ -123,7 +123,7 @@ const APIProductDefinitionTab: React.FC = () => {
   }
 
   return (
-    <PageSection hasBodyWrapper={false} className="apiproduct-definition-page">
+    <PageSection hasBodyWrapper={false}>
       <SwaggerUI spec={parsedSpec} />
     </PageSection>
   );
