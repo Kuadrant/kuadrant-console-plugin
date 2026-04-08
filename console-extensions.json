@@ -70,6 +70,14 @@
   {
     "type": "console.page/route",
     "properties": {
+      "exact": true,
+      "path": "/kuadrant/ns/:ns/overview",
+      "component": { "$codeRef": "KuadrantOverviewPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
       "path": "/kuadrant/all-namespaces/policies",
       "component": { "$codeRef": "KuadrantPoliciesPage" }
     }

@@ -38,23 +38,43 @@ test.describe('RBAC - test-dev persona', () => {
     await expect(createButton).toBeHidden();
   });
 
-  // overview checks RBAC against 'default' namespace (resolves #ALL_NS# to default).
-  // namespace-scoped users only have permissions in kuadrant-test, so all overview
-  // cards show Access Denied. this is a known limitation - the overview has no
-  // namespace picker.
-  test('overview shows Access Denied for all cards (namespace-scoped user)', async ({ page }) => {
+  // namespace-scoped users get redirected from /kuadrant/overview to
+  // /kuadrant/ns/default/overview (fallback namespace when activeNamespace is #ALL_NS#).
+  test('overview redirects to namespace-scoped view (namespace-scoped user)', async ({ page }) => {
     await navigateToOverview(page);
+    await page.waitForLoadState('networkidle');
+
+    // verify we were redirected to namespace-scoped URL (uses 'default' as fallback)
+    await expect(page).toHaveURL(/\/kuadrant\/ns\/default\/overview/, { timeout: 15_000 });
+
+    // wait for any RBAC checks to complete
     await waitForPermissionsLoaded(page);
 
-    await expect(
-      page.locator('text=You do not have permission to view Policies'),
-    ).toBeVisible({ timeout: 15_000 });
+    // user can then switch to kuadrant-test namespace using the console namespace dropdown
+  });
+
+  test('overview shows resources when accessed via kuadrant-test namespace', async ({ page }) => {
+    // navigate directly to their accessible namespace
+    await page.evaluate(() => {
+      window.history.pushState({}, '', '/kuadrant/ns/kuadrant-test/overview');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await page.waitForLoadState('networkidle');
+
+    // should stay on this URL (no redirect since they have permissions)
+    await expect(page).toHaveURL('/kuadrant/ns/kuadrant-test/overview', { timeout: 15_000 });
+
+    await waitForPermissionsLoaded(page);
+
+    // verify they can see gateway card (not access denied)
+    await expect(page.locator('text=Gateways - Traffic Analysis')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // no "you do not have permission" messages
     await expect(
       page.locator('text=You do not have permission to view Gateways'),
-    ).toBeVisible();
-    await expect(
-      page.locator('text=You do not have permission to view HTTPRoutes'),
-    ).toBeVisible();
+    ).not.toBeVisible();
   });
 
   test('topology page shows no-permission view', async ({ page }) => {
@@ -188,19 +208,41 @@ test.describe('RBAC - test-viewer persona', () => {
     await expect(createButton).toBeDisabled();
   });
 
-  test('overview shows Access Denied for all cards (namespace-scoped user)', async ({ page }) => {
+  test('overview redirects to namespace-scoped view (namespace-scoped user)', async ({ page }) => {
     await navigateToOverview(page);
+    await page.waitForLoadState('networkidle');
+
+    // verify we were redirected to namespace-scoped URL (uses 'default' as fallback)
+    await expect(page).toHaveURL(/\/kuadrant\/ns\/default\/overview/, { timeout: 15_000 });
+
+    // wait for any RBAC checks to complete
     await waitForPermissionsLoaded(page);
 
-    await expect(
-      page.locator('text=You do not have permission to view Policies'),
-    ).toBeVisible({ timeout: 15_000 });
-    await expect(
-      page.locator('text=You do not have permission to view Gateways'),
-    ).toBeVisible();
-    await expect(
-      page.locator('text=You do not have permission to view HTTPRoutes'),
-    ).toBeVisible();
+    // user can then switch to kuadrant-test namespace using the console namespace dropdown
+  });
+
+  test('overview shows resources when accessed via kuadrant-test namespace', async ({ page }) => {
+    // navigate directly to their accessible namespace
+    await page.evaluate(() => {
+      window.history.pushState({}, '', '/kuadrant/ns/kuadrant-test/overview');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await page.waitForLoadState('networkidle');
+
+    // should stay on this URL (no redirect since they have permissions)
+    await expect(page).toHaveURL('/kuadrant/ns/kuadrant-test/overview', { timeout: 15_000 });
+
+    await waitForPermissionsLoaded(page);
+
+    // verify they can see gateway card (not access denied)
+    await expect(page.locator('text=Gateways - Traffic Analysis')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // create buttons should be disabled (read-only user)
+    const createGateway = page.locator('button:has-text("Create Gateway")');
+    await expect(createGateway).toBeVisible();
+    await expect(createGateway).toBeDisabled();
   });
 });
 
@@ -261,15 +303,41 @@ test.describe('RBAC - test-devops persona', () => {
     }
   });
 
-  test('overview shows Access Denied for all cards (namespace-scoped user)', async ({ page }) => {
+  test('overview redirects to namespace-scoped view (namespace-scoped user)', async ({ page }) => {
     await navigateToOverview(page);
+    await page.waitForLoadState('networkidle');
+
+    // verify we were redirected to namespace-scoped URL (uses 'default' as fallback)
+    await expect(page).toHaveURL(/\/kuadrant\/ns\/default\/overview/, { timeout: 15_000 });
+
+    // wait for any RBAC checks to complete
     await waitForPermissionsLoaded(page);
 
-    // even though test-devops has policy list in kuadrant-test, the overview
-    // checks against 'default' namespace
-    await expect(
-      page.locator('text=You do not have permission to view Gateways'),
-    ).toBeVisible({ timeout: 15_000 });
+    // user can then switch to kuadrant-test namespace using the console namespace dropdown
+  });
+
+  test('overview shows resources when accessed via kuadrant-test namespace', async ({ page }) => {
+    // navigate directly to their accessible namespace
+    await page.evaluate(() => {
+      window.history.pushState({}, '', '/kuadrant/ns/kuadrant-test/overview');
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    });
+    await page.waitForLoadState('networkidle');
+
+    // should stay on this URL (no redirect since they have permissions)
+    await expect(page).toHaveURL('/kuadrant/ns/kuadrant-test/overview', { timeout: 15_000 });
+
+    await waitForPermissionsLoaded(page);
+
+    // verify they can see gateway card (not access denied)
+    await expect(page.locator('text=Gateways - Traffic Analysis')).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // verify create policy dropdown is enabled (has CRUD on policies)
+    const createButton = page.locator('button:has-text("Create Policy")');
+    await expect(createButton).toBeVisible();
+    await expect(createButton).toBeEnabled();
   });
 });
 
@@ -311,6 +379,22 @@ test.describe('RBAC - test-admin persona', () => {
       await expect(item).toBeVisible();
       expect(await item.getAttribute('aria-disabled')).toBeNull();
     }
+  });
+
+  test('overview stays on cluster-wide view (no redirect for cluster-admin)', async ({ page }) => {
+    await navigateToOverview(page);
+    await page.waitForLoadState('networkidle');
+
+    // verify admin users stay on /kuadrant/overview (cluster-wide view, no redirect)
+    await expect(page).toHaveURL('/kuadrant/overview', { timeout: 15_000 });
+
+    // wait for any RBAC checks to complete
+    await waitForPermissionsLoaded(page);
+
+    // verify they can see resources (have cluster-wide permissions)
+    await expect(
+      page.locator('text=You do not have permission to view Gateways'),
+    ).not.toBeVisible();
   });
 
   test('overview shows all cards with create buttons enabled', async ({ page }) => {
