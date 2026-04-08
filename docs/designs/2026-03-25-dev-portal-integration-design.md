@@ -468,43 +468,23 @@ status:
 
 ### Security Considerations
 
-**RBAC Implementation** (#340):
+> **📖 Full RBAC Design:** This section provides a high-level overview. For complete RBAC architecture, permission matrices, validation procedures, and deployment patterns, see **[API Management RBAC Design](./2026-03-26-api-management-rbac-design.md)**.
 
-> **Note**: RBAC model is pending further discussion. The three-persona model below is a starting point but may be refined.
+**RBAC Implementation** ([#353](https://github.com/Kuadrant/kuadrant-console-plugin/issues/353)):
 
-Three personas aligned with Backstage plugin:
+**Namespace-Based RBAC Model:**
 
-1. **Consumer**: Can view API Products, request API keys, view own keys
-2. **Owner**: Can manage API Products they own, approve/reject access requests
-3. **Admin**: Can manage all API Products, approve/reject all requests
+- **API Consumer**: Can view API Products, request API keys, view own keys
+- **API Owner**: Can manage API Products they own, approve/reject access requests
+- **API Admin**: Can manage all API Products, approve/reject all requests
 
-**Kubernetes RBAC Mapping**:
+**Key Architectural Decisions:**
 
-```yaml
-# Consumer role
-- apiGroups: ["devportal.kuadrant.io"]
-  resources: ["apiproducts"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["devportal.kuadrant.io"]
-  resources: ["apikeys"]
-  verbs: ["get", "list", "watch", "create"]
-  # ResourceNames limited to user's own keys via webhook/controller
-
-# Owner role (inherits Consumer + adds)
-- apiGroups: ["devportal.kuadrant.io"]
-  resources: ["apiproducts"]
-  verbs: ["create", "update", "patch", "delete"]
-  # Limited to products where metadata.owner matches user
-- apiGroups: ["devportal.kuadrant.io"]
-  resources: ["apikeys"]
-  verbs: ["update", "patch"]
-  # Limited to keys for owned products
-
-# Admin role (inherits Owner + expands scope)
-- apiGroups: ["devportal.kuadrant.io"]
-  resources: ["apiproducts", "apikeys"]
-  verbs: ["*"]
-```
+1. **APIKeys in consumer's namespace** (not owner's) for RBAC-enforced isolation between consumers
+2. **APIKeyRequest shadow resources** in owner's namespace enable request discovery without exposing API key values
+3. **APIKeyApproval CRD** enforces approval workflow via namespace separation (consumers cannot approve their own requests)
+4. **Centralized secret storage** in `kuadrant` namespace with API key value projection via `status.apiKeyValue`
+5. **All operations as logged-in user** via OpenShift Console's OAuth token (no backend service accounts)
 
 **Security Measures**:
 
