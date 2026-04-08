@@ -926,7 +926,7 @@ const KuadrantOverviewPage: React.FC = () => {
                       columns={gatewayTrafficColumns}
                       renderers={gatewayTrafficRenders}
                       namespace="#ALL_NS#"
-                      emtpyResourceName="Gateways"
+                      emptyResourceName="Gateways"
                     />
                   </CardBody>
                 </Card>
@@ -1074,7 +1074,7 @@ const KuadrantOverviewPage: React.FC = () => {
                       resources={[resourceGVKMapping['HTTPRoute']]}
                       columns={columns}
                       namespace="#ALL_NS#"
-                      emtpyResourceName="HTTPRoutes"
+                      emptyResourceName="HTTPRoutes"
                     />
                   </CardBody>
                 </Card>

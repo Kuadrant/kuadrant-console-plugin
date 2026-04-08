@@ -30,7 +30,7 @@ const APIProductsListPage: React.FC = () => {
         <ResourceList
           resources={[RESOURCES.APIProduct.gvk]}
           namespace={activeNamespace}
-          emtpyResourceName="API Products"
+          emptyResourceName="API Products"
         />
       </PageSection>
     </>
