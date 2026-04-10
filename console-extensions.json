@@ -30,6 +30,36 @@
     }
   },
   {
+    "type": "console.tab/horizontalNav",
+    "properties": {
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIProduct"
+      },
+      "page": {
+        "name": "Definition",
+        "href": "definition"
+      },
+      "component": { "$codeRef": "APIProductDefinitionTab" }
+    }
+  },
+  {
+    "type": "console.tab/horizontalNav",
+    "properties": {
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIProduct"
+      },
+      "page": {
+        "name": "Policies",
+        "href": "policies"
+      },
+      "component": { "$codeRef": "APIProductPoliciesTab" }
+    }
+  },
+  {
     "type": "console.page/route",
     "properties": {
       "exact": true,
@@ -57,6 +87,20 @@
       "exact": true,
       "path": "/kuadrant/policy-topology",
       "component": { "$codeRef": "PolicyTopologyPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "path": "/kuadrant/all-namespaces/apiproducts",
+      "component": { "$codeRef": "APIProductsListPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "path": "/kuadrant/ns/:ns/apiproducts",
+      "component": { "$codeRef": "APIProductsListPage" }
     }
   },
   {
@@ -203,6 +247,20 @@
     }
   },
   {
+    "type": "console.navigation/resource-ns",
+    "properties": {
+      "id": "kuadrant-apiproducts-admin",
+      "name": "%plugin__kuadrant-console-plugin~API Products%",
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIProduct"
+      },
+      "perspective": "admin",
+      "section": "kuadrant-section-admin"
+    }
+  },
+  {
     "type": "console.navigation/href",
     "properties": {
       "id": "kuadrant-policy-topology-admin",
@@ -237,6 +295,20 @@
       "id": "kuadrant-policies-dev",
       "name": "%plugin__kuadrant-console-plugin~Policies%",
       "href": "/kuadrant/all-namespaces/policies",
+      "perspective": "dev",
+      "section": "kuadrant-section-dev"
+    }
+  },
+  {
+    "type": "console.navigation/resource-ns",
+    "properties": {
+      "id": "kuadrant-apiproducts-dev",
+      "name": "%plugin__kuadrant-console-plugin~API Products%",
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIProduct"
+      },
       "perspective": "dev",
       "section": "kuadrant-section-dev"
     }

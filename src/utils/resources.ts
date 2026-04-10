@@ -135,6 +135,24 @@ export const RESOURCES = {
     createPath: 'KuadrantPlanPolicyCreatePage',
   },
 
+  // devportal.kuadrant.io resources
+  APIProduct: {
+    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIProduct' },
+    plural: 'APIProducts',
+    isPolicy: false,
+    isGatewayAPI: false,
+    showInTopologyByDefault: false,
+    isKuadrantInternal: false,
+  },
+  APIKeyRequest: {
+    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIKeyRequest' },
+    plural: 'APIKeyRequests',
+    isPolicy: false,
+    isGatewayAPI: false,
+    showInTopologyByDefault: false,
+    isKuadrantInternal: false,
+  },
+
   // kuadrant infrastructure
   Kuadrant: {
     gvk: { group: 'kuadrant.io', version: 'v1beta1', kind: 'Kuadrant' },

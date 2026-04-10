@@ -36,7 +36,6 @@ import { getStatusLabel } from '../utils/statusLabel';
 import DropdownWithKebab from './DropdownWithKebab';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
-import { RESOURCES } from '../utils/resources';
 
 type ResourceListProps = {
   resources: Array<{
@@ -45,7 +44,7 @@ type ResourceListProps = {
     kind: string;
   }>;
   namespace?: string;
-  emtpyResourceName?: string;
+  emptyResourceName?: string;
   paginationLimit?: number;
   columns?: TableColumn<K8sResourceCommon>[];
   renderers?: Record<
@@ -64,7 +63,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   paginationLimit = 10,
   columns,
   renderers,
-  emtpyResourceName = 'Policies',
+  emptyResourceName = 'Policies',
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
@@ -77,23 +76,12 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
   const { userRBAC, loading: rbacLoading } = useAccessReviews(accessResources);
 
-  const resourceKinds = [
-    'AuthPolicy',
-    'RateLimitPolicy',
-    'TokenRateLimitPolicy',
-    'OIDCPolicy',
-    'PlanPolicy',
-    'DNSPolicy',
-    'TLSPolicy',
-    'Gateway',
-    'HTTPRoute',
-  ];
-
-  const resourceMappings = resourceKinds.map((kind) => ({
-    key: `${getResourceNameFromKind(kind)}-list`,
-    group: RESOURCES[kind].gvk.group,
-    version: RESOURCES[kind].gvk.version,
-    kind,
+  // Generate resource mappings dynamically from the resources prop
+  const resourceMappings = resources.map((resource) => ({
+    key: `${getResourceNameFromKind(resource.kind)}-list`,
+    group: resource.group,
+    version: resource.version,
+    kind: resource.kind,
   }));
 
   // filter out resources that the user doesn't have permission to list
@@ -394,13 +382,13 @@ const ResourceList: React.FC<ResourceListProps> = ({
             <EmptyState
               titleText={
                 <Title headingLevel="h4" size="lg">
-                  {t('No')} {emtpyResourceName} {t('found')}
+                  {t('No')} {emptyResourceName} {t('found')}
                 </Title>
               }
               icon={SearchIcon}
             >
               <EmptyStateBody>
-                {t('There are no')} {emtpyResourceName} {t('to display - please create some.')}
+                {t('There are no')} {emptyResourceName} {t('to display - please create some.')}
               </EmptyStateBody>
             </EmptyState>
           ) : (
