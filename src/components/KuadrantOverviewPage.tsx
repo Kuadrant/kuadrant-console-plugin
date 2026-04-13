@@ -233,7 +233,7 @@ const KuadrantOverviewPage: React.FC = () => {
     if (ns && ns !== activeNamespace) {
       setActiveNamespace(ns);
     }
-  }, [ns, activeNamespace, setActiveNamespace]);
+  }, [ns, setActiveNamespace]);
 
   const handleHideCard = () => {
     setHideCard(true);
