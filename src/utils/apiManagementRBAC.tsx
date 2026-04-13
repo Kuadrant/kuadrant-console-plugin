@@ -64,6 +64,8 @@ export function useAPIManagementRBAC(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const resourcesToCheck = options?.resources || [
       'apikeys',
       'apiproducts',
@@ -72,38 +74,54 @@ export function useAPIManagementRBAC(
     ];
 
     const checkPermissions = async () => {
-      const checks = resourcesToCheck.flatMap((resource) => {
-        const verbs = ['create', 'update', 'delete', 'list'] as const;
-        return verbs.map(async (verb) => {
-          const result = await checkAccess({
-            group: 'devportal.kuadrant.io',
-            resource: resource,
-            verb,
-            namespace: targetNamespace,
+      try {
+        const checks = resourcesToCheck.flatMap((resource) => {
+          const verbs = ['create', 'update', 'delete', 'list'] as const;
+          return verbs.map(async (verb) => {
+            const result = await checkAccess({
+              group: 'devportal.kuadrant.io',
+              resource: resource,
+              verb,
+              namespace: targetNamespace,
+            });
+            return {
+              resource,
+              verb,
+              allowed: result.status?.allowed || false,
+            };
           });
-          return {
-            resource,
-            verb,
-            allowed: result.status?.allowed || false,
-          };
         });
-      });
 
-      const results = await Promise.all(checks);
+        const results = await Promise.all(checks);
 
-      const newPermissions = { ...permissions };
-      results.forEach(({ resource, verb, allowed }) => {
-        if (verb === 'create') newPermissions[resource].canCreate = allowed;
-        if (verb === 'update') newPermissions[resource].canUpdate = allowed;
-        if (verb === 'delete') newPermissions[resource].canDelete = allowed;
-        if (verb === 'list') newPermissions[resource].canList = allowed;
-      });
+        if (!isMounted) return;
 
-      setPermissions(newPermissions);
-      setLoading(false);
+        setPermissions((prevPermissions) => {
+          const newPermissions = { ...prevPermissions };
+          results.forEach(({ resource, verb, allowed }) => {
+            if (verb === 'create') newPermissions[resource].canCreate = allowed;
+            if (verb === 'update') newPermissions[resource].canUpdate = allowed;
+            if (verb === 'delete') newPermissions[resource].canDelete = allowed;
+            if (verb === 'list') newPermissions[resource].canList = allowed;
+          });
+          return newPermissions;
+        });
+      } catch (error) {
+        console.error('Failed to check API Management permissions:', error);
+        // Permissions remain in initial denied state (safe default)
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
     };
 
     checkPermissions();
+
+    return () => {
+      isMounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetNamespace, options?.resources?.join(',')]);
 
   const persona = derivePersona(permissions);
