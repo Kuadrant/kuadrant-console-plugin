@@ -331,5 +331,53 @@
       "section": "kuadrant-section-dev",
       "badge": "dev"
     }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/all-namespaces/apikeys",
+      "component": { "$codeRef": "APIKeyListPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/ns/:ns/apikeys",
+      "component": { "$codeRef": "APIKeyListPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/all-namespaces/apikey-approvals",
+      "component": { "$codeRef": "APIKeyApprovalPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/ns/:ns/apikey-approvals",
+      "component": { "$codeRef": "APIKeyApprovalPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/all-namespaces/apikey-requests",
+      "component": { "$codeRef": "APIKeyRequestListPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/ns/:ns/apikey-requests",
+      "component": { "$codeRef": "APIKeyRequestListPage" }
+    }
   }
 ]
