@@ -121,7 +121,6 @@ export function useAPIManagementRBAC(
     return () => {
       isMounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetNamespace, options?.resources?.join(',')]);
 
   const persona = derivePersona(permissions);
