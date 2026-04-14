@@ -471,12 +471,12 @@ test.describe('RBAC - test-admin persona', () => {
     await namespaceButton.click();
     await page.waitForTimeout(1000);
 
-    // select kuadrant-system namespace
+    // select kuadrant-test namespace
     const namespaceOptionSelectors = [
-      'li:has-text("kuadrant-system")',
-      'button:has-text("kuadrant-system")',
-      'a:has-text("kuadrant-system")',
-      '[role="option"]:has-text("kuadrant-system")',
+      'li:has-text("kuadrant-test")',
+      'button:has-text("kuadrant-test")',
+      'a:has-text("kuadrant-test")',
+      '[role="option"]:has-text("kuadrant-test")',
     ];
 
     const namespaceOption = await (async () => {
@@ -486,20 +486,20 @@ test.describe('RBAC - test-admin persona', () => {
           return element;
         }
       }
-      throw new Error('Could not locate kuadrant-system namespace option');
+      throw new Error('Could not locate kuadrant-test namespace option');
     })();
 
     await namespaceOption.click();
     await page.waitForTimeout(2000);
 
     // verify URL changed to namespace-scoped view
-    await expect(page).toHaveURL('/kuadrant/ns/kuadrant-system/overview', {
+    await expect(page).toHaveURL('/kuadrant/ns/kuadrant-test/overview', {
       timeout: 15_000,
     });
 
     // verify URL doesn't revert back to cluster-wide view
     await page.waitForTimeout(2000);
-    await expect(page).toHaveURL('/kuadrant/ns/kuadrant-system/overview', {
+    await expect(page).toHaveURL('/kuadrant/ns/kuadrant-test/overview', {
       timeout: 5_000,
     });
   });
