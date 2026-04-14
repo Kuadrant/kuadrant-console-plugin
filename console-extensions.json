@@ -255,10 +255,11 @@
     }
   },
   {
-    "type": "console.navigation/resource-ns",
+    "type": "console.navigation/href",
     "properties": {
       "id": "kuadrant-apiproducts-admin",
       "name": "%plugin__kuadrant-console-plugin~API Products%",
+      "href": "/kuadrant/all-namespaces/apiproducts",
       "model": {
         "group": "devportal.kuadrant.io",
         "version": "v1alpha1",
@@ -308,10 +309,11 @@
     }
   },
   {
-    "type": "console.navigation/resource-ns",
+    "type": "console.navigation/href",
     "properties": {
       "id": "kuadrant-apiproducts-dev",
       "name": "%plugin__kuadrant-console-plugin~API Products%",
+      "href": "/kuadrant/all-namespaces/apiproducts",
       "model": {
         "group": "devportal.kuadrant.io",
         "version": "v1alpha1",
