@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams, useNavigate } from 'react-router-dom-v5-compat';
+import { useParams, useNavigate, useLocation } from 'react-router-dom-v5-compat';
 import Helmet from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 import {
@@ -55,6 +55,8 @@ import {
   GreenCheckCircleIcon,
   YellowExclamationTriangleIcon,
   TableData,
+  NamespaceBar,
+  checkAccess,
 } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import ResourceList from './ResourceList';
@@ -65,9 +67,9 @@ import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
 import { KuadrantStatusAlert } from './KuadrantStatusAlert';
 import {
-  TOTAL_REQUESTS_QUERY,
-  ERROR_REQUEST_QUERY,
-  ERRORS_BY_CODE_QUERY,
+  buildTotalRequestsQuery,
+  buildErrorRequestQuery,
+  buildErrorsByCodeQuery,
   buildGatewayKey,
 } from '../utils/metricsQueries';
 import { fetchConfig, KuadrantConfig } from '../utils/configLoader';
@@ -122,6 +124,7 @@ interface ClusterVersion extends K8sResourceCommon {
 
 const KuadrantOverviewPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const { ns } = useParams<{ ns: string }>();
   const [activeNamespace, setActiveNamespace] = useActiveNamespace();
@@ -145,7 +148,40 @@ const KuadrantOverviewPage: React.FC = () => {
     setIsCreateOpen(!isCreateOpen);
   };
 
-  const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
+  // Determine namespace from URL path or activeNamespace
+  const watchNamespace = ns || activeNamespace;
+
+  // Smart default redirect: check cluster-wide permissions and redirect namespace-scoped users
+  React.useEffect(() => {
+    const performRedirect = async () => {
+      if (location.pathname === '/kuadrant/overview') {
+        try {
+          const result = await checkAccess({
+            group: 'gateway.networking.k8s.io',
+            resource: 'gateways',
+            verb: 'list',
+          });
+
+          // If user doesn't have cluster-wide access, redirect to namespace-scoped view
+          if (!result.status?.allowed) {
+            const targetNamespace =
+              activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
+            navigate(`/kuadrant/ns/${targetNamespace}/overview`, { replace: true });
+          }
+          // Otherwise, stay on /kuadrant/overview (cluster-wide view)
+        } catch (error) {
+          // On error, redirect to namespace-scoped view
+          const targetNamespace =
+            activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
+          navigate(`/kuadrant/ns/${targetNamespace}/overview`, { replace: true });
+        }
+      }
+    };
+
+    performRedirect();
+  }, [location.pathname, activeNamespace, navigate]);
+
+  const resolvedNamespace = watchNamespace === '#ALL_NS#' ? undefined : watchNamespace;
   const rbacResources = resources.map((res) => ({
     group: res.gvk.group,
     kind: getResourceNameFromKind(res.gvk.kind),
@@ -197,7 +233,7 @@ const KuadrantOverviewPage: React.FC = () => {
     if (ns && ns !== activeNamespace) {
       setActiveNamespace(ns);
     }
-  }, [ns, activeNamespace, setActiveNamespace]);
+  }, [ns, setActiveNamespace]);
 
   const handleHideCard = () => {
     setHideCard(true);
@@ -416,7 +452,7 @@ const KuadrantOverviewPage: React.FC = () => {
   ];
 
   const handleCreateResource = (resource) => {
-    const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
+    const resolvedNamespace = watchNamespace === '#ALL_NS#' ? 'default' : watchNamespace;
 
     if (resource === 'Gateway') {
       const gateway = resourceGVKMapping['Gateway'];
@@ -431,27 +467,54 @@ const KuadrantOverviewPage: React.FC = () => {
     }
   };
 
+  const handleNamespaceChange = (newNamespace: string) => {
+    if (newNamespace !== '#ALL_NS#') {
+      navigate(`/kuadrant/ns/${newNamespace}/overview`, { replace: true });
+    } else {
+      navigate('/kuadrant/overview', { replace: true });
+    }
+  };
+
   const onMenuSelect = (_event: React.MouseEvent<Element, MouseEvent>, policyType: string) => {
+    const resolvedNamespace = watchNamespace === '#ALL_NS#' ? 'default' : watchNamespace;
     const resource = resourceGVKMapping[policyType];
-    const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
     const targetUrl = `/k8s/ns/${resolvedNamespace}/${resource.group}~${resource.version}~${resource.kind}/~new`;
     navigate(targetUrl);
-    setIsOpen(false);
+    setIsCreateOpen(false);
   };
 
   // Prometheus queries for gateway traffic
+  // Determine namespace for metrics filtering (undefined for cluster-wide)
+  const metricsNamespace = watchNamespace === '#ALL_NS#' ? undefined : watchNamespace;
+
+  // Build queries as memoized values to ensure proper re-fetching when namespace changes
+  const totalRequestsQuery = React.useMemo(
+    () => buildTotalRequestsQuery(metricsNamespace),
+    [metricsNamespace],
+  );
+
+  const totalErrorsQuery = React.useMemo(
+    () => buildErrorRequestQuery(metricsNamespace),
+    [metricsNamespace],
+  );
+
+  const totalErrorsByCodeQuery = React.useMemo(
+    () => buildErrorsByCodeQuery(metricsNamespace),
+    [metricsNamespace],
+  );
+
   const [totalRequestsRes, totalRequestsLoaded, totalRequestsError] = usePrometheusPoll({
     endpoint: PrometheusEndpoint.QUERY,
-    query: TOTAL_REQUESTS_QUERY,
+    query: totalRequestsQuery,
   });
   const [totalErrorsRes, totalErrorsLoaded, totalErrorsError] = usePrometheusPoll({
     endpoint: PrometheusEndpoint.QUERY,
-    query: ERROR_REQUEST_QUERY,
+    query: totalErrorsQuery,
   });
   const [totalErrorsByCodeRes, totalErrorsByCodeLoaded, totalErrorsByCodeError] = usePrometheusPoll(
     {
       endpoint: PrometheusEndpoint.QUERY,
-      query: ERRORS_BY_CODE_QUERY,
+      query: totalErrorsByCodeQuery,
     },
   );
 
@@ -667,6 +730,7 @@ const KuadrantOverviewPage: React.FC = () => {
   const [gateways] = useK8sWatchResource<Gateway[]>({
     groupVersionKind: gvk,
     isList: true,
+    namespace: watchNamespace === '#ALL_NS#' ? undefined : watchNamespace,
   });
 
   const clusterVersionResource = {
@@ -700,6 +764,7 @@ const KuadrantOverviewPage: React.FC = () => {
         <Helmet>
           <title data-test="example-page-title">{t('Kuadrant')}</title>
         </Helmet>
+        <NamespaceBar onNamespaceChange={handleNamespaceChange} />
         <PageSection className="kuadrant-overview-page">
           <Title headingLevel="h1" className="pf-u-mb-lg">
             {t('Kuadrant')} Overview
@@ -905,19 +970,19 @@ const KuadrantOverviewPage: React.FC = () => {
                 <Card>
                   <CardTitle className="kuadrant-resource-create-container">
                     <Title headingLevel="h2">{t('Gateways - Traffic Analysis')}</Title>
-                    {resourceRBAC['Gateway']?.create ? (
+                    {!resourceRBAC['Gateway']?.create ? (
+                      <Tooltip content="You do not have permission to create a Gateway">
+                        <Button className="kuadrant-overview-create-button" isAriaDisabled>
+                          {t(`Create Gateway`)}
+                        </Button>
+                      </Tooltip>
+                    ) : (
                       <Button
                         onClick={() => handleCreateResource('Gateway')}
                         className="kuadrant-overview-create-button"
                       >
                         {t(`Create Gateway`)}
                       </Button>
-                    ) : (
-                      <Tooltip content="You do not have permission to create a Gateway">
-                        <Button className="kuadrant-overview-create-button" isAriaDisabled>
-                          {t(`Create Gateway`)}
-                        </Button>
-                      </Tooltip>
                     )}
                   </CardTitle>
                   <CardBody className="pf-u-p-10">
@@ -925,7 +990,7 @@ const KuadrantOverviewPage: React.FC = () => {
                       resources={[resourceGVKMapping['Gateway']]}
                       columns={gatewayTrafficColumns}
                       renderers={gatewayTrafficRenders}
-                      namespace="#ALL_NS#"
+                      namespace={watchNamespace}
                       emptyResourceName="Gateways"
                     />
                   </CardBody>
@@ -1041,7 +1106,7 @@ const KuadrantOverviewPage: React.FC = () => {
                         resourceGVKMapping['TLSPolicy'],
                       ]}
                       columns={columns}
-                      namespace="#ALL_NS#"
+                      namespace={watchNamespace}
                       paginationLimit={5}
                     />
                   </CardBody>
@@ -1054,26 +1119,26 @@ const KuadrantOverviewPage: React.FC = () => {
                 <Card>
                   <CardTitle className="kuadrant-resource-create-container">
                     <Title headingLevel="h2">{t('HTTPRoutes')}</Title>
-                    {resourceRBAC['HTTPRoute']?.create ? (
+                    {!resourceRBAC['HTTPRoute']?.create ? (
+                      <Tooltip content="You do not have permission to create a HTTPRoute">
+                        <Button className="kuadrant-overview-create-button" isAriaDisabled>
+                          {t(`Create HTTPRoute`)}
+                        </Button>
+                      </Tooltip>
+                    ) : (
                       <Button
                         onClick={() => handleCreateResource('HTTPRoute')}
                         className="kuadrant-overview-create-button"
                       >
                         {t(`Create HTTPRoute`)}
                       </Button>
-                    ) : (
-                      <Tooltip content="You do not have permission to create a HTTPRoute">
-                        <Button className="kuadrant-overview-create-button" isAriaDisabled>
-                          {t(`Create HTTPRoute`)}
-                        </Button>
-                      </Tooltip>
                     )}
                   </CardTitle>
                   <CardBody className="pf-u-p-10">
                     <ResourceList
                       resources={[resourceGVKMapping['HTTPRoute']]}
                       columns={columns}
-                      namespace="#ALL_NS#"
+                      namespace={watchNamespace}
                       emptyResourceName="HTTPRoutes"
                     />
                   </CardBody>
