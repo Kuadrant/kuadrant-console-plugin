@@ -11,10 +11,11 @@ import {
   ResourceLink,
   TableData,
   Timestamp,
+  useK8sWatchResource,
 } from '@openshift-console/dynamic-plugin-sdk';
 import ResourceList from '../ResourceList';
 import { RESOURCES } from '../../utils/resources';
-import { APIProduct } from './types';
+import { APIProduct, PlanPolicy } from './types';
 import '../kuadrant.css';
 
 const APIProductsListPage: React.FC = () => {
@@ -29,6 +30,34 @@ const APIProductsListPage: React.FC = () => {
       navigate('/kuadrant/all-namespaces/apiproducts', { replace: true });
     }
   };
+
+  // Watch PlanPolicy resources to link them to APIProducts
+  const [planPolicies, planPoliciesLoaded] = useK8sWatchResource<PlanPolicy[]>({
+    groupVersionKind: RESOURCES.PlanPolicy.gvk,
+    namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
+    isList: true,
+  });
+
+  // Build a lookup map: HTTPRoute key -> PlanPolicy
+  // Key format: "namespace/routeName"
+  const planPolicyMap = React.useMemo(() => {
+    const map = new Map<string, PlanPolicy>();
+    if (planPoliciesLoaded && planPolicies) {
+      planPolicies.forEach((policy) => {
+        const targetRef = policy.spec?.targetRef;
+        if (targetRef && targetRef.kind === 'HTTPRoute' && targetRef.name) {
+          // Use the policy's namespace if targetRef.namespace is not specified
+          const targetNamespace = targetRef.namespace || policy.metadata?.namespace;
+          const key = `${targetNamespace}/${targetRef.name}`;
+          // Store first matching policy (could be extended to handle multiple)
+          if (!map.has(key)) {
+            map.set(key, policy);
+          }
+        }
+      });
+    }
+    return map;
+  }, [planPolicies, planPoliciesLoaded]);
 
   // Custom columns for API Products - in specified order
   const columns: TableColumn<K8sResourceCommon>[] = React.useMemo(
@@ -49,10 +78,10 @@ const APIProductsListPage: React.FC = () => {
         title: t('Route'),
         id: 'route',
       },
-      /*{
-              title: t('PlanPolicy'),
-              id: 'planpolicy',
-            },*/
+      {
+        title: t('PlanPolicy'),
+        id: 'planpolicy',
+      },
       {
         title: t('Namespace'),
         id: 'namespace',
@@ -124,17 +153,36 @@ const APIProductsListPage: React.FC = () => {
           </TableData>
         );
       },
-      /*planpolicy: (
-              column: TableColumn<K8sResourceCommon>,
-              _resource: K8sResourceCommon,
-              activeColumnIDs: Set<string>,
-            ) => {
-              return (
-                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                  -
-                </TableData>
-              );
-            },*/
+      planpolicy: (
+        column: TableColumn<K8sResourceCommon>,
+        resource: K8sResourceCommon,
+        activeColumnIDs: Set<string>,
+      ) => {
+        const apiProduct = resource as APIProduct;
+        const targetRef = apiProduct.spec?.targetRef;
+
+        // Find matching PlanPolicy based on the APIProduct's targetRef
+        let matchingPolicy: PlanPolicy | undefined;
+        if (targetRef && targetRef.kind === 'HTTPRoute' && targetRef.name) {
+          const targetNamespace = targetRef.namespace || resource.metadata?.namespace;
+          const key = `${targetNamespace}/${targetRef.name}`;
+          matchingPolicy = planPolicyMap.get(key);
+        }
+
+        return (
+          <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+            {matchingPolicy ? (
+              <ResourceLink
+                groupVersionKind={RESOURCES.PlanPolicy.gvk}
+                name={matchingPolicy.metadata?.name}
+                namespace={matchingPolicy.metadata?.namespace}
+              />
+            ) : (
+              '-'
+            )}
+          </TableData>
+        );
+      },
       status: (
         column: TableColumn<K8sResourceCommon>,
         resource: K8sResourceCommon,
@@ -183,7 +231,7 @@ const APIProductsListPage: React.FC = () => {
         );
       },
     }),
-    [],
+    [planPolicyMap],
   );
 
   return (
