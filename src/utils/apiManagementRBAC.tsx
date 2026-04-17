@@ -77,9 +77,12 @@ export function useAPIManagementRBAC(
       try {
         const checks = resourcesToCheck.flatMap((resource) => {
           const verbs = ['create', 'update', 'delete', 'list'] as const;
+          // APIProduct uses extensions.kuadrant.io, others use devportal.kuadrant.io
+          const apiGroup =
+            resource === 'apiproducts' ? 'extensions.kuadrant.io' : 'devportal.kuadrant.io';
           return verbs.map(async (verb) => {
             const result = await checkAccess({
-              group: 'devportal.kuadrant.io',
+              group: apiGroup,
               resource: resource,
               verb,
               namespace: targetNamespace,
@@ -121,7 +124,6 @@ export function useAPIManagementRBAC(
     return () => {
       isMounted = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [targetNamespace, options?.resources?.join(',')]);
 
   const persona = derivePersona(permissions);

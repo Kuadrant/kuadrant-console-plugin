@@ -144,6 +144,22 @@ export const RESOURCES = {
     showInTopologyByDefault: false,
     isKuadrantInternal: false,
   },
+  APIKey: {
+    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIKey' },
+    plural: 'APIKeys',
+    isPolicy: false,
+    isGatewayAPI: false,
+    showInTopologyByDefault: false,
+    isKuadrantInternal: false,
+  },
+  APIKeyApproval: {
+    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIKeyApproval' },
+    plural: 'APIKeyApprovals',
+    isPolicy: false,
+    isGatewayAPI: false,
+    showInTopologyByDefault: false,
+    isKuadrantInternal: false,
+  },
 
   // kuadrant infrastructure
   Kuadrant: {
@@ -169,40 +185,6 @@ export const RESOURCES = {
     isGatewayAPI: false,
     showInTopologyByDefault: true,
     isKuadrantInternal: true,
-  },
-
-  // API Management resources (devportal.kuadrant.io)
-  APIProduct: {
-    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIProduct' },
-    plural: 'APIProducts',
-    isPolicy: false,
-    isGatewayAPI: false,
-    showInTopologyByDefault: false,
-    isKuadrantInternal: false,
-  },
-  APIKey: {
-    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIKey' },
-    plural: 'APIKeys',
-    isPolicy: false,
-    isGatewayAPI: false,
-    showInTopologyByDefault: false,
-    isKuadrantInternal: false,
-  },
-  APIKeyRequest: {
-    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIKeyRequest' },
-    plural: 'APIKeyRequests',
-    isPolicy: false,
-    isGatewayAPI: false,
-    showInTopologyByDefault: false,
-    isKuadrantInternal: false,
-  },
-  APIKeyApproval: {
-    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIKeyApproval' },
-    plural: 'APIKeyApprovals',
-    isPolicy: false,
-    isGatewayAPI: false,
-    showInTopologyByDefault: false,
-    isKuadrantInternal: false,
   },
 
   // other resources

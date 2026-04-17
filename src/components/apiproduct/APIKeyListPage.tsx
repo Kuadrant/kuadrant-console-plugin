@@ -1,12 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  PageSection,
-  Title,
-  EmptyState,
-  EmptyStateBody,
-  Spinner,
-} from '@patternfly/react-core';
+import { PageSection, Title, EmptyState, EmptyStateBody, Spinner } from '@patternfly/react-core';
 import { CubesIcon } from '@patternfly/react-icons';
 import { useAPIManagementRBAC } from '../../utils/apiManagementRBAC';
 import NoPermissionsView from '../NoPermissionsView';
@@ -33,9 +27,7 @@ const APIKeyListPage: React.FC = () => {
   // RBAC gate: only consumers and admins can view their API keys
   const canViewAPIKeys = permissions.apikeys.canList;
   if (!canViewAPIKeys) {
-    return (
-      <NoPermissionsView primaryMessage={t('You do not have permission to view API Keys')} />
-    );
+    return <NoPermissionsView primaryMessage={t('You do not have permission to view API Keys')} />;
   }
 
   return (

@@ -1,12 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  PageSection,
-  Title,
-  EmptyState,
-  EmptyStateBody,
-  Spinner,
-} from '@patternfly/react-core';
+import { PageSection, Title, EmptyState, EmptyStateBody, Spinner } from '@patternfly/react-core';
 import { CheckCircleIcon } from '@patternfly/react-icons';
 import { useAPIManagementRBAC } from '../../utils/apiManagementRBAC';
 import NoPermissionsView from '../NoPermissionsView';
@@ -34,9 +28,7 @@ const APIKeyApprovalPage: React.FC = () => {
   const canApprove = permissions.apikeyapprovals.canCreate;
   if (!canApprove) {
     return (
-      <NoPermissionsView
-        primaryMessage={t('You do not have permission to approve API Keys')}
-      />
+      <NoPermissionsView primaryMessage={t('You do not have permission to approve API Keys')} />
     );
   }
 

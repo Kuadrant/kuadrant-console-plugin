@@ -1,12 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  PageSection,
-  Title,
-  EmptyState,
-  EmptyStateBody,
-  Spinner,
-} from '@patternfly/react-core';
+import { PageSection, Title, EmptyState, EmptyStateBody, Spinner } from '@patternfly/react-core';
 import { ListIcon } from '@patternfly/react-icons';
 import { useAPIManagementRBAC } from '../../utils/apiManagementRBAC';
 import NoPermissionsView from '../NoPermissionsView';
@@ -34,7 +28,9 @@ const APIKeyRequestListPage: React.FC = () => {
   const canViewRequests = permissions.apikeyrequests.canList;
   if (!canViewRequests) {
     return (
-      <NoPermissionsView primaryMessage={t('You do not have permission to view API Key Requests')} />
+      <NoPermissionsView
+        primaryMessage={t('You do not have permission to view API Key Requests')}
+      />
     );
   }
 

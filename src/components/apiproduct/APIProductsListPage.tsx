@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom-v5-compat';
-import { PageSection, Title, Tooltip, Button } from '@patternfly/react-core';
+import { PageSection, Title, Tooltip, Button, Spinner } from '@patternfly/react-core';
 import {
   useActiveNamespace,
   NamespaceBar,
@@ -11,12 +11,15 @@ import {
 import ResourceList from '../ResourceList';
 import { RESOURCES } from '../../utils/resources';
 import { getResourceNameFromKind } from '../../utils/getModelFromResource';
+import { useAPIManagementRBAC } from '../../utils/apiManagementRBAC';
+import NoPermissionsView from '../NoPermissionsView';
 import '../kuadrant.css';
 
 const APIProductsListPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activeNamespace] = useActiveNamespace();
   const navigate = useNavigate();
+  const { permissions, loading } = useAPIManagementRBAC();
 
   const isAllNamespaces = activeNamespace === '#ALL_NS#';
 
@@ -44,6 +47,29 @@ const APIProductsListPage: React.FC = () => {
       navigate('/kuadrant/all-namespaces/apiproducts', { replace: true });
     }
   };
+
+  // Show loading state while checking permissions
+  if (loading) {
+    return (
+      <>
+        <NamespaceBar onNamespaceChange={handleNamespaceChange} />
+        <PageSection variant="secondary">
+          <Spinner size="lg" />
+        </PageSection>
+      </>
+    );
+  }
+
+  // RBAC gate: only users with list permission can view API Products
+  const canViewAPIProducts = permissions.apiproducts.canList;
+  if (!canViewAPIProducts) {
+    return (
+      <>
+        <NamespaceBar onNamespaceChange={handleNamespaceChange} />
+        <NoPermissionsView primaryMessage={t('You do not have permission to view API Products')} />
+      </>
+    );
+  }
 
   return (
     <>
