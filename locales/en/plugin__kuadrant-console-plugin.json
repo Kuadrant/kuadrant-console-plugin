@@ -208,6 +208,7 @@
   "You do not have permission to create a {{policyType}}": "You do not have permission to create a {{policyType}}",
   "You do not have permission to view API Key Requests": "You do not have permission to view API Key Requests",
   "You do not have permission to view API Keys": "You do not have permission to view API Keys",
+  "You do not have permission to view API Products": "You do not have permission to view API Products",
   "You do not have permission to view Gateways": "You do not have permission to view Gateways",
   "You do not have permission to view HTTPRoutes": "You do not have permission to view HTTPRoutes",
   "You do not have permission to view Policies": "You do not have permission to view Policies",
