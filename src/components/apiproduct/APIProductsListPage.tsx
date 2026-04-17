@@ -52,7 +52,9 @@ const APIProductsListPage: React.FC = () => {
   });
 
   // Watch PlanPolicy resources to link them to APIProducts
-  const [planPolicies, planPoliciesLoaded] = useK8sWatchResource<PlanPolicy[]>({
+  const [planPolicies, planPoliciesLoaded, planPoliciesLoadError] = useK8sWatchResource<
+    PlanPolicy[]
+  >({
     groupVersionKind: RESOURCES.PlanPolicy.gvk,
     namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
     isList: true,
@@ -93,11 +95,11 @@ const APIProductsListPage: React.FC = () => {
     if (!apiProducts) return [];
     const statuses = new Set<string>();
     apiProducts.forEach((product) => {
-      const status = product.spec?.publishStatus || 'Draft';
+      const status = product.spec?.publishStatus || t('Draft');
       statuses.add(status);
     });
     return Array.from(statuses).sort();
-  }, [apiProducts]);
+  }, [apiProducts, t]);
 
   // Apply filters to APIProducts
   const filteredProducts = React.useMemo(() => {
@@ -106,7 +108,7 @@ const APIProductsListPage: React.FC = () => {
     return apiProducts.filter((product) => {
       // Status filter
       if (statusFilter) {
-        const productStatus = product.spec?.publishStatus || 'Draft';
+        const productStatus = product.spec?.publishStatus || t('Draft');
         if (productStatus !== statusFilter) {
           return false;
         }
@@ -130,7 +132,16 @@ const APIProductsListPage: React.FC = () => {
 
       return true;
     });
-  }, [apiProducts, statusFilter, filters, filterSelected]);
+  }, [apiProducts, statusFilter, filters, filterSelected, t]);
+
+  // Filter labels
+  const filterLabels = React.useMemo(
+    () => ({
+      name: t('Name'),
+      namespace: t('Namespace'),
+    }),
+    [t],
+  );
 
   // Pagination
   const startIndex = (currentPage - 1) * perPage;
@@ -311,7 +322,7 @@ const APIProductsListPage: React.FC = () => {
         resource: APIProduct,
         activeColumnIDs: Set<string>,
       ) => {
-        const lifecycle = resource.spec?.publishStatus || 'Draft';
+        const lifecycle = resource.spec?.publishStatus || t('Draft');
         return (
           <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
             <Label color={lifecycle === 'Published' ? 'green' : 'orange'}>{lifecycle}</Label>
@@ -420,6 +431,13 @@ const APIProductsListPage: React.FC = () => {
             </Alert>
           </AlertGroup>
         )}
+        {planPoliciesLoadError && (
+          <AlertGroup>
+            <Alert title={t('Error loading PlanPolicies')} variant="danger" isInline>
+              {planPoliciesLoadError.message}
+            </Alert>
+          </AlertGroup>
+        )}
         <ListPageBody>
           <Toolbar>
             <ToolbarContent>
@@ -483,7 +501,7 @@ const APIProductsListPage: React.FC = () => {
                     <TextInput
                       type="text"
                       placeholder={t('Search by {{filterValue}}...', {
-                        filterValue: filterSelected,
+                        filterValue: filterLabels[filterSelected],
                       })}
                       value={filters}
                       onChange={(_event, value) => handleFilterChange(value)}
