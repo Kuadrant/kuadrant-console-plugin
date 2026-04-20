@@ -9,6 +9,7 @@ import {
   EmptyState,
   EmptyStateBody,
   Alert,
+  Spinner,
 } from '@patternfly/react-core';
 import { SearchIcon } from '@patternfly/react-icons';
 import {
@@ -26,6 +27,8 @@ import {
 import { APIProduct } from './types';
 import { RESOURCES } from '../../utils/resources';
 import { getStatusLabel } from '../../utils/statusLabel';
+import { useAPIManagementRBAC } from '../../utils/apiManagementRBAC';
+import NoPermissionsView from '../NoPermissionsView';
 import extractResourceNameFromURL from '../../utils/nameFromPath';
 import '../kuadrant.css';
 
@@ -49,6 +52,7 @@ const APIProductPoliciesTab: React.FC = () => {
   const [activeNamespace] = useActiveNamespace();
   const location = useLocation();
   const productName = extractResourceNameFromURL(location.pathname);
+  const { permissions, loading: rbacLoading } = useAPIManagementRBAC();
 
   // Fetch the APIProduct
   const [apiProduct, productLoaded, productLoadError] = useK8sWatchResource<APIProduct>({
@@ -194,6 +198,21 @@ const APIProductPoliciesTab: React.FC = () => {
       </>
     );
   };
+
+  // Show loading state while checking permissions
+  if (rbacLoading) {
+    return (
+      <PageSection hasBodyWrapper={false}>
+        <Spinner size="lg" />
+      </PageSection>
+    );
+  }
+
+  // RBAC gate: only users with list permission can view API Product policies
+  const canViewAPIProducts = permissions.apiproducts.canList;
+  if (!canViewAPIProducts) {
+    return <NoPermissionsView primaryMessage={t('You do not have permission to view API Products')} />;
+  }
 
   // Error states
   if (productLoadError) {

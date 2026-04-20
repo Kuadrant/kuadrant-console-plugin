@@ -98,7 +98,10 @@
       "APIProductPoliciesTab": "./components/apiproduct/APIProductPoliciesTab",
       "APIProductDefinitionTab": "./components/apiproduct/APIProductDefinitionTab",
       "useDNSPolicyActions": "./components/dnspolicy/useDNSPolicyActions",
-      "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions"
+      "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions",
+      "APIKeyListPage": "./components/apiproduct/APIKeyListPage",
+      "APIKeyApprovalPage": "./components/apiproduct/APIKeyApprovalPage",
+      "APIKeyRequestListPage": "./components/apiproduct/APIKeyRequestListPage"
     },
     "dependencies": {
       "@console/pluginAPI": "*"

@@ -152,6 +152,22 @@ export const RESOURCES = {
     showInTopologyByDefault: false,
     isKuadrantInternal: false,
   },
+  APIKey: {
+    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIKey' },
+    plural: 'APIKeys',
+    isPolicy: false,
+    isGatewayAPI: false,
+    showInTopologyByDefault: false,
+    isKuadrantInternal: false,
+  },
+  APIKeyApproval: {
+    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIKeyApproval' },
+    plural: 'APIKeyApprovals',
+    isPolicy: false,
+    isGatewayAPI: false,
+    showInTopologyByDefault: false,
+    isKuadrantInternal: false,
+  },
 
   // kuadrant infrastructure
   Kuadrant: {
