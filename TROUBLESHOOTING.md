@@ -87,18 +87,22 @@ magic 7f454c4602010100000000000000000002003e00
 mask fffffffffffefe00fffffffffffffffffeffffff
 ```
 
+#### Alternative 2
+Try creating a podman machine with a base image that works, such as [fedora@39](https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/39.20240407.3.0/aarch64/fedora-coreos-39.20240407.3.0-applehv.aarch64.raw.gz).
+For some reason, every other image tried failed with the segfault, but that one and previous ones.
+
+```sh
+podman machine init --disk-size 60 --rootful --cpus=4 --memory=8192 --image https://builds.coreos.fedoraproject.org/prod/streams/stable/builds/39.20240407.3.0/aarch64/fedora-coreos-39.20240407.3.0-applehv.aarch64.raw.gz
+```
+
 ***Profit!***
 
 ### Limitations
 
-The console plugin <4.20 images crashes on ARM due to a Go runtime bug in older Go versions when running linux/amd64 binaries under QEMU emulation OR Rosetta on Podman only, apparently.
+The latest console plugin images crashes on ARM due to a Go runtime bug in older Go versions when running linux/amd64 binaries under QEMU emulation OR Rosetta on Podman only, apparently.
 
 
 #### Why This Happens
 So far with the testing done with Podman in ARM:
 
-- Console plugins 4.20 and below were built with Go < 1.23
-- Go 1.23+ introduced eventfd-based netpoll (replacing pipes) for better performance
-- The old pipe-based netpoll has bugs when running under QEMU/Rosetta emulation on ARM64 hosts
-- Console 4.20+ was built with Go 1.23+ which fixed this issue
-- Running natively (ARM64 binary on ARM64 host) avoids the issue entirely
+- There's been a change in the Fedora CoreOS base image that so far there's nothing conclusive, but [this discussion](https://github.com/containers/podman/discussions/22714) provided the actual fix in the Alternative 2.
