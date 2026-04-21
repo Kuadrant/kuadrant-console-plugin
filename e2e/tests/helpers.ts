@@ -17,21 +17,19 @@ export async function dismissConsoleTour(page: Page): Promise<void> {
 
   // modal is present - find and click dismiss button
   // try multiple selector strategies to find the close/skip button
-  const skipTourButton = page.locator('button:has-text("Skip tour")');
-  const skipButton = page.locator('button:has-text("Skip")');
-  const closeButton = page.locator('.pf-v6-c-modal-box button[aria-label="Close"]');
+  const skipTourButton = page.locator('.pf-v6-c-modal-box').locator('button:text-is("Skip tour")').first();
+  const skipButton = page.locator('.pf-v6-c-modal-box').locator('button:text-is("Skip")').first();
+  const closeButton = page.locator('.pf-v6-c-modal-box').locator('button[aria-label="Close"]').first();
 
   let dismissed = false;
 
   // try each button type in order
   for (const button of [skipTourButton, skipButton, closeButton]) {
     try {
-      const visible = await button.isVisible({ timeout: 1_000 });
-      if (visible) {
-        await button.click({ timeout: 3_000 });
-        dismissed = true;
-        break;
-      }
+      await button.waitFor({ state: 'visible', timeout: 1_000 });
+      await button.click({ timeout: 3_000 });
+      dismissed = true;
+      break;
     } catch {
       // try next button
       continue;
