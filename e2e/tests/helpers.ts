@@ -4,22 +4,65 @@ const TEST_NAMESPACE = 'kuadrant-test';
 
 // dismiss any console welcome/tour modals that block interaction
 export async function dismissConsoleTour(page: Page): Promise<void> {
-  const dismissible = page
-    .locator('button:has-text("Skip tour"), button:has-text("Skip")')
-    .or(page.locator('.pf-v6-c-modal-box button[aria-label="Close"]'));
+  // look for the modal backdrop - this indicates a modal is blocking interaction
+  const backdrop = page.locator('.pf-v6-c-backdrop');
+
   try {
-    await dismissible.first().click({ timeout: 3_000 });
+    // wait up to 5 seconds for the backdrop to appear (modal might be animating in)
+    await backdrop.waitFor({ state: 'visible', timeout: 5_000 });
   } catch {
-    // no tour modal present
+    // no modal present, nothing to dismiss
+    return;
+  }
+
+  // modal is present - find and click dismiss button
+  // try multiple selector strategies to find the close/skip button
+  const skipTourButton = page.locator('button:has-text("Skip tour")');
+  const skipButton = page.locator('button:has-text("Skip")');
+  const closeButton = page.locator('.pf-v6-c-modal-box button[aria-label="Close"]');
+
+  let dismissed = false;
+
+  // try each button type in order
+  for (const button of [skipTourButton, skipButton, closeButton]) {
+    try {
+      const visible = await button.isVisible({ timeout: 1_000 });
+      if (visible) {
+        await button.click({ timeout: 3_000 });
+        dismissed = true;
+        break;
+      }
+    } catch {
+      // try next button
+      continue;
+    }
+  }
+
+  if (!dismissed) {
+    console.warn('Could not find dismiss button for console tour modal');
+    return;
+  }
+
+  // CRITICAL: wait for the backdrop to fully disappear (including CSS animations)
+  // In headless mode this is instant, but in headed mode the backdrop fades out
+  // over 200-300ms and intercepts clicks during the animation
+  try {
+    await backdrop.waitFor({ state: 'hidden', timeout: 10_000 });
+  } catch (error) {
+    console.warn('Backdrop did not disappear after dismissing modal:', error);
+    throw error; // re-throw so test fails with clear error
   }
 }
 
 // start impersonating a user via the console masthead
 export async function impersonateUser(page: Page, username: string): Promise<void> {
-  await dismissConsoleTour(page);
-
   const userDropdown = page.locator('[data-test="user-dropdown-toggle"]');
   await userDropdown.waitFor({ state: 'visible', timeout: 30_000 });
+
+  // CRITICAL: dismiss modal RIGHT BEFORE clicking the user dropdown
+  // The modal appears asynchronously and may not be present during initial page load
+  await dismissConsoleTour(page);
+
   await userDropdown.click();
 
   const impersonateItem = page.locator('[data-test="impersonate-user"] button');
