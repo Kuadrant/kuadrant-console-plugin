@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom-v5-compat';
-import { PageSection, Title, Tooltip } from '@patternfly/react-core';
+import { PageSection, Title, Tooltip, Button } from '@patternfly/react-core';
 import {
   useActiveNamespace,
   NamespaceBar,
@@ -18,14 +18,24 @@ const APIProductsListPage: React.FC = () => {
   const [activeNamespace] = useActiveNamespace();
   const navigate = useNavigate();
 
-  const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
+  const isAllNamespaces = activeNamespace === '#ALL_NS#';
 
-  const [canCreate, canCreateLoading] = useAccessReview({
-    group: RESOURCES.APIProduct.gvk.group,
-    resource: getResourceNameFromKind(RESOURCES.APIProduct.gvk.kind),
-    verb: 'create',
-    namespace: resolvedNamespace,
-  });
+  // Skip RBAC check when viewing all namespaces
+  const [canCreate, canCreateLoading] = useAccessReview(
+    !isAllNamespaces
+      ? {
+          group: RESOURCES.APIProduct.gvk.group,
+          resource: getResourceNameFromKind(RESOURCES.APIProduct.gvk.kind),
+          verb: 'create',
+          namespace: activeNamespace,
+        }
+      : {
+          group: RESOURCES.APIProduct.gvk.group,
+          resource: getResourceNameFromKind(RESOURCES.APIProduct.gvk.kind),
+          verb: 'create',
+          namespace: '',
+        },
+  );
 
   const handleNamespaceChange = (namespace: string) => {
     if (namespace !== '#ALL_NS#') {
@@ -49,18 +59,21 @@ const APIProductsListPage: React.FC = () => {
             emptyResourceName="API Products"
           />
           <div className="kuadrant-resource-create-button pf-u-mt-md">
-            {!canCreateLoading && canCreate ? (
-              <ListPageCreateLink to={`/kuadrant/ns/${resolvedNamespace}/apiproducts/~new`}>
+            {!canCreateLoading && canCreate && !isAllNamespaces ? (
+              <ListPageCreateLink to={`/kuadrant/ns/${activeNamespace}/apiproducts/~new`}>
                 {t('Create API Product')}
               </ListPageCreateLink>
             ) : (
-              <Tooltip content={t('You do not have permission to create an API Product')}>
-                <span
-                  className="pf-c-button pf-m-primary pf-u-mt-md pf-u-mr-md"
-                  style={{ opacity: 0.4 }}
-                >
+              <Tooltip
+                content={
+                  isAllNamespaces
+                    ? t('Select a namespace to create an API Product')
+                    : t('You do not have permission to create an API Product')
+                }
+              >
+                <Button variant="primary" isAriaDisabled>
                   {t('Create API Product')}
-                </span>
+                </Button>
               </Tooltip>
             )}
           </div>

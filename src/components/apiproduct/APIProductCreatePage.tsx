@@ -104,12 +104,17 @@ const APIProductCreatePage: React.FC = () => {
     const apiVersion = `${RESOURCES.APIProduct.gvk.group}/${RESOURCES.APIProduct.gvk.version}`;
     const existingData = apiProductData && !Array.isArray(apiProductData) ? apiProductData : null;
 
+    // Use the namespace from the edited resource in edit mode, otherwise use selected namespace
+    const resourceNamespace = isEditMode
+      ? existingData?.metadata?.namespace ?? namespaceEdit
+      : selectedNamespace;
+
     const resource: any = {
       apiVersion,
       kind: RESOURCES.APIProduct.gvk.kind,
       metadata: {
         name: formData.resourceName,
-        namespace: selectedNamespace,
+        namespace: resourceNamespace,
       },
       spec: {
         displayName: formData.displayName,
