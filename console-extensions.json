@@ -114,6 +114,31 @@
   {
     "type": "console.page/route",
     "properties": {
+      "path": "/kuadrant/all-namespaces/myapikeys",
+      "component": { "$codeRef": "MyAPIKeysPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "path": "/kuadrant/ns/:ns/myapikeys",
+      "component": { "$codeRef": "MyAPIKeysPage" }
+    }
+  },
+  {
+    "type": "console.page/resource/list",
+    "properties": {
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIKey"
+      },
+      "component": { "$codeRef": "MyAPIKeysPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
       "exact": true,
       "path": "/k8s/ns/:ns/tlspolicy/name/:name/edit",
       "component": { "$codeRef": "KuadrantTLSCreatePage" }
@@ -282,6 +307,28 @@
   {
     "type": "console.navigation/section",
     "properties": {
+      "id": "kuadrant-api-catalog-section-admin",
+      "name": "%plugin__kuadrant-console-plugin~Kuadrant API Catalog%",
+      "perspective": "admin"
+    }
+  },
+  {
+    "type": "console.navigation/resource-ns",
+    "properties": {
+      "id": "kuadrant-myapikeys-admin",
+      "name": "%plugin__kuadrant-console-plugin~My API Keys%",
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIKey"
+      },
+      "perspective": "admin",
+      "section": "kuadrant-api-catalog-section-admin"
+    }
+  },
+  {
+    "type": "console.navigation/section",
+    "properties": {
       "id": "kuadrant-section-dev",
       "name": "%plugin__kuadrant-console-plugin~Kuadrant%",
       "perspective": "dev"
@@ -330,6 +377,28 @@
       "perspective": "dev",
       "section": "kuadrant-section-dev",
       "badge": "dev"
+    }
+  },
+  {
+    "type": "console.navigation/section",
+    "properties": {
+      "id": "kuadrant-api-catalog-section-dev",
+      "name": "%plugin__kuadrant-console-plugin~Kuadrant API Catalog%",
+      "perspective": "dev"
+    }
+  },
+  {
+    "type": "console.navigation/resource-ns",
+    "properties": {
+      "id": "kuadrant-myapikeys-dev",
+      "name": "%plugin__kuadrant-console-plugin~My API Keys%",
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIKey"
+      },
+      "perspective": "dev",
+      "section": "kuadrant-api-catalog-section-dev"
     }
   }
 ]

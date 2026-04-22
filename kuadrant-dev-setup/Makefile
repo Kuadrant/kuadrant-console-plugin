@@ -61,6 +61,7 @@ demo-install:
 	@kubectl apply -f demo/toystore-demo.yaml
 	@kubectl apply -f demo/gamestore-demo.yaml
 	@kubectl apply -f demo/additional-demos.yaml
+	@kubectl patch apikey rejected-shipping-apikey -n toystore --subresource=status --type=merge -p '{"status":{"phase":"Rejected"}}'
 	@echo ""
 	@echo "demo resources installed!"
 	@echo ""
