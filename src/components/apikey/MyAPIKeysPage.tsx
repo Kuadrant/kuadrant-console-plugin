@@ -8,6 +8,17 @@ import {
   EmptyStateBody,
   AlertGroup,
   Alert,
+  Toolbar,
+  ToolbarContent,
+  ToolbarItem,
+  ToolbarGroup,
+  Select,
+  SelectOption,
+  MenuToggle,
+  MenuToggleElement,
+  InputGroup,
+  TextInput,
+  ToolbarFilter,
 } from '@patternfly/react-core';
 import {
   useActiveNamespace,
@@ -53,6 +64,101 @@ const MyAPIKeysPage: React.FC = () => {
     namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
     isList: true,
   });
+
+  // Filter state
+  const [isFilterTypeOpen, setIsFilterTypeOpen] = React.useState(false);
+  const [filterType, setFilterType] = React.useState<string>('Name');
+  const [isFilterValueOpen, setIsFilterValueOpen] = React.useState(false);
+  const [nameFilter, setNameFilter] = React.useState<string>('');
+  const [statusFilters, setStatusFilters] = React.useState<string[]>([]);
+  const [ownerFilter, setOwnerFilter] = React.useState<string>('');
+
+  // Filter data based on filter type and value
+  const filteredData = React.useMemo(() => {
+    return apiKeys.filter((key) => {
+      // Name filter
+      if (nameFilter && !key.metadata.name.toLowerCase().includes(nameFilter.toLowerCase())) {
+        return false;
+      }
+
+      // Status filter (multiple selection)
+      if (statusFilters.length > 0) {
+        const phase = key.status?.phase || 'Unknown';
+        if (!statusFilters.includes(phase)) {
+          return false;
+        }
+      }
+
+      // Owner filter
+      if (
+        ownerFilter &&
+        !key.spec?.requestedBy?.userId?.toLowerCase().includes(ownerFilter.toLowerCase())
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [apiKeys, nameFilter, statusFilters, ownerFilter]);
+
+  const onFilterTypeToggle = () => setIsFilterTypeOpen(!isFilterTypeOpen);
+
+  const onFilterTypeSelect = (
+    _event: React.MouseEvent<Element, MouseEvent> | undefined,
+    selection: string,
+  ) => {
+    setFilterType(selection);
+    setIsFilterTypeOpen(false);
+  };
+
+  const onFilterValueToggle = () => setIsFilterValueOpen(!isFilterValueOpen);
+
+  const onStatusFilterSelect = (
+    _event: React.MouseEvent<Element, MouseEvent> | undefined,
+    selection: string,
+  ) => {
+    setStatusFilters((prev) =>
+      prev.includes(selection) ? prev.filter((s) => s !== selection) : [...prev, selection],
+    );
+  };
+
+  const handleNameFilterChange = (_event: React.FormEvent<HTMLInputElement>, value: string) => {
+    setNameFilter(value);
+  };
+
+  const handleOwnerFilterChange = (_event: React.FormEvent<HTMLInputElement>, value: string) => {
+    setOwnerFilter(value);
+  };
+
+  const onDeleteNameFilter = (_category: string, _label: string) => {
+    setNameFilter('');
+  };
+
+  const onDeleteStatusFilter = (_category: string, label: string) => {
+    setStatusFilters((prev) => prev.filter((s) => s !== label));
+  };
+
+  const onDeleteOwnerFilter = (_category: string, _label: string) => {
+    setOwnerFilter('');
+  };
+
+  const onDeleteNameGroup = () => {
+    setNameFilter('');
+  };
+
+  const onDeleteStatusGroup = () => {
+    setStatusFilters([]);
+  };
+
+  const onDeleteOwnerGroup = () => {
+    setOwnerFilter('');
+  };
+
+  const onClearAllFilters = () => {
+    setNameFilter('');
+    setStatusFilters([]);
+    setOwnerFilter('');
+  };
 
   const columns: TableColumn<APIKey>[] = React.useMemo(() => {
     const cols: TableColumn<APIKey>[] = [
@@ -167,7 +273,124 @@ const MyAPIKeysPage: React.FC = () => {
           </AlertGroup>
         )}
         <ListPageBody>
-          {loaded && apiKeys.length === 0 ? (
+          <Toolbar
+            clearAllFilters={onClearAllFilters}
+            clearFiltersButtonText={t('Clear all filters')}
+          >
+            <ToolbarContent>
+              <ToolbarGroup variant="filter-group">
+                <ToolbarItem>
+                  <Select
+                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                      <MenuToggle
+                        ref={toggleRef}
+                        onClick={onFilterTypeToggle}
+                        isExpanded={isFilterTypeOpen}
+                      >
+                        {filterType}
+                      </MenuToggle>
+                    )}
+                    onSelect={onFilterTypeSelect}
+                    onOpenChange={setIsFilterTypeOpen}
+                    isOpen={isFilterTypeOpen}
+                  >
+                    <SelectOption value="Name">{t('Name')}</SelectOption>
+                    <SelectOption value="Status">{t('Status')}</SelectOption>
+                    <SelectOption value="Owner">{t('Owner')}</SelectOption>
+                  </Select>
+                </ToolbarItem>
+
+                <ToolbarFilter
+                  categoryName={t('Name')}
+                  labels={nameFilter ? [nameFilter] : []}
+                  deleteLabel={onDeleteNameFilter}
+                  deleteLabelGroup={onDeleteNameGroup}
+                  showToolbarItem={filterType === 'Name'}
+                >
+                  <InputGroup className="pf-v5-c-input-group co-filter-group">
+                    <TextInput
+                      type="text"
+                      placeholder={t('Search by {{filterValue}}...', {
+                        filterValue: filterType.toLowerCase(),
+                      })}
+                      onChange={handleNameFilterChange}
+                      value={nameFilter}
+                      className="pf-v5-c-form-control co-text-filter-with-icon"
+                      aria-label="Name filter"
+                    />
+                  </InputGroup>
+                </ToolbarFilter>
+
+                <ToolbarFilter
+                  categoryName={t('Status')}
+                  labels={statusFilters}
+                  deleteLabel={onDeleteStatusFilter}
+                  deleteLabelGroup={onDeleteStatusGroup}
+                  showToolbarItem={filterType === 'Status'}
+                >
+                  <Select
+                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                      <MenuToggle
+                        ref={toggleRef}
+                        onClick={onFilterValueToggle}
+                        isExpanded={isFilterValueOpen}
+                      >
+                        {t('Select status')}
+                      </MenuToggle>
+                    )}
+                    onSelect={onStatusFilterSelect}
+                    onOpenChange={setIsFilterValueOpen}
+                    isOpen={isFilterValueOpen}
+                    selected={statusFilters}
+                  >
+                    <SelectOption
+                      hasCheckbox
+                      value="Approved"
+                      isSelected={statusFilters.includes('Approved')}
+                    >
+                      {t('Approved')}
+                    </SelectOption>
+                    <SelectOption
+                      hasCheckbox
+                      value="Pending"
+                      isSelected={statusFilters.includes('Pending')}
+                    >
+                      {t('Pending')}
+                    </SelectOption>
+                    <SelectOption
+                      hasCheckbox
+                      value="Rejected"
+                      isSelected={statusFilters.includes('Rejected')}
+                    >
+                      {t('Rejected')}
+                    </SelectOption>
+                  </Select>
+                </ToolbarFilter>
+
+                <ToolbarFilter
+                  categoryName={t('Owner')}
+                  labels={ownerFilter ? [ownerFilter] : []}
+                  deleteLabel={onDeleteOwnerFilter}
+                  deleteLabelGroup={onDeleteOwnerGroup}
+                  showToolbarItem={filterType === 'Owner'}
+                >
+                  <InputGroup className="pf-v5-c-input-group co-filter-group">
+                    <TextInput
+                      type="text"
+                      placeholder={t('Search by {{filterValue}}...', {
+                        filterValue: filterType.toLowerCase(),
+                      })}
+                      onChange={handleOwnerFilterChange}
+                      value={ownerFilter}
+                      className="pf-v5-c-form-control co-text-filter-with-icon"
+                      aria-label="Owner filter"
+                    />
+                  </InputGroup>
+                </ToolbarFilter>
+              </ToolbarGroup>
+            </ToolbarContent>
+          </Toolbar>
+          {loaded && filteredData.length === 0 ? (
             <EmptyState
               titleText={
                 <Title headingLevel="h4" size="lg">
@@ -177,14 +400,16 @@ const MyAPIKeysPage: React.FC = () => {
               icon={SearchIcon}
             >
               <EmptyStateBody>
-                {t(
-                  'There are no API Keys to display - request access to an API Product to get started.',
-                )}
+                {!nameFilter && statusFilters.length === 0 && !ownerFilter
+                  ? t(
+                      'There are no API Keys to display - request access to an API Product to get started.',
+                    )
+                  : t('No API Keys match the filter criteria.')}
               </EmptyStateBody>
             </EmptyState>
           ) : (
             <VirtualizedTable<APIKey>
-              data={apiKeys}
+              data={filteredData}
               unfilteredData={apiKeys}
               loaded={loaded}
               loadError={apiKeysLoadError}
