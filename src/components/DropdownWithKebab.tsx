@@ -80,6 +80,10 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
           obj.kind
         }/${obj.metadata.name}/yaml`,
       });
+    } else if (obj.kind === 'APIProduct') {
+      navigate({
+        pathname: `/kuadrant/ns/${obj.metadata.namespace}/apiproducts/${obj.metadata.name}/edit`,
+      });
     } else {
       navigate({
         pathname: `/k8s/ns/${obj.metadata.namespace}/${policyType}/name/${obj.metadata.name}/edit`,

@@ -131,6 +131,17 @@
     "type": "console.resource/create",
     "properties": {
       "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIProduct"
+      },
+      "component": { "$codeRef": "APIProductCreatePage" }
+    }
+  },
+  {
+    "type": "console.resource/create",
+    "properties": {
+      "model": {
         "group": "kuadrant.io",
         "version": "v1",
         "kind": "DNSPolicy"
@@ -255,15 +266,11 @@
     }
   },
   {
-    "type": "console.navigation/resource-ns",
+    "type": "console.navigation/href",
     "properties": {
       "id": "kuadrant-apiproducts-admin",
       "name": "%plugin__kuadrant-console-plugin~API Products%",
-      "model": {
-        "group": "devportal.kuadrant.io",
-        "version": "v1alpha1",
-        "kind": "APIProduct"
-      },
+      "href": "/kuadrant/all-namespaces/apiproducts",
       "perspective": "admin",
       "section": "kuadrant-section-admin"
     }
@@ -308,15 +315,11 @@
     }
   },
   {
-    "type": "console.navigation/resource-ns",
+    "type": "console.navigation/href",
     "properties": {
       "id": "kuadrant-apiproducts-dev",
       "name": "%plugin__kuadrant-console-plugin~API Products%",
-      "model": {
-        "group": "devportal.kuadrant.io",
-        "version": "v1alpha1",
-        "kind": "APIProduct"
-      },
+      "href": "/kuadrant/all-namespaces/apiproducts",
       "perspective": "dev",
       "section": "kuadrant-section-dev"
     }
@@ -330,6 +333,22 @@
       "perspective": "dev",
       "section": "kuadrant-section-dev",
       "badge": "dev"
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/ns/:ns/apiproducts/~new",
+      "component": { "$codeRef": "APIProductCreatePage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/ns/:ns/apiproducts/:name/edit",
+      "component": { "$codeRef": "APIProductCreatePage" }
     }
   }
 ]
