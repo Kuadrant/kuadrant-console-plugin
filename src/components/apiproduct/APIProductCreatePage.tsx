@@ -97,7 +97,7 @@ const APIProductCreatePage: React.FC = () => {
       // Mark as manual since we're editing an existing resource
       setIsResourceNameManual(true);
     }
-  }, [apiProductData, apiProductLoaded, apiProductError, selectedNamespace]);
+  }, [apiProductData, apiProductLoaded, apiProductError]);
 
   // Construct APIProduct resource from form data
   const constructResource = (): APIProduct => {

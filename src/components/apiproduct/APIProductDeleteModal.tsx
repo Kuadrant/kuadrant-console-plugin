@@ -49,7 +49,7 @@ const APIProductDeleteModal: React.FC<APIProductDeleteModalProps> = ({
       });
       onSuccess();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      const message = error instanceof Error ? error.message : t('Unknown error occurred');
       setErrorMsg(message);
       setIsDeleting(false);
     }

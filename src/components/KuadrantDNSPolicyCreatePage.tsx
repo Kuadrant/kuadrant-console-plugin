@@ -401,7 +401,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
           </Form>
         </PageSection>
       ) : (
-        <React.Suspense fallback={<div> {t('Loading..')}.</div>}>
+        <React.Suspense fallback={<div> {t('Loading...')}.</div>}>
           <ResourceYAMLEditor
             initialResource={yamlInput}
             create={create}

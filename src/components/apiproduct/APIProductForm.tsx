@@ -486,7 +486,10 @@ const APIProductForm: React.FC<APIProductFormProps> = ({
               validation={isFormValid()}
               update={isEditMode}
             />
-            <Button variant="link" onClick={() => navigate(`/kuadrant/ns/${namespace}`)}>
+            <Button
+              variant="link"
+              onClick={() => navigate(`/kuadrant/ns/${namespace}/apiproducts`)}
+            >
               {t('Cancel')}
             </Button>
           </ActionGroup>
