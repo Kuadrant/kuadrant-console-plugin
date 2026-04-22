@@ -135,15 +135,7 @@ export const RESOURCES = {
     createPath: 'KuadrantPlanPolicyCreatePage',
   },
 
-  // devportal.kuadrant.io resources
-  APIProduct: {
-    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIProduct' },
-    plural: 'APIProducts',
-    isPolicy: false,
-    isGatewayAPI: false,
-    showInTopologyByDefault: false,
-    isKuadrantInternal: false,
-  },
+  // devportal.kuadrant.io resources (moved below after ConsolePlugin)
   APIKeyRequest: {
     gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIKeyRequest' },
     plural: 'APIKeyRequests',
@@ -199,6 +191,25 @@ export const RESOURCES = {
   ConsolePlugin: {
     gvk: { group: 'console.openshift.io', version: 'v1', kind: 'ConsolePlugin' },
     plural: 'ConsolePlugins',
+    isPolicy: false,
+    isGatewayAPI: false,
+    showInTopologyByDefault: false,
+    isKuadrantInternal: false,
+  },
+
+  // developer portal resources
+  APIProduct: {
+    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIProduct' },
+    plural: 'APIProducts',
+    isPolicy: false,
+    isGatewayAPI: false,
+    showInTopologyByDefault: false,
+    isKuadrantInternal: false,
+    createPath: 'APIProductCreatePage',
+  },
+  APIKey: {
+    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIKey' },
+    plural: 'APIKeys',
     isPolicy: false,
     isGatewayAPI: false,
     showInTopologyByDefault: false,
