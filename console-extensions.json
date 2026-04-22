@@ -116,6 +116,20 @@
   {
     "type": "console.page/route",
     "properties": {
+      "path": "/kuadrant/all-namespaces/myapikeys",
+      "component": { "$codeRef": "MyAPIKeysPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "path": "/kuadrant/ns/:ns/myapikeys",
+      "component": { "$codeRef": "MyAPIKeysPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
       "exact": true,
       "path": "/k8s/ns/:ns/tlspolicy/name/:name/edit",
       "component": { "$codeRef": "KuadrantTLSCreatePage" }
@@ -291,6 +305,24 @@
   {
     "type": "console.navigation/section",
     "properties": {
+      "id": "kuadrant-api-catalog-section-admin",
+      "name": "%plugin__kuadrant-console-plugin~Kuadrant API Catalog%",
+      "perspective": "admin"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "kuadrant-myapikeys-admin",
+      "name": "%plugin__kuadrant-console-plugin~My API Keys%",
+      "href": "/kuadrant/all-namespaces/myapikeys",
+      "perspective": "admin",
+      "section": "kuadrant-api-catalog-section-admin"
+    }
+  },
+  {
+    "type": "console.navigation/section",
+    "properties": {
       "id": "kuadrant-section-dev",
       "name": "%plugin__kuadrant-console-plugin~Kuadrant%",
       "perspective": "dev"
@@ -351,6 +383,24 @@
       "exact": true,
       "path": "/kuadrant/ns/:ns/apiproducts/:name/edit",
       "component": { "$codeRef": "APIProductCreatePage" }
+    }
+  },
+  {
+    "type": "console.navigation/section",
+    "properties": {
+      "id": "kuadrant-api-catalog-section-dev",
+      "name": "%plugin__kuadrant-console-plugin~Kuadrant API Catalog%",
+      "perspective": "dev"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "kuadrant-myapikeys-dev",
+      "name": "%plugin__kuadrant-console-plugin~My API Keys%",
+      "href": "/kuadrant/all-namespaces/myapikeys",
+      "perspective": "dev",
+      "section": "kuadrant-api-catalog-section-dev"
     }
   }
 ]
