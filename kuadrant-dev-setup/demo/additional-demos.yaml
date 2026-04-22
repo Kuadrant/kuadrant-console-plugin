@@ -119,6 +119,7 @@ spec:
     email: owner2@kuadrant.local
     slack: "#owner2-support"
 ---
+# approved apikey targeting automatic approval api
 apiVersion: devportal.kuadrant.io/v1alpha1
 kind: APIKey
 metadata:
@@ -137,6 +138,48 @@ spec:
   requestedBy:
     userId: user-12345
     email: developer@example.com
+status:
+  phase: Approved
+---
+# pending apikey targeting manual approval api
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: pending-payment-apikey
+  namespace: toystore
+  annotations:
+    backstage.io/owner: user:default/developer1
+  labels:
+    app.kubernetes.io/name: developer-portal-controller
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  apiProductRef:
+    name: owner1-payment-api
+  planTier: silver
+  useCase: "Payment processing for mobile app integration"
+  requestedBy:
+    userId: developer1
+    email: developer1@example.com
+---
+# rejected apikey targeting manual approval api
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: rejected-shipping-apikey
+  namespace: toystore
+  annotations:
+    backstage.io/owner: user:default/developer2
+  labels:
+    app.kubernetes.io/name: developer-portal-controller
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  apiProductRef:
+    name: owner2-shipping-api
+  planTier: bronze
+  useCase: "Shipping integration for third-party vendor"
+  requestedBy:
+    userId: developer2
+    email: developer2@example.com
 ---
 # admin's analytics api
 apiVersion: devportal.kuadrant.io/v1alpha1
