@@ -144,9 +144,9 @@ export const RESOURCES = {
     showInTopologyByDefault: false,
     isKuadrantInternal: false,
   },
-  APIKeyRequest: {
-    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIKeyRequest' },
-    plural: 'APIKeyRequests',
+  APIKey: {
+    gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIKey' },
+    plural: 'APIKeys',
     isPolicy: false,
     isGatewayAPI: false,
     showInTopologyByDefault: false,
