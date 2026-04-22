@@ -128,6 +128,17 @@
     }
   },
   {
+    "type": "console.page/resource/list",
+    "properties": {
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIKey"
+      },
+      "component": { "$codeRef": "MyAPIKeysPage" }
+    }
+  },
+  {
     "type": "console.page/route",
     "properties": {
       "exact": true,
@@ -311,11 +322,15 @@
     }
   },
   {
-    "type": "console.navigation/href",
+    "type": "console.navigation/resource-ns",
     "properties": {
       "id": "kuadrant-myapikeys-admin",
       "name": "%plugin__kuadrant-console-plugin~My API Keys%",
-      "href": "/kuadrant/all-namespaces/myapikeys",
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIKey"
+      },
       "perspective": "admin",
       "section": "kuadrant-api-catalog-section-admin"
     }
@@ -394,11 +409,15 @@
     }
   },
   {
-    "type": "console.navigation/href",
+    "type": "console.navigation/resource-ns",
     "properties": {
       "id": "kuadrant-myapikeys-dev",
       "name": "%plugin__kuadrant-console-plugin~My API Keys%",
-      "href": "/kuadrant/all-namespaces/myapikeys",
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIKey"
+      },
       "perspective": "dev",
       "section": "kuadrant-api-catalog-section-dev"
     }
