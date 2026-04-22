@@ -1,7 +1,8 @@
 import { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
 
+// Extended PublishStatus to support full lifecycle (matches design doc)
 export type ApprovalMode = 'manual' | 'automatic';
-export type PublishStatus = 'Published' | 'Unpublished';
+export type PublishStatus = 'Draft' | 'Published' | 'Deprecated' | 'Retired';
 
 export interface TargetRef {
   group: string;
@@ -12,13 +13,17 @@ export interface TargetRef {
 
 export interface Documentation {
   openAPISpecURL?: string;
+  swaggerUI?: string;
   docsURL?: string;
+  gitRepository?: string;
+  techdocsRef?: string;
 }
 
 export interface ContactInfo {
   team?: string;
   email?: string;
   slack?: string;
+  url?: string;
 }
 
 export interface APIProductSpec {
@@ -33,7 +38,14 @@ export interface APIProductSpec {
   contact?: ContactInfo;
 }
 
+export interface PlanSpec {
+  tier: string;
+  limits?: any; // planpolicyv1alpha1.Limits - complex type
+}
+
 export interface APIProductStatus {
+  observedGeneration?: number;
+  discoveredPlans?: PlanSpec[];
   conditions?: {
     type: string;
     status: string;
@@ -46,6 +58,8 @@ export interface APIProductStatus {
     maxSizeUsed: number;
     raw?: string;
   };
+  discoveredAuthScheme?: any; // kuadrantapiv1.AuthSchemeSpec - complex type
+  oidcDiscovery?: any; // OIDCDiscoveryStatus - complex type
 }
 
 export interface APIProduct extends K8sResourceCommon {
