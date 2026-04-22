@@ -119,6 +119,25 @@ spec:
     email: owner2@kuadrant.local
     slack: "#owner2-support"
 ---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: toystore-apikey
+  namespace: toystore
+  annotations:
+    backstage.io/owner: user:default/owner2
+  labels:
+    app.kubernetes.io/name: developer-portal-controller
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  apiProductRef:
+    name: owner2-customer-api
+  planTier: gold
+  useCase: "Authentication key for our Toystore API integration"
+  requestedBy:
+    userId: user-12345
+    email: developer@example.com
+---
 # admin's analytics api
 apiVersion: devportal.kuadrant.io/v1alpha1
 kind: APIProduct
