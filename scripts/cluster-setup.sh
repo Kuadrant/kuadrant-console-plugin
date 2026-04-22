@@ -27,6 +27,9 @@ oinc create \
 	--addons gateway-api,cert-manager,metallb,istio,kuadrant@latest \
 	--console-plugin "${PLUGIN_NAME}=http://${HOST}:${PLUGIN_PORT}"
 
+log "patch kuadrant to enable developer portal controller..."
+kubectl patch kuadrant kuadrant -n kuadrant-system --type merge --patch '{"spec": {"components": {"developerPortal": {"enabled": true}}}}'
+
 # --- MetalLB IP pool ---
 
 log "configuring MetalLB IP pool..."

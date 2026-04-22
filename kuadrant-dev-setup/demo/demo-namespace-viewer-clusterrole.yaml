@@ -1,0 +1,30 @@
+---
+# Demo Namespace Viewer ClusterRole
+# Minimal ClusterRole for OpenShift Console namespace visibility
+# Used in demo environments to avoid the overly-permissive built-in 'view' ClusterRole
+#
+# This ClusterRole provides ONLY namespace/project visibility for console navigation.
+#
+# Usage:
+#   kubectl apply -f demo-namespace-viewer-clusterrole.yaml
+#
+#   Bind to users cluster-wide using ClusterRoleBinding:
+#   kubectl create clusterrolebinding demo-namespace-viewer-alice \
+#     --clusterrole=demo-namespace-viewer \
+#     --user=alice-mobile-dev
+#
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: demo-namespace-viewer
+rules:
+  # View namespaces for OpenShift console visibility (cluster-wide read-only)
+  # Required for namespace dropdown and navigation in OpenShift Console
+  - apiGroups: [""]
+    resources: ["namespaces"]
+    verbs: ["get", "list", "watch"]
+
+  # View OpenShift projects (OpenShift-specific namespace wrapper)
+  - apiGroups: ["project.openshift.io"]
+    resources: ["projects"]
+    verbs: ["get", "list", "watch"]

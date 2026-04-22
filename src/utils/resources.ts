@@ -1,5 +1,7 @@
 // comprehensive resource registry - single source of truth for all kuadrant resources
 
+import { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
+
 export interface ResourceGVK {
   group: string;
   version: string;
@@ -20,6 +22,47 @@ export interface ResourceMetadata {
   isKuadrantInternal: boolean;
   // navigation path for create page (if creatable via UI)
   createPath?: string;
+}
+
+// Resource type definitions
+
+export interface PlanLimits {
+  daily?: number;
+  weekly?: number;
+  monthly?: number;
+  yearly?: number;
+  custom?: Array<{
+    limit: number;
+    window: string;
+  }>;
+}
+
+export interface APIKey extends K8sResourceCommon {
+  spec?: {
+    apiProductRef?: {
+      name: string;
+    };
+    planTier?: string;
+    requestedBy?: {
+      userId: string;
+      email: string;
+    };
+    useCase?: string;
+  };
+  status?: {
+    phase?: 'Pending' | 'Approved' | 'Rejected';
+    secretRef?: {
+      name: string;
+    };
+    limits?: PlanLimits;
+    conditions?: Array<{
+      type: string;
+      status: string;
+      lastTransitionTime?: string;
+      reason?: string;
+      message?: string;
+    }>;
+  };
 }
 
 // resource definitions
@@ -290,3 +333,17 @@ export const getPoliciesForResource = (resourceKind: ResourceKind): ResourceKind
 };
 
 export default resourceGVKMapping;
+
+export interface OpenshiftUser {
+  metadata?: {
+    name?: string;
+  };
+}
+
+export interface SelfSubjectReviewResponse {
+  status?: {
+    userInfo?: {
+      username?: string;
+    };
+  };
+}
