@@ -112,6 +112,17 @@
     }
   },
   {
+    "type": "console.page/resource/list",
+    "properties": {
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIProduct"
+      },
+      "component": { "$codeRef": "APIProductsListPage" }
+    }
+  },
+  {
     "type": "console.page/route",
     "properties": {
       "exact": true,

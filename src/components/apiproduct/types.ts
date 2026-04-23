@@ -52,3 +52,14 @@ export interface APIProduct extends K8sResourceCommon {
   spec: APIProductSpec;
   status?: APIProductStatus;
 }
+
+export interface PlanPolicy extends K8sResourceCommon {
+  spec?: {
+    targetRef?: {
+      group?: string;
+      kind?: string;
+      name?: string;
+      namespace?: string;
+    };
+  };
+}

@@ -115,6 +115,15 @@ export async function navigateToTopology(page: Page): Promise<void> {
   await spaNavigate(page, '/kuadrant/policy-topology');
 }
 
+export async function navigateToAPIProducts(page: Page, namespace?: string): Promise<void> {
+  const ns = namespace || TEST_NAMESPACE;
+  await spaNavigate(page, `/k8s/ns/${ns}/devportal.kuadrant.io~v1alpha1~APIProduct`);
+}
+
+export async function navigateToAPIProductsAllNamespaces(page: Page): Promise<void> {
+  await spaNavigate(page, '/k8s/all-namespaces/devportal.kuadrant.io~v1alpha1~APIProduct');
+}
+
 // wait for RBAC permission checks to finish loading.
 // the loading indicator may appear and disappear very quickly, so we try to
 // catch it appearing first to avoid a false-green race condition.
