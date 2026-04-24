@@ -21,4 +21,7 @@ kubectl apply -f "${SCRIPT_DIR}/manifests/test-rbac.yaml"
 log "creating test resources..."
 kubectl apply -f "${SCRIPT_DIR}/manifests/test-resources.yaml"
 
+log "creating APIProduct test fixtures..."
+kubectl apply -f "${SCRIPT_DIR}/manifests/test-apiproduct-fixtures.yaml"
+
 log "e2e setup complete"

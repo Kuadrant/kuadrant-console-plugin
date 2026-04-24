@@ -16,6 +16,7 @@ interface GenericPolicyForm {
   policyType: string;
   navigate: NavigateFunction;
   validation: boolean;
+  update?: boolean;
 }
 
 const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
@@ -24,10 +25,11 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
   policyType,
   navigate,
   validation,
+  update: updateProp,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [errorAlertMsg, setErrorAlertMsg] = React.useState('');
-  const update = !!resource.metadata.creationTimestamp;
+  const update = updateProp ?? !!resource.metadata.creationTimestamp;
 
   const handleCreateUpdate = async () => {
     if (!validation) return; // Early return if form is not valid
@@ -35,19 +37,27 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
 
     try {
       if (update) {
-        const response = await k8sUpdate({
+        await k8sUpdate({
           model: model,
           data: resource,
         });
-        console.log(`${policyType} updated successfully:`, response);
-        navigate(`/kuadrant/all-namespaces/policies/${policyType}`);
+        // APIProduct uses different URL pattern
+        if (policyType === 'apiproduct') {
+          navigate(`/kuadrant/ns/${resource.metadata.namespace}/apiproducts`);
+        } else {
+          navigate(`/kuadrant/all-namespaces/policies/${policyType}`);
+        }
       } else {
-        const response = await k8sCreate({
+        await k8sCreate({
           model: model,
           data: resource,
         });
-        console.log(`${policyType} created successfully:`, response);
-        navigate(`/kuadrant/all-namespaces/policies/${policyType}`);
+        // APIProduct uses different URL pattern
+        if (policyType === 'apiproduct') {
+          navigate(`/kuadrant/ns/${resource.metadata.namespace}/apiproducts`);
+        } else {
+          navigate(`/kuadrant/all-namespaces/policies/${policyType}`);
+        }
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'An error occurred';

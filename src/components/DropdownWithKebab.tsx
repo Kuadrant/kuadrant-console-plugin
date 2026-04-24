@@ -20,6 +20,7 @@ import { useNavigate } from 'react-router-dom-v5-compat';
 import { RESOURCES, ResourceKind } from '../utils/resources';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getModelFromResource, getResourceNameFromKind } from '../utils/getModelFromResource';
+import APIProductDeleteModal from './apiproduct/APIProductDeleteModal';
 type DropdownWithKebabProps = {
   obj: K8sResourceCommon;
 };
@@ -79,6 +80,10 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
         pathname: `/k8s/ns/${obj.metadata.namespace}/${obj.apiVersion.replace('/', '~')}~${
           obj.kind
         }/${obj.metadata.name}/yaml`,
+      });
+    } else if (obj.kind === 'APIProduct') {
+      navigate({
+        pathname: `/kuadrant/ns/${obj.metadata.namespace}/apiproducts/${obj.metadata.name}/edit`,
       });
     } else {
       navigate({
@@ -154,30 +159,38 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
           )}
         </DropdownList>
       </Dropdown>
-      <Modal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        aria-labelledby="delete-modal-title"
-        aria-describedby="delete-modal-body"
-        variant="medium"
-      >
-        <ModalHeader title="Confirm Delete" />
-        <ModalBody>
-          Are you sure you want to delete the resource <b>{obj.metadata.name}</b>?
-        </ModalBody>
-        <ModalFooter>
-          <Button key="confirm" variant={ButtonVariant.danger} onClick={onDeleteConfirm}>
-            Delete
-          </Button>
-          <Button
-            key="cancel"
-            variant={ButtonVariant.link}
-            onClick={() => setIsDeleteModalOpen(false)}
-          >
-            Cancel
-          </Button>
-        </ModalFooter>
-      </Modal>
+      {obj.kind === 'APIProduct' ? (
+        <APIProductDeleteModal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          resource={obj}
+        />
+      ) : (
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={() => setIsDeleteModalOpen(false)}
+          aria-labelledby="delete-modal-title"
+          aria-describedby="delete-modal-body"
+          variant="medium"
+        >
+          <ModalHeader title="Confirm Delete" />
+          <ModalBody>
+            Are you sure you want to delete the resource <b>{obj.metadata.name}</b>?
+          </ModalBody>
+          <ModalFooter>
+            <Button key="confirm" variant={ButtonVariant.danger} onClick={onDeleteConfirm}>
+              Delete
+            </Button>
+            <Button
+              key="cancel"
+              variant={ButtonVariant.link}
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancel
+            </Button>
+          </ModalFooter>
+        </Modal>
+      )}
     </>
   );
 };
