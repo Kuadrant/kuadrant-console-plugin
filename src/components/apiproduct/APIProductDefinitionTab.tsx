@@ -15,7 +15,7 @@ import { FileCodeIcon } from '@patternfly/react-icons';
 // Chosen for interactive "try it out" functionality despite bundle size
 import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { useK8sWatchResource, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
 import { APIProduct } from './types';
 import { RESOURCES } from '../../utils/resources';
