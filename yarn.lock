@@ -3306,6 +3306,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/js-yaml@npm:^4.0.9":
+  version: 4.0.9
+  resolution: "@types/js-yaml@npm:4.0.9"
+  checksum: 10c0/24de857aa8d61526bbfbbaa383aa538283ad17363fcd5bb5148e2c7f604547db36646440e739d78241ed008702a8920665d1add5618687b6743858fae00da211
+  languageName: node
+  linkType: hard
+
 "@types/json-schema@npm:*, @types/json-schema@npm:^7.0.5, @types/json-schema@npm:^7.0.8, @types/json-schema@npm:^7.0.9":
   version: 7.0.9
   resolution: "@types/json-schema@npm:7.0.9"
@@ -9613,6 +9620,7 @@ __metadata:
     "@patternfly/react-table": "npm:^6.2.2"
     "@patternfly/react-topology": "npm:^6.2.0"
     "@playwright/test": "npm:^1.50.0"
+    "@types/js-yaml": "npm:^4.0.9"
     "@types/node": "npm:^18.0.0"
     "@types/react": "npm:^17.0.37"
     "@types/react-helmet": "npm:^6.1.4"

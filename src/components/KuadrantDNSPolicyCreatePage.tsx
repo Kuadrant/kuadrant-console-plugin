@@ -222,6 +222,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
 
   const handleYAMLChange = (yamlInput: string) => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
@@ -401,7 +402,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
           </Form>
         </PageSection>
       ) : (
-        <React.Suspense fallback={<div> {t('Loading..')}.</div>}>
+        <React.Suspense fallback={<div>{t('Loading...')}</div>}>
           <ResourceYAMLEditor
             initialResource={yamlInput}
             create={create}
