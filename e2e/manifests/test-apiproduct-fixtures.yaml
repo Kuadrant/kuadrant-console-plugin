@@ -1,0 +1,111 @@
+---
+# HTTPRoute for APIProduct tests to reference
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: test-httproute
+  namespace: kuadrant-test
+spec:
+  parentRefs:
+    - name: test-gateway
+      namespace: kuadrant-test
+  hostnames:
+    - "api.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: test-backend
+          port: 8080
+
+---
+# APIProduct for testing edit functionality
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: test-edit-product
+  namespace: kuadrant-test
+spec:
+  displayName: Test Edit Product
+  version: v1.0.0
+  description: Product for testing edit functionality
+  tags:
+    - test
+    - edit
+  publishStatus: Draft
+  approvalMode: manual
+  documentation:
+    openAPISpecURL: https://api.example.com/spec.yaml
+    docsURL: https://api.example.com/docs
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-httproute
+
+---
+# APIProduct for testing delete functionality
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: test-delete-product
+  namespace: kuadrant-test
+spec:
+  displayName: Test Delete Product
+  version: v1.0.0
+  description: Product for testing delete functionality - will be deleted by test
+  tags:
+    - test
+    - delete
+  publishStatus: Draft
+  approvalMode: automatic
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-httproute
+
+---
+# Second APIProduct for list view tests
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: test-list-product-1
+  namespace: kuadrant-test
+spec:
+  displayName: Test List Product 1
+  version: v1.0.0
+  description: First product for testing list views
+  tags:
+    - test
+    - list
+  publishStatus: Published
+  approvalMode: manual
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-httproute
+
+---
+# Third APIProduct for list view tests
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: test-list-product-2
+  namespace: kuadrant-test
+spec:
+  displayName: Test List Product 2
+  version: v2.0.0
+  description: Second product for testing list views
+  tags:
+    - test
+    - list
+    - beta
+  publishStatus: Draft
+  approvalMode: automatic
+  documentation:
+    openAPISpecURL: https://api2.example.com/spec.yaml
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-httproute
