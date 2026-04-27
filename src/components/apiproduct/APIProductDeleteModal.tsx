@@ -74,8 +74,7 @@ const APIProductDeleteModal: React.FC<APIProductDeleteModalProps> = ({
         )}
         <p>{t('Warning: This action cannot be undone')}</p>
         <p>
-          {t('This will permanently delete the APIProduct')}{' '}
-          <strong>{resourceName}</strong>.
+          {t('This will permanently delete the APIProduct')} <strong>{resourceName}</strong>.
         </p>
         <FormGroup
           label={t('Type the APIProduct name to confirm deletion')}
