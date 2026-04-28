@@ -32,7 +32,12 @@ import {
   ListPageBody,
   ResourceLink,
 } from '@openshift-console/dynamic-plugin-sdk';
-import { SearchIcon } from '@patternfly/react-icons';
+import {
+  SearchIcon,
+  CheckCircleIcon,
+  HourglassStartIcon,
+  ExclamationCircleIcon,
+} from '@patternfly/react-icons';
 import { RESOURCES, APIKey } from '../../utils/resources';
 import APIKeyReveal from './APIKeyReveal';
 import '../kuadrant.css';
@@ -46,6 +51,32 @@ const MyAPIKeysPage: React.FC = () => {
     namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
     isList: true,
   });
+
+  const renderStatus = (phase?: string) => {
+    if (phase === 'Approved') {
+      return (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CheckCircleIcon style={{ color: '#3e8635' }} />
+          {t('Active')}
+        </span>
+      );
+    } else if (phase === 'Pending') {
+      return (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <HourglassStartIcon style={{ color: '#8476d1' }} />
+          {t('Pending')}
+        </span>
+      );
+    } else if (phase === 'Rejected') {
+      return (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ExclamationCircleIcon style={{ color: '#c9190b' }} />
+          {t('Rejected')}
+        </span>
+      );
+    }
+    return phase || 'Unknown';
+  };
 
   // Filter state
   const [isFilterTypeOpen, setIsFilterTypeOpen] = React.useState(false);
@@ -221,7 +252,7 @@ const MyAPIKeysPage: React.FC = () => {
           {obj.spec?.apiProductRef?.name || '-'}
         </TableData>
         <TableData id="status" activeColumnIDs={activeColumnIDs}>
-          {obj.status?.phase || 'Unknown'}
+          {renderStatus(obj.status?.phase)}
         </TableData>
         <TableData id="tier" activeColumnIDs={activeColumnIDs}>
           {obj.spec?.planTier || '-'}
