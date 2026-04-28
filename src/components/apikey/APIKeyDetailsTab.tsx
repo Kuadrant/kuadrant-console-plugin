@@ -11,7 +11,7 @@ import {
 } from '@patternfly/react-core';
 import { Timestamp } from '@openshift-console/dynamic-plugin-sdk';
 import { APIKey, PlanLimits } from '../../utils/resources';
-import APIKeyReveal from './APIKeyReveal';
+import APIKeyRevealModal from './APIKeyRevealModal';
 import UsageExamples from './UsageExamples';
 import '../kuadrant.css';
 
@@ -100,7 +100,7 @@ const APIKeyDetailsTab: React.FC<APIKeyDetailsTabProps> = ({ apiKey }) => {
               <DescriptionListGroup>
                 <DescriptionListTerm>{t('API Key')}</DescriptionListTerm>
                 <DescriptionListDescription>
-                  <APIKeyReveal apiKeyObj={apiKey} />
+                  <APIKeyRevealModal apiKeyObj={apiKey} />
                 </DescriptionListDescription>
               </DescriptionListGroup>
             )}

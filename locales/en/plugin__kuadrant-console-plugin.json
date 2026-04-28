@@ -298,5 +298,11 @@
   "You do not have permission to delete this API Key": "You do not have permission to delete this API Key",
   "Usage Examples": "Usage Examples",
   "Failed to load usage examples": "Failed to load usage examples",
-  "Copy to clipboard": "Copy to clipboard"
+  "Copy to clipboard": "Copy to clipboard",
+  "Delete API Key?": "Delete API Key?",
+  "This action cannot be undone. Type": "This action cannot be undone. Type",
+  "to confirm deletion.": "to confirm deletion.",
+  "Enter API key name": "Enter API key name",
+  "Confirm API key name": "Confirm API key name",
+  "Actions": "Actions"
 }

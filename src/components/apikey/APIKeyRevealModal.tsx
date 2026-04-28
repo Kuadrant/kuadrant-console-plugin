@@ -26,11 +26,11 @@ interface Secret extends K8sResourceCommon {
   };
 }
 
-interface APIKeyRevealProps {
+interface APIKeyRevealModalProps {
   apiKeyObj: APIKey;
 }
 
-const APIKeyReveal: React.FC<APIKeyRevealProps> = ({ apiKeyObj }) => {
+const APIKeyRevealModal: React.FC<APIKeyRevealModalProps> = ({ apiKeyObj }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [isWarningModalOpen, setIsWarningModalOpen] = React.useState(false);
   const [isRevealModalOpen, setIsRevealModalOpen] = React.useState(false);
@@ -271,4 +271,4 @@ const APIKeyReveal: React.FC<APIKeyRevealProps> = ({ apiKeyObj }) => {
   );
 };
 
-export default APIKeyReveal;
+export default APIKeyRevealModal;

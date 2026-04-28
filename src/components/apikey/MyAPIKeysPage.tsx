@@ -20,6 +20,9 @@ import {
   InputGroup,
   TextInput,
   ToolbarFilter,
+  Dropdown,
+  DropdownList,
+  DropdownItem,
 } from '@patternfly/react-core';
 import {
   useActiveNamespace,
@@ -31,15 +34,20 @@ import {
   Timestamp,
   ListPageBody,
   ResourceLink,
+  k8sDelete,
 } from '@openshift-console/dynamic-plugin-sdk';
 import {
   SearchIcon,
   CheckCircleIcon,
   HourglassStartIcon,
   ExclamationCircleIcon,
+  EllipsisVIcon,
 } from '@patternfly/react-icons';
 import { RESOURCES, APIKey } from '../../utils/resources';
-import APIKeyReveal from './APIKeyReveal';
+import { getModelFromResource, getResourceNameFromKind } from '../../utils/getModelFromResource';
+import useAccessReviews from '../../utils/resourceRBAC';
+import APIKeyRevealModal from './APIKeyRevealModal';
+import APIKeyDeleteModal from './APIKeyDeleteModal';
 import '../kuadrant.css';
 
 const MyAPIKeysPage: React.FC = () => {
@@ -85,6 +93,22 @@ const MyAPIKeysPage: React.FC = () => {
   const [nameFilter, setNameFilter] = React.useState<string>('');
   const [statusFilters, setStatusFilters] = React.useState<string[]>([]);
   const [ownerFilter, setOwnerFilter] = React.useState<string>('');
+
+  // Delete modal state
+  const [deleteAPIKey, setDeleteAPIKey] = React.useState<APIKey | null>(null);
+  const [deleteError, setDeleteError] = React.useState<string>('');
+
+  // RBAC permission checks
+  const resourceName = getResourceNameFromKind('APIKey');
+  const resourceGVK: { group: string; kind: string; namespace?: string }[] = [
+    {
+      group: RESOURCES.APIKey.gvk.group,
+      kind: resourceName,
+      namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
+    },
+  ];
+  const { userRBAC } = useAccessReviews(resourceGVK);
+  const canDelete = userRBAC[`${resourceName}-delete`];
 
   // Filter data based on filter type and value
   const filteredData = React.useMemo(() => {
@@ -173,6 +197,31 @@ const MyAPIKeysPage: React.FC = () => {
     setOwnerFilter('');
   };
 
+  const handleDeleteClick = (apiKey: APIKey) => {
+    setDeleteAPIKey(apiKey);
+    setDeleteError('');
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteAPIKey) return;
+
+    try {
+      const model = getModelFromResource(deleteAPIKey);
+      await k8sDelete({ model, resource: deleteAPIKey });
+      setDeleteAPIKey(null);
+      setDeleteError('');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      setDeleteError(errorMessage);
+      console.error('Failed to delete APIKey:', error);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeleteAPIKey(null);
+    setDeleteError('');
+  };
+
   const columns: TableColumn<APIKey>[] = React.useMemo(() => {
     const cols: TableColumn<APIKey>[] = [
       {
@@ -220,12 +269,18 @@ const MyAPIKeysPage: React.FC = () => {
         sort: 'metadata.creationTimestamp',
         transforms: [sortable],
       },
+      {
+        title: '',
+        id: 'actions',
+      },
     );
 
     return cols;
   }, [t, activeNamespace]);
 
   const APIKeyRow: React.FC<RowProps<APIKey>> = ({ obj, activeColumnIDs }) => {
+    const [isKebabOpen, setIsKebabOpen] = React.useState(false);
+
     return (
       <>
         <TableData id="name" activeColumnIDs={activeColumnIDs}>
@@ -259,13 +314,43 @@ const MyAPIKeysPage: React.FC = () => {
         </TableData>
         <TableData id="apiKey" activeColumnIDs={activeColumnIDs}>
           {obj.status?.phase === 'Approved' && obj.status?.secretRef?.name ? (
-            <APIKeyReveal apiKeyObj={obj} />
+            <APIKeyRevealModal apiKeyObj={obj} />
           ) : (
             '-'
           )}
         </TableData>
         <TableData id="requestedTime" activeColumnIDs={activeColumnIDs}>
           <Timestamp timestamp={obj.metadata.creationTimestamp} />
+        </TableData>
+        <TableData id="actions" activeColumnIDs={activeColumnIDs}>
+          <Dropdown
+            isOpen={isKebabOpen}
+            onOpenChange={(isOpen) => setIsKebabOpen(isOpen)}
+            toggle={(toggleRef) => (
+              <MenuToggle
+                ref={toggleRef}
+                variant="plain"
+                onClick={() => setIsKebabOpen(!isKebabOpen)}
+                isExpanded={isKebabOpen}
+                aria-label={t('Actions')}
+              >
+                <EllipsisVIcon />
+              </MenuToggle>
+            )}
+          >
+            <DropdownList>
+              <DropdownItem
+                key="delete"
+                onClick={() => {
+                  setIsKebabOpen(false);
+                  handleDeleteClick(obj);
+                }}
+                isDisabled={!canDelete}
+              >
+                {t('Delete')}
+              </DropdownItem>
+            </DropdownList>
+          </Dropdown>
         </TableData>
       </>
     );
@@ -431,6 +516,15 @@ const MyAPIKeysPage: React.FC = () => {
           )}
         </ListPageBody>
       </PageSection>
+
+      {/* Delete Confirmation Modal */}
+      <APIKeyDeleteModal
+        isOpen={deleteAPIKey !== null}
+        apiKeyName={deleteAPIKey?.metadata.name || ''}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        error={deleteError}
+      />
     </>
   );
 };

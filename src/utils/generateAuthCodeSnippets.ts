@@ -5,10 +5,7 @@ export interface AuthCodeSnippets {
   go: string;
 }
 
-export const generateAuthCodeSnippets = (
-  apiKey: string,
-  hostname: string,
-): AuthCodeSnippets => {
+export const generateAuthCodeSnippets = (apiKey: string, hostname: string): AuthCodeSnippets => {
   const url = `https://${hostname}/api/v1/example`;
 
   return {

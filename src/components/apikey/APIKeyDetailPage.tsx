@@ -11,11 +11,6 @@ import {
   FlexItem,
   Button,
   ButtonVariant,
-  Modal,
-  ModalVariant,
-  ModalHeader,
-  ModalBody,
-  ModalFooter,
   Tooltip,
   Breadcrumb,
   BreadcrumbItem,
@@ -35,6 +30,7 @@ import { RESOURCES, APIKey } from '../../utils/resources';
 import { getModelFromResource, getResourceNameFromKind } from '../../utils/getModelFromResource';
 import useAccessReviews from '../../utils/resourceRBAC';
 import APIKeyDetailsTab from './APIKeyDetailsTab';
+import APIKeyDeleteModal from './APIKeyDeleteModal';
 import '../kuadrant.css';
 
 const APIKeyDetailPage: React.FC = () => {
@@ -88,6 +84,7 @@ const APIKeyDetailPage: React.FC = () => {
       const model = getModelFromResource(apiKeyToUse);
       await k8sDelete({ model, resource: apiKeyToUse });
       setIsDeleteModalOpen(false);
+      setDeleteError('');
       // Navigate back to list page
       navigate(`/kuadrant/ns/${ns}/myapikeys`);
     } catch (error) {
@@ -164,7 +161,10 @@ const APIKeyDetailPage: React.FC = () => {
           alignItems={{ default: 'alignItemsCenter' }}
         >
           <FlexItem>
-            <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsMd' }}>
+            <Flex
+              alignItems={{ default: 'alignItemsCenter' }}
+              spaceItems={{ default: 'spaceItemsMd' }}
+            >
               <FlexItem>
                 <Title headingLevel="h1">{apiKeyToUse.metadata.name}</Title>
               </FlexItem>
@@ -215,30 +215,13 @@ const APIKeyDetailPage: React.FC = () => {
       </PageSection>
 
       {/* Delete Confirmation Modal */}
-      <Modal isOpen={isDeleteModalOpen} onClose={handleDeleteCancel} variant={ModalVariant.small}>
-        <ModalHeader title={t('Confirm Delete')} />
-        <ModalBody>
-          {deleteError && (
-            <Alert
-              variant="danger"
-              isInline
-              title={t('Delete failed')}
-              style={{ marginBottom: '16px' }}
-            >
-              {deleteError}
-            </Alert>
-          )}
-          {t('Are you sure you want to delete the API Key')} <strong>{name}</strong>?
-        </ModalBody>
-        <ModalFooter>
-          <Button key="confirm" variant={ButtonVariant.danger} onClick={handleDeleteConfirm}>
-            {t('Delete')}
-          </Button>
-          <Button key="cancel" variant={ButtonVariant.link} onClick={handleDeleteCancel}>
-            {t('Cancel')}
-          </Button>
-        </ModalFooter>
-      </Modal>
+      <APIKeyDeleteModal
+        isOpen={isDeleteModalOpen}
+        apiKeyName={name || ''}
+        onConfirm={handleDeleteConfirm}
+        onCancel={handleDeleteCancel}
+        error={deleteError}
+      />
     </>
   );
 };

@@ -14,11 +14,7 @@ import {
   Spinner,
   Alert,
 } from '@patternfly/react-core';
-import {
-  K8sResourceCommon,
-  k8sGet,
-  useK8sModel,
-} from '@openshift-console/dynamic-plugin-sdk';
+import { K8sResourceCommon, k8sGet, useK8sModel } from '@openshift-console/dynamic-plugin-sdk';
 import { APIKey } from '../../utils/resources';
 import { generateAuthCodeSnippets, AuthCodeSnippets } from '../../utils/generateAuthCodeSnippets';
 import '../kuadrant.css';
@@ -62,7 +58,12 @@ const UsageExamples: React.FC<UsageExamplesProps> = ({ apiKey }) => {
 
   React.useEffect(() => {
     const fetchData = async () => {
-      if (!apiProductModel || !namespace || !apiProductName || apiKey.status?.phase !== 'Approved') {
+      if (
+        !apiProductModel ||
+        !namespace ||
+        !apiProductName ||
+        apiKey.status?.phase !== 'Approved'
+      ) {
         return;
       }
 
