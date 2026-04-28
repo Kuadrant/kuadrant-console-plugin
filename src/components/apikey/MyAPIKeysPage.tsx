@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom-v5-compat';
 import { sortable } from '@patternfly/react-table';
 import {
   PageSection,
@@ -43,7 +44,12 @@ import {
   useK8sModel,
   k8sPatch,
 } from '@openshift-console/dynamic-plugin-sdk';
-import { SearchIcon, EyeIcon, ExclamationTriangleIcon, EyeSlashIcon } from '@patternfly/react-icons';
+import {
+  SearchIcon,
+  EyeIcon,
+  ExclamationTriangleIcon,
+  EyeSlashIcon,
+} from '@patternfly/react-icons';
 import { RESOURCES } from '../../utils/resources';
 import '../kuadrant.css';
 
@@ -100,7 +106,8 @@ const APIKeyReveal: React.FC<{ apiKeyObj: APIKey }> = ({ apiKeyObj }) => {
           ns: namespace,
         });
 
-        const viewed = secret.metadata?.annotations?.['devportal.kuadrant.io/apikey-viewed'] === 'true';
+        const viewed =
+          secret.metadata?.annotations?.['devportal.kuadrant.io/apikey-viewed'] === 'true';
         setAlreadyViewed(viewed);
       } catch (err) {
         console.error('Error checking secret viewed status:', err);
@@ -470,17 +477,12 @@ const MyAPIKeysPage: React.FC = () => {
   }, [t, activeNamespace]);
 
   const APIKeyRow: React.FC<RowProps<APIKey>> = ({ obj, activeColumnIDs }) => {
-    const { apiVersion, kind } = obj;
-    const [group, version] = apiVersion.includes('/') ? apiVersion.split('/') : ['', apiVersion];
-
     return (
       <>
         <TableData id="name" activeColumnIDs={activeColumnIDs}>
-          <ResourceLink
-            groupVersionKind={{ group, version, kind }}
-            name={obj.metadata.name}
-            namespace={obj.metadata.namespace}
-          />
+          <Link to={`/kuadrant/ns/${obj.metadata.namespace}/apikeys/name/${obj.metadata.name}`}>
+            {obj.metadata.name}
+          </Link>
         </TableData>
         {activeNamespace === '#ALL_NS#' && (
           <TableData id="namespace" activeColumnIDs={activeColumnIDs}>

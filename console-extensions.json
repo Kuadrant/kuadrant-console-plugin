@@ -128,6 +128,14 @@
     }
   },
   {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/ns/:ns/apikeys/name/:name",
+      "component": { "$codeRef": "APIKeyDetailPage" }
+    }
+  },
+  {
     "type": "console.page/resource/list",
     "properties": {
       "model": {
