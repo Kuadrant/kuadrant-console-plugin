@@ -5,6 +5,7 @@
   "A healthy gateway has a `true` status for the `Accepted` and `Programmed` conditions.": "A healthy gateway has a `true` status for the `Accepted` and `Programmed` conditions.",
   "Accepted ": "Accepted ",
   "Access Denied": "Access Denied",
+  "Active": "Active",
   "Add a tag to your API product": "Add a tag to your API product",
   "Add API and Associate route": "Add API and Associate route",
   "Add Limit": "Add Limit",
@@ -294,5 +295,8 @@
   "You do not have permission to view Policies": "You do not have permission to view Policies",
   "You do not have permission to view Policy Topology": "You do not have permission to view Policy Topology",
   "You do not have permission to view this resource": "You do not have permission to view this resource",
-  "You do not have permission to delete this API Key": "You do not have permission to delete this API Key"
+  "You do not have permission to delete this API Key": "You do not have permission to delete this API Key",
+  "Usage Examples": "Usage Examples",
+  "Failed to load usage examples": "Failed to load usage examples",
+  "Copy to clipboard": "Copy to clipboard"
 }

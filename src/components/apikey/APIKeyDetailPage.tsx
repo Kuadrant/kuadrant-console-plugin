@@ -16,42 +16,26 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  DescriptionList,
-  DescriptionListGroup,
-  DescriptionListTerm,
-  DescriptionListDescription,
   Tooltip,
+  Breadcrumb,
+  BreadcrumbItem,
+  Tabs,
+  Tab,
+  TabTitleText,
 } from '@patternfly/react-core';
-import { ExternalLinkAltIcon } from '@patternfly/react-icons';
 import {
-  useK8sWatchResource,
-  K8sResourceCommon,
-  k8sDelete,
-  Timestamp,
-} from '@openshift-console/dynamic-plugin-sdk';
-import { RESOURCES } from '../../utils/resources';
+  ExternalLinkAltIcon,
+  CheckCircleIcon,
+  HourglassStartIcon,
+  ExclamationCircleIcon,
+} from '@patternfly/react-icons';
+import { Link } from 'react-router-dom-v5-compat';
+import { useK8sWatchResource, k8sDelete } from '@openshift-console/dynamic-plugin-sdk';
+import { RESOURCES, APIKey } from '../../utils/resources';
 import { getModelFromResource, getResourceNameFromKind } from '../../utils/getModelFromResource';
 import useAccessReviews from '../../utils/resourceRBAC';
+import APIKeyDetailsTab from './APIKeyDetailsTab';
 import '../kuadrant.css';
-
-interface APIKey extends K8sResourceCommon {
-  spec?: {
-    apiProductRef?: {
-      name: string;
-    };
-    planTier?: string;
-    requestedBy?: {
-      userId: string;
-    };
-    useCase?: string;
-  };
-  status?: {
-    phase?: 'Pending' | 'Approved' | 'Rejected';
-    secretRef?: {
-      name: string;
-    };
-  };
-}
 
 const APIKeyDetailPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -60,6 +44,7 @@ const APIKeyDetailPage: React.FC = () => {
 
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
   const [deleteError, setDeleteError] = React.useState<string>('');
+  const [activeTabKey, setActiveTabKey] = React.useState<string | number>(0);
 
   const [apiKey, loaded, loadError] = useK8sWatchResource<APIKey>({
     groupVersionKind: RESOURCES.APIKey.gvk,
@@ -117,6 +102,32 @@ const APIKeyDetailPage: React.FC = () => {
     setDeleteError('');
   };
 
+  const renderStatus = (phase?: string) => {
+    if (phase === 'Approved') {
+      return (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CheckCircleIcon style={{ color: '#3e8635' }} />
+          {t('Active')}
+        </span>
+      );
+    } else if (phase === 'Pending') {
+      return (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <HourglassStartIcon style={{ color: '#8476d1' }} />
+          {t('Pending')}
+        </span>
+      );
+    } else if (phase === 'Rejected') {
+      return (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <ExclamationCircleIcon style={{ color: '#c9190b' }} />
+          {t('Rejected')}
+        </span>
+      );
+    }
+    return phase || 'Unknown';
+  };
+
   if (loadError) {
     return (
       <PageSection hasBodyWrapper={false}>
@@ -140,12 +151,25 @@ const APIKeyDetailPage: React.FC = () => {
   return (
     <>
       <PageSection hasBodyWrapper={false}>
+        <Breadcrumb>
+          <BreadcrumbItem>
+            <Link to={`/kuadrant/ns/${ns}/myapikeys`}>{t('My API Keys')}</Link>
+          </BreadcrumbItem>
+          <BreadcrumbItem isActive>{apiKeyToUse.metadata.name}</BreadcrumbItem>
+        </Breadcrumb>
+      </PageSection>
+      <PageSection hasBodyWrapper={false}>
         <Flex
           justifyContent={{ default: 'justifyContentSpaceBetween' }}
           alignItems={{ default: 'alignItemsCenter' }}
         >
           <FlexItem>
-            <Title headingLevel="h1">{apiKeyToUse.metadata.name}</Title>
+            <Flex alignItems={{ default: 'alignItemsCenter' }} spaceItems={{ default: 'spaceItemsMd' }}>
+              <FlexItem>
+                <Title headingLevel="h1">{apiKeyToUse.metadata.name}</Title>
+              </FlexItem>
+              <FlexItem>{renderStatus(apiKeyToUse.status?.phase)}</FlexItem>
+            </Flex>
           </FlexItem>
           <FlexItem>
             <Flex>
@@ -178,70 +202,16 @@ const APIKeyDetailPage: React.FC = () => {
         </Flex>
       </PageSection>
 
-      <PageSection hasBodyWrapper={false}>
-        <Title headingLevel="h2" size="lg" style={{ marginBottom: '16px' }}>
-          {t('Details')}
-        </Title>
-        <DescriptionList isHorizontal>
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('Name')}</DescriptionListTerm>
-            <DescriptionListDescription>{apiKeyToUse.metadata.name}</DescriptionListDescription>
-          </DescriptionListGroup>
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('Namespace')}</DescriptionListTerm>
-            <DescriptionListDescription>
-              {apiKeyToUse.metadata.namespace || '-'}
-            </DescriptionListDescription>
-          </DescriptionListGroup>
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('Owner')}</DescriptionListTerm>
-            <DescriptionListDescription>
-              {apiKeyToUse.spec?.requestedBy?.userId || '-'}
-            </DescriptionListDescription>
-          </DescriptionListGroup>
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('API Product')}</DescriptionListTerm>
-            <DescriptionListDescription>
-              {apiKeyToUse.spec?.apiProductRef?.name || '-'}
-            </DescriptionListDescription>
-          </DescriptionListGroup>
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('Status')}</DescriptionListTerm>
-            <DescriptionListDescription>
-              {apiKeyToUse.status?.phase || 'Unknown'}
-            </DescriptionListDescription>
-          </DescriptionListGroup>
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('Tier')}</DescriptionListTerm>
-            <DescriptionListDescription>
-              {apiKeyToUse.spec?.planTier || '-'}
-            </DescriptionListDescription>
-          </DescriptionListGroup>
-          {apiKeyToUse.spec?.useCase && (
-            <DescriptionListGroup>
-              <DescriptionListTerm>{t('Use Case')}</DescriptionListTerm>
-              <DescriptionListDescription>{apiKeyToUse.spec.useCase}</DescriptionListDescription>
-            </DescriptionListGroup>
-          )}
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('Requested Time')}</DescriptionListTerm>
-            <DescriptionListDescription>
-              {apiKeyToUse.metadata.creationTimestamp ? (
-                <Timestamp timestamp={apiKeyToUse.metadata.creationTimestamp} />
-              ) : (
-                '-'
-              )}
-            </DescriptionListDescription>
-          </DescriptionListGroup>
-          {apiKeyToUse.status?.secretRef?.name && (
-            <DescriptionListGroup>
-              <DescriptionListTerm>{t('Secret Reference')}</DescriptionListTerm>
-              <DescriptionListDescription>
-                {apiKeyToUse.status.secretRef.name}
-              </DescriptionListDescription>
-            </DescriptionListGroup>
-          )}
-        </DescriptionList>
+      <PageSection hasBodyWrapper={false} padding={{ default: 'noPadding' }}>
+        <Tabs
+          activeKey={activeTabKey}
+          onSelect={(_event, tabIndex) => setActiveTabKey(tabIndex)}
+          aria-label="APIKey details tabs"
+        >
+          <Tab eventKey={0} title={<TabTitleText>{t('Details')}</TabTitleText>}>
+            <APIKeyDetailsTab apiKey={apiKeyToUse} />
+          </Tab>
+        </Tabs>
       </PageSection>
 
       {/* Delete Confirmation Modal */}
