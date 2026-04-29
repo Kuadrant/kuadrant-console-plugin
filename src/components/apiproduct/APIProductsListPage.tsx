@@ -21,6 +21,8 @@ import {
   EmptyStateBody,
   Alert,
   AlertGroup,
+  Tooltip,
+  Button,
 } from '@patternfly/react-core';
 import { sortable } from '@patternfly/react-table';
 import { SearchIcon } from '@patternfly/react-icons';
@@ -34,20 +36,25 @@ import {
   VirtualizedTable,
   RowProps,
   ListPageBody,
+  ListPageCreateLink,
+  useAccessReview,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { RESOURCES } from '../../utils/resources';
 import { APIProduct, PlanPolicy } from './types';
 import DropdownWithKebab from '../DropdownWithKebab';
 import '../kuadrant.css';
+import { getResourceNameFromKind } from '../../utils/getModelFromResource';
 
 const APIProductsListPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activeNamespace] = useActiveNamespace();
+  const allNamespacesSubPath = '#ALL_NS#';
+  const isAllNamespaces = activeNamespace === allNamespacesSubPath;
 
   // Watch APIProduct resources
   const [apiProducts, productsLoaded, productsLoadError] = useK8sWatchResource<APIProduct[]>({
     groupVersionKind: RESOURCES.APIProduct.gvk,
-    namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
+    namespace: activeNamespace === allNamespacesSubPath ? undefined : activeNamespace,
     isList: true,
   });
 
@@ -56,7 +63,7 @@ const APIProductsListPage: React.FC = () => {
     PlanPolicy[]
   >({
     groupVersionKind: RESOURCES.PlanPolicy.gvk,
-    namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
+    namespace: activeNamespace === allNamespacesSubPath ? undefined : activeNamespace,
     isList: true,
   });
 
@@ -68,6 +75,23 @@ const APIProductsListPage: React.FC = () => {
   const [isStatusFilterOpen, setIsStatusFilterOpen] = React.useState(false);
   const [currentPage, setCurrentPage] = React.useState<number>(1);
   const [perPage, setPerPage] = React.useState<number>(10);
+
+  // Skip RBAC check when viewing all namespaces
+  const [canCreate, canCreateLoading] = useAccessReview(
+    !isAllNamespaces
+      ? {
+          group: RESOURCES.APIProduct.gvk.group,
+          resource: getResourceNameFromKind(RESOURCES.APIProduct.gvk.kind),
+          verb: 'create',
+          namespace: activeNamespace,
+        }
+      : {
+          group: RESOURCES.APIProduct.gvk.group,
+          resource: getResourceNameFromKind(RESOURCES.APIProduct.gvk.kind),
+          verb: 'create',
+          namespace: '',
+        },
+  );
 
   // Build a lookup map: HTTPRoute key -> PlanPolicy
   // Key format: "namespace/routeName"
@@ -557,6 +581,25 @@ const APIProductsListPage: React.FC = () => {
             </div>
           )}
         </ListPageBody>
+        <div className="kuadrant-resource-create-button pf-u-mt-md">
+          {!canCreateLoading && canCreate && !isAllNamespaces ? (
+            <ListPageCreateLink to={`/kuadrant/ns/${activeNamespace}/apiproducts/~new`}>
+              {t('Create API Product')}
+            </ListPageCreateLink>
+          ) : (
+            <Tooltip
+              content={
+                isAllNamespaces
+                  ? t('Select a namespace to create an API Product')
+                  : t('You do not have permission to create an API Product')
+              }
+            >
+              <Button variant="primary" isAriaDisabled>
+                {t('Create API Product')}
+              </Button>
+            </Tooltip>
+          )}
+        </div>
       </PageSection>
     </>
   );
