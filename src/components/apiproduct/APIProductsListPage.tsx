@@ -444,161 +444,167 @@ const APIProductsListPage: React.FC = () => {
 
   return (
     <>
-      <PageSection hasBodyWrapper={false}>
+      <PageSection hasBodyWrapper={false} className="kuadrant-policy-list-body">
         <Title headingLevel="h1">{t('API Products')}</Title>
       </PageSection>
       <PageSection hasBodyWrapper={false} className="kuadrant-policy-list-body">
-        {productsLoadError && (
-          <AlertGroup>
-            <Alert title={t('Error loading API Products')} variant="danger" isInline>
-              {productsLoadError.message}
-            </Alert>
-          </AlertGroup>
-        )}
-        {planPoliciesLoadError && (
-          <AlertGroup>
-            <Alert title={t('Error loading PlanPolicies')} variant="danger" isInline>
-              {planPoliciesLoadError.message}
-            </Alert>
-          </AlertGroup>
-        )}
-        <ListPageBody>
-          <Toolbar>
-            <ToolbarContent>
-              <ToolbarGroup variant="filter-group">
-                <ToolbarItem>
-                  <Select
-                    isOpen={isStatusFilterOpen}
-                    onOpenChange={setIsStatusFilterOpen}
-                    onSelect={handleStatusFilterSelect}
-                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                      <MenuToggle
-                        ref={toggleRef}
-                        onClick={() => setIsStatusFilterOpen(!isStatusFilterOpen)}
-                        isExpanded={isStatusFilterOpen}
-                      >
-                        {statusFilter || t('Status')}
-                      </MenuToggle>
-                    )}
-                  >
-                    <SelectList>
-                      {statusOptions.map((status) => (
-                        <SelectOption
-                          key={status}
-                          value={status}
-                          isSelected={statusFilter === status}
-                        >
-                          {status}
-                        </SelectOption>
-                      ))}
-                    </SelectList>
-                  </Select>
-                </ToolbarItem>
-                {statusFilter && (
+        <div className="co-m-nav-title--row kuadrant-resource-create-container">
+          {productsLoadError && (
+            <AlertGroup>
+              <Alert title={t('Error loading API Products')} variant="danger" isInline>
+                {productsLoadError.message}
+              </Alert>
+            </AlertGroup>
+          )}
+          {planPoliciesLoadError && (
+            <AlertGroup>
+              <Alert title={t('Error loading PlanPolicies')} variant="danger" isInline>
+                {planPoliciesLoadError.message}
+              </Alert>
+            </AlertGroup>
+          )}
+          <ListPageBody>
+            <Toolbar>
+              <ToolbarContent>
+                <ToolbarGroup variant="filter-group">
                   <ToolbarItem>
-                    <Label color="blue" onClose={clearStatusFilter}>
-                      {t('Status')}: {statusFilter}
-                    </Label>
+                    <Select
+                      isOpen={isStatusFilterOpen}
+                      onOpenChange={setIsStatusFilterOpen}
+                      onSelect={handleStatusFilterSelect}
+                      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                        <MenuToggle
+                          ref={toggleRef}
+                          onClick={() => setIsStatusFilterOpen(!isStatusFilterOpen)}
+                          isExpanded={isStatusFilterOpen}
+                        >
+                          {statusFilter || t('Status')}
+                        </MenuToggle>
+                      )}
+                    >
+                      <SelectList>
+                        {statusOptions.map((status) => (
+                          <SelectOption
+                            key={status}
+                            value={status}
+                            isSelected={statusFilter === status}
+                          >
+                            {status}
+                          </SelectOption>
+                        ))}
+                      </SelectList>
+                    </Select>
                   </ToolbarItem>
-                )}
-                <ToolbarItem>
-                  <Select
-                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                      <MenuToggle ref={toggleRef} onClick={onToggleClick} isExpanded={isFilterOpen}>
-                        {filterSelected === 'name' && t('Name')}
-                        {filterSelected === 'namespace' && t('Namespace')}
-                      </MenuToggle>
-                    )}
-                    onSelect={onFilterSelect}
-                    onOpenChange={setIsFilterOpen}
-                    isOpen={isFilterOpen}
-                  >
-                    <SelectList>
-                      <SelectOption value="name">{t('Name')}</SelectOption>
-                      <SelectOption value="namespace">{t('Namespace')}</SelectOption>
-                    </SelectList>
-                  </Select>
-                </ToolbarItem>
+                  {statusFilter && (
+                    <ToolbarItem>
+                      <Label color="blue" onClose={clearStatusFilter}>
+                        {t('Status')}: {statusFilter}
+                      </Label>
+                    </ToolbarItem>
+                  )}
+                  <ToolbarItem>
+                    <Select
+                      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                        <MenuToggle
+                          ref={toggleRef}
+                          onClick={onToggleClick}
+                          isExpanded={isFilterOpen}
+                        >
+                          {filterSelected === 'name' && t('Name')}
+                          {filterSelected === 'namespace' && t('Namespace')}
+                        </MenuToggle>
+                      )}
+                      onSelect={onFilterSelect}
+                      onOpenChange={setIsFilterOpen}
+                      isOpen={isFilterOpen}
+                    >
+                      <SelectList>
+                        <SelectOption value="name">{t('Name')}</SelectOption>
+                        <SelectOption value="namespace">{t('Namespace')}</SelectOption>
+                      </SelectList>
+                    </Select>
+                  </ToolbarItem>
 
-                <ToolbarItem>
-                  <InputGroup>
-                    <TextInput
-                      type="text"
-                      placeholder={t('Search by {{filterValue}}...', {
-                        filterValue: filterLabels[filterSelected],
-                      })}
-                      value={filters}
-                      onChange={(_event, value) => handleFilterChange(value)}
-                      aria-label={t('Resource search')}
-                    />
-                  </InputGroup>
-                </ToolbarItem>
-              </ToolbarGroup>
-            </ToolbarContent>
-          </Toolbar>
+                  <ToolbarItem>
+                    <InputGroup>
+                      <TextInput
+                        type="text"
+                        placeholder={t('Search by {{filterValue}}...', {
+                          filterValue: filterLabels[filterSelected],
+                        })}
+                        value={filters}
+                        onChange={(_event, value) => handleFilterChange(value)}
+                        aria-label={t('Resource search')}
+                      />
+                    </InputGroup>
+                  </ToolbarItem>
+                </ToolbarGroup>
+              </ToolbarContent>
+            </Toolbar>
 
-          {paginatedProducts.length === 0 && productsLoaded ? (
-            <EmptyState
-              titleText={
-                <Title headingLevel="h4" size="lg">
-                  {t('No API Products found')}
-                </Title>
-              }
-              icon={SearchIcon}
-            >
-              <EmptyStateBody>
-                {statusFilter || filters
-                  ? t('No API Products match the filter criteria.')
-                  : t('There are no API Products to display - please create some.')}
-              </EmptyStateBody>
-            </EmptyState>
-          ) : (
-            <VirtualizedTable<APIProduct>
-              data={paginatedProducts}
-              unfilteredData={filteredProducts}
-              loaded={productsLoaded}
-              loadError={productsLoadError}
-              columns={columns}
-              Row={APIProductRow}
-            />
-          )}
-
-          {filteredProducts.length > 0 && (
-            <div className="kuadrant-pagination-left">
-              <Pagination
-                itemCount={filteredProducts.length}
-                perPage={perPage}
-                page={currentPage}
-                onSetPage={onSetPage}
-                onPerPageSelect={onPerPageSelect}
-                variant="bottom"
-                perPageOptions={[
-                  { title: '5', value: 5 },
-                  { title: '10', value: 10 },
-                  { title: '20', value: 20 },
-                ]}
+            {paginatedProducts.length === 0 && productsLoaded ? (
+              <EmptyState
+                titleText={
+                  <Title headingLevel="h4" size="lg">
+                    {t('No API Products found')}
+                  </Title>
+                }
+                icon={SearchIcon}
+              >
+                <EmptyStateBody>
+                  {statusFilter || filters
+                    ? t('No API Products match the filter criteria.')
+                    : t('There are no API Products to display - please create some.')}
+                </EmptyStateBody>
+              </EmptyState>
+            ) : (
+              <VirtualizedTable<APIProduct>
+                data={paginatedProducts}
+                unfilteredData={filteredProducts}
+                loaded={productsLoaded}
+                loadError={productsLoadError}
+                columns={columns}
+                Row={APIProductRow}
               />
-            </div>
-          )}
-        </ListPageBody>
-        <div className="kuadrant-resource-create-button pf-u-mt-md">
-          {!canCreateLoading && canCreate && !isAllNamespaces ? (
-            <ListPageCreateLink to={`/kuadrant/ns/${activeNamespace}/apiproducts/~new`}>
-              {t('Create API Product')}
-            </ListPageCreateLink>
-          ) : (
-            <Tooltip
-              content={
-                isAllNamespaces
-                  ? t('Select a namespace to create an API Product')
-                  : t('You do not have permission to create an API Product')
-              }
-            >
-              <Button variant="primary" isAriaDisabled>
+            )}
+
+            {filteredProducts.length > 0 && (
+              <div className="kuadrant-pagination-left">
+                <Pagination
+                  itemCount={filteredProducts.length}
+                  perPage={perPage}
+                  page={currentPage}
+                  onSetPage={onSetPage}
+                  onPerPageSelect={onPerPageSelect}
+                  variant="bottom"
+                  perPageOptions={[
+                    { title: '5', value: 5 },
+                    { title: '10', value: 10 },
+                    { title: '20', value: 20 },
+                  ]}
+                />
+              </div>
+            )}
+          </ListPageBody>
+          <div className="kuadrant-resource-create-button pf-u-mt-md">
+            {!canCreateLoading && canCreate && !isAllNamespaces ? (
+              <ListPageCreateLink to={`/kuadrant/ns/${activeNamespace}/apiproducts/~new`}>
                 {t('Create API Product')}
-              </Button>
-            </Tooltip>
-          )}
+              </ListPageCreateLink>
+            ) : (
+              <Tooltip
+                content={
+                  isAllNamespaces
+                    ? t('Select a namespace to create an API Product')
+                    : t('You do not have permission to create an API Product')
+                }
+              >
+                <Button variant="primary" isAriaDisabled>
+                  {t('Create API Product')}
+                </Button>
+              </Tooltip>
+            )}
+          </div>
         </div>
       </PageSection>
     </>
