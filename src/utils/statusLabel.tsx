@@ -57,6 +57,11 @@ const getStatusLabel = (obj) => {
       'kuadrant.io/RateLimitPolicyAffected',
       'kuadrant.io/TokenRateLimitPolicyAffected',
     ],
+    GRPCRoute: [
+      'kuadrant.io/AuthPolicyAffected',
+      'kuadrant.io/RateLimitPolicyAffected',
+      'kuadrant.io/TokenRateLimitPolicyAffected',
+    ],
   };
 
   const policiesAffected = policiesMap[kind] || [];
