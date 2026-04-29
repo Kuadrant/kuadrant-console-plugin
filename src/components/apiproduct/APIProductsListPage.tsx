@@ -444,7 +444,7 @@ const APIProductsListPage: React.FC = () => {
 
   return (
     <>
-      <PageSection hasBodyWrapper={false} className="kuadrant-policy-list-body">
+      <PageSection hasBodyWrapper={false}>
         <Title headingLevel="h1">{t('API Products')}</Title>
       </PageSection>
       <PageSection hasBodyWrapper={false} className="kuadrant-policy-list-body">
@@ -558,14 +558,16 @@ const APIProductsListPage: React.FC = () => {
                 </EmptyStateBody>
               </EmptyState>
             ) : (
-              <VirtualizedTable<APIProduct>
-                data={paginatedProducts}
-                unfilteredData={filteredProducts}
-                loaded={productsLoaded}
-                loadError={productsLoadError}
-                columns={columns}
-                Row={APIProductRow}
-              />
+              <div className="kuadrant-resource-table">
+                <VirtualizedTable<APIProduct>
+                  data={paginatedProducts}
+                  unfilteredData={filteredProducts}
+                  loaded={productsLoaded}
+                  loadError={productsLoadError}
+                  columns={columns}
+                  Row={APIProductRow}
+                />
+              </div>
             )}
 
             {filteredProducts.length > 0 && (

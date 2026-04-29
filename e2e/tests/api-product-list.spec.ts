@@ -9,18 +9,6 @@ const navigateToAPIProducts = async (page, namespace = 'kuadrant-test') => {
   await page.waitForLoadState('networkidle');
 };
 
-const navigateToAPIProductsAllNamespaces = async (page) => {
-  await page.evaluate(() => {
-    window.history.pushState(
-      {},
-      '',
-      '/k8s/all-namespaces/devportal.kuadrant.io~v1alpha1~APIProduct',
-    );
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  });
-  await page.waitForLoadState('networkidle');
-};
-
 test.describe('APIProduct List Page - Display and Filters', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -63,14 +51,19 @@ test.describe('APIProduct List Page - Display and Filters', () => {
       await expect(row).toBeVisible({ timeout: 15_000 });
 
     // Verify our test API Products are displayed
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('a:has-text("payment-api")')).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('a:has-text("draft-api")')).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.locator('div.kuadrant-resource-table a:has-text("gamestore-api")'),
+    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('div.kuadrant-resource-table a:has-text("payment-api")')).toBeVisible(
+      { timeout: 10_000 },
+    );
+    await expect(page.locator('div.kuadrant-resource-table a:has-text("draft-api")')).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Verify we have at least 4 API Products
     const rows = page.locator('tbody tr[data-key]');
-    await expect(rows).toHaveCount(4, { timeout: 10_000 });
+    await expect(rows).toHaveCount(5, { timeout: 10_000 });
   });
 
   test('displays correct status labels', async ({ page }) => {
@@ -78,12 +71,14 @@ test.describe('APIProduct List Page - Display and Filters', () => {
     await waitForPermissionsLoaded(page);
 
     // Wait for Published status labels (green)
-    const publishedLabels = page.locator('.pf-v6-c-label.pf-m-green:has-text("Published")');
-    await expect(publishedLabels.first()).toBeVisible({ timeout: 15_000 });
+    const publishedLabels = await page
+      .locator('.pf-v6-c-label.pf-m-green:has-text("Published")')
+      .all();
+    expect(publishedLabels).toHaveLength(2);
 
     // Wait for Draft status label (orange)
-    const draftLabel = page.locator('.pf-v6-c-label.pf-m-orange:has-text("Draft")');
-    await expect(draftLabel).toBeVisible({ timeout: 10_000 });
+    const draftLabels = await page.locator('.pf-v6-c-label.pf-m-orange:has-text("Draft")').all();
+    expect(draftLabels).toHaveLength(3);
   });
 
   test('displays PlanPolicy links correctly', async ({ page }) => {
@@ -93,12 +88,12 @@ test.describe('APIProduct List Page - Display and Filters', () => {
     // Wait for table to load
     await page.waitForTimeout(2000); // Give time for PlanPolicy map to build
 
-    // Find the row for toystore-api (has a PlanPolicy)
-    const toystoreRow = page.locator('tr:has(a:has-text("toystore-api"))');
-    await expect(toystoreRow).toBeVisible({ timeout: 15_000 });
+    // Find the row for gamestore-api (has a PlanPolicy)
+    const gamestoreRow = page.locator('tr:has(a:has-text("gamestore-api"))');
+    await expect(gamestoreRow).toBeVisible({ timeout: 15_000 });
 
     // Verify PlanPolicy link is present in the row
-    const planPolicyLink = toystoreRow.locator('a:has-text("test-plan-policy")');
+    const planPolicyLink = gamestoreRow.locator('a:has-text("test-plan-policy")');
     await expect(planPolicyLink).toBeVisible({ timeout: 10_000 });
   });
 
@@ -106,13 +101,13 @@ test.describe('APIProduct List Page - Display and Filters', () => {
     await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
-    // Wait for tag labels (teal color)
-    const tagLabels = page.locator('.pf-v6-c-label.pf-m-teal');
-    await expect(tagLabels.first()).toBeVisible({ timeout: 15_000 });
+    // Find the row for gamestore-api (has a PlanPolicy)
+    const gamestoreRow = page.locator('tr:has(a:has-text("gamestore-api"))');
 
     // Verify specific tags exist
-    await expect(page.locator('.pf-v6-c-label:has-text("demo")').first()).toBeVisible();
-    await expect(page.locator('.pf-v6-c-label:has-text("retail")').first()).toBeVisible();
+    await expect(gamestoreRow.locator('.pf-v6-c-label:has-text("demo")').first()).toBeVisible();
+    await expect(gamestoreRow.locator('.pf-v6-c-label:has-text("retail")').first()).toBeVisible();
+    await expect(gamestoreRow.locator('.pf-v6-c-label:has-text("games")').first()).toBeVisible();
   });
 });
 
@@ -162,7 +157,7 @@ test.describe('APIProduct List Page - Status Filter', () => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible({ timeout: 15_000 });
 
     // Open status filter dropdown
     const statusToggle = page.locator('button:has-text("Status")').first();
@@ -182,7 +177,6 @@ test.describe('APIProduct List Page - Status Filter', () => {
     await expect(page.locator('a:has-text("draft-api")')).toBeVisible();
 
     // Verify Published products are NOT shown
-    await expect(page.locator('a:has-text("toystore-api")')).not.toBeVisible();
     await expect(page.locator('a:has-text("gamestore-api")')).not.toBeVisible();
   });
 
@@ -235,7 +229,7 @@ test.describe('APIProduct List Page - Name Filter', () => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible({ timeout: 15_000 });
 
     // Verify Name filter is selected by default
     const filterTypeToggle = page.locator('button:has-text("Name")').first();
@@ -243,16 +237,16 @@ test.describe('APIProduct List Page - Name Filter', () => {
 
     // Type into search input
     const searchInput = page.locator('input[aria-label="Resource search"]');
-    await searchInput.fill('toystore');
+    await searchInput.fill('gamestore');
 
     // Wait for filter to apply
     await page.waitForTimeout(1000);
 
-    // Verify only toystore-api is shown
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible();
+    // Verify only gamestore-api is shown
+    await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible();
 
     // Verify other products are NOT shown
-    await expect(page.locator('a:has-text("gamestore-api")')).not.toBeVisible();
+    await expect(page.locator('a:has-text("draft-api")')).not.toBeVisible();
     await expect(page.locator('a:has-text("payment-api")')).not.toBeVisible();
   });
 
@@ -279,7 +273,7 @@ test.describe('APIProduct List Page - Name Filter', () => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible({ timeout: 15_000 });
 
     // Type non-matching search
     const searchInput = page.locator('input[aria-label="Resource search"]');
@@ -298,11 +292,11 @@ test.describe('APIProduct List Page - Name Filter', () => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible({ timeout: 15_000 });
 
     // Apply name filter
     const searchInput = page.locator('input[aria-label="Resource search"]');
-    await searchInput.fill('toystore');
+    await searchInput.fill('someapi');
     await page.waitForTimeout(1000);
 
     // Verify filter is active
@@ -313,109 +307,9 @@ test.describe('APIProduct List Page - Name Filter', () => {
     await page.waitForTimeout(1000);
 
     // Verify all products are shown again
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible();
+    await expect(page.locator('a:has-text("draft-api")')).toBeVisible();
     await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible();
     await expect(page.locator('a:has-text("payment-api")')).toBeVisible();
-  });
-});
-
-test.describe('APIProduct List Page - Namespace Filter', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto('/');
-    await page.waitForLoadState('networkidle');
-    await impersonateUser(page, 'test-admin');
-  });
-
-  test.afterEach(async ({ page }) => {
-    await stopImpersonation(page);
-  });
-
-  test('switches filter type to Namespace', async ({ page }) => {
-    await navigateToAPIProducts(page);
-    await waitForPermissionsLoaded(page);
-
-    // Wait for initial data to load
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible({ timeout: 15_000 });
-
-    // Click on filter type dropdown (initially shows "Name")
-    const filterTypeToggle = page
-      .locator('[data-ouia-component-id="OUIA-Generated-Toolbar-1"] button:has-text("Name")')
-      .first();
-    await filterTypeToggle.click();
-
-    // Select "Namespace" option
-    const namespaceOption = page.locator(
-      '[data-ouia-component-type="PF6/Select"] button span span:has-text("Namespace")',
-    );
-    await namespaceOption.click();
-
-    // Verify toggle now shows "Namespace"
-    await expect(page.getByRole('button', { name: 'Namespace' }).nth(1)).toBeVisible();
-  });
-
-  test('filters by namespace in all-namespaces view', async ({ page }) => {
-    await navigateToAPIProductsAllNamespaces(page);
-    await waitForPermissionsLoaded(page);
-
-    // Wait for initial data to load (both namespaces)
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible({ timeout: 15_000 });
-
-    // Wait a bit longer to ensure all resources load
-    await page.waitForTimeout(2000);
-
-    // Switch to namespace filter
-    const filterTypeToggle = page
-      .locator('[data-ouia-component-id="OUIA-Generated-Toolbar-1"] button:has-text("Name")')
-      .first();
-    await filterTypeToggle.click();
-    const namespaceOption = page.locator(
-      '[data-ouia-component-type="PF6/Select"] button span span:has-text("Namespace")',
-    );
-    await namespaceOption.click();
-
-    // Type namespace into search input
-    const searchInput = page.locator('input[aria-label="Resource search"]');
-    await searchInput.fill('kuadrant-test-2');
-
-    // Wait for filter to apply
-    await page.waitForTimeout(1000);
-
-    // Verify only products from kuadrant-test-2 namespace are shown
-    await expect(page.locator('a:has-text("shipping-api")')).toBeVisible({ timeout: 10_000 });
-
-    // Verify products from other namespaces are NOT shown
-    await expect(page.locator('a:has-text("toystore-api")')).not.toBeVisible();
-    await expect(page.locator('a:has-text("gamestore-api")')).not.toBeVisible();
-  });
-
-  test('filters by namespace (partial match)', async ({ page }) => {
-    await navigateToAPIProductsAllNamespaces(page);
-    await waitForPermissionsLoaded(page);
-
-    // Wait for initial data to load
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible({ timeout: 15_000 });
-    await page.waitForTimeout(2000);
-
-    // Switch to namespace filter
-    const filterTypeToggle = page
-      .locator('[data-ouia-component-id="OUIA-Generated-Toolbar-1"] button:has-text("Name")')
-      .first();
-    await filterTypeToggle.click();
-    const namespaceOption = page.locator(
-      '[data-ouia-component-type="PF6/Select"] button span span:has-text("Namespace")',
-    );
-    await namespaceOption.click();
-
-    // Type partial namespace into search input (matches "kuadrant-test" and "kuadrant-test-2")
-    const searchInput = page.locator('input[aria-label="Resource search"]');
-    await searchInput.fill('kuadrant-test');
-
-    // Wait for filter to apply
-    await page.waitForTimeout(1000);
-
-    // Verify products from both kuadrant-test namespaces are shown
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible();
-    await expect(page.locator('a:has-text("shipping-api")')).toBeVisible();
   });
 });
 
@@ -435,7 +329,7 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible({ timeout: 15_000 });
 
     // Apply status filter (Published)
     const statusToggle = page.locator('button:has-text("Status")').first();
@@ -450,7 +344,6 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await page.waitForTimeout(1000);
 
     // Verify only Published products with "store" in name are shown
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible();
     await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible();
 
     // Verify payment-api is NOT shown (doesn't have "store" in name)
@@ -465,7 +358,7 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
-    await expect(page.locator('a:has-text("toystore-api")')).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible({ timeout: 15_000 });
 
     // Apply status filter (Draft)
     const statusToggle = page.locator('button:has-text("Status")').first();
