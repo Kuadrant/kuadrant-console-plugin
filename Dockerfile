@@ -5,7 +5,7 @@ USER root
 RUN dnf update -y && \
     dnf upgrade -y && \
     dnf module enable nodejs:22 nginx:1.24 -y && \
-    dnf install -y nodejs nginx npm
+    dnf install -y nodejs nginx npm gcc-c++ make python3
 
 # Enable corepack for Yarn v4 support
 RUN npm install -g corepack && \
@@ -19,7 +19,7 @@ RUN mkdir -p /var/cache/nginx /var/log/nginx /run && \
 WORKDIR /usr/src/app
 
 COPY package.json yarn.lock .yarnrc.yml ./
-RUN yarn install --immutable
+RUN YARN_ENABLE_SCRIPTS=false yarn install --immutable
 
 COPY . .
 

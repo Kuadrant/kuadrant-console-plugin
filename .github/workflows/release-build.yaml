@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [amd64, arm64, s390x]
+        arch: [amd64, arm64, s390x, ppc64le]
 
     steps:
       - name: Checkout Code
@@ -61,6 +61,7 @@ jobs:
           buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }}-amd64
           buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }}-arm64
           buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }}-s390x
+          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }}-ppc64le
 
       - name: Push Multi-Arch Release Manifest
         run: |
