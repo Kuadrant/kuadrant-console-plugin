@@ -23,6 +23,7 @@ import {
   Dropdown,
   DropdownList,
   DropdownItem,
+  Button,
 } from '@patternfly/react-core';
 import {
   useActiveNamespace,
@@ -48,6 +49,7 @@ import { getModelFromResource, getResourceNameFromKind } from '../../utils/getMo
 import useAccessReviews from '../../utils/resourceRBAC';
 import APIKeyRevealModal from './APIKeyRevealModal';
 import APIKeyDeleteModal from './APIKeyDeleteModal';
+import RequestAPIKeyModal from './RequestAPIKeyModal';
 import '../kuadrant.css';
 
 const MyAPIKeysPage: React.FC = () => {
@@ -98,6 +100,9 @@ const MyAPIKeysPage: React.FC = () => {
   const [deleteAPIKey, setDeleteAPIKey] = React.useState<APIKey | null>(null);
   const [deleteError, setDeleteError] = React.useState<string>('');
 
+  // Request API Key modal state
+  const [isRequestModalOpen, setIsRequestModalOpen] = React.useState(false);
+
   // RBAC permission checks
   const resourceName = getResourceNameFromKind('APIKey');
   const resourceGVK: { group: string; kind: string; namespace?: string }[] = [
@@ -108,6 +113,7 @@ const MyAPIKeysPage: React.FC = () => {
     },
   ];
   const { userRBAC } = useAccessReviews(resourceGVK);
+  const canCreate = userRBAC[`${resourceName}-create`];
   const canDelete = userRBAC[`${resourceName}-delete`];
 
   // Filter data based on filter type and value
@@ -359,7 +365,16 @@ const MyAPIKeysPage: React.FC = () => {
   return (
     <>
       <PageSection hasBodyWrapper={false}>
-        <Title headingLevel="h1">{t('My API Keys')}</Title>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Title headingLevel="h1">{t('My API Keys')}</Title>
+          <Button
+            variant="primary"
+            onClick={() => setIsRequestModalOpen(true)}
+            isDisabled={!canCreate || activeNamespace === '#ALL_NS#'}
+          >
+            {t('Request API Key')}
+          </Button>
+        </div>
       </PageSection>
       <PageSection hasBodyWrapper={false} className="kuadrant-policy-list-body">
         {apiKeysLoadError && (
@@ -524,6 +539,12 @@ const MyAPIKeysPage: React.FC = () => {
         onConfirm={handleDeleteConfirm}
         onCancel={handleDeleteCancel}
         error={deleteError}
+      />
+
+      {/* Request API Key Modal */}
+      <RequestAPIKeyModal
+        isOpen={isRequestModalOpen}
+        onClose={() => setIsRequestModalOpen(false)}
       />
     </>
   );
