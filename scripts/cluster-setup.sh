@@ -24,8 +24,11 @@ PLUGIN_NAME=$(node -p "require('${REPO_DIR}/package.json').consolePlugin.name")
 
 log "creating oinc cluster with addons..."
 oinc create \
-  --addons gateway-api,cert-manager,metallb,istio,kuadrant \
-  --console-plugin "${PLUGIN_NAME}=http://${HOST}:${PLUGIN_PORT}"
+	--addons gateway-api,cert-manager,metallb,istio,kuadrant \
+	--console-plugin "${PLUGIN_NAME}=http://${HOST}:${PLUGIN_PORT}"
+
+log "patch kuadrant to enable developer portal controller..."
+kubectl patch kuadrant kuadrant -n kuadrant-system --type merge --patch '{"spec": {"components": {"developerPortal": {"enabled": true}}}}'
 
 # --- MetalLB IP pool ---
 
