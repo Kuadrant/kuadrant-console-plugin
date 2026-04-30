@@ -10,7 +10,8 @@ import {
   Label,
 } from '@patternfly/react-core';
 import { Timestamp } from '@openshift-console/dynamic-plugin-sdk';
-import { APIKey, PlanLimits } from '../../utils/resources';
+import { APIKey } from '../../utils/resources';
+import { formatLimits } from '../../utils/apiKeyUtils';
 import APIKeyRevealModal from './APIKeyRevealModal';
 import UsageExamples from './UsageExamples';
 import '../kuadrant.css';
@@ -21,21 +22,6 @@ interface APIKeyDetailsTabProps {
 
 const APIKeyDetailsTab: React.FC<APIKeyDetailsTabProps> = ({ apiKey }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
-
-  const formatLimits = (limits: PlanLimits | undefined): string | null => {
-    if (!limits) return null;
-
-    if (limits.daily) return `${limits.daily} requests per day`;
-    if (limits.weekly) return `${limits.weekly} requests per week`;
-    if (limits.monthly) return `${limits.monthly} requests per month`;
-    if (limits.yearly) return `${limits.yearly} requests per year`;
-    if (limits.custom && limits.custom.length > 0) {
-      const { limit, window } = limits.custom[0];
-      return `${limit} requests per ${window}`;
-    }
-
-    return null;
-  };
 
   return (
     <PageSection hasBodyWrapper={false}>
