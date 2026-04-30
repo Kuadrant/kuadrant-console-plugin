@@ -180,7 +180,7 @@ This section describes the high-level workflow for consumers to request and rece
 
 **Why always create APIKeyApproval (even in automatic mode)?**
 
-- ✅ **Unified revocation mechanism**: Owners revoke ANY approved key (automatic or manual) by editing/deleting APIKeyApproval
+- ✅ **Unified revocation mechanism**: Owners revoke ANY approved key (automatic or manual) by editing APIKeyApproval (`approved: false`)
 - ✅ **Stable across mode changes**: Switching `automatic ↔ manual` doesn't affect existing approved APIKeys
 - ✅ **Historical record**: APIKeyApproval proves "this was approved under the rules at the time" (decoupled from current approval mode)
 - ✅ **Audit trail**: Distinguishes auto-approved (`reviewedBy: "system"`) from manually approved (`reviewedBy: "owner@example.com"`)
@@ -366,7 +366,7 @@ spec:
 - **Approval workflow**:
   - `approvalMode: automatic` → Controller automatically creates APIKeyApproval with `approved: true` and `approvedBy: "system"` (no owner intervention required for initial approval)
   - `approvalMode: manual` → Owner creates APIKeyApproval resource to approve/reject consumer requests
-  - **Revocation**: In both modes, owners can revoke by editing APIKeyApproval (`approved: false`) or deleting it (controller removes Approved condition)
+  - **Revocation**: In both modes, owners can revoke by editing APIKeyApproval (`approved: false`) - controller sets Denied condition and removes enforcement Secret
   - **Mode changes**: Existing APIKeyApprovals remain valid when switching modes - approval state is decoupled from current approval mode
 - **Draft products**: `publishStatus: Draft` can be used to hide products from catalog while in development (UI can filter by this field)
 - **HTTPRoute reference**: `spec.targetRef` must reference an HTTPRoute in the same namespace (namespace-local reference)
@@ -447,7 +447,6 @@ spec:
   - Copies `reviewedBy`, `reason`, `message` into condition fields
 - **Revocation workflow**:
   - Owner edits APIKeyApproval: `approved: false` → controller sets `Denied` condition, deletes enforcement Secret
-  - Owner deletes APIKeyApproval → controller removes `Approved` condition (returns to Pending state), deletes enforcement Secret
   - Works identically for automatic and manual approvals (unified revocation mechanism)
 - **Clean RBAC separation**:
   - Consumers have `create/update/delete apikeys` permissions in their own namespace
@@ -600,8 +599,8 @@ In addition to APIProduct and APIKey, API consumers need read-only access to pol
 **Secret rotation and revocation:**
 
 - **Consumer rotation**: Consumer deletes old APIKey and creates new one with new secret
-- **Owner revocation**: Owner edits APIKeyApproval (`approved: false`) or deletes it
-  - Controller updates APIKey conditions (removes `Approved`, sets `Denied` if `approved: false`)
+- **Owner revocation**: Owner edits APIKeyApproval (`approved: false`)
+  - Controller updates APIKey conditions (sets `Denied`)
   - Controller deletes enforcement Secret from kuadrant namespace
   - Consumer's secret remains (consumer manages their own secrets)
   - Works identically for automatic and manual approvals
@@ -614,7 +613,7 @@ In addition to APIProduct and APIKey, API consumers need read-only access to pol
 - **Risk**: Owner accidentally sets automatic mode for sensitive API
 - **Mitigation**:
   - Document approval modes clearly, UI should warn when switching to automatic
-  - Owners can revoke by editing/deleting the auto-generated APIKeyApproval (same as manual approvals)
+  - Owners can revoke by editing the auto-generated APIKeyApproval (`approved: false`) - same mechanism as manual approvals
 
 **Approval separation via APIKeyApproval CRD:**
 
@@ -633,7 +632,7 @@ In addition to APIProduct and APIKey, API consumers need read-only access to pol
   - Projects secret value to consumer's APIKey status
   - Sets `Failed` condition if APIKeyApproval namespace doesn't match APIProduct namespace
 - **Unified revocation**:
-  - Owners can revoke ANY approved key (automatic or manual) by editing APIKeyApproval (`approved: false`) or deleting it
+  - Owners can revoke ANY approved key (automatic or manual) by editing APIKeyApproval (`approved: false`)
   - Controller removes enforcement Secret and updates APIKey conditions accordingly
   - Same mechanism for both approval modes (consistent architecture)
 - **Approval mode changes**:
@@ -1002,7 +1001,7 @@ Update controller ServiceAccount ClusterRole with permissions: `apikeys` (get, l
 
 **Task 5: Implement APIKeyApproval and APIKeyRequest UI components**
 
-Create APIKeyApproval form component for API owners showing pending APIKeyRequest resources (namespace-scoped list in owner's namespace) with approve/reject actions, reason/message fields, auto-populated `reviewedBy` (logged-in user) and `reviewedAt` (current timestamp). Add APIKeyApproval list view showing approval history, distinguishing auto-generated (`reviewedBy: "system"`) from manual approvals. Add APIKeyRequest list view for owners showing request metadata (requestedBy, useCase, planTier, status conditions) with links to create APIKeyApproval (for manual mode) or indication that auto-approval is pending/complete. Add revocation actions (edit/delete APIKeyApproval) for both automatic and manual approvals. Add permission checks via `SelfSubjectAccessReview` for `create apikeyapprovals` and `get apikeyrequests`. Show visual indicators for Pending/Approved/Denied/Failed states and approval mode (automatic vs manual).
+Create APIKeyApproval form component for API owners showing pending APIKeyRequest resources (namespace-scoped list in owner's namespace) with approve/reject actions, reason/message fields, auto-populated `reviewedBy` (logged-in user) and `reviewedAt` (current timestamp). Add APIKeyApproval list view showing approval history, distinguishing auto-generated (`reviewedBy: "system"`) from manual approvals. Add APIKeyRequest list view for owners showing request metadata (requestedBy, useCase, planTier, status conditions) with links to create APIKeyApproval (for manual mode) or indication that auto-approval is pending/complete. Add revocation actions (edit APIKeyApproval to set `approved: false`) for both automatic and manual approvals. Add permission checks via `SelfSubjectAccessReview` for `create apikeyapprovals`, `update apikeyapprovals`, and `get apikeyrequests`. Show visual indicators for Pending/Approved/Denied/Failed states and approval mode (automatic vs manual).
 
 **Task 6: Update APIKey UI for conditions pattern, secret management, and cross-namespace references**
 
@@ -1199,8 +1198,8 @@ See the "Validation Checklist" section below for detailed test scenarios.
 11. [ ] Controller syncs `Approved` condition to APIKeyRequest status (in owner's namespace)
 12. [ ] Consumer reads API key from their Secret in `consumer-team-mobile` namespace
 13. [ ] Owner can view auto-generated APIKeyApproval: `kubectl get apikeyapprovals -n api-team-payments`
-14. [ ] Owner can revoke by editing APIKeyApproval (`approved: false`) or deleting it
-15. [ ] Upon revocation, controller removes `Approved` condition and deletes enforcement Secret
+14. [ ] Owner can revoke by editing APIKeyApproval (`approved: false`)
+15. [ ] Upon revocation, controller sets `Denied` condition and deletes enforcement Secret
 
 #### Controller Validation Test (Negative)
 
@@ -1255,7 +1254,7 @@ This test verifies that approval state is decoupled from the current approval mo
 8. [ ] Verify APIKey STILL has `Approved` condition (no change - historical approval remains valid)
 9. [ ] Verify enforcement Secret STILL exists (API key still works)
 10. [ ] Verify APIKeyApproval STILL exists with `reviewedBy: "system"` (historical record preserved)
-11. [ ] Owner can still revoke by editing/deleting APIKeyApproval (revocation mechanism works)
+11. [ ] Owner can still revoke by editing APIKeyApproval (`approved: false`) - revocation mechanism works
 
 **Part 2: Manual → Automatic**
 
