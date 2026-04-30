@@ -126,7 +126,7 @@ This section describes the high-level workflow for consumers to request and rece
 6. **Owner discovers requests** - API Owner lists APIKeyRequest resources in **their own namespace** (namespace-scoped, RBAC-enforced - owners only see requests for their API products)
 
 7. **Approval decision**:
-   - **Automatic mode**: Controller automatically creates APIKeyApproval resource in **owner's namespace** with `approved: true` and `approvedBy: "system"` (no owner action needed)
+   - **Automatic mode**: Controller automatically creates APIKeyApproval resource in **owner's namespace** with `approved: true` and `reviewedBy: "system"` (no owner action needed)
    - **Manual mode**: API Owner creates APIKeyApproval resource in **their own namespace** with cross-namespace reference to consumer's APIKey
 
 8. **Controller reconciles approval** - Controller reads APIKeyApproval and updates APIKey `status.conditions` (Approved or Denied based on `spec.approved` field)
@@ -364,7 +364,7 @@ spec:
 - **Namespace ownership**: API Owners can only create/update/delete APIProducts in their assigned namespaces
 - **Catalog visibility**: All personas have cluster-wide read access to enable API discovery
 - **Approval workflow**:
-  - `approvalMode: automatic` → Controller automatically creates APIKeyApproval with `approved: true` and `approvedBy: "system"` (no owner intervention required for initial approval)
+  - `approvalMode: automatic` → Controller automatically creates APIKeyApproval with `approved: true` and `reviewedBy: "system"` (no owner intervention required for initial approval)
   - `approvalMode: manual` → Owner creates APIKeyApproval resource to approve/reject consumer requests
   - **Revocation**: In both modes, owners can revoke by editing APIKeyApproval (`approved: false`) - controller sets Denied condition and removes enforcement Secret
   - **Mode changes**: Existing APIKeyApprovals remain valid when switching modes - approval state is decoupled from current approval mode
