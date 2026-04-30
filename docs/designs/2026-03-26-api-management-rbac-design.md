@@ -126,12 +126,12 @@ This section describes the high-level workflow for consumers to request and rece
 6. **Owner discovers requests** - API Owner lists APIKeyRequest resources in **their own namespace** (namespace-scoped, RBAC-enforced - owners only see requests for their API products)
 
 7. **Approval decision**:
-   - **Automatic mode**: Controller automatically approves the request (no owner action needed)
+   - **Automatic mode**: Controller automatically creates APIKeyApproval resource in **owner's namespace** with `approved: true` and `reviewedBy: "system"` (no owner action needed)
    - **Manual mode**: API Owner creates APIKeyApproval resource in **their own namespace** with cross-namespace reference to consumer's APIKey
 
-8. **Controller reconciles approval** - Controller reads APIKeyApproval (manual mode) or auto-approves (automatic mode) and updates APIKey `status.conditions` (Approved or Denied)
+8. **Controller reconciles approval** - Controller reads APIKeyApproval and updates APIKey `status.conditions` (Approved or Denied based on `spec.approved` field)
 
-9. **On approval**: Controller reads API key from consumer's secret (spec.secretRef) and creates Secret in **kuadrant namespace** with the API key value plus policy enforcement metadata (centralized secret storage, makes API key effective for traffic)
+9. **On approval**: When APIKeyApproval exists with `approved: true` (either auto-created or manually created), controller reads API key from consumer's secret (spec.secretRef) and creates Secret in **kuadrant namespace** with the API key value plus policy enforcement metadata (centralized secret storage, makes API key effective for traffic)
 
 10. **Consumer retrieves API key** - Consumer accesses the API key value from their Secret in their own namespace (has secret read permissions in own namespace)
 
@@ -171,12 +171,21 @@ This section describes the high-level workflow for consumers to request and rece
 
 **Solution**:
 
-- Owner creates **APIKeyApproval** resource in their own namespace
+- **APIKeyApproval resource created in owner's namespace** (by owner for manual mode, by controller for automatic mode)
 - APIKeyApproval references APIKey via `spec.apiKeyRef.namespace` (cross-namespace reference)
 - Owner has: `create apikeyapprovals` permission in their namespace
 - Consumer does NOT have: `create apikeyapprovals` permission (no access to owner's namespace)
-- Controller derives `status.conditions` (Approved/Denied) from APIKeyApproval existence
+- Controller derives `status.conditions` (Approved/Denied) from APIKeyApproval `spec.approved` field
 - **No validation webhook needed** - Clean RBAC separation via namespaces
+
+**Why always create APIKeyApproval (even in automatic mode)?**
+
+- ✅ **Unified revocation mechanism**: Owners revoke ANY approved key (automatic or manual) by editing APIKeyApproval (`approved: false`)
+- ✅ **Stable across mode changes**: Switching `automatic ↔ manual` doesn't affect existing approved APIKeys
+- ✅ **Historical record**: APIKeyApproval proves "this was approved under the rules at the time" (decoupled from current approval mode)
+- ✅ **Audit trail**: Distinguishes auto-approved (`reviewedBy: "system"`) from manually approved (`reviewedBy: "owner@example.com"`)
+- ✅ **Simpler controller**: Single reconciliation path - always check for APIKeyApproval (no dual approval logic)
+- ✅ **Prevents unexpected breaks**: Active API consumers remain approved when approval mode changes (prevents `automatic → manual` causing all keys to become Pending)
 
 **4. Consumer-Provided Secrets with Centralized Policy Enforcement Storage**
 
@@ -355,15 +364,20 @@ spec:
 - **Namespace ownership**: API Owners can only create/update/delete APIProducts in their assigned namespaces
 - **Catalog visibility**: All personas have cluster-wide read access to enable API discovery
 - **Approval workflow**:
-  - `approvalMode: automatic` → APIKeys approved immediately by Developer Portal Controller (no owner intervention)
+  - `approvalMode: automatic` → Controller automatically creates APIKeyApproval with `approved: true` and `reviewedBy: "system"` (no owner intervention required for initial approval)
   - `approvalMode: manual` → Owner creates APIKeyApproval resource to approve/reject consumer requests
+  - **Revocation**: In both modes, owners can revoke by editing APIKeyApproval (`approved: false`) - controller sets Denied condition and removes enforcement Secret
+  - **Mode changes**: Existing APIKeyApprovals remain valid when switching modes - approval state is decoupled from current approval mode
 - **Draft products**: `publishStatus: Draft` can be used to hide products from catalog while in development (UI can filter by this field)
 - **HTTPRoute reference**: `spec.targetRef` must reference an HTTPRoute in the same namespace (namespace-local reference)
 - **Owner permissions**: Requires `create apiproducts` permission in namespace, plus `get httproutes` to select valid routes
 
 #### APIKeyApproval Resource (devportal.kuadrant.io/v1alpha1)
 
-API Owners create APIKeyApproval resources to approve or reject consumer API access requests in **manual approval mode**.
+APIKeyApproval resources record approval decisions for consumer API access requests. They are created either:
+
+- **Automatically** by the controller when `APIProduct.spec.approvalMode = automatic`
+- **Manually** by API Owners when `APIProduct.spec.approvalMode = manual`
 
 ```yaml
 apiVersion: devportal.kuadrant.io/v1alpha1
@@ -381,6 +395,7 @@ spec:
   approved: true  # true = Approved, false = Rejected/Denied
 
   # Who made the decision
+  # "system" for automatic approvals, user email for manual approvals
   reviewedBy: "bob@payment-team.com"
 
   # When the decision was made
@@ -393,9 +408,31 @@ spec:
   message: "Approved for mobile team's payment integration project. Contact us if you need higher limits."
 ```
 
+**Example: Automatic Approval**
+
+```yaml
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKeyApproval
+metadata:
+  name: mobile-app-payment-key-approval
+  namespace: payment-services
+spec:
+  apiKeyRef:
+    name: mobile-app-payment-key
+    namespace: consumer-team-mobile
+  approved: true
+  reviewedBy: "system"  # Auto-generated by controller
+  reviewedAt: "2026-03-30T13:46:00Z"
+  reason: "AutomaticApproval"
+  message: "Automatically approved based on APIProduct approval mode"
+```
+
 **RBAC implications:**
 
-- **Owner-only resource**: Only API Owners can create/update/delete APIKeyApproval resources
+- **Creation modes**:
+  - **Automatic mode**: Controller creates APIKeyApproval with `approved: true` and `reviewedBy: "system"`
+  - **Manual mode**: API Owners create APIKeyApproval to approve/reject requests
+- **Owner permissions**: Owners can create/update/delete APIKeyApproval resources in their namespace
 - **Namespace placement**: APIKeyApproval created in **owner's namespace** (same as APIProduct)
 - **Cross-namespace reference**: `spec.apiKeyRef.namespace` references APIKey in consumer's namespace
 - **Review metadata**: All approval/rejection metadata stored in APIKeyApproval (reviewedBy, reviewedAt, reason, message)
@@ -408,11 +445,17 @@ spec:
   - If `spec.approved = false`: Sets `Denied` condition to "True" in APIKey status
   - If no APIKeyApproval exists: No approval/denial conditions set (pending state)
   - Copies `reviewedBy`, `reason`, `message` into condition fields
+- **Revocation workflow**:
+  - Owner edits APIKeyApproval: `approved: false` → controller sets `Denied` condition, deletes enforcement Secret
+  - Works identically for automatic and manual approvals (unified revocation mechanism)
 - **Clean RBAC separation**:
   - Consumers have `create/update/delete apikeys` permissions in their own namespace
   - Consumers do NOT have `create apikeyapprovals` permissions (no access to owner's namespace)
   - **No validation webhook needed** - Kubernetes RBAC enforces separation via namespaces
-- **Automatic approval mode**: APIKeyApproval resource not needed when `APIProduct.spec.approvalMode = automatic`
+- **Approval mode changes**:
+  - Existing APIKeyApprovals remain valid when switching `automatic ↔ manual`
+  - Approval state is decoupled from current approval mode (historical record of approval at a point in time)
+  - Prevents unexpected state changes to active API consumers
 
 #### APIKeyRequest Resource (devportal.kuadrant.io/v1alpha1)
 
@@ -553,22 +596,28 @@ In addition to APIProduct and APIKey, API consumers need read-only access to pol
   - **Security isolation**: Owners never interact with APIKey or Secret resources in consumer namespaces
 - **Admin exception**: Admins retain cluster-wide read on APIKeys for troubleshooting, but still do NOT have secret read permissions in consumer namespaces (consumer secrets remain isolated). Admins are trusted platform operators expected to follow organizational policies regarding access to sensitive data.
 
-**Secret rotation:**
+**Secret rotation and revocation:**
 
-- Consumer can delete old APIKey and create new one with new secret
-- Owner can deny/revoke by deleting APIKeyApproval (controller removes `Approved` condition and deletes Secret from kuadrant namespace)
+- **Consumer rotation**: Consumer deletes old APIKey and creates new one with new secret
+- **Owner revocation**: Owner edits APIKeyApproval (`approved: false`)
+  - Controller updates APIKey conditions (sets `Denied`)
+  - Controller deletes enforcement Secret from kuadrant namespace
+  - Consumer's secret remains (consumer manages their own secrets)
+  - Works identically for automatic and manual approvals
 
 #### 3. Approval Enforcement
 
 **Automatic approval mode:**
 
-- `APIProduct.spec.approvalMode: automatic` grants immediate access
+- `APIProduct.spec.approvalMode: automatic` → Controller creates APIKeyApproval with `approved: true` and `reviewedBy: "system"`
 - **Risk**: Owner accidentally sets automatic mode for sensitive API
-- **Mitigation**: Document approval modes clearly, UI should warn when switching to automatic
+- **Mitigation**:
+  - Document approval modes clearly, UI should warn when switching to automatic
+  - Owners can revoke by editing the auto-generated APIKeyApproval (`approved: false`) - same mechanism as manual approvals
 
 **Approval separation via APIKeyApproval CRD:**
 
-- **Architecture**: Owner creates APIKeyApproval resource in **their own namespace** to approve/reject requests
+- **Architecture**: APIKeyApproval created in **owner's namespace** (by controller for automatic mode, by owner for manual mode)
 - **Cross-namespace reference**: APIKeyApproval references APIKey in consumer's namespace
 - **RBAC enforcement**: Consumers cannot create APIKeyApproval resources (no permission in owner's namespace)
 - **Status as output**: `status.conditions` reconciled by controller, not set directly by users
@@ -576,11 +625,20 @@ In addition to APIProduct and APIKey, API consumers need read-only access to pol
 - **No validation webhook needed**: Clean RBAC separation via namespaces and separate resource type
 - **Controller responsibility**:
   - Watches APIKeyApproval resources cluster-wide
+  - **In automatic mode**: Creates APIKeyApproval when APIKeyRequest is created (if APIProduct.spec.approvalMode = automatic)
   - **Validates namespace alignment**: Ensures APIKeyApproval.metadata.namespace == APIKey.spec.apiProductRef.namespace
-  - Reconciles `status.conditions` (Approved/Denied) based on APIKeyApproval existence and `approved` field
+  - Reconciles `status.conditions` (Approved/Denied) based on APIKeyApproval `approved` field
   - Creates Secret in kuadrant namespace only when approved and validation passes (centralized storage)
   - Projects secret value to consumer's APIKey status
   - Sets `Failed` condition if APIKeyApproval namespace doesn't match APIProduct namespace
+- **Unified revocation**:
+  - Owners can revoke ANY approved key (automatic or manual) by editing APIKeyApproval (`approved: false`)
+  - Controller removes enforcement Secret and updates APIKey conditions accordingly
+  - Same mechanism for both approval modes (consistent architecture)
+- **Approval mode changes**:
+  - **Stability**: Switching `automatic ↔ manual` does NOT affect existing APIKeys
+  - **Historical record**: APIKeyApproval proves "this was approved under the rules at the time"
+  - **No unexpected breaks**: Active API consumers remain approved when mode changes
 
 #### 4. Cross-namespace References
 
@@ -919,7 +977,7 @@ The following tasks are required to implement this RBAC design. Each task is act
 
 **Task 1: Implement APIKeyApproval CRD and approval workflow controller**
 
-Define `APIKeyApproval` CRD (`devportal.kuadrant.io/v1alpha1`) with spec fields: `apiKeyRef.name`, `apiKeyRef.namespace`, `approved` (boolean), `reviewedBy`, `reviewedAt`, `reason`, `message`. Implement controller that watches APIKeyApproval resources cluster-wide with namespace validation (`APIKeyApproval.metadata.namespace == APIKey.spec.apiProductRef.namespace`). Implement approval logic: when `spec.approved = true` and validation passes, read API key from consumer's secret (APIKey.spec.secretRef in consumer's namespace), create enforcement Secret in kuadrant namespace with API key plus policy metadata, set `Approved` condition in APIKey status. Implement denial logic: when `spec.approved = false`, set `Denied` condition. Set `Failed` condition if validation fails or if consumer's secret doesn't exist. Handle pending state (no APIKeyApproval = empty conditions). Generate CRD manifests, add to operator deployment, document in README. Add unit, integration, and e2e tests for approval/denial workflows, namespace validation, and secret copying.
+Define `APIKeyApproval` CRD (`devportal.kuadrant.io/v1alpha1`) with spec fields: `apiKeyRef.name`, `apiKeyRef.namespace`, `approved` (boolean), `reviewedBy`, `reviewedAt`, `reason`, `message`. Implement controller that watches APIKeyApproval resources cluster-wide with namespace validation (`APIKeyApproval.metadata.namespace == APIKey.spec.apiProductRef.namespace`). **Automatic approval**: Watch APIKeyRequest resources and automatically create APIKeyApproval when `APIProduct.spec.approvalMode = automatic` (set `approved: true`, `reviewedBy: "system"`, `reason: "AutomaticApproval"`). Implement approval logic: when `spec.approved = true` and validation passes, read API key from consumer's secret (APIKey.spec.secretRef in consumer's namespace), create enforcement Secret in kuadrant namespace with API key plus policy metadata, set `Approved` condition in APIKey status. Implement denial logic: when `spec.approved = false`, set `Denied` condition. Implement revocation logic: when APIKeyApproval is deleted, remove `Approved` condition from APIKey status and delete enforcement Secret from kuadrant namespace. Set `Failed` condition if validation fails or if consumer's secret doesn't exist. Handle pending state (no APIKeyApproval = empty conditions). Generate CRD manifests, add to operator deployment, document in README. Add unit, integration, and e2e tests for approval/denial workflows, automatic approval creation, revocation, namespace validation, and secret copying.
 
 **APIKeyRequest CRD and Controller**
 
@@ -937,13 +995,13 @@ Add `spec.apiProductRef.namespace` field (string, required) for cross-namespace 
 
 **Task 4: Update controller RBAC permissions and documentation**
 
-Update controller ServiceAccount ClusterRole with permissions: `apikeys` (get, list, watch), `apikeys/status` (update, patch), `apikeyapprovals` (get, list, watch), `apikeyrequests` (create, update, delete, get, list, watch), `apiproducts` (get, list, watch), all cluster-wide. Add cluster-wide `secrets` read permissions (get, list, watch) to read API keys from consumer secrets. Scope `secrets` write permissions (create, update, delete) to kuadrant namespace only via RoleBinding for creating enforcement secrets. Add any additional APIKey permissions needed for chosen cleanup implementation. Document RBAC requirements in controller README including cleanup mechanism for cross-namespace APIKeyRequest resources and secret copying pattern.
+Update controller ServiceAccount ClusterRole with permissions: `apikeys` (get, list, watch), `apikeys/status` (update, patch), `apikeyapprovals` (create, update, delete, get, list, watch) - **create permission for automatic approval mode**, `apikeyrequests` (create, update, delete, get, list, watch), `apiproducts` (get, list, watch), all cluster-wide. Add cluster-wide `secrets` read permissions (get, list, watch) to read API keys from consumer secrets. Scope `secrets` write permissions (create, update, delete) to kuadrant namespace only via RoleBinding for creating enforcement secrets. Add any additional APIKey permissions needed for chosen cleanup implementation. Document RBAC requirements in controller README including automatic APIKeyApproval creation, cleanup mechanism for cross-namespace APIKeyRequest resources, and secret copying pattern.
 
 #### Console Plugin (github.com/Kuadrant/kuadrant-console-plugin)
 
 **Task 5: Implement APIKeyApproval and APIKeyRequest UI components**
 
-Create APIKeyApproval form component for API owners showing pending APIKeyRequest resources (namespace-scoped list in owner's namespace) with approve/reject actions, reason/message fields, auto-populated `reviewedBy` (logged-in user) and `reviewedAt` (current timestamp). Add APIKeyApproval list view showing approval history. Add APIKeyRequest list view for owners showing request metadata (requestedBy, useCase, planTier, status conditions) with links to create APIKeyApproval. Add permission checks via `SelfSubjectAccessReview` for `create apikeyapprovals` and `get apikeyrequests`. Show visual indicators for Pending/Approved/Denied/Failed states.
+Create APIKeyApproval form component for API owners showing pending APIKeyRequest resources (namespace-scoped list in owner's namespace) with approve/reject actions, reason/message fields, auto-populated `reviewedBy` (logged-in user) and `reviewedAt` (current timestamp). Add APIKeyApproval list view showing approval history, distinguishing auto-generated (`reviewedBy: "system"`) from manual approvals. Add APIKeyRequest list view for owners showing request metadata (requestedBy, useCase, planTier, status conditions) with links to create APIKeyApproval (for manual mode) or indication that auto-approval is pending/complete. Add revocation actions (edit APIKeyApproval to set `approved: false`) for both automatic and manual approvals. Add permission checks via `SelfSubjectAccessReview` for `create apikeyapprovals`, `update apikeyapprovals`, and `get apikeyrequests`. Show visual indicators for Pending/Approved/Denied/Failed states and approval mode (automatic vs manual).
 
 **Task 6: Update APIKey UI for conditions pattern, secret management, and cross-namespace references**
 
@@ -1100,29 +1158,48 @@ See the "Validation Checklist" section below for detailed test scenarios.
 
 #### Cross-Namespace Workflow Test
 
-**End-to-end scenario**:
+**End-to-end scenario (Manual Approval Mode)**:
 
 1. [ ] Consumer creates Secret with API key in `consumer-team-mobile` namespace
 2. [ ] Consumer creates APIKey in `consumer-team-mobile` namespace with `spec.secretRef` referencing the secret
 3. [ ] APIKey references APIProduct in `api-team-payments` namespace (cross-namespace ref via `spec.apiProductRef.namespace`)
-4. [ ] Controller automatically creates APIKeyRequest in `api-team-payments` namespace (shadow resource)
-5. [ ] APIKeyRequest contains request metadata (requestedBy, useCase, planTier) but NOT secret references
-6. [ ] Owner in `api-team-payments` lists APIKeyRequests in their own namespace: `kubectl get apikeyrequests -n api-team-payments`
-7. [ ] Owner CANNOT list APIKeys cluster-wide (no cluster-wide apikeys permission - RBAC enforced)
-8. [ ] Owner reviews APIKeyRequest details (sees who requested, use case, plan tier)
-9. [ ] Owner creates APIKeyApproval in `api-team-payments` namespace
-10. [ ] APIKeyApproval references APIKey in `consumer-team-mobile` namespace (cross-namespace ref)
-11. [ ] Controller validates: APIKeyApproval namespace (`api-team-payments`) matches APIProduct namespace (`api-team-payments`)
-12. [ ] Controller reads API key from consumer's secret in `consumer-team-mobile` namespace (using `spec.secretRef`)
-13. [ ] Controller creates enforcement Secret in `kuadrant` namespace with API key plus policy metadata
-14. [ ] Controller sets `Approved` condition in APIKey status (validation passed)
-15. [ ] Controller syncs `Approved` condition to APIKeyRequest status (in owner's namespace)
-16. [ ] Consumer reads API key from their Secret in `consumer-team-mobile` namespace
-17. [ ] Consumer CANNOT read Secret in `kuadrant` namespace (isolation verified - enforcement secrets)
-18. [ ] Owner CANNOT read Secret in `consumer-team-mobile` namespace (consumer secrets remain isolated)
-19. [ ] Owner CANNOT read Secret in `kuadrant` namespace (enforcement secrets managed by controller)
-20. [ ] Owner CANNOT read APIKey resource (no apikeys permission - cannot access consumer APIKeys)
-21. [ ] Owner CANNOT read consumer's secret (no secret permissions in consumer namespace - security isolation)
+4. [ ] APIProduct has `spec.approvalMode: manual`
+5. [ ] Controller automatically creates APIKeyRequest in `api-team-payments` namespace (shadow resource)
+6. [ ] APIKeyRequest contains request metadata (requestedBy, useCase, planTier) but NOT secret references
+7. [ ] Owner in `api-team-payments` lists APIKeyRequests in their own namespace: `kubectl get apikeyrequests -n api-team-payments`
+8. [ ] Owner CANNOT list APIKeys cluster-wide (no cluster-wide apikeys permission - RBAC enforced)
+9. [ ] Owner reviews APIKeyRequest details (sees who requested, use case, plan tier)
+10. [ ] Owner creates APIKeyApproval in `api-team-payments` namespace
+11. [ ] APIKeyApproval references APIKey in `consumer-team-mobile` namespace (cross-namespace ref)
+12. [ ] Controller validates: APIKeyApproval namespace (`api-team-payments`) matches APIProduct namespace (`api-team-payments`)
+13. [ ] Controller reads API key from consumer's secret in `consumer-team-mobile` namespace (using `spec.secretRef`)
+14. [ ] Controller creates enforcement Secret in `kuadrant` namespace with API key plus policy metadata
+15. [ ] Controller sets `Approved` condition in APIKey status (validation passed)
+16. [ ] Controller syncs `Approved` condition to APIKeyRequest status (in owner's namespace)
+17. [ ] Consumer reads API key from their Secret in `consumer-team-mobile` namespace
+18. [ ] Consumer CANNOT read Secret in `kuadrant` namespace (isolation verified - enforcement secrets)
+19. [ ] Owner CANNOT read Secret in `consumer-team-mobile` namespace (consumer secrets remain isolated)
+20. [ ] Owner CANNOT read Secret in `kuadrant` namespace (enforcement secrets managed by controller)
+21. [ ] Owner CANNOT read APIKey resource (no apikeys permission - cannot access consumer APIKeys)
+22. [ ] Owner CANNOT read consumer's secret (no secret permissions in consumer namespace - security isolation)
+
+**End-to-end scenario (Automatic Approval Mode)**:
+
+1. [ ] Consumer creates Secret with API key in `consumer-team-mobile` namespace
+2. [ ] Consumer creates APIKey in `consumer-team-mobile` namespace with `spec.secretRef` referencing the secret
+3. [ ] APIKey references APIProduct in `api-team-payments` namespace (cross-namespace ref via `spec.apiProductRef.namespace`)
+4. [ ] APIProduct has `spec.approvalMode: automatic`
+5. [ ] Controller automatically creates APIKeyRequest in `api-team-payments` namespace (shadow resource)
+6. [ ] Controller automatically creates APIKeyApproval in `api-team-payments` namespace with `approved: true`, `reviewedBy: "system"`, `reason: "AutomaticApproval"`
+7. [ ] Controller validates: APIKeyApproval namespace (`api-team-payments`) matches APIProduct namespace (`api-team-payments`)
+8. [ ] Controller reads API key from consumer's secret in `consumer-team-mobile` namespace (using `spec.secretRef`)
+9. [ ] Controller creates enforcement Secret in `kuadrant` namespace with API key plus policy metadata
+10. [ ] Controller sets `Approved` condition in APIKey status (validation passed)
+11. [ ] Controller syncs `Approved` condition to APIKeyRequest status (in owner's namespace)
+12. [ ] Consumer reads API key from their Secret in `consumer-team-mobile` namespace
+13. [ ] Owner can view auto-generated APIKeyApproval: `kubectl get apikeyapprovals -n api-team-payments`
+14. [ ] Owner can revoke by editing APIKeyApproval (`approved: false`)
+15. [ ] Upon revocation, controller sets `Denied` condition and deletes enforcement Secret
 
 #### Controller Validation Test (Negative)
 
@@ -1158,6 +1235,43 @@ This test verifies the controller properly handles cleanup of cross-namespace AP
 8. [ ] Verify APIKeyRequest is fully deleted: `kubectl get apikeyrequests -n api-team-payments` (should not exist)
 
 **Expected outcome**: APIKeyRequest is cleaned up when APIKey is deleted, despite being in different namespaces (explicit cleanup mechanism works correctly).
+
+#### Approval Mode Change Test
+
+**Scenario**: Verify existing APIKeys remain stable when APIProduct approval mode changes
+
+This test verifies that approval state is decoupled from the current approval mode:
+
+**Part 1: Automatic → Manual**
+
+1. [ ] Create APIProduct with `spec.approvalMode: automatic` in `api-team-payments` namespace
+2. [ ] Consumer creates Secret and APIKey in `consumer-team-mobile` namespace
+3. [ ] Controller creates APIKeyRequest in `api-team-payments` namespace
+4. [ ] Controller creates APIKeyApproval with `approved: true`, `reviewedBy: "system"` in `api-team-payments` namespace
+5. [ ] Verify APIKey has `Approved` condition: `kubectl get apikey -n consumer-team-mobile -o yaml`
+6. [ ] Verify enforcement Secret exists: `kubectl get secret -n kuadrant`
+7. [ ] **Mode change**: Update APIProduct `spec.approvalMode: manual`
+8. [ ] Verify APIKey STILL has `Approved` condition (no change - historical approval remains valid)
+9. [ ] Verify enforcement Secret STILL exists (API key still works)
+10. [ ] Verify APIKeyApproval STILL exists with `reviewedBy: "system"` (historical record preserved)
+11. [ ] Owner can still revoke by editing APIKeyApproval (`approved: false`) - revocation mechanism works
+
+**Part 2: Manual → Automatic**
+
+1. [ ] Create APIProduct with `spec.approvalMode: manual` in `api-team-payments` namespace
+2. [ ] Consumer creates Secret and APIKey in `consumer-team-mobile` namespace
+3. [ ] Owner manually creates APIKeyApproval with `approved: true`, `reviewedBy: "owner@example.com"`
+4. [ ] Verify APIKey has `Approved` condition
+5. [ ] Verify enforcement Secret exists
+6. [ ] **Mode change**: Update APIProduct `spec.approvalMode: automatic`
+7. [ ] Verify APIKey STILL has `Approved` condition (no change - manual approval remains valid)
+8. [ ] Verify enforcement Secret STILL exists
+9. [ ] Verify APIKeyApproval STILL exists with `reviewedBy: "owner@example.com"` (manual approval preserved)
+10. [ ] New consumer creates APIKey for the same APIProduct
+11. [ ] Controller creates APIKeyApproval with `reviewedBy: "system"` for the NEW request (automatic mode now active)
+12. [ ] Both APIKeys remain approved (old manual, new automatic)
+
+**Expected outcome**: Approval mode changes do NOT affect existing approved APIKeys. APIKeyApproval acts as a historical record of approval at a point in time, decoupled from the current approval mode. This prevents unexpected breaks for active API consumers.
 
 ### Test Personas
 
