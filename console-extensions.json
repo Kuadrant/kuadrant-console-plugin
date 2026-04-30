@@ -98,18 +98,13 @@
     }
   },
   {
-    "type": "console.page/route",
+    "type": "console.page/resource/list",
     "properties": {
-      "exact": true,
-      "path": "/kuadrant/all-namespaces/apiproducts",
-      "component": { "$codeRef": "APIProductsListPage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "exact": true,
-      "path": "/kuadrant/ns/:ns/apiproducts",
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIProduct"
+      },
       "component": { "$codeRef": "APIProductsListPage" }
     }
   },
@@ -268,11 +263,15 @@
     }
   },
   {
-    "type": "console.navigation/href",
+    "type": "console.navigation/resource-ns",
     "properties": {
       "id": "kuadrant-apiproducts-admin",
       "name": "%plugin__kuadrant-console-plugin~API Products%",
-      "href": "/kuadrant/all-namespaces/apiproducts",
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIProduct"
+      },
       "perspective": "admin",
       "section": "kuadrant-section-admin"
     }
@@ -317,11 +316,15 @@
     }
   },
   {
-    "type": "console.navigation/href",
+    "type": "console.navigation/resource-ns",
     "properties": {
       "id": "kuadrant-apiproducts-dev",
       "name": "%plugin__kuadrant-console-plugin~API Products%",
-      "href": "/kuadrant/all-namespaces/apiproducts",
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIProduct"
+      },
       "perspective": "dev",
       "section": "kuadrant-section-dev"
     }

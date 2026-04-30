@@ -54,3 +54,175 @@ spec:
     authentication:
       "anon":
         anonymous: {}
+---
+# API Product resources for e2e tests
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: toystore-api
+  namespace: kuadrant-test
+  annotations:
+    backstage.io/owner: user:default/owner1
+spec:
+  displayName: Toystore API
+  description: simple toy store api for demonstration
+  version: v1
+  approvalMode: manual
+  publishStatus: Published
+  tags:
+    - demo
+    - retail
+    - toys
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-route
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: api-owners
+    email: api-owners@example.com
+    slack: "#api-support"
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: gamestore-api
+  namespace: kuadrant-test
+  annotations:
+    backstage.io/owner: user:default/owner2
+spec:
+  displayName: Gamestore API
+  description: Simple game store api for demonstration
+  version: v1
+  approvalMode: manual
+  publishStatus: Published
+  tags:
+    - demo
+    - retail
+    - games
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-route
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: api-owners
+    email: api-owners@example.com
+    slack: "#api-support"
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: payment-api
+  namespace: kuadrant-test
+  annotations:
+    backstage.io/owner: user:default/owner1
+spec:
+  displayName: Payment API
+  description: payment processing api
+  version: v2
+  approvalMode: automatic
+  publishStatus: Published
+  tags:
+    - payments
+    - fintech
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-route
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: payment-team
+    email: payments@example.com
+    slack: "#payment-support"
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: draft-api
+  namespace: kuadrant-test
+  annotations:
+    backstage.io/owner: user:default/owner1
+spec:
+  displayName: Draft API
+  description: work-in-progress api (not yet published)
+  version: v1
+  approvalMode: manual
+  publishStatus: Draft
+  tags:
+    - draft
+    - wip
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-route
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: api-owners
+    email: api-owners@example.com
+    slack: "#api-support"
+---
+# APIProduct in different namespace for namespace filter testing
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kuadrant-test-2
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: shipping-api
+  namespace: kuadrant-test-2
+  annotations:
+    backstage.io/owner: user:default/owner2
+spec:
+  displayName: Shipping API
+  description: shipping and logistics api
+  version: v1
+  approvalMode: manual
+  publishStatus: Published
+  tags:
+    - shipping
+    - logistics
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-route
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://github.com/Kuadrant/kuadrantctl/blob/main/examples/oas3/petstore.yaml
+  contact:
+    team: shipping-team
+    email: shipping@example.com
+    slack: "#shipping-support"
+---
+# PlanPolicy for testing PlanPolicy column
+apiVersion: extensions.kuadrant.io/v1alpha1
+kind: PlanPolicy
+metadata:
+  name: test-plan-policy
+  namespace: kuadrant-test
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-route
+  plans:
+    - tier: gold
+      predicate: |
+        has(auth.identity) && auth.identity.metadata.annotations["secret.kuadrant.io/plan-id"] == "gold"
+      limits:
+        daily: 100
+    - tier: silver
+      predicate: |
+        has(auth.identity) && auth.identity.metadata.annotations["secret.kuadrant.io/plan-id"] == "silver"
+      limits:
+        daily: 50
