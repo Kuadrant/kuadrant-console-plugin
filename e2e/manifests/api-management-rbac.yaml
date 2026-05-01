@@ -1,0 +1,119 @@
+# API Management RBAC test personas
+# Apply this manifest to set up test users for manual verification
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kuadrant-test
+---
+# test-consumer: browse API catalog and manage their own API keys
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: api-consumer
+  namespace: kuadrant-test
+rules:
+  # Can browse API catalog
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list"]
+  # Can manage their own API keys
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # Need to read secrets to see API key values
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: api-consumer
+  namespace: kuadrant-test
+subjects:
+  - kind: User
+    name: test-consumer
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: api-consumer
+  apiGroup: rbac.authorization.k8s.io
+---
+# test-owner: publish APIs and approve access requests
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: api-owner
+  namespace: kuadrant-test
+rules:
+  # Can manage APIProducts in their namespace
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # Can view and approve API key requests
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeyrequests"]
+    verbs: ["get", "list"]
+  # Can create approval decisions
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeyapprovals"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # Need to read HTTPRoutes to link APIProducts
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: api-owner
+  namespace: kuadrant-test
+subjects:
+  - kind: User
+    name: test-owner
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: api-owner
+  apiGroup: rbac.authorization.k8s.io
+---
+# test-admin: full cluster-wide access to all API Management resources
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: api-admin
+rules:
+  # All API Management CRDs
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apiproducts", "apikeys", "apikeyrequests", "apikeyapprovals"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # PlanPolicy is in extensions.kuadrant.io
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["planpolicies"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # Gateway API resources
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways", "httproutes"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # Kuadrant policies
+  - apiGroups: ["kuadrant.io"]
+    resources: ["authpolicies", "ratelimitpolicies"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # Secrets for API keys
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: api-admin
+subjects:
+  - kind: User
+    name: test-admin
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: api-admin
+  apiGroup: rbac.authorization.k8s.io
