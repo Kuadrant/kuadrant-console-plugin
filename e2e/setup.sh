@@ -24,4 +24,7 @@ kubectl apply -f "${SCRIPT_DIR}/manifests/test-resources.yaml"
 log "creating APIProduct test fixtures..."
 kubectl apply -f "${SCRIPT_DIR}/manifests/test-apiproduct-fixtures.yaml"
 
+log "creating APIKey test fixtures..."
+kubectl apply -f "${SCRIPT_DIR}/manifests/test-apikey-fixtures.yaml"
+
 log "e2e setup complete"

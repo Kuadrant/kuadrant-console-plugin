@@ -115,6 +115,10 @@ export async function navigateToTopology(page: Page): Promise<void> {
   await spaNavigate(page, '/kuadrant/policy-topology');
 }
 
+export async function navigateToAPIKeyApprovals(page: Page): Promise<void> {
+  await spaNavigate(page, '/kuadrant/apikey-approvals');
+}
+
 // wait for RBAC permission checks to finish loading.
 // the loading indicator may appear and disappear very quickly, so we try to
 // catch it appearing first to avoid a false-green race condition.
