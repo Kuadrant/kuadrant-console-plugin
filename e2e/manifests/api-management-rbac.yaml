@@ -14,7 +14,7 @@ metadata:
   namespace: kuadrant-test
 rules:
   # Can browse API catalog
-  - apiGroups: ["extensions.kuadrant.io"]
+  - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
     verbs: ["get", "list"]
   # Can manage their own API keys
@@ -48,7 +48,7 @@ metadata:
   namespace: kuadrant-test
 rules:
   # Can manage APIProducts in their namespace
-  - apiGroups: ["extensions.kuadrant.io"]
+  - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
     verbs: ["get", "list", "create", "update", "delete"]
   # Can view and approve API key requests
@@ -85,11 +85,12 @@ metadata:
   name: api-admin
 rules:
   # All API Management CRDs
-  - apiGroups: ["extensions.kuadrant.io"]
-    resources: ["apiproducts", "planpolicies"]
-    verbs: ["get", "list", "create", "update", "delete"]
   - apiGroups: ["devportal.kuadrant.io"]
-    resources: ["apikeys", "apikeyrequests", "apikeyapprovals"]
+    resources: ["apiproducts", "apikeys", "apikeyrequests", "apikeyapprovals"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # PlanPolicy is in extensions.kuadrant.io
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["planpolicies"]
     verbs: ["get", "list", "create", "update", "delete"]
   # Gateway API resources
   - apiGroups: ["gateway.networking.k8s.io"]

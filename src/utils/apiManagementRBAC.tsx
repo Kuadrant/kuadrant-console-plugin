@@ -77,9 +77,8 @@ export function useAPIManagementRBAC(
       try {
         const checks = resourcesToCheck.flatMap((resource) => {
           const verbs = ['create', 'update', 'delete', 'list'] as const;
-          // APIProduct uses extensions.kuadrant.io, others use devportal.kuadrant.io
-          const apiGroup =
-            resource === 'apiproducts' ? 'extensions.kuadrant.io' : 'devportal.kuadrant.io';
+          // All API Management resources use devportal.kuadrant.io
+          const apiGroup = 'devportal.kuadrant.io';
           return verbs.map(async (verb) => {
             const result = await checkAccess({
               group: apiGroup,
