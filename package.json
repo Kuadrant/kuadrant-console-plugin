@@ -94,6 +94,7 @@
       "KuadrantPlanPolicyCreatePage": "./components/KuadrantPlanPolicyCreatePage",
       "KuadrantTLSCreatePage": "./components/KuadrantTLSCreatePage",
       "HTTPRoutePoliciesPage": "./components/HTTPRoutePoliciesPage",
+      "GRPCRoutePoliciesPage": "./components/GRPCRoutePoliciesPage",
       "GatewayPoliciesPage": "./components/GatewayPoliciesPage",
       "APIProductCreatePage": "./components/apiproduct/APIProductCreatePage",
       "APIProductsListPage": "./components/apiproduct/APIProductsListPage",

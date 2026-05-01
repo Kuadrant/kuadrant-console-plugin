@@ -20,6 +20,21 @@
       "model": {
         "group": "gateway.networking.k8s.io",
         "version": "v1",
+        "kind": "GRPCRoute"
+      },
+      "page": {
+        "name": "Policies",
+        "href": "policies"
+      },
+      "component": { "$codeRef": "GRPCRoutePoliciesPage" }
+    }
+  },
+  {
+    "type": "console.tab/horizontalNav",
+    "properties": {
+      "model": {
+        "group": "gateway.networking.k8s.io",
+        "version": "v1",
         "kind": "Gateway"
       },
       "page": {

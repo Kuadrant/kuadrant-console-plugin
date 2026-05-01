@@ -41,6 +41,14 @@ export const RESOURCES = {
     showInTopologyByDefault: true,
     isKuadrantInternal: false,
   },
+  GRPCRoute: {
+    gvk: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'GRPCRoute' },
+    plural: 'GRPCRoutes',
+    isPolicy: false,
+    isGatewayAPI: true,
+    showInTopologyByDefault: true,
+    isKuadrantInternal: false,
+  },
   GatewayClass: {
     gvk: { group: 'gateway.networking.k8s.io', version: 'v1', kind: 'GatewayClass' },
     plural: 'GatewayClasses',
@@ -273,6 +281,7 @@ export const RESOURCE_POLICY_MAP: Partial<Record<ResourceKind, ResourceKind[]>> 
     'PlanPolicy',
   ],
   HTTPRoute: ['AuthPolicy', 'RateLimitPolicy', 'TokenRateLimitPolicy', 'OIDCPolicy', 'PlanPolicy'],
+  GRPCRoute: ['AuthPolicy', 'RateLimitPolicy', 'PlanPolicy'],
 };
 
 // get policy kinds that can target a given resource

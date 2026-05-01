@@ -4,7 +4,7 @@ import { DefaultNode } from '@patternfly/react-topology';
 import { CubesIcon, CloudUploadAltIcon, TopologyIcon, RouteIcon } from '@patternfly/react-icons';
 
 // resource types where context menu should be disabled
-const disabledContextMenuTypes = ['GatewayClass', 'HTTPRouteRule', 'Listener'];
+const disabledContextMenuTypes = ['GatewayClass', 'HTTPRouteRule', 'GRPCRouteRule', 'Listener'];
 
 // policy resource types (for styling)
 const isPolicyNode = (type: string) =>
@@ -24,6 +24,7 @@ const getIconComponent = (type: string) => {
     case 'Gateway':
       return CubesIcon;
     case 'HTTPRoute':
+    case 'GRPCRoute':
       return RouteIcon;
     case 'TLSPolicy':
     case 'DNSPolicy':

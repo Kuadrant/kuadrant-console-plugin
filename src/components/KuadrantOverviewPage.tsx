@@ -94,6 +94,7 @@ export const resources: Resource[] = [
   { name: 'TLSPolicies', gvk: resourceGVKMapping['TLSPolicy'] },
   { name: 'Gateways', gvk: resourceGVKMapping['Gateway'] },
   { name: 'HTTPRoutes', gvk: resourceGVKMapping['HTTPRoute'] },
+  { name: 'GRPCRoutes', gvk: resourceGVKMapping['GRPCRoute'] },
 ];
 
 interface TotalRequestsByGateway {
@@ -209,6 +210,7 @@ const KuadrantOverviewPage: React.FC = () => {
     'AuthPolicy',
     'Gateway',
     'HTTPRoute',
+    'GRPCRoute',
   ].reduce(
     (acc, resource) => ({
       ...acc,
@@ -453,18 +455,8 @@ const KuadrantOverviewPage: React.FC = () => {
 
   const handleCreateResource = (resource) => {
     const resolvedNamespace = watchNamespace === '#ALL_NS#' ? 'default' : watchNamespace;
-
-    if (resource === 'Gateway') {
-      const gateway = resourceGVKMapping['Gateway'];
-      navigate(
-        `/k8s/ns/${resolvedNamespace}/${gateway.group}~${gateway.version}~${gateway.kind}/~new`,
-      );
-    } else {
-      const httpRoute = resourceGVKMapping['HTTPRoute'];
-      navigate(
-        `/k8s/ns/${resolvedNamespace}/${httpRoute.group}~${httpRoute.version}~${httpRoute.kind}/~new`,
-      );
-    }
+    const gvk = resourceGVKMapping[resource];
+    navigate(`/k8s/ns/${resolvedNamespace}/${gvk.group}~${gvk.version}~${gvk.kind}/~new`);
   };
 
   const handleNamespaceChange = (newNamespace: string) => {
@@ -1163,6 +1155,64 @@ const KuadrantOverviewPage: React.FC = () => {
                         <EmptyStateBody>
                           <Content component="p">
                             {t('You do not have permission to view HTTPRoutes')}
+                          </Content>
+                        </EmptyStateBody>
+                      </EmptyState>
+                    </Bullseye>
+                  </CardBody>
+                </Card>
+              </GridItem>
+            )}
+
+            {resourceRBAC['GRPCRoute']?.list ? (
+              <GridItem lg={6}>
+                <Card>
+                  <CardTitle className="kuadrant-resource-create-container">
+                    <Title headingLevel="h2">{t('GRPCRoutes')}</Title>
+                    {!resourceRBAC['GRPCRoute']?.create ? (
+                      <Tooltip content={t('You do not have permission to create a GRPCRoute')}>
+                        <Button className="kuadrant-overview-create-button" isAriaDisabled>
+                          {t('Create GRPCRoute')}
+                        </Button>
+                      </Tooltip>
+                    ) : (
+                      <Button
+                        onClick={() => handleCreateResource('GRPCRoute')}
+                        className="kuadrant-overview-create-button"
+                      >
+                        {t('Create GRPCRoute')}
+                      </Button>
+                    )}
+                  </CardTitle>
+                  <CardBody className="pf-u-p-10">
+                    <ResourceList
+                      resources={[resourceGVKMapping['GRPCRoute']]}
+                      columns={columns}
+                      namespace={watchNamespace}
+                      emptyResourceName="GRPCRoutes"
+                    />
+                  </CardBody>
+                </Card>
+              </GridItem>
+            ) : (
+              <GridItem lg={6}>
+                <Card>
+                  <CardBody className="pf-u-p-10">
+                    <CardTitle>
+                      <Title headingLevel="h2">{t('GRPCRoutes')}</Title>
+                    </CardTitle>
+                    <Bullseye>
+                      <EmptyState
+                        titleText={
+                          <Title headingLevel="h4" size="lg">
+                            {t('Access Denied')}
+                          </Title>
+                        }
+                        icon={LockIcon}
+                      >
+                        <EmptyStateBody>
+                          <Content component="p">
+                            {t('You do not have permission to view GRPCRoutes')}
                           </Content>
                         </EmptyStateBody>
                       </EmptyState>
