@@ -46,13 +46,21 @@ const RejectionModal: React.FC<RejectionModalProps> = ({
       ? t('Reject API Key')
       : t('Reject {{count}} API keys', { count: requests.length });
 
+  const handleClose = () => {
+    setReason('');
+    setError('');
+    setRequests(initialRequests);
+    onClose();
+  };
+
   const handleRemove = (requestName: string) => {
     const updated = requests.filter((r) => r.metadata?.name !== requestName);
     setRequests(updated);
 
     // Auto-close modal if last item removed
     if (updated.length === 0) {
-      onClose();
+      handleClose();
+      return;
     }
   };
 
@@ -64,17 +72,10 @@ const RejectionModal: React.FC<RejectionModalProps> = ({
       await onReject(requests, reason || undefined);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to reject API keys');
+      setError(err instanceof Error ? err.message : t('Failed to reject API keys'));
     } finally {
       setIsRejecting(false);
     }
-  };
-
-  const handleClose = () => {
-    setReason('');
-    setError('');
-    setRequests(initialRequests);
-    onClose();
   };
 
   return (

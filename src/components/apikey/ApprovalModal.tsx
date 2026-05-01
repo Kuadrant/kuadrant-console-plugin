@@ -43,13 +43,20 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
       ? t('Approve API Key')
       : t('Approve {{count}} API keys', { count: requests.length });
 
+  const handleClose = () => {
+    setError('');
+    setRequests(initialRequests);
+    onClose();
+  };
+
   const handleRemove = (requestName: string) => {
     const updated = requests.filter((r) => r.metadata?.name !== requestName);
     setRequests(updated);
 
     // Auto-close modal if last item removed
     if (updated.length === 0) {
-      onClose();
+      handleClose();
+      return;
     }
   };
 
@@ -65,12 +72,6 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
     } finally {
       setIsApproving(false);
     }
-  };
-
-  const handleClose = () => {
-    setError('');
-    setRequests(initialRequests);
-    onClose();
   };
 
   return (

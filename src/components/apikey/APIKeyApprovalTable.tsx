@@ -57,11 +57,12 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
   };
 
   const sortedRequests = React.useMemo(() => {
-    if (!sortBy.index) return requests;
+    const sortIndex = sortBy.index;
+    if (sortIndex === undefined) return requests;
 
     const sorted = [...requests].sort((a, b) => {
-      const aValue = getSortableRowValues(a)[sortBy.index!];
-      const bValue = getSortableRowValues(b)[sortBy.index!];
+      const aValue = getSortableRowValues(a)[sortIndex];
+      const bValue = getSortableRowValues(b)[sortIndex];
 
       if (typeof aValue === 'number' && typeof bValue === 'number') {
         return sortBy.direction === 'asc' ? aValue - bValue : bValue - aValue;
@@ -151,7 +152,14 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
                 {isPending && (
                   <Dropdown
                     isOpen={openActionMenus.has(requestName)}
-                    onOpenChange={() => toggleActionMenu(requestName)}
+                    onOpenChange={(isOpen) => {
+                      setOpenActionMenus((prev) => {
+                        const next = new Set(prev);
+                        if (isOpen) next.add(requestName);
+                        else next.delete(requestName);
+                        return next;
+                      });
+                    }}
                     toggle={(toggleRef) => (
                       <MenuToggle
                         ref={toggleRef}

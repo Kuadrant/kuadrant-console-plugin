@@ -27,6 +27,7 @@ interface APIKeyApprovalToolbarProps {
   onBulkApprove: () => void;
   onBulkReject: () => void;
   productOptions: Array<{ name: string; namespace: string }>;
+  isActionsDisabled?: boolean;
 }
 
 const APIKeyApprovalToolbar: React.FC<APIKeyApprovalToolbarProps> = ({
@@ -36,6 +37,7 @@ const APIKeyApprovalToolbar: React.FC<APIKeyApprovalToolbarProps> = ({
   onBulkApprove,
   onBulkReject,
   productOptions,
+  isActionsDisabled = false,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [isProductSelectOpen, setIsProductSelectOpen] = React.useState(false);
@@ -119,12 +121,12 @@ const APIKeyApprovalToolbar: React.FC<APIKeyApprovalToolbarProps> = ({
           <>
             <ToolbarItem variant="separator" />
             <ToolbarItem>
-              <Button variant="primary" onClick={onBulkApprove}>
+              <Button variant="primary" onClick={onBulkApprove} isDisabled={isActionsDisabled}>
                 {t('Approve {{count}} selected', { count: selectedCount })}
               </Button>
             </ToolbarItem>
             <ToolbarItem>
-              <Button variant="danger" onClick={onBulkReject}>
+              <Button variant="danger" onClick={onBulkReject} isDisabled={isActionsDisabled}>
                 {t('Reject {{count}} selected', { count: selectedCount })}
               </Button>
             </ToolbarItem>

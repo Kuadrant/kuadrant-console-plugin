@@ -117,6 +117,14 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
+      "path": "/kuadrant/apikey-approvals",
+      "component": { "$codeRef": "APIKeyApprovalPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
       "path": "/k8s/ns/:ns/tlspolicy/name/:name/edit",
       "component": { "$codeRef": "KuadrantTLSCreatePage" }
     }
@@ -280,6 +288,16 @@
   {
     "type": "console.navigation/href",
     "properties": {
+      "id": "kuadrant-apikey-approvals-admin",
+      "name": "%plugin__kuadrant-console-plugin~API Key Approvals%",
+      "href": "/kuadrant/apikey-approvals",
+      "perspective": "admin",
+      "section": "kuadrant-section-admin"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
       "id": "kuadrant-policy-topology-admin",
       "name": "%plugin__kuadrant-console-plugin~Policy Topology%",
       "href": "/kuadrant/policy-topology",
@@ -322,6 +340,16 @@
       "id": "kuadrant-apiproducts-dev",
       "name": "%plugin__kuadrant-console-plugin~API Products%",
       "href": "/kuadrant/all-namespaces/apiproducts",
+      "perspective": "dev",
+      "section": "kuadrant-section-dev"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "kuadrant-apikey-approvals-dev",
+      "name": "%plugin__kuadrant-console-plugin~API Key Approvals%",
+      "href": "/kuadrant/apikey-approvals",
       "perspective": "dev",
       "section": "kuadrant-section-dev"
     }
