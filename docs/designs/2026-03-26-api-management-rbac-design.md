@@ -41,11 +41,17 @@ The design introduces three personas (API Consumer, API Owner, API Admin) with d
 
 **New RBAC roles are additive** (no breaking changes to existing roles):
 
-- New ClusterRoles: `api-consumer`, `api-owner`, `api-admin`
+- New ClusterRoles: `api-catalog-browser`, `api-consumer`, `api-owner`, `api-admin`
 - New CRD: `APIKeyApproval` (`devportal.kuadrant.io/v1alpha1`)
 - New focus on API Management resources: `APIProduct`, `APIKey`, `APIKeyApproval`
 
-All policies (PlanPolicy, AuthPolicy, RateLimitPolicy) are treated uniformly with read-only access for the new three personas.
+**RBAC binding strategy:**
+- `api-catalog-browser`: Bound via ClusterRoleBinding for cluster-wide read access to catalog (all authenticated users)
+- `api-consumer`: Bound via RoleBinding for namespace-scoped APIKey/Secret management
+- `api-owner`: Bound via RoleBinding for namespace-scoped API management
+- `api-admin`: Bound via ClusterRoleBinding for cluster-wide permissions
+
+All policies (PlanPolicy, AuthPolicy, RateLimitPolicy) are treated uniformly with read-only access via the `api-catalog-browser` role.
 
 ### Architecture
 
@@ -693,73 +699,155 @@ In addition to APIProduct and APIKey, API consumers need read-only access to pol
 
 | Resource | Action | Consumer (own NS) | Consumer (other NS) | Owner (own NS) | Owner (other NS) | Admin |
 |----------|--------|:--------:|:--------:|:--------------:|:----------------:|:-----:|
-| **APIProduct** | get/list | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
-| APIProduct | create | ❌ | ❌ | ✅ | ❌ | ✅ |
-| APIProduct | update | ❌ | ❌ | ✅ | ❌ | ✅ |
-| APIProduct | delete | ❌ | ❌ | ✅ | ❌ | ✅ |
-| **APIKey** | get/list | ✅ | ❌ | ❌ | ❌ | ✅ Cluster-wide |
-| APIKey | create | ✅ | ❌ | ❌ | ❌ | ✅ |
-| APIKey | update | ✅ | ❌ | ❌ | ❌ | ✅ |
-| APIKey | delete | ✅ | ❌ | ❌ | ❌ | ✅ |
-| **APIKeyRequest** | get/list | ❌ | ❌ | ✅ | ❌ | ✅ Cluster-wide |
+| **APIProduct** | get/list/watch | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ |
+| APIProduct | create | ❌ | ❌ | ✅ | ❌ | ✅ Cluster-wide |
+| APIProduct | update | ❌ | ❌ | ✅ | ❌ | ✅ Cluster-wide |
+| APIProduct | delete | ❌ | ❌ | ✅ | ❌ | ✅ Cluster-wide |
+| **APIKey** | get/list/watch | ✅ | ❌ | ❌ | ❌ | ✅ Cluster-wide |
+| APIKey | create | ✅ | ❌ | ❌ | ❌ | ✅ Cluster-wide |
+| APIKey | update | ✅ | ❌ | ❌ | ❌ | ✅ Cluster-wide |
+| APIKey | delete | ✅ | ❌ | ❌ | ❌ | ✅ Cluster-wide |
+| **APIKeyRequest** | get/list/watch | ❌ | ❌ | ✅ | ❌ | ✅ Cluster-wide |
 | APIKeyRequest | create/update/delete | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **APIKeyApproval** | get/list | ❌ | ❌ | ✅ | ❌ | ✅ Cluster-wide |
-| APIKeyApproval | create | ❌ | ❌ | ✅ | ❌ | ✅ |
-| APIKeyApproval | update | ❌ | ❌ | ✅ | ❌ | ✅ |
-| APIKeyApproval | delete | ❌ | ❌ | ✅ | ❌ | ✅ |
+| **APIKeyApproval** | get/list/watch | ❌ | ❌ | ✅ | ❌ | ✅ Cluster-wide |
+| APIKeyApproval | create | ❌ | ❌ | ✅ | ❌ | ✅ Cluster-wide |
+| APIKeyApproval | update | ❌ | ❌ | ✅ | ❌ | ✅ Cluster-wide |
+| APIKeyApproval | delete | ❌ | ❌ | ✅ | ❌ | ✅ Cluster-wide |
+| **Secret** | get/list/watch | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Secret | create/update/delete | ✅ | ❌ | ❌ | ❌ | ❌ |
 
-### Supporting Policies and Routes (Read-Only)
+### Supporting Policies and Routes (Read-Only via api-catalog-browser)
 
 | Resource | Action | Consumer | Owner | Admin |
 |----------|--------|:--------:|:-----:|:-----:|
-| PlanPolicy | get/list | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
-| PlanPolicy | create/update/delete | ❌ | ❌ | ❌ |
-| AuthPolicy | get/list | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
-| RateLimitPolicy | get/list | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
-| HTTPRoute | get/list | ✅ Cluster-wide | ✅ Cluster-wide | ✅ Cluster-wide |
-| Gateway | get/list | ❌ | ✅ Cluster-wide | ✅ Cluster-wide |
+| PlanPolicy | get/list/watch | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ |
+| PlanPolicy | create/update/delete | ❌ (platform-managed) | ❌ (platform-managed) | ❌ (platform-managed) |
+| AuthPolicy | get/list/watch | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ |
+| AuthPolicy | create/update/delete | ❌² | ❌² | ❌² |
+| RateLimitPolicy | get/list/watch | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ |
+| RateLimitPolicy | create/update/delete | ❌² | ❌² | ❌² |
+| HTTPRoute | get/list/watch | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ |
+| HTTPRoute | create/update/delete | ❌² | ❌² | ❌² |
+| Gateway | get/list/watch | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ | ✅ via catalog-browser¹ |
+| Gateway | create/update/delete | ❌² | ❌² | ❌² |
 
 **Notes**:
 
+**Binding Strategy:**
+- ¹ **api-catalog-browser ClusterRole**: Each persona (consumer/owner/admin) requires this role bound via **ClusterRoleBinding** for cluster-wide catalog discovery
+  - Consumers get: `api-catalog-browser` (ClusterRoleBinding) + `api-consumer` (RoleBinding per namespace)
+  - Owners get: `api-catalog-browser` (ClusterRoleBinding) + `api-owner` (RoleBinding per namespace)
+  - Admins get: `api-catalog-browser` (ClusterRoleBinding) + `api-admin` (ClusterRoleBinding)
+- ² **Write access**: Policies/Routes may have write access via separate non-API-Management roles if needed
+
+**Consumer Permissions:**
 - **Consumer (own NS)**: Permissions in namespaces where consumer has RoleBinding for api-consumer ClusterRole
-- **Consumer (other NS)**: Permissions in namespaces where consumer does NOT have RoleBinding. **RBAC-enforced isolation**: Consumers cannot access APIKeys or Secrets in other consumer namespaces, enforcing the architectural principle "Consumers must have access only to their own api keys"
-- **Admin is Owner with cluster-wide scope**: API Admin has the same core permissions as API Owner, but bound cluster-wide (ClusterRoleBinding instead of RoleBinding). Additional admin capability: write access to APIKeys and cluster-wide read on APIKeyRequests for troubleshooting.
-- **Consumer APIKey access**: Always **namespace-scoped** (never cluster-wide). Consumers can only access APIKeys in namespaces where they have RoleBindings. See "Consumer (other NS)" column for isolation verification.
-- **Consumer catalog access**: Cluster-wide read access to APIProducts, policies, and routes for discovery
-- **APIKey namespace**: Consumers create APIKeys in designated namespace(s) - shared (Pattern 1) or per-team (Pattern 2)
-- **APIKeyRequest discovery**: Owners discover requests via APIKeyRequest resources in **their own namespace** (namespace-scoped, RBAC-enforced). APIKeyRequest is a controller-managed shadow resource mirroring APIKey requests - owners/consumers do NOT create/update/delete these directly.
-- **RBAC-enforced filtering**: Namespace boundaries ensure owners only see requests for their API products. No cluster-wide APIKey access needed for owners.
-- **Security isolation**: Owners do NOT have access to APIKey resources or consumer Secrets. APIKeyRequest does not contain API key values or secret references.
-- **APIKeyApproval namespace**: Owners create APIKeyApproval in their own namespace with cross-namespace reference to consumer's APIKey
-- **Secret access**: Consumers have **secret read permissions in their own namespace** (namespace-scoped via RoleBinding) to access API keys. Consumer creates secret with API key before creating APIKey. APIKey references secret via `spec.secretRef`. On approval, controller creates enforcement secret in kuadrant namespace. API key duplicated in two secrets: consumer's namespace (access) and kuadrant namespace (policy enforcement). Owners and admins do NOT have secret read permissions in consumer namespaces (consumer secrets remain isolated).
-- **PlanPolicies**: Read-only for all API Management personas (consumers, owners, admins). PlanPolicies are platform-managed resources, not controlled by API Management roles.
-- **Policies/Routes**: AuthPolicy, RateLimitPolicy, HTTPRoute, Gateway are read-only for API Management roles. Owners may have write access via separate non-API-Management roles if needed.
-- **Cluster-wide**: Permission applies across all namespaces (for discovery/catalog browsing only, not APIKey operations)
+- **Consumer (other NS)**: Permissions in namespaces where consumer does NOT have RoleBinding
+- **RBAC-enforced isolation**: Consumers cannot access APIKeys or Secrets in other consumer namespaces (architectural principle)
+- **APIKey access**: Always **namespace-scoped** (never cluster-wide). See "Consumer (other NS)" column for isolation verification.
+- **Secret access**: Namespace-scoped via RoleBinding. Consumer creates secret with API key, references via `spec.secretRef`. Controller creates enforcement secret in kuadrant namespace on approval.
+
+**Owner Permissions:**
+- **APIKeyRequest discovery**: Owners discover requests via APIKeyRequest resources in **their own namespace** (namespace-scoped, RBAC-enforced)
+- **APIKeyRequest lifecycle**: Controller-managed shadow resource - owners/consumers do NOT create/update/delete these directly
+- **Security isolation**: Owners do NOT have access to APIKey resources or consumer Secrets. APIKeyRequest does not contain API key values.
+- **APIKeyApproval**: Created in owner's namespace with cross-namespace reference to consumer's APIKey
+
+**Admin Permissions:**
+- **Scope**: Same core permissions as api-owner, but bound cluster-wide (ClusterRoleBinding instead of RoleBinding)
+- **Additional capability**: Write access to APIKeys for troubleshooting (cluster-wide)
+- **Security**: Admins do NOT have secret read permissions in consumer namespaces (consumer secrets remain isolated)
 
 ## RBAC Manifests
 
 This section contains the complete Kubernetes RBAC manifests for API Management roles.
+
+### API Catalog Browser ClusterRole
+
+```yaml
+---
+# API Catalog Browser ClusterRole
+# Provides cluster-wide read-only access to API catalog resources
+# Enables API discovery across all namespaces for API Management personas
+#
+# Usage:
+#   kubectl apply -f api-catalog-browser-role.yaml
+#
+#   Bind to consumer groups via ClusterRoleBinding:
+#   kubectl create clusterrolebinding api-catalog-browser-consumers \
+#     --clusterrole=api-catalog-browser \
+#     --group=mobile-app-developers
+#
+#   Bind to owner groups via ClusterRoleBinding:
+#   kubectl create clusterrolebinding api-catalog-browser-owners \
+#     --clusterrole=api-catalog-browser \
+#     --group=team-payments
+#
+#   Bind to admin groups via ClusterRoleBinding:
+#   kubectl create clusterrolebinding api-catalog-browser-admins \
+#     --clusterrole=api-catalog-browser \
+#     --group=platform-team
+#
+# Note: This role is designed to be bound cluster-wide via ClusterRoleBinding
+#       All API Management personas (consumers, owners, admins) require this role for catalog discovery
+#       Each persona gets TWO bindings: api-catalog-browser (ClusterRoleBinding) + persona-specific role (RoleBinding or ClusterRoleBinding)
+#
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: api-catalog-browser
+rules:
+  # Browse all API products for discovery (cluster-wide read-only)
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list", "watch"]
+
+  # View rate limiting plans cluster-wide (read-only, platform-managed)
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["planpolicies"]
+    verbs: ["get", "list", "watch"]
+
+  # View policies cluster-wide (read-only, to understand API requirements)
+  - apiGroups: ["kuadrant.io"]
+    resources: ["authpolicies", "ratelimitpolicies"]
+    verbs: ["get", "list", "watch"]
+
+  # View HTTPRoutes cluster-wide (read-only, to understand API endpoints)
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list", "watch"]
+
+  # View Gateways cluster-wide (read-only, for context)
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways"]
+    verbs: ["get", "list", "watch"]
+```
 
 ### API Consumer ClusterRole
 
 ```yaml
 ---
 # API Consumer ClusterRole
-# Allows developers to create and manage API access requests and browse the API catalog
-# Includes namespace-scoped APIKey management and cluster-wide read access for catalog browsing
+# Allows developers to create and manage API access requests in their assigned namespaces
+# Requires api-catalog-browser role (bound via ClusterRoleBinding) for catalog discovery
 #
 # Usage:
 #   kubectl apply -f api-consumer-role.yaml
 #
-#   Bind to users or groups in their namespace using RoleBinding:
-#   kubectl create rolebinding api-consumer-binding \
-#     --clusterrole=api-consumer \
-#     --user=<username> \
-#     -n <consumer-namespace>
+#   1. Bind catalog browsing to consumer group/user (cluster-wide):
+#      kubectl create clusterrolebinding api-catalog-browser-consumers \
+#        --clusterrole=api-catalog-browser \
+#        --group=mobile-app-developers
 #
-# Note: ClusterRole + RoleBinding = namespace-scoped write permissions
-#       The consumer can only manage APIKeys in namespaces where they have a RoleBinding
-#       Cluster-wide read permissions allow consumers to discover all published APIs
+#   2. Bind consumer permissions to users/groups in their namespace (namespace-scoped):
+#      kubectl create rolebinding api-consumer-binding \
+#        --clusterrole=api-consumer \
+#        --group=mobile-app-developers \
+#        -n <consumer-namespace>
+#
+# Note: ClusterRole + RoleBinding = namespace-scoped permissions
+#       The consumer can only manage APIKeys and Secrets in namespaces where they have a RoleBinding
+#       Catalog browsing requires separate api-catalog-browser ClusterRoleBinding (cluster-wide)
 #
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -770,33 +858,16 @@ rules:
   # Consumers do NOT update status - controller manages all status fields
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apikeys"]
-    verbs: ["get", "list", "create", "update", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
 
   # Read secrets in consumer's own namespace to access API keys (namespace-scoped via RoleBinding)
   # Consumer creates secret with API key before creating APIKey (spec.secretRef references this secret)
   # On approval, controller creates enforcement secret in kuadrant namespace (consumer cannot access)
   - apiGroups: [""]
     resources: ["secrets"]
-    verbs: ["get", "list", "create", "update", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
 
-  # Browse all API products for discovery (cluster-wide)
-  - apiGroups: ["devportal.kuadrant.io"]
-    resources: ["apiproducts"]
-    verbs: ["get", "list"]
-
-  # View policies cluster-wide (read-only, to understand API requirements)
-  - apiGroups: ["extensions.kuadrant.io"]
-    resources: ["planpolicies"]
-    verbs: ["get", "list"]
-  - apiGroups: ["kuadrant.io"]
-    resources: ["authpolicies", "ratelimitpolicies"]
-    verbs: ["get", "list"]
-
-  # View HTTPRoutes cluster-wide (read-only, to understand API endpoints)
-  - apiGroups: ["gateway.networking.k8s.io"]
-    resources: ["httproutes"]
-    verbs: ["get", "list"]
-
+  # NOTE: Catalog browsing (apiproducts, policies, routes) comes from api-catalog-browser ClusterRole
   # NOTE: Consumers do NOT have apikeyapprovals permissions (architectural principle)
   # Only API owners can approve/reject requests
 ```
@@ -807,20 +878,26 @@ rules:
 ---
 # API Owner ClusterRole
 # Allows teams to publish and manage APIs in their namespace
-# Includes cluster-wide read access for catalog browsing
+# Requires api-catalog-browser role (bound via ClusterRoleBinding) for catalog discovery
 #
 # Usage:
 #   kubectl apply -f api-owner-role.yaml
 #
-#   Bind to team users or groups in their namespace using RoleBinding:
-#   kubectl create rolebinding api-owner-binding \
-#     --clusterrole=api-owner \
-#     --group=team-payment-services \
-#     -n payment-services
+#   1. Bind catalog browsing to owner team (cluster-wide):
+#      kubectl create clusterrolebinding api-catalog-browser-payments \
+#        --clusterrole=api-catalog-browser \
+#        --group=team-payment-services
 #
-# Note: ClusterRole + RoleBinding = namespace-scoped write permissions
-#       The owner can only manage APIProducts, APIKeyApprovals, and view APIKeyRequests in namespaces where they have a RoleBinding
-#       Cluster-wide read permissions allow owners to discover all APIs (catalog browsing)
+#   2. Bind owner permissions to team users/groups in their namespace (namespace-scoped):
+#      kubectl create rolebinding api-owner-binding \
+#        --clusterrole=api-owner \
+#        --group=team-payment-services \
+#        -n payment-services
+#
+# Note: ClusterRole + RoleBinding = namespace-scoped permissions
+#       The owner can only manage APIProducts, APIKeyApprovals in namespaces where they have a RoleBinding
+#       The owner can only view APIKeyRequests in namespaces where they have a RoleBinding
+#       Catalog browsing requires separate api-catalog-browser ClusterRoleBinding (cluster-wide)
 #
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -830,12 +907,12 @@ rules:
   # Manage API products (namespace-scoped via RoleBinding)
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
   # Approve/reject API key requests via APIKeyApproval resource (namespace-scoped via RoleBinding)
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apikeyapprovals"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
   # Discover API key requests via APIKeyRequest shadow resources (namespace-scoped via RoleBinding)
   # Controller automatically creates APIKeyRequest in owner's namespace when consumer creates APIKey
@@ -843,30 +920,13 @@ rules:
   # Namespace boundaries ensure owners only see requests for their API products
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apikeyrequests"]
-    verbs: ["get", "list"]
+    verbs: ["get", "list", "watch"]
 
   # NOTE: Owners do NOT have access to apikeys resources (consumers own these)
   # Owners discover requests via apikeyrequests in their own namespace only
 
-  # View rate limiting plans cluster-wide (reference when creating products)
-  - apiGroups: ["extensions.kuadrant.io"]
-    resources: ["planpolicies"]
-    verbs: ["get", "list"]
-
-  # View policies cluster-wide (read-only, to understand API requirements)
-  - apiGroups: ["kuadrant.io"]
-    resources: ["authpolicies", "ratelimitpolicies"]
-    verbs: ["get", "list"]
-
-  # View HTTPRoutes cluster-wide (for discovery and referencing in APIProducts)
-  - apiGroups: ["gateway.networking.k8s.io"]
-    resources: ["httproutes"]
-    verbs: ["get", "list"]
-
-  # View Gateways cluster-wide (for context)
-  - apiGroups: ["gateway.networking.k8s.io"]
-    resources: ["gateways"]
-    verbs: ["get", "list"]
+  # NOTE: Catalog browsing (planpolicies, authpolicies, ratelimitpolicies, httproutes, gateways) 
+  # comes from api-catalog-browser ClusterRole
 
   # NOTE: Secrets are managed by consumers in their own namespace and by controller in kuadrant namespace
   # Owners do NOT have secret read permissions in consumer namespaces (consumer secrets remain isolated)
@@ -884,19 +944,29 @@ rules:
 #
 # Note: This is api-owner permissions bound cluster-wide (via ClusterRoleBinding)
 #       plus additional permissions for troubleshooting (apikeys write access)
+#       Requires api-catalog-browser role (bound via ClusterRoleBinding) for catalog discovery
 #
 # Usage:
 #   kubectl apply -f api-admin-clusterrole.yaml
 #
-#   Bind to admin users (ClusterRoleBinding grants cluster-wide access):
-#   kubectl create clusterrolebinding api-admin-alice \
-#     --clusterrole=api-admin \
-#     --user=alice
+#   1. Bind catalog browsing to admin users/groups (cluster-wide):
+#      kubectl create clusterrolebinding api-catalog-browser-admins \
+#        --clusterrole=api-catalog-browser \
+#        --group=platform-team
 #
-#   Bind to admin group:
-#   kubectl create clusterrolebinding api-admin-platform-team \
-#     --clusterrole=api-admin \
-#     --group=platform-team
+#   2. Bind admin permissions to admin users/groups (cluster-wide):
+#      kubectl create clusterrolebinding api-admin-platform-team \
+#        --clusterrole=api-admin \
+#        --group=platform-team
+#
+#      Or bind to individual admin users:
+#      kubectl create clusterrolebinding api-catalog-browser-alice \
+#        --clusterrole=api-catalog-browser \
+#        --user=alice
+#
+#      kubectl create clusterrolebinding api-admin-alice \
+#        --clusterrole=api-admin \
+#        --user=alice
 #
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -906,19 +976,19 @@ rules:
   # Manage API products cluster-wide (same as api-owner, but cluster-wide via ClusterRoleBinding)
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apiproducts"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
   # Manage API key approvals cluster-wide (same as api-owner, but cluster-wide via ClusterRoleBinding)
   # Allows admins to approve/reject on behalf of owners in any namespace
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apikeyapprovals"]
-    verbs: ["get", "list", "create", "update", "patch", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
 
   # View API key requests cluster-wide (same as api-owner, but cluster-wide via ClusterRoleBinding)
   # Allows admins to see all APIKeyRequest shadow resources across all namespaces
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apikeyrequests"]
-    verbs: ["get", "list"]
+    verbs: ["get", "list", "watch"]
 
   # Additional troubleshooting permission: Full access to API keys cluster-wide
   # Unlike api-owner (no apikeys access), admins can create/update/delete APIKeys for troubleshooting
@@ -926,31 +996,14 @@ rules:
   # NOTE: Admins still do NOT have secret read permissions in consumer namespaces (consumer secrets remain isolated)
   - apiGroups: ["devportal.kuadrant.io"]
     resources: ["apikeys"]
-    verbs: ["get", "list", "create", "update", "delete"]
+    verbs: ["get", "list", "watch", "create", "update", "delete"]
+
+  # NOTE: Catalog browsing (planpolicies, authpolicies, ratelimitpolicies, httproutes, gateways)
+  # comes from api-catalog-browser ClusterRole
 
   # NOTE: Secrets are managed by consumers in their own namespace and by controller in kuadrant namespace
   # Admins do NOT have secret read permissions in consumer namespaces (consumer secrets remain isolated)
   # Admins can view APIKey resources but cannot access consumer secrets containing API key values
-
-  # View rate limiting plans cluster-wide (same as api-owner)
-  - apiGroups: ["extensions.kuadrant.io"]
-    resources: ["planpolicies"]
-    verbs: ["get", "list"]
-
-  # View policies cluster-wide (same as api-owner)
-  - apiGroups: ["kuadrant.io"]
-    resources: ["authpolicies", "ratelimitpolicies"]
-    verbs: ["get", "list"]
-
-  # View HTTPRoutes cluster-wide (same as api-owner)
-  - apiGroups: ["gateway.networking.k8s.io"]
-    resources: ["httproutes"]
-    verbs: ["get", "list"]
-
-  # View Gateways cluster-wide (same as api-owner)
-  - apiGroups: ["gateway.networking.k8s.io"]
-    resources: ["gateways"]
-    verbs: ["get", "list"]
 ```
 
 ## Implementation Plan
@@ -1015,11 +1068,11 @@ Use `SelfSubjectAccessReview` to check permissions before rendering actions: Con
 
 **Task 8: Package and auto-deploy RBAC ClusterRoles**
 
-Create `config/rbac/api-management/` directory with ClusterRole manifests: `api-consumer.yaml`, `api-owner.yaml`, `api-admin.yaml` (copy from RBAC Manifests section in this design). Add to operator deployment kustomization, Helm chart, and OLM bundle. Implement auto-deployment on installation and upgrade logic to update ClusterRoles when operator is updated. Ensure ClusterRoles are created before console plugin installation.
+Create `config/rbac/api-management/` directory with ClusterRole manifests: `api-catalog-browser.yaml`, `api-consumer.yaml`, `api-owner.yaml`, `api-admin.yaml` (copy from RBAC Manifests section in this design). Add to operator deployment kustomization, Helm chart, and OLM bundle. Implement auto-deployment on installation and upgrade logic to update ClusterRoles when operator is updated. Ensure ClusterRoles are created before console plugin installation.
 
 **Task 9: Add namespace onboarding templates and RBAC validation**
 
-Create `NamespaceTemplate` CRD (or use existing solution) with templates for deployment patterns: consumer namespace (RoleBinding for api-consumer), owner namespace (RoleBinding for api-owner), shared consumer namespace (Pattern 1). Add operator validation logic to check if required ClusterRoles exist, set status condition if missing, add reconciliation to recreate if deleted. Document template usage, troubleshooting, ClusterRole deployment, and RoleBinding creation with examples for Patterns 1-4. Add RBAC section to operator README linking to this design document.
+Create `NamespaceTemplate` CRD (or use existing solution) with templates for deployment patterns: consumer namespace (ClusterRoleBinding for api-catalog-browser + RoleBinding for api-consumer), owner namespace (ClusterRoleBinding for api-catalog-browser + RoleBinding for api-owner), shared consumer namespace (Pattern 1). Add operator validation logic to check if required ClusterRoles exist, set status condition if missing, add reconciliation to recreate if deleted. Document template usage, troubleshooting, ClusterRole deployment, and dual RoleBinding creation (ClusterRoleBinding for catalog + RoleBinding for namespace-scoped permissions) with examples for Patterns 1-4. Add RBAC section to operator README linking to this design document.
 
 ### Future Work (Out of Scope)
 
@@ -1045,37 +1098,49 @@ RBAC testing focuses on verifying that Kubernetes enforces the defined permissio
 
 ### kubectl Impersonation Tests
 
-Use `kubectl --as=<user>` to test permissions without creating real users:
+Use `kubectl --as=<user>` to test permissions without creating real users.
+
+**Setup assumptions:**
+- `test-api-consumer-a` has: ClusterRoleBinding for `api-catalog-browser` + RoleBinding for `api-consumer` in `api-consumer-a` namespace
+- `test-api-owner-team-a` has: ClusterRoleBinding for `api-catalog-browser` + RoleBinding for `api-owner` in `api-team-a` namespace
+- `test-api-admin` has: ClusterRoleBinding for `api-catalog-browser` + ClusterRoleBinding for `api-admin`
 
 ```bash
-# Test consumer permissions (assuming consumer-a has access to 'api-consumer-a' namespace)
-kubectl auth can-i list apiproducts --as=test-api-consumer-a --all-namespaces  # Should succeed (cluster-wide catalog)
-kubectl auth can-i create secrets --as=test-api-consumer-a -n api-consumer-a  # Should succeed (own namespace)
-kubectl auth can-i get secrets --as=test-api-consumer-a -n api-consumer-a  # Should succeed (own namespace)
+# Test consumer permissions (assuming consumer-a has both bindings)
+kubectl auth can-i list apiproducts --as=test-api-consumer-a --all-namespaces  # Should succeed (via api-catalog-browser)
+kubectl auth can-i list planpolicies --as=test-api-consumer-a --all-namespaces  # Should succeed (via api-catalog-browser)
+kubectl auth can-i list httproutes --as=test-api-consumer-a --all-namespaces  # Should succeed (via api-catalog-browser)
+kubectl auth can-i create secrets --as=test-api-consumer-a -n api-consumer-a  # Should succeed (own namespace via api-consumer)
+kubectl auth can-i get secrets --as=test-api-consumer-a -n api-consumer-a  # Should succeed (own namespace via api-consumer)
 kubectl auth can-i get secrets --as=test-api-consumer-a -n api-consumer-b  # Should fail (other consumer NS - isolation)
 kubectl auth can-i get secrets --as=test-api-consumer-a -n kuadrant  # Should fail (kuadrant namespace - enforcement secrets)
-kubectl auth can-i create apikeys --as=test-api-consumer-a -n api-consumer-a  # Should succeed (own namespace)
-kubectl auth can-i list apikeys --as=test-api-consumer-a -n api-consumer-a  # Should succeed (own namespace)
+kubectl auth can-i create apikeys --as=test-api-consumer-a -n api-consumer-a  # Should succeed (own namespace via api-consumer)
+kubectl auth can-i list apikeys --as=test-api-consumer-a -n api-consumer-a  # Should succeed (own namespace via api-consumer)
 kubectl auth can-i create apikeys --as=test-api-consumer-a -n api-consumer-b  # Should fail (other consumer NS - isolation)
 kubectl auth can-i list apikeys --as=test-api-consumer-a -n api-consumer-b  # Should fail (other consumer NS - isolation)
 kubectl auth can-i list apikeys --as=test-api-consumer-a --all-namespaces  # Should fail (namespace-scoped only)
 kubectl auth can-i create apiproducts --as=test-api-consumer-a -n api-consumer-a  # Should fail
 kubectl auth can-i list apikeyrequests --as=test-api-consumer-a -n api-consumer-a  # Should fail (owners only)
 
-# Test owner permissions
+# Test owner permissions (assuming owner has both bindings)
+kubectl auth can-i list apiproducts --as=test-api-owner-team-a --all-namespaces  # Should succeed (via api-catalog-browser)
+kubectl auth can-i list planpolicies --as=test-api-owner-team-a --all-namespaces  # Should succeed (via api-catalog-browser)
+kubectl auth can-i list gateways --as=test-api-owner-team-a --all-namespaces  # Should succeed (via api-catalog-browser)
 kubectl auth can-i list apikeys --as=test-api-owner-team-a --all-namespaces  # Should fail (no apikeys permission - use apikeyrequests)
 kubectl auth can-i get secrets --as=test-api-owner-team-a -n api-consumer-a  # Should fail (no secret access in consumer namespaces)
 kubectl auth can-i get secrets --as=test-api-owner-team-a -n kuadrant  # Should fail (enforcement secrets managed by controller)
-kubectl auth can-i list apikeyrequests --as=test-api-owner-team-a -n api-team-a  # Should succeed (own namespace)
+kubectl auth can-i list apikeyrequests --as=test-api-owner-team-a -n api-team-a  # Should succeed (own namespace via api-owner)
 kubectl auth can-i list apikeyrequests --as=test-api-owner-team-a -n api-team-b  # Should fail (namespace-scoped)
-kubectl auth can-i create apiproducts --as=test-api-owner-team-a -n api-team-a  # Should succeed (own namespace)
+kubectl auth can-i create apiproducts --as=test-api-owner-team-a -n api-team-a  # Should succeed (own namespace via api-owner)
 kubectl auth can-i create apiproducts --as=test-api-owner-team-a -n api-team-b  # Should fail
-kubectl auth can-i create apikeyapprovals --as=test-api-owner-team-a -n api-team-a  # Should succeed
+kubectl auth can-i create apikeyapprovals --as=test-api-owner-team-a -n api-team-a  # Should succeed (via api-owner)
 
-# Test admin permissions
-kubectl auth can-i list planpolicies --as=test-api-admin --all-namespaces  # Should succeed (read-only)
-kubectl auth can-i delete apiproducts --as=test-api-admin -n api-team-a  # Should succeed
-kubectl auth can-i list apikeys --as=test-api-admin --all-namespaces  # Should succeed
+# Test admin permissions (assuming admin has both bindings)
+kubectl auth can-i list apiproducts --as=test-api-admin --all-namespaces  # Should succeed (via api-catalog-browser)
+kubectl auth can-i list planpolicies --as=test-api-admin --all-namespaces  # Should succeed (via api-catalog-browser, read-only)
+kubectl auth can-i delete apiproducts --as=test-api-admin -n api-team-a  # Should succeed (via api-admin)
+kubectl auth can-i list apikeys --as=test-api-admin --all-namespaces  # Should succeed (via api-admin)
+kubectl auth can-i get secrets --as=test-api-admin -n api-consumer-a  # Should fail (consumer secrets remain isolated)
 ```
 
 ### Manual Validation
@@ -1093,21 +1158,25 @@ See the "Validation Checklist" section below for detailed test scenarios.
 
 #### Consumer Testing
 
+**Setup required:**
+- ClusterRoleBinding for `api-catalog-browser`
+- RoleBinding for `api-consumer` in consumer's namespace
+
 **Positive Permissions** (should succeed):
 
-- [ ] Can list all APIProducts cluster-wide (`kubectl get apiproducts --all-namespaces`)
-- [ ] Can get specific APIProduct details
-- [ ] Can view PlanPolicies, AuthPolicies, RateLimitPolicies, HTTPRoutes (read-only, cluster-wide)
-- [ ] Can create Secret with API key in own namespace
-- [ ] Can read Secrets in own namespace (to retrieve API key value)
-- [ ] Can create APIKey in own namespace with `spec.secretRef` and cross-namespace reference to APIProduct
-- [ ] Can update own APIKey in own namespace
-- [ ] Can delete own APIKey in own namespace
+- [ ] Can list all APIProducts cluster-wide via api-catalog-browser (`kubectl get apiproducts --all-namespaces`)
+- [ ] Can get specific APIProduct details via api-catalog-browser
+- [ ] Can view PlanPolicies, AuthPolicies, RateLimitPolicies, HTTPRoutes, Gateways via api-catalog-browser (read-only, cluster-wide)
+- [ ] Can create Secret with API key in own namespace via api-consumer
+- [ ] Can read Secrets in own namespace via api-consumer (to retrieve API key value)
+- [ ] Can create APIKey in own namespace with `spec.secretRef` and cross-namespace reference to APIProduct via api-consumer
+- [ ] Can update own APIKey in own namespace via api-consumer
+- [ ] Can delete own APIKey in own namespace via api-consumer
 
 **Negative Permissions** (should fail):
 
 - [ ] Cannot create APIProducts in any namespace
-- [ ] Cannot create APIKeys in other consumer namespaces
+- [ ] Cannot create APIKeys in other consumer namespaces (RoleBinding is namespace-scoped)
 - [ ] Cannot read APIKeys in other consumer namespaces (isolation test)
 - [ ] Cannot read Secrets in other consumer namespaces (isolation test)
 - [ ] Cannot create APIKeyApproval resources (approval denied)
@@ -1116,27 +1185,31 @@ See the "Validation Checklist" section below for detailed test scenarios.
 
 #### Owner Testing
 
+**Setup required:**
+- ClusterRoleBinding for `api-catalog-browser`
+- RoleBinding for `api-owner` in owner's namespace
+
 **Positive Permissions** (should succeed):
 
-- [ ] Can list all APIProducts cluster-wide
-- [ ] Can list APIKeyRequests in own namespace: `kubectl get apikeyrequests -n api-team-a`
-- [ ] Can view APIKeyRequest details (requestedBy, useCase, planTier, status conditions)
-- [ ] Can create APIProduct in own namespace
-- [ ] Can update/delete APIProduct in own namespace
-- [ ] Can create APIKeyApproval in own namespace with cross-namespace reference to consumer's APIKey
-- [ ] Can update/delete APIKeyApproval in own namespace
-- [ ] Can view HTTPRoutes and Gateways cluster-wide
+- [ ] Can list all APIProducts cluster-wide via api-catalog-browser
+- [ ] Can view PlanPolicies, AuthPolicies, RateLimitPolicies, HTTPRoutes, Gateways via api-catalog-browser (cluster-wide, read-only)
+- [ ] Can list APIKeyRequests in own namespace via api-owner: `kubectl get apikeyrequests -n api-team-a`
+- [ ] Can view APIKeyRequest details (requestedBy, useCase, planTier, status conditions) via api-owner
+- [ ] Can create APIProduct in own namespace via api-owner
+- [ ] Can update/delete APIProduct in own namespace via api-owner
+- [ ] Can create APIKeyApproval in own namespace with cross-namespace reference to consumer's APIKey via api-owner
+- [ ] Can update/delete APIKeyApproval in own namespace via api-owner
 
 **Negative Permissions** (should fail):
 
-- [ ] Cannot list APIKeys cluster-wide (no apikeys permission - RBAC enforced)
+- [ ] Cannot list APIKeys cluster-wide (no apikeys permission in api-owner or api-catalog-browser - RBAC enforced)
 - [ ] Cannot read APIKey resources in consumer namespaces (security isolation)
 - [ ] Cannot read Secrets in consumer namespaces (cannot access API key values)
-- [ ] Cannot list APIKeyRequests in other owner namespaces
+- [ ] Cannot list APIKeyRequests in other owner namespaces (RoleBinding is namespace-scoped)
 - [ ] Cannot create/update/delete APIKeyRequest resources (controller-managed only)
-- [ ] Cannot create APIProduct in other team namespaces
-- [ ] Cannot delete APIProduct in other team namespaces
-- [ ] Cannot create APIKeyApproval in other team namespaces
+- [ ] Cannot create APIProduct in other team namespaces (RoleBinding is namespace-scoped)
+- [ ] Cannot delete APIProduct in other team namespaces (RoleBinding is namespace-scoped)
+- [ ] Cannot create APIKeyApproval in other team namespaces (RoleBinding is namespace-scoped)
 - [ ] Cannot approve requests for other teams' API products (controller validation prevents cross-namespace approvals)
 - [ ] Cannot create APIKeys (consumers create in their own namespace)
 - [ ] Cannot update APIKey status (controller-managed)
@@ -1144,17 +1217,25 @@ See the "Validation Checklist" section below for detailed test scenarios.
 
 #### Admin Testing
 
+**Setup required:**
+- ClusterRoleBinding for `api-catalog-browser`
+- ClusterRoleBinding for `api-admin`
+
 **Positive Permissions** (should succeed):
 
-- [ ] Can list APIProducts cluster-wide
-- [ ] Can list APIKeys cluster-wide
-- [ ] Can list APIKeyApprovals cluster-wide
-- [ ] Can create APIProduct in any namespace
-- [ ] Can update/delete APIProduct in any namespace
-- [ ] Can create APIKeyApproval in any namespace (on behalf of owners)
-- [ ] Can delete APIKeyApprovals in any namespace
-- [ ] Can view PlanPolicies cluster-wide (read-only - platform-managed)
-- [ ] Can view all Kuadrant policies (AuthPolicy, RateLimitPolicy, etc.)
+- [ ] Can list APIProducts cluster-wide via api-catalog-browser
+- [ ] Can view PlanPolicies, AuthPolicies, RateLimitPolicies, HTTPRoutes, Gateways via api-catalog-browser (cluster-wide, read-only)
+- [ ] Can list APIKeys cluster-wide via api-admin
+- [ ] Can list APIKeyApprovals cluster-wide via api-admin
+- [ ] Can create APIProduct in any namespace via api-admin
+- [ ] Can update/delete APIProduct in any namespace via api-admin
+- [ ] Can create APIKeyApproval in any namespace via api-admin (on behalf of owners)
+- [ ] Can delete APIKeyApprovals in any namespace via api-admin
+- [ ] Can create/update/delete APIKeys cluster-wide via api-admin (troubleshooting capability)
+
+**Negative Permissions** (should fail):
+
+- [ ] Cannot read Secrets in consumer namespaces (consumer secrets remain isolated - admins do NOT have secret permissions)
 
 #### Cross-Namespace Workflow Test
 
@@ -1275,13 +1356,28 @@ This test verifies that approval state is decoupled from the current approval mo
 
 ### Test Personas
 
-Test users for kubectl impersonation testing:
+Test users for kubectl impersonation testing. Each persona requires TWO bindings:
 
-- `test-api-consumer-a` - Consumer with access to `api-consumer-a` namespace (for isolation testing)
-- `test-api-consumer-b` - Consumer with access to `api-consumer-b` namespace (for isolation testing)
-- `test-api-owner-team-a` - Owner with access to `api-team-a` namespace
-- `test-api-owner-team-b` - Owner with access to `api-team-b` namespace
-- `test-api-admin` - Admin with cluster-wide access
+**Consumer Personas:**
+- `test-api-consumer-a` - Consumer with:
+  - ClusterRoleBinding for `api-catalog-browser` (catalog discovery)
+  - RoleBinding for `api-consumer` in `api-consumer-a` namespace (APIKey/Secret management)
+- `test-api-consumer-b` - Consumer with:
+  - ClusterRoleBinding for `api-catalog-browser` (catalog discovery)
+  - RoleBinding for `api-consumer` in `api-consumer-b` namespace (APIKey/Secret management)
+
+**Owner Personas:**
+- `test-api-owner-team-a` - Owner with:
+  - ClusterRoleBinding for `api-catalog-browser` (catalog discovery)
+  - RoleBinding for `api-owner` in `api-team-a` namespace (API management)
+- `test-api-owner-team-b` - Owner with:
+  - ClusterRoleBinding for `api-catalog-browser` (catalog discovery)
+  - RoleBinding for `api-owner` in `api-team-b` namespace (API management)
+
+**Admin Persona:**
+- `test-api-admin` - Admin with:
+  - ClusterRoleBinding for `api-catalog-browser` (catalog discovery)
+  - ClusterRoleBinding for `api-admin` (cluster-wide API management)
 
 **Note**: Two consumer personas enable testing namespace isolation (Pattern 2). Consumer A cannot access Consumer B's APIKeys and vice versa.
 
@@ -1297,11 +1393,16 @@ All consumers share one namespace and use catalog cluster-wide.
 # Create shared consumer namespace
 kubectl create namespace api-consumers
 
-# Apply consumer ClusterRoles (once, cluster-wide)
-# Apply Consumer ClusterRole (see "RBAC Manifests" section above for complete YAML)
+# Apply ClusterRoles (once, cluster-wide)
+# Apply api-catalog-browser ClusterRole (see "RBAC Manifests" section above for complete YAML)
+# Apply api-consumer ClusterRole (see "RBAC Manifests" section above for complete YAML)
 
-# Bind all consumers to the shared namespace (ClusterRole + RoleBinding = namespace-scoped write permissions)
-# Cluster-wide read permissions already included in api-consumer ClusterRole
+# 1. Bind catalog browsing to consumer group (cluster-wide read access)
+kubectl create clusterrolebinding api-catalog-browser-consumers \
+  --clusterrole=api-catalog-browser \
+  --group=api-consumers
+
+# 2. Bind consumer permissions to the shared namespace (namespace-scoped write permissions)
 kubectl create rolebinding api-consumer-binding \
   --clusterrole=api-consumer \
   --group=api-consumers \
@@ -1339,15 +1440,29 @@ Each consumer team gets namespace-scoped RBAC permissions for strict isolation.
 kubectl create namespace consumer-team-mobile
 kubectl create namespace consumer-team-backend
 
-# Apply consumer ClusterRoles (once, cluster-wide)
-# Apply Consumer ClusterRole (see "RBAC Manifests" section above for complete YAML)
+# Apply ClusterRoles (once, cluster-wide)
+# Apply api-catalog-browser ClusterRole (see "RBAC Manifests" section above for complete YAML)
+# Apply api-consumer ClusterRole (see "RBAC Manifests" section above for complete YAML)
 
-# Bind to teams/users (ClusterRole + RoleBinding = namespace-scoped write permissions)
-# Cluster-wide read permissions already included in api-consumer ClusterRole
+# 1. Bind catalog browsing to consumer teams (cluster-wide read access)
+kubectl create clusterrolebinding api-catalog-browser-mobile \
+  --clusterrole=api-catalog-browser \
+  --group=mobile-app-developers
+
+kubectl create clusterrolebinding api-catalog-browser-backend \
+  --clusterrole=api-catalog-browser \
+  --group=backend-developers
+
+# 2. Bind consumer permissions to teams per namespace (namespace-scoped write permissions)
 kubectl create rolebinding api-consumer-binding \
   --clusterrole=api-consumer \
   --group=mobile-app-developers \
   -n consumer-team-mobile
+
+kubectl create rolebinding api-consumer-binding \
+  --clusterrole=api-consumer \
+  --group=backend-developers \
+  -n consumer-team-backend
 ```
 
 **Benefits**:
@@ -1374,16 +1489,31 @@ Each API owner team gets their own namespace for publishing APIs and managing ap
 kubectl create namespace api-team-payments
 kubectl create namespace api-team-shipping
 
-# Apply Owner ClusterRole (see "RBAC Manifests" section above for complete YAML)
+# Apply ClusterRoles (once, cluster-wide)
+# Apply api-catalog-browser ClusterRole (see "RBAC Manifests" section above for complete YAML)
+# Apply api-owner ClusterRole (see "RBAC Manifests" section above for complete YAML)
 
-# Bind to teams (ClusterRole + RoleBinding = namespace-scoped write)
+# 1. Bind catalog browsing to owner teams (cluster-wide read access)
+kubectl create clusterrolebinding api-catalog-browser-payments \
+  --clusterrole=api-catalog-browser \
+  --group=team-payments
+
+kubectl create clusterrolebinding api-catalog-browser-shipping \
+  --clusterrole=api-catalog-browser \
+  --group=team-shipping
+
+# 2. Bind owner permissions to teams per namespace (namespace-scoped write permissions)
 kubectl create rolebinding api-owner-binding \
   --clusterrole=api-owner \
   --group=team-payments \
   -n api-team-payments
 
-# Note: api-owner includes cluster-wide read permissions for catalog browsing (APIProducts)
-# Owners discover requests via APIKeyRequest resources in their own namespace (namespace-scoped)
+kubectl create rolebinding api-owner-binding \
+  --clusterrole=api-owner \
+  --group=team-shipping \
+  -n api-team-shipping
+
+# Note: Owners discover requests via APIKeyRequest resources in their own namespace (namespace-scoped)
 ```
 
 **Benefits**:
@@ -1402,15 +1532,25 @@ Platform administrators are API owners with cluster-wide permissions, plus addit
 **Key principle**: api-admin is api-owner with ClusterRoleBinding (cluster-wide scope) instead of RoleBinding (namespace-scoped).
 
 ```bash
-# Apply admin ClusterRole (cluster-wide)
-# Apply Admin ClusterRole (see "RBAC Manifests" section above for complete YAML)
+# Apply ClusterRoles (once, cluster-wide)
+# Apply api-catalog-browser ClusterRole (see "RBAC Manifests" section above for complete YAML)
+# Apply api-admin ClusterRole (see "RBAC Manifests" section above for complete YAML)
 
-# Bind to platform team (ClusterRoleBinding grants cluster-wide access)
+# 1. Bind catalog browsing to platform team (cluster-wide read access)
+kubectl create clusterrolebinding api-catalog-browser-admins \
+  --clusterrole=api-catalog-browser \
+  --group=platform-team
+
+# 2. Bind admin permissions to platform team (cluster-wide write permissions)
 kubectl create clusterrolebinding api-admin-platform-team \
   --clusterrole=api-admin \
   --group=platform-team
 
-# Or bind to individual admin users
+# Or bind to individual admin users:
+kubectl create clusterrolebinding api-catalog-browser-alice \
+  --clusterrole=api-catalog-browser \
+  --user=alice@example.com
+
 kubectl create clusterrolebinding api-admin-alice \
   --clusterrole=api-admin \
   --user=alice@example.com
@@ -1434,27 +1574,39 @@ kubectl create namespace consumer-team-mobile
 kubectl create namespace api-team-payments
 
 # 2. Deploy RBAC ClusterRoles (once, cluster-wide)
-# Apply Consumer ClusterRole (see "RBAC Manifests" section above for complete YAML)
-# Apply Owner ClusterRole (see "RBAC Manifests" section above for complete YAML)
-# Apply Admin ClusterRole (see "RBAC Manifests" section above for complete YAML)
+# Apply api-catalog-browser ClusterRole (see "RBAC Manifests" section above for complete YAML)
+# Apply api-consumer ClusterRole (see "RBAC Manifests" section above for complete YAML)
+# Apply api-owner ClusterRole (see "RBAC Manifests" section above for complete YAML)
+# Apply api-admin ClusterRole (see "RBAC Manifests" section above for complete YAML)
 
-# 3. Bind consumer team (ClusterRole + RoleBinding = namespace-scoped write permissions)
-# Cluster-wide read permissions already included in api-consumer ClusterRole
+# 3. Bind catalog browsing (cluster-wide read access for discovery)
+kubectl create clusterrolebinding api-catalog-browser-mobile \
+  --clusterrole=api-catalog-browser \
+  --group=mobile-app-developers
+
+kubectl create clusterrolebinding api-catalog-browser-payments \
+  --clusterrole=api-catalog-browser \
+  --group=team-payments
+
+kubectl create clusterrolebinding api-catalog-browser-admins \
+  --clusterrole=api-catalog-browser \
+  --group=platform-team
+
+# 4. Bind consumer team (namespace-scoped write permissions)
 kubectl create rolebinding api-consumer-binding \
   --clusterrole=api-consumer \
   --group=mobile-app-developers \
   -n consumer-team-mobile
 
-# 4. Bind owner team (ClusterRole + RoleBinding = namespace-scoped write)
+# 5. Bind owner team (namespace-scoped write permissions)
 kubectl create rolebinding api-owner-binding \
   --clusterrole=api-owner \
   --group=team-payments \
   -n api-team-payments
 
-# Note: api-owner includes cluster-wide read permissions for catalog browsing (APIProducts)
-# Owners discover requests via APIKeyRequest resources in their own namespace (namespace-scoped)
+# Note: Owners discover requests via APIKeyRequest resources in their own namespace (namespace-scoped)
 
-# 5. Bind platform admins
+# 6. Bind platform admins (cluster-wide write permissions)
 kubectl create clusterrolebinding api-admin-platform-team \
   --clusterrole=api-admin \
   --group=platform-team
