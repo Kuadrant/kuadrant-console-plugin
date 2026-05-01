@@ -95,6 +95,7 @@
       "KuadrantTLSCreatePage": "./components/KuadrantTLSCreatePage",
       "HTTPRoutePoliciesPage": "./components/HTTPRoutePoliciesPage",
       "GatewayPoliciesPage": "./components/GatewayPoliciesPage",
+      "PolicyTargetRefPage": "./components/PolicyTargetRefPage",
       "APIProductCreatePage": "./components/apiproduct/APIProductCreatePage",
       "APIProductsListPage": "./components/apiproduct/APIProductsListPage",
       "APIProductPoliciesTab": "./components/apiproduct/APIProductPoliciesTab",

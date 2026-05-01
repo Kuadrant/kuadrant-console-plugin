@@ -32,6 +32,38 @@
   {
     "type": "console.tab/horizontalNav",
     "properties": {
+      "model": { "group": "kuadrant.io", "version": "v1", "kind": "AuthPolicy" },
+      "page": { "name": "Target", "href": "targetref" },
+      "component": { "$codeRef": "PolicyTargetRefPage" }
+    }
+  },
+  {
+    "type": "console.tab/horizontalNav",
+    "properties": {
+      "model": { "group": "kuadrant.io", "version": "v1", "kind": "RateLimitPolicy" },
+      "page": { "name": "Target", "href": "targetref" },
+      "component": { "$codeRef": "PolicyTargetRefPage" }
+    }
+  },
+  {
+    "type": "console.tab/horizontalNav",
+    "properties": {
+      "model": { "group": "kuadrant.io", "version": "v1", "kind": "DNSPolicy" },
+      "page": { "name": "Target", "href": "targetref" },
+      "component": { "$codeRef": "PolicyTargetRefPage" }
+    }
+  },
+  {
+    "type": "console.tab/horizontalNav",
+    "properties": {
+      "model": { "group": "kuadrant.io", "version": "v1", "kind": "TLSPolicy" },
+      "page": { "name": "Target", "href": "targetref" },
+      "component": { "$codeRef": "PolicyTargetRefPage" }
+    }
+  },
+  {
+    "type": "console.tab/horizontalNav",
+    "properties": {
       "model": {
         "group": "devportal.kuadrant.io",
         "version": "v1alpha1",
