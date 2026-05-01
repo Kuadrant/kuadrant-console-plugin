@@ -124,3 +124,29 @@ roleRef:
   kind: ClusterRole
   name: test-admin-kuadrant
   apiGroup: rbac.authorization.k8s.io
+---
+# test-api-owner: can read APIKeyRequests and manage APIKeyApprovals (approve/reject flow)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: test-api-owner
+rules:
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeyrequests"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeyapprovals"]
+    verbs: ["get", "list", "create", "update", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: test-api-owner
+subjects:
+  - kind: User
+    name: test-api-owner
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: test-api-owner
+  apiGroup: rbac.authorization.k8s.io

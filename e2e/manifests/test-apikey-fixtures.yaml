@@ -1,0 +1,37 @@
+---
+# Pending APIKeyRequest for alice - used by approve/filter tests
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKeyRequest
+metadata:
+  name: test-request-alice
+  namespace: kuadrant-test
+spec:
+  apiProductRef:
+    name: test-list-product-1
+  apiKeyRef:
+    name: alice-apikey
+    namespace: kuadrant-test
+  planTier: gold
+  requestedBy:
+    userId: alice-test
+    email: alice@example.com
+  useCase: Testing the approval flow for alice - integration test fixture
+
+---
+# Pending APIKeyRequest for bob - used by reject/bulk tests
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKeyRequest
+metadata:
+  name: test-request-bob
+  namespace: kuadrant-test
+spec:
+  apiProductRef:
+    name: test-list-product-1
+  apiKeyRef:
+    name: bob-apikey
+    namespace: kuadrant-test
+  planTier: silver
+  requestedBy:
+    userId: bob-test
+    email: bob@startup.io
+  useCase: Testing the rejection flow for bob - integration test fixture
