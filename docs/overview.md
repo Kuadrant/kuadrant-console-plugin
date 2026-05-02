@@ -30,7 +30,7 @@ kubectl patch consoles.operator.openshift.io cluster --type=merge \
   --patch '{"spec":{"plugins":["kuadrant-console-plugin"]}}'
 ```
 
-Refresh the console and the Connectivity Link section should appear in the navigation.
+Refresh the console and the **Kuadrant** section should appear in the navigation.
 
 ## Post-install: RBAC
 
