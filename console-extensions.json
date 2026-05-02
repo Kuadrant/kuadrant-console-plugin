@@ -33,6 +33,21 @@
     "type": "console.tab/horizontalNav",
     "properties": {
       "model": {
+        "group": "gateway.networking.k8s.io",
+        "version": "v1",
+        "kind": "Gateway"
+      },
+      "page": {
+        "name": "Backends",
+        "href": "backends"
+      },
+      "component": { "$codeRef": "GatewayBackendsPage" }
+    }
+  },
+  {
+    "type": "console.tab/horizontalNav",
+    "properties": {
+      "model": {
         "group": "devportal.kuadrant.io",
         "version": "v1alpha1",
         "kind": "APIProduct"
