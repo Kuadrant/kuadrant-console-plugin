@@ -74,13 +74,19 @@ export const useTopologyData = ({
       });
       setAllNamespaces(Array.from(namespaces).sort());
 
+      // Ensure unique resource types so the badge count matches actual selections.
+      // Duplicates can appear due to state updates and inflate the count.
+      const normalizedResourceSelection = [...new Set(selectedResourceTypes)].filter((r) =>
+        uniqueTypes.includes(r),
+      );
+
       // on initial load, default to showByDefault set
-      let activeSelection = selectedResourceTypes.filter((r) => uniqueTypes.includes(r));
-      if (selectedResourceTypes.length === 0 && isInitialLoad) {
+      let activeSelection = normalizedResourceSelection;
+      if (normalizedResourceSelection.length === 0 && isInitialLoad) {
         activeSelection = uniqueTypes.filter((t) => showByDefault.has(t));
         // notify parent component to update its state
         if (onInitialSelection && activeSelection.length > 0) {
-          onInitialSelection(activeSelection);
+          onInitialSelection([...new Set(activeSelection)]);
         }
       }
 

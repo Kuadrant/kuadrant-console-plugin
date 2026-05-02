@@ -47,6 +47,12 @@ export const ResourceFilterToolbar: React.FC<ResourceFilterToolbarProps> = ({
   const [isOpen, setIsOpen] = React.useState(false);
   const [isNamespaceOpen, setIsNamespaceOpen] = React.useState(false);
 
+  // Dedupe for label chips, badge count, and Select value — duplicates break ToolbarFilter keys and inflate the badge.
+  const uniqueSelectedResourceTypes = React.useMemo(
+    () => [...new Set(selectedResourceTypes)],
+    [selectedResourceTypes],
+  );
+
   const handleSelect = (
     event: React.MouseEvent | React.ChangeEvent | undefined,
     selection: string,
@@ -72,7 +78,7 @@ export const ResourceFilterToolbar: React.FC<ResourceFilterToolbarProps> = ({
         <ToolbarItem variant="label-group">
           <ToolbarFilter
             categoryName="Resource"
-            labels={selectedResourceTypes}
+            labels={uniqueSelectedResourceTypes}
             deleteLabel={handleDeleteLabel}
             deleteLabelGroup={onDeleteGroup}
           >
@@ -82,12 +88,12 @@ export const ResourceFilterToolbar: React.FC<ResourceFilterToolbarProps> = ({
               isOpen={isOpen}
               onOpenChange={setIsOpen}
               onSelect={handleSelect}
-              selected={selectedResourceTypes}
+              selected={uniqueSelectedResourceTypes}
               toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
                 <MenuToggle ref={toggleRef} onClick={() => setIsOpen(!isOpen)} isExpanded={isOpen}>
                   Resource{' '}
-                  {selectedResourceTypes.length > 0 && (
-                    <Badge isRead>{selectedResourceTypes.length}</Badge>
+                  {uniqueSelectedResourceTypes.length > 0 && (
+                    <Badge isRead>{uniqueSelectedResourceTypes.length}</Badge>
                   )}
                 </MenuToggle>
               )}
@@ -98,7 +104,7 @@ export const ResourceFilterToolbar: React.FC<ResourceFilterToolbarProps> = ({
                     key={type}
                     value={type}
                     hasCheckbox
-                    isSelected={selectedResourceTypes.includes(type)}
+                    isSelected={uniqueSelectedResourceTypes.includes(type)}
                   >
                     {type}
                   </SelectOption>
