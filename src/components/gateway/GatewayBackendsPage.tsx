@@ -156,9 +156,7 @@ const GatewayBackendsPage: React.FC = () => {
 
   const loadErrors = [gatewayWatch.loadError, httpRoutesWatch.loadError].filter(Boolean);
   const loadError =
-    loadErrors.length > 0
-      ? new Error(loadErrors.map((err) => err.message).join('; '))
-      : null;
+    loadErrors.length > 0 ? new Error(loadErrors.map((err) => err.message).join('; ')) : null;
 
   const backends = React.useMemo(() => {
     const raw = httpRoutesWatch.data;
@@ -186,7 +184,7 @@ const GatewayBackendsPage: React.FC = () => {
           const group = ref.group ?? '';
           const kind = !ref.kind ? 'Service' : ref.kind;
           const namespace = ref.namespace ?? routeNs;
-          const key = `${group}/${kind}/${namespace}/${ref.name}`;
+          const key = `${group}/${kind}/${namespace}/${ref.name}/${ref.port ?? ''}`;
           const existing = map.get(key);
 
           if (!existing) {
