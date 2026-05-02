@@ -29,21 +29,23 @@ const PolicyTopologyPage: React.FC = () => {
   const [selectedResourceTypes, setSelectedResourceTypes] = React.useState<string[]>([]);
   const [selectedNamespace, setSelectedNamespace] = React.useState<string | null>(null);
 
-  // filter handlers
+  // filter handlers (functional updates + dedupe so count badge cannot drift from unique selections)
   const onResourceSelect = (
     _event: React.MouseEvent | React.ChangeEvent | undefined,
     selection: string,
   ) => {
-    if (selectedResourceTypes.includes(selection)) {
-      setSelectedResourceTypes(selectedResourceTypes.filter((r) => r !== selection));
-    } else {
-      setSelectedResourceTypes([...selectedResourceTypes, selection]);
-    }
+    setSelectedResourceTypes((prev) => {
+      const unique = [...new Set(prev)];
+      if (unique.includes(selection)) {
+        return unique.filter((r) => r !== selection);
+      }
+      return [...unique, selection];
+    });
   };
 
   const onDeleteResourceFilter = (_category: string, chip: string) => {
     if (chip) {
-      setSelectedResourceTypes(selectedResourceTypes.filter((r) => r !== chip));
+      setSelectedResourceTypes((prev) => [...new Set(prev)].filter((r) => r !== chip));
     }
   };
 
@@ -103,7 +105,7 @@ const PolicyTopologyPage: React.FC = () => {
     configMapData: configMap?.data?.topology || null,
     selectedResourceTypes,
     selectedNamespace,
-    onInitialSelection: setSelectedResourceTypes,
+    onInitialSelection: (types) => setSelectedResourceTypes([...new Set(types)]),
     loaded,
     loadError,
   });
