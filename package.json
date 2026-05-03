@@ -89,6 +89,7 @@
       "KuadrantDNSPolicyCreatePage": "./components/KuadrantDNSPolicyCreatePage",
       "KuadrantAuthPolicyCreatePage": "./components/KuadrantAuthPolicyCreatePage",
       "KuadrantRateLimitPolicyCreatePage": "./components/KuadrantRateLimitPolicyCreatePage",
+      "RateLimitPolicyEditPage": "./components/RateLimitPolicyEditPage",
       "KuadrantTokenRateLimitPolicyCreatePage": "./components/KuadrantTokenRateLimitPolicyCreatePage",
       "KuadrantOIDCPolicyCreatePage": "./components/KuadrantOIDCPolicyCreatePage",
       "KuadrantPlanPolicyCreatePage": "./components/KuadrantPlanPolicyCreatePage",

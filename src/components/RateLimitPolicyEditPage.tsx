@@ -18,9 +18,9 @@ import './kuadrant.css';
 import {
   ResourceYAMLEditor,
   useK8sModel,
-  useActiveNamespace,
+  useK8sWatchResource,
 } from '@openshift-console/dynamic-plugin-sdk';
-import { useNavigate } from 'react-router-dom-v5-compat';
+import { useNavigate, useLocation } from 'react-router-dom-v5-compat';
 import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
@@ -45,10 +45,15 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
+const RateLimitPolicyEditPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
-  const [selectedNamespace] = useActiveNamespace();
+
+  const location = useLocation();
+  const pathSplit = location.pathname.split('/');
+  // Expected path: /k8s/ns/:ns/ratelimitpolicies/:name/edit
+  const nsParam = pathSplit[3] || 'default';
+  const nameParam = pathSplit[5] || '';
 
   const model = RESOURCES.RateLimitPolicy.gvk;
 
@@ -58,21 +63,67 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
     kind: model.kind,
   });
 
-  const [policyName, setPolicyName] = React.useState('example-ratelimitpolicy');
+  const watchResource = model && nameParam ? {
+    groupVersionKind: model,
+    isList: false,
+    name: nameParam,
+    namespace: nsParam,
+  } : null;
+
+  const [resourceData, loaded, error] = watchResource
+    ? useK8sWatchResource(watchResource)
+    : [null, true, null];
+
+  const [policyName, setPolicyName] = React.useState(nameParam);
   const [targetRefName, setTargetRefName] = React.useState('');
   const [limit, setLimit] = React.useState<number>(100);
   const [window, setWindow] = React.useState('1s');
   const [yamlInput, setYamlInput] = React.useState<any>(null);
 
-  const rateLimitPolicy = React.useMemo(() => {
+  React.useEffect(() => {
+    if (loaded && !error && resourceData && !Array.isArray(resourceData)) {
+      setPolicyName(resourceData.metadata?.name || nameParam);
+      setTargetRefName((resourceData as any).spec?.targetRef?.name || '');
+      
+      const limits = (resourceData as any).spec?.limits || {};
+      const limitKey = Object.keys(limits)[0];
+      if (limitKey && limits[limitKey]?.rates?.length > 0) {
+        setLimit(limits[limitKey].rates[0].limit || 100);
+        setWindow(limits[limitKey].rates[0].window || '1s');
+      }
+      setYamlInput(resourceData);
+    }
+  }, [resourceData, loaded, error]);
+
+  const handleYAMLChange = (yamlStr: string) => {
+    try {
+      const parsed = yaml.load(yamlStr) as any;
+      if (parsed) {
+        setPolicyName(parsed.metadata?.name || '');
+        setTargetRefName(parsed.spec?.targetRef?.name || '');
+        setYamlInput(parsed);
+      }
+    } catch (e) {
+      console.error(t('Error parsing YAML:'), e);
+    }
+  };
+
+  const navigate = useNavigate();
+
+  const handleCancelResource = () => {
+    handleCancel(nsParam, resourceData || {}, navigate);
+  };
+
+  const updatedResource = React.useMemo(() => {
+    if (!resourceData) return null;
     return {
-      apiVersion: `${model.group}/${model.version}`,
-      kind: model.kind,
+      ...resourceData,
       metadata: {
+        ...resourceData.metadata,
         name: policyName,
-        namespace: selectedNamespace,
       },
       spec: {
+        ...(resourceData as any).spec,
         targetRef: {
           group: 'gateway.networking.k8s.io',
           kind: 'Gateway',
@@ -91,38 +142,17 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
         },
       },
     };
-  }, [policyName, selectedNamespace, targetRefName, limit, window]);
+  }, [resourceData, policyName, targetRefName, limit, window]);
 
-  React.useEffect(() => {
-    if (!yamlInput) {
-      setYamlInput(rateLimitPolicy);
-    }
-  }, [rateLimitPolicy]);
-
-  const handleYAMLChange = (yamlStr: string) => {
-    try {
-      const parsed = yaml.load(yamlStr) as any;
-      if (parsed) {
-        setPolicyName(parsed.metadata?.name || '');
-        setTargetRefName(parsed.spec?.targetRef?.name || '');
-        setYamlInput(parsed);
-      }
-    } catch (e) {
-      console.error(t('Error parsing YAML:'), e);
-    }
-  };
-
-  const navigate = useNavigate();
-
-  const handleCancelResource = () => {
-    handleCancel(selectedNamespace, rateLimitPolicy, navigate);
-  };
+  if (!loaded) {
+    return <PageSection>{t('Loading...')}</PageSection>;
+  }
 
   const yamlViewNode = (
     <React.Suspense fallback={<div>{t('Loading...')}</div>}>
       <ResourceYAMLEditor
-        initialResource={yamlInput || rateLimitPolicy}
-        create={true}
+        initialResource={yamlInput || resourceData}
+        create={false}
         onChange={handleYAMLChange}
       />
     </React.Suspense>
@@ -131,13 +161,13 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   return (
     <>
       <Helmet>
-        <title data-test="example-page-title">{t('Create RateLimitPolicy')}</title>
+        <title data-test="example-page-title">{t('Edit RateLimitPolicy')}</title>
       </Helmet>
       <PageSection hasBodyWrapper={false} className="pf-m-no-padding">
         <div className="co-m-nav-title">
-          <Title headingLevel="h1">{t('Create RateLimitPolicy')}</Title>
+          <Title headingLevel="h1">{t('Edit RateLimitPolicy')}</Title>
           <p className="help-block">
-            {t('Create a new RateLimitPolicy.')}
+            {t('Edit the configuration for your RateLimitPolicy.')}
           </p>
         </div>
         <FormGroup
@@ -175,6 +205,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
                   id="policy-name"
                   name="policy-name"
                   value={policyName}
+                  isDisabled
                   onChange={(_event, value) => setPolicyName(value)}
                 />
                 <FormHelperText>
@@ -226,11 +257,11 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
               <ActionGroup className="pf-u-mt-0">
                 <KuadrantCreateUpdate
                   model={k8sModel}
-                  resource={rateLimitPolicy}
+                  resource={updatedResource || {}}
                   policyType="ratelimitpolicy"
                   navigate={navigate}
                   validation={!!targetRefName && limit > 0 && !!window}
-                  update={false}
+                  update={true}
                 />
                 <Button variant="link" onClick={handleCancelResource}>
                   {t('Cancel')}
@@ -246,4 +277,4 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   );
 };
 
-export default KuadrantRateLimitPolicyCreatePage;
+export default RateLimitPolicyEditPage;

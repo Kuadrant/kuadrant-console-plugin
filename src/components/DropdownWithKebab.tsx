@@ -67,9 +67,12 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   };
 
   const onEditClick = () => {
-    if (
+    if (obj.kind === 'RateLimitPolicy') {
+      navigate({
+        pathname: `/k8s/ns/${obj.metadata.namespace}/ratelimitpolicies/${obj.metadata.name}/edit`,
+      });
+    } else if (
       obj.kind === 'AuthPolicy' ||
-      obj.kind === 'RateLimitPolicy' ||
       obj.kind === 'TokenRateLimitPolicy' ||
       obj.kind === 'OIDCPolicy' ||
       obj.kind === 'PlanPolicy' ||
