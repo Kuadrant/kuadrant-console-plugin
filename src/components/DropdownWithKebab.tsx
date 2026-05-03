@@ -73,9 +73,13 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
       obj.kind === 'TokenRateLimitPolicy' ||
       obj.kind === 'OIDCPolicy' ||
       obj.kind === 'PlanPolicy' ||
-      obj.kind === 'Gateway' ||
-      obj.kind === 'HTTPRoute'
+      obj.kind === 'DNSPolicy' ||
+      obj.kind === 'TLSPolicy'
     ) {
+      navigate({
+        pathname: `/k8s/ns/${obj.metadata.namespace}/${policyType}/name/${obj.metadata.name}/edit`,
+      });
+    } else if (obj.kind === 'Gateway' || obj.kind === 'HTTPRoute') {
       navigate({
         pathname: `/k8s/ns/${obj.metadata.namespace}/${obj.apiVersion.replace('/', '~')}~${
           obj.kind

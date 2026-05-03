@@ -130,6 +130,14 @@
     }
   },
   {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/ns/:ns/:kind/name/:name/edit",
+      "component": { "$codeRef": "KuadrantPolicyEditPage" }
+    }
+  },
+  {
     "type": "console.resource/create",
     "properties": {
       "model": {

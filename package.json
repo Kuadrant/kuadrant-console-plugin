@@ -93,6 +93,7 @@
       "KuadrantOIDCPolicyCreatePage": "./components/KuadrantOIDCPolicyCreatePage",
       "KuadrantPlanPolicyCreatePage": "./components/KuadrantPlanPolicyCreatePage",
       "KuadrantTLSCreatePage": "./components/KuadrantTLSCreatePage",
+      "KuadrantPolicyEditPage": "./components/KuadrantPolicyEditPage",
       "HTTPRoutePoliciesPage": "./components/HTTPRoutePoliciesPage",
       "GatewayPoliciesPage": "./components/GatewayPoliciesPage",
       "APIProductCreatePage": "./components/apiproduct/APIProductCreatePage",
