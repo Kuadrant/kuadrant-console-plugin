@@ -26,7 +26,7 @@ spec:
     spec:
       containers:
       - name: kuadrant-console-plugin
-        image: quay.io/kuadrant/console-plugin:latest
+        image: quay.io/kuadrant/console-plugin:v0.3.6
         ports:
         - containerPort: 9443
           protocol: TCP
