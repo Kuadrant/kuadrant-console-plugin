@@ -130,6 +130,14 @@
     }
   },
   {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/ns/:ns/oidcpolicy/name/:name/edit",
+      "component": { "$codeRef": "KuadrantOIDCPolicyCreatePage" }
+    }
+  },
+  {
     "type": "console.resource/create",
     "properties": {
       "model": {

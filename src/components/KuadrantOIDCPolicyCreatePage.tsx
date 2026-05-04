@@ -90,6 +90,9 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
         group: 'gateway.networking.k8s.io',
         kind: 'Gateway',
         name: selectedGateway.name,
+        ...(selectedGateway.namespace && selectedGateway.namespace !== selectedNamespace
+          ? { namespace: selectedGateway.namespace }
+          : {}),
       },
       clientID,
       issuerURL,
@@ -297,7 +300,8 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
                   <HelperTextItem>
                     {t(
                       'The base URL of the OIDC provider. The discovery document will be ' +
-                        'fetched from {issuerURL}/.well-known/openid-configuration',
+                        'fetched from {{issuerURL}}/.well-known/openid-configuration',
+                      { issuerURL: issuerURL || 'https://your-issuer.example.com' },
                     )}
                   </HelperTextItem>
                 </HelperText>
