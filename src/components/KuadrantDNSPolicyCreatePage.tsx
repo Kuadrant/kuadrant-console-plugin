@@ -99,7 +99,9 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         ...(hasLoadBalancing
           ? {
               loadBalancing: {
-                ...(loadBalancing?.weight ? { weight: loadBalancing.weight } : {}),
+                ...(loadBalancing?.weight !== null && loadBalancing?.weight !== undefined
+                  ? { weight: loadBalancing.weight }
+                  : {}),
                 ...(loadBalancing?.geo ? { geo: loadBalancing.geo } : {}),
                 ...(loadBalancing.defaultGeo !== ''
                   ? { defaultGeo: loadBalancing.defaultGeo }
