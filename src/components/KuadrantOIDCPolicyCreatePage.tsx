@@ -111,21 +111,17 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
   });
 
   // ── Edit mode: watch existing resource ────────────────────────────────────
-  // Only set up the watch when a name is present in the URL (edit route)
-  let oidcResource = null;
-  if (nameEdit) {
-    oidcResource = {
-      groupVersionKind: oidcPolicyGVK,
-      isList: false,
-      name: nameEdit,
-      namespace: namespaceEdit,
-    };
-  }
-
-  // Conditional hook call pattern matches DNS/TLS implementations exactly
-  const [oidcData, oidcLoaded, oidcError] = oidcResource
-    ? useK8sWatchResource(oidcResource)
-    : [null, false, null];
+  // Pass null descriptor when not editing — SDK handles this cleanly
+  const [oidcData, oidcLoaded, oidcError] = useK8sWatchResource(
+    nameEdit
+      ? {
+          groupVersionKind: oidcPolicyGVK,
+          isList: false,
+          name: nameEdit,
+          namespace: namespaceEdit,
+        }
+      : null,
+  );
 
   // Populate form fields when existing resource data is loaded
   React.useEffect(() => {
