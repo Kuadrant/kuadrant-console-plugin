@@ -88,7 +88,10 @@ const config: Configuration = {
   plugins: [
     new ConsoleRemotePlugin(),
     new CopyWebpackPlugin({
-      patterns: [{ from: path.resolve(__dirname, 'locales'), to: 'locales' }],
+      patterns: [
+        { from: path.resolve(__dirname, 'locales'), to: 'locales' },
+        { from: path.resolve(__dirname, 'public/config.json'), to: 'config.json' },
+      ],
     }),
   ],
   devtool: isProd ? false : 'source-map',

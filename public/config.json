@@ -1,0 +1,5 @@
+{
+  "TOPOLOGY_CONFIGMAP_NAME": "topology",
+  "TOPOLOGY_CONFIGMAP_NAMESPACE": "kuadrant-system",
+  "METRICS_WORKLOAD_SUFFIX": "-openshift-default"
+}
