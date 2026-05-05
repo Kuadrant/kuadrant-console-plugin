@@ -9,8 +9,8 @@
     "url": "https://github.com/kuadrant/kuadrant-console-plugin.git"
   },
   "scripts": {
-    "clean": "npx rimraf dist",
-    "build": "yarn clean && npx cross-env NODE_ENV=production yarn webpack",
+    "clean": "rimraf dist",
+    "build": "yarn clean && cross-env NODE_ENV=production yarn webpack",
     "build-dev": "yarn clean && yarn webpack",
     "start": "yarn webpack serve --progress",
     "start-console": "./start-console.sh",
