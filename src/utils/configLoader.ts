@@ -32,7 +32,7 @@ const isValidConfig = (config: any): config is KuadrantConfig => {
 /**
  * Fetch the config.json file dynamically at runtime (once, then cached)
  * Normally served from <cluster-host>/api/plugins/kuadrant-console-plugin/config.json
- * 
+ *
  * Security: Uses JSON instead of executable JavaScript to prevent XSS attacks
  */
 const loadConfig = async (): Promise<KuadrantConfig> => {
