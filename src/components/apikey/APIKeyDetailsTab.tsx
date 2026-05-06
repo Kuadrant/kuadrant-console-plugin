@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom-v5-compat';
 import {
   PageSection,
   DescriptionList,
@@ -10,9 +9,14 @@ import {
   Label,
   Alert,
 } from '@patternfly/react-core';
-import { Timestamp, k8sGet, useK8sModel } from '@openshift-console/dynamic-plugin-sdk';
+import {
+  Timestamp,
+  k8sGet,
+  useK8sModel,
+  ResourceLink,
+} from '@openshift-console/dynamic-plugin-sdk';
 import { EyeIcon, EyeSlashIcon } from '@patternfly/react-icons';
-import { APIKey, getAPIKeyPhase, Secret } from '../../utils/resources';
+import { APIKey, getAPIKeyPhase, Secret, RESOURCES } from '../../utils/resources';
 import { formatLimits } from '../../utils/apiKeyUtils';
 import APIKeyRevealModal from './APIKeyRevealModal';
 import UsageExamples from './UsageExamples';
@@ -132,11 +136,11 @@ const APIKeyDetailsTab: React.FC<APIKeyDetailsTabProps> = ({ apiKey }) => {
               <DescriptionListTerm>{t('API Product')}</DescriptionListTerm>
               <DescriptionListDescription>
                 {apiKey.spec?.apiProductRef?.name ? (
-                  <Link
-                    to={`/k8s/ns/${apiKey.metadata.namespace}/devportal.kuadrant.io~v1alpha1~APIProduct/${apiKey.spec.apiProductRef.name}`}
-                  >
-                    {apiKey.spec.apiProductRef.name}
-                  </Link>
+                  <ResourceLink
+                    groupVersionKind={RESOURCES.APIProduct.gvk}
+                    name={apiKey.spec.apiProductRef.name}
+                    namespace={apiKey.spec.apiProductRef.namespace || apiKey.metadata.namespace}
+                  />
                 ) : (
                   '-'
                 )}
