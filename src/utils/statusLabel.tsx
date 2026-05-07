@@ -194,6 +194,31 @@ const getStatusLabel = (obj) => {
 
   const generalConditions = status?.conditions || [];
 
+  if (kind === 'APIKey' || kind === 'APIKeyRequest') {
+    if (generalConditions.length === 0) {
+      return generateLabelWithTooltip(
+        'Pending',
+        'orange',
+        <PendingIcon />,
+        t('Waiting for approval'),
+      );
+    }
+    const approved = generalConditions.find((c) => c.type === 'Approved' && c.status === 'True');
+    const denied = generalConditions.find((c) => c.type === 'Denied' && c.status === 'True');
+    const failed = generalConditions.find((c) => c.type === 'Failed' && c.status === 'True');
+
+    if (approved) {
+      return generateLabelWithTooltip('Approved', 'green', <CheckCircleIcon />, approved.message);
+    }
+    if (denied) {
+      return generateLabelWithTooltip('Denied', 'red', <ExclamationTriangleIcon />, denied.message);
+    }
+    if (failed) {
+      return generateLabelWithTooltip('Failed', 'red', <ExclamationTriangleIcon />, failed.message);
+    }
+    return generateLabelWithTooltip('Pending', 'orange', <PendingIcon />, t('Waiting for approval'));
+  }
+
   if (generalConditions.length === 0) {
     return generateLabelWithTooltip('Creating', 'cyan', <PendingIcon />, tooltipTexts['Creating']);
   }

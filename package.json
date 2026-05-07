@@ -101,6 +101,10 @@
       "APIProductsListPage": "./components/apiproduct/APIProductsListPage",
       "APIProductPoliciesTab": "./components/apiproduct/APIProductPoliciesTab",
       "APIProductDefinitionTab": "./components/apiproduct/APIProductDefinitionTab",
+      "APIKeysListPage": "./components/apikey/APIKeysListPage",
+      "APIKeyCreatePage": "./components/apikey/APIKeyCreatePage",
+      "APIKeyDetailsPage": "./components/apikey/APIKeyDetailsPage",
+      "APIKeyRequestsListPage": "./components/apikey/APIKeyRequestsListPage",
       "useDNSPolicyActions": "./components/dnspolicy/useDNSPolicyActions",
       "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions"
     },

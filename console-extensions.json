@@ -75,6 +75,21 @@
     }
   },
   {
+    "type": "console.tab/horizontalNav",
+    "properties": {
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIProduct"
+      },
+      "page": {
+        "name": "Access Requests",
+        "href": "requests"
+      },
+      "component": { "$codeRef": "APIKeyRequestsListPage" }
+    }
+  },
+  {
     "type": "console.page/route",
     "properties": {
       "exact": true,
@@ -369,6 +384,58 @@
       "exact": true,
       "path": "/kuadrant/ns/:ns/apiproducts/:name/edit",
       "component": { "$codeRef": "APIProductCreatePage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/ns/:ns/apikeys",
+      "component": { "$codeRef": "APIKeysListPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/all-namespaces/apikeys",
+      "component": { "$codeRef": "APIKeysListPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/ns/:ns/apikeys/:name",
+      "component": { "$codeRef": "APIKeyDetailsPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/ns/:ns/apikeys/~new",
+      "component": { "$codeRef": "APIKeyCreatePage" }
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "kuadrant-apikeys-dev",
+      "name": "%plugin__kuadrant-console-plugin~API Keys%",
+      "href": "/kuadrant/all-namespaces/apikeys",
+      "perspective": "dev",
+      "section": "kuadrant-section-dev"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "kuadrant-apikeys-admin",
+      "name": "%plugin__kuadrant-console-plugin~API Keys%",
+      "href": "/kuadrant/all-namespaces/apikeys",
+      "perspective": "admin",
+      "section": "kuadrant-section-admin"
     }
   }
 ]
