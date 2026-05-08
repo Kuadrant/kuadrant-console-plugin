@@ -9,6 +9,7 @@ import {
   EmptyState,
   EmptyStateBody,
   Alert,
+  Spinner,
 } from '@patternfly/react-core';
 import { FileCodeIcon } from '@patternfly/react-icons';
 // SwaggerUI v5.10.5: Last version supporting React 17
@@ -19,6 +20,8 @@ import * as yaml from 'js-yaml';
 import { useK8sWatchResource, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
 import { APIProduct } from './types';
 import { RESOURCES } from '../../utils/resources';
+import { useAPIManagementRBAC } from '../../utils/apiManagementRBAC';
+import NoPermissionsView from '../NoPermissionsView';
 import extractResourceNameFromURL from '../../utils/nameFromPath';
 import '../kuadrant.css';
 
@@ -27,6 +30,7 @@ const APIProductDefinitionTab: React.FC = () => {
   const [activeNamespace] = useActiveNamespace();
   const location = useLocation();
   const productName = extractResourceNameFromURL(location.pathname);
+  const { permissions, loading: rbacLoading } = useAPIManagementRBAC();
 
   const [apiProduct, loaded, loadError] = useK8sWatchResource<APIProduct>({
     groupVersionKind: RESOURCES.APIProduct.gvk,
@@ -73,6 +77,23 @@ const APIProductDefinitionTab: React.FC = () => {
     }
     return result;
   }, [specToUse]);
+
+  // Show loading state while checking permissions
+  if (rbacLoading) {
+    return (
+      <PageSection hasBodyWrapper={false}>
+        <Spinner size="lg" />
+      </PageSection>
+    );
+  }
+
+  // RBAC gate: only users with list permission can view API Product details
+  const canViewAPIProducts = permissions.apiproducts.canList;
+  if (!canViewAPIProducts) {
+    return (
+      <NoPermissionsView primaryMessage={t('You do not have permission to view API Products')} />
+    );
+  }
 
   if (loadError) {
     return (
