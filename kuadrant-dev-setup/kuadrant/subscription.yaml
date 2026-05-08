@@ -4,7 +4,7 @@ metadata:
   name: kuadrant-operator
   namespace: kuadrant-system
 spec:
-  channel: stable
+  channel: preview
   installPlanApproval: Automatic
   name: kuadrant-operator
   source: kuadrant-operator-catalog
