@@ -21,6 +21,8 @@ interface APIKeyApprovalTableProps {
   onSelectAll: (selected: boolean) => void;
   onApprove: (request: APIKeyRequest) => void;
   onReject: (request: APIKeyRequest) => void;
+  canApprove?: boolean;
+  canApproveLoading?: boolean;
 }
 
 const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
@@ -30,6 +32,8 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
   onSelectAll,
   onApprove,
   onReject,
+  canApprove = true,
+  canApproveLoading = false,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [sortBy, setSortBy] = React.useState<{ index?: number; direction?: 'asc' | 'desc' }>({
@@ -204,24 +208,40 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
                       )}
                     >
                       <DropdownList>
-                        <DropdownItem
-                          key="approve"
-                          onClick={() => {
-                            onApprove(request);
-                            toggleActionMenu(requestName);
-                          }}
+                        <Tooltip
+                          content={t(
+                            'You do not have permission to approve or reject API key requests',
+                          )}
+                          trigger={!canApprove && !canApproveLoading ? 'mouseenter' : 'manual'}
                         >
-                          {t('Approve')}
-                        </DropdownItem>
-                        <DropdownItem
-                          key="reject"
-                          onClick={() => {
-                            onReject(request);
-                            toggleActionMenu(requestName);
-                          }}
+                          <DropdownItem
+                            key="approve"
+                            isDisabled={canApproveLoading || !canApprove}
+                            onClick={() => {
+                              onApprove(request);
+                              toggleActionMenu(requestName);
+                            }}
+                          >
+                            {t('Approve')}
+                          </DropdownItem>
+                        </Tooltip>
+                        <Tooltip
+                          content={t(
+                            'You do not have permission to approve or reject API key requests',
+                          )}
+                          trigger={!canApprove && !canApproveLoading ? 'mouseenter' : 'manual'}
                         >
-                          {t('Reject')}
-                        </DropdownItem>
+                          <DropdownItem
+                            key="reject"
+                            isDisabled={canApproveLoading || !canApprove}
+                            onClick={() => {
+                              onReject(request);
+                              toggleActionMenu(requestName);
+                            }}
+                          >
+                            {t('Reject')}
+                          </DropdownItem>
+                        </Tooltip>
                       </DropdownList>
                     </Dropdown>
                   )}

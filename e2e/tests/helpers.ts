@@ -4,52 +4,46 @@ const TEST_NAMESPACE = 'kuadrant-test';
 
 // dismiss any console welcome/tour modals that block interaction
 export async function dismissConsoleTour(page: Page): Promise<void> {
-  // look for the modal backdrop - this indicates a modal is blocking interaction
   const backdrop = page.locator('.pf-v6-c-backdrop');
 
   try {
-    // wait up to 5 seconds for the backdrop to appear (modal might be animating in)
     await backdrop.waitFor({ state: 'visible', timeout: 5_000 });
   } catch {
-    // no modal present, nothing to dismiss
     return;
   }
 
-  // modal is present - find and click dismiss button
-  // try multiple selector strategies to find the close/skip button
-  const skipTourButton = page.locator('.pf-v6-c-modal-box').locator('button:text-is("Skip tour")').first();
-  const skipButton = page.locator('.pf-v6-c-modal-box').locator('button:text-is("Skip")').first();
-  const closeButton = page.locator('.pf-v6-c-modal-box').locator('button[aria-label="Close"]').first();
+  const modalBox = page.locator('.pf-v6-c-modal-box, .pf-c-modal-box').first();
 
-  let dismissed = false;
+  try {
+    await modalBox.waitFor({ state: 'visible', timeout: 5_000 });
+  } catch {
+    return;
+  }
 
-  // try each button type in order
-  for (const button of [skipTourButton, skipButton, closeButton]) {
+  const candidates = [
+    modalBox.locator('button:text-is("Skip tour")'),
+    modalBox.locator('button:text-is("Skip")'),
+    modalBox.locator('button:text-is("Get started")'),
+    modalBox.locator('button[aria-label="Close"]'),
+    modalBox.locator('button[title="Close"]'),
+    modalBox.locator('button:has-text("Skip")'),
+    modalBox.locator('button:has-text("Close")'),
+    modalBox.locator('.pf-v6-c-modal-box__close button, .pf-c-modal-box__close button').first(),
+    modalBox.locator('button').first(),
+  ];
+
+  for (const locator of candidates) {
     try {
-      await button.waitFor({ state: 'visible', timeout: 1_000 });
-      await button.click({ timeout: 3_000 });
-      dismissed = true;
+      await locator.first().waitFor({ state: 'visible', timeout: 500 });
+      await locator.first().click({ timeout: 5_000 });
+      await modalBox.waitFor({ state: 'hidden', timeout: 2_000 });
       break;
     } catch {
-      // try next button
       continue;
     }
   }
 
-  if (!dismissed) {
-    console.warn('Could not find dismiss button for console tour modal');
-    return;
-  }
-
-  // CRITICAL: wait for the backdrop to fully disappear (including CSS animations)
-  // In headless mode this is instant, but in headed mode the backdrop fades out
-  // over 200-300ms and intercepts clicks during the animation
-  try {
-    await backdrop.waitFor({ state: 'hidden', timeout: 10_000 });
-  } catch (error) {
-    console.warn('Backdrop did not disappear after dismissing modal:', error);
-    throw error; // re-throw so test fails with clear error
-  }
+  await backdrop.waitFor({ state: 'hidden', timeout: 10_000 });
 }
 
 // start impersonating a user via the console masthead
@@ -93,9 +87,18 @@ export async function stopImpersonation(page: Page): Promise<void> {
   }
 }
 
+// Wait for Kuadrant plugin to load by checking for sidebar menu item
+async function waitForKuadrantPlugin(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Kuadrant', exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+  await page.waitForTimeout(2000);
+}
+
 // SPA navigation using pushState - preserves redux state (including impersonation)
 // page.goto() causes a full reload which destroys impersonation state
 async function spaNavigate(page: Page, path: string): Promise<void> {
+  // Wait for plugin to be ready before navigating to plugin routes
+  await waitForKuadrantPlugin(page);
+
   await page.evaluate((p) => {
     window.history.pushState({}, '', p);
     window.dispatchEvent(new PopStateEvent('popstate'));
@@ -122,6 +125,14 @@ export async function navigateToAPIProducts(page: Page, namespace?: string): Pro
 
 export async function navigateToAPIProductsAllNamespaces(page: Page): Promise<void> {
   await spaNavigate(page, '/kuadrant/apiproducts/all-namespaces');
+}
+
+export async function navigateToAPIKeyApprovals(page: Page, namespace?: string): Promise<void> {
+  const ns = namespace || TEST_NAMESPACE;
+  // Full page navigation so the console reads the namespace from the URL and updates its
+  // active namespace state. spaNavigate (pushState) does not trigger the namespace update.
+  await page.goto(`/kuadrant/apikey-approvals/ns/${ns}`);
+  await page.waitForLoadState('networkidle');
 }
 
 // wait for RBAC permission checks to finish loading.

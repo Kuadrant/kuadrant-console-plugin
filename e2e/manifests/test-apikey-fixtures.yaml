@@ -1,0 +1,243 @@
+---
+# APIProduct for approval flow tests - references test-route which has test-auth-policy
+# (api-key auth, Accepted+Enforced). Controller requires DiscoveredAuthScheme on the
+# product before it will keep an APIKeyRequest alive.
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: test-approval-product
+  namespace: kuadrant-test
+spec:
+  displayName: Test Approval Product
+  version: v1.0.0
+  description: Product for testing the approval/rejection flow
+  publishStatus: Published
+  approvalMode: manual
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-route
+---
+# Each test suite gets its own dedicated consumer so tests are independent.
+# approve suite → alice
+# reject-with-reason suite → bob
+# reject-without-reason suite → bob2
+# bulk-approve suite → carol + dave
+# bulk-reject suite → ellen + frank
+
+# ── alice (approve suite) ─────────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: consumer-alice
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alice-api-key
+  namespace: consumer-alice
+stringData:
+  api_key: test-alice-key-12345
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: alice-api-key
+  namespace: consumer-alice
+spec:
+  apiProductRef:
+    name: test-approval-product
+    namespace: kuadrant-test
+  planTier: gold
+  useCase: "Testing API integration"
+  requestedBy:
+    userId: "alice"
+    email: "alice@example.com"
+  secretRef:
+    name: alice-api-key
+---
+# ── bob (reject-with-reason suite) ───────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: consumer-bob
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bob-api-key
+  namespace: consumer-bob
+stringData:
+  api_key: test-bob-key-11111
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: bob-api-key
+  namespace: consumer-bob
+spec:
+  apiProductRef:
+    name: test-approval-product
+    namespace: kuadrant-test
+  planTier: silver
+  useCase: "Building a startup integration"
+  requestedBy:
+    userId: "bob"
+    email: "bob@startup.io"
+  secretRef:
+    name: bob-api-key
+---
+# ── bob2 (reject-without-reason suite) ───────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: consumer-bob2
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bob2-api-key
+  namespace: consumer-bob2
+stringData:
+  api_key: test-bob2-key-22222
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: bob2-api-key
+  namespace: consumer-bob2
+spec:
+  apiProductRef:
+    name: test-approval-product
+    namespace: kuadrant-test
+  planTier: silver
+  useCase: "Mobile app API integration"
+  requestedBy:
+    userId: "bob2"
+    email: "bob2@startup.io"
+  secretRef:
+    name: bob2-api-key
+---
+# ── carol (bulk-approve suite) ────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: consumer-carol
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: carol-api-key
+  namespace: consumer-carol
+stringData:
+  api_key: test-carol-key-33333
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: carol-api-key
+  namespace: consumer-carol
+spec:
+  apiProductRef:
+    name: test-approval-product
+    namespace: kuadrant-test
+  planTier: gold
+  useCase: "Enterprise integration"
+  requestedBy:
+    userId: "carol"
+    email: "carol@enterprise.com"
+  secretRef:
+    name: carol-api-key
+---
+# ── dave (bulk-approve suite) ─────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: consumer-dave
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dave-api-key
+  namespace: consumer-dave
+stringData:
+  api_key: test-dave-key-44444
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: dave-api-key
+  namespace: consumer-dave
+spec:
+  apiProductRef:
+    name: test-approval-product
+    namespace: kuadrant-test
+  planTier: bronze
+  useCase: "Partner API access"
+  requestedBy:
+    userId: "dave"
+    email: "dave@partner.io"
+  secretRef:
+    name: dave-api-key
+---
+# ── ellen (bulk-reject suite) ─────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: consumer-ellen
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ellen-api-key
+  namespace: consumer-ellen
+stringData:
+  api_key: test-ellen-key-55555
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: ellen-api-key
+  namespace: consumer-ellen
+spec:
+  apiProductRef:
+    name: test-approval-product
+    namespace: kuadrant-test
+  planTier: gold
+  useCase: "Research API integration"
+  requestedBy:
+    userId: "ellen"
+    email: "ellen@research.io"
+  secretRef:
+    name: ellen-api-key
+---
+# ── frank (bulk-reject suite) ─────────────────────────────────────────────────
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: consumer-frank
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: frank-api-key
+  namespace: consumer-frank
+stringData:
+  api_key: test-frank-key-66666
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: frank-api-key
+  namespace: consumer-frank
+spec:
+  apiProductRef:
+    name: test-approval-product
+    namespace: kuadrant-test
+  planTier: bronze
+  useCase: "Freelance project API"
+  requestedBy:
+    userId: "frank"
+    email: "frank@freelance.io"
+  secretRef:
+    name: frank-api-key
