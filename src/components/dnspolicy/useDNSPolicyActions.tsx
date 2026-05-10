@@ -83,7 +83,7 @@ const useDNSPolicyActions = (obj: K8sResourceCommon): ExtensionHookResult<Action
     ];
 
     return actionsList;
-  }, [history, obj, dnsPolicyModel, launchAnnotationsModal, launchDeleteModal, launchLabelsModal]);
+  }, [navigate, obj, dnsPolicyModel, launchAnnotationsModal, launchDeleteModal, launchLabelsModal]);
 
   return [actions, true, undefined];
 };

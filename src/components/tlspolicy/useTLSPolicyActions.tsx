@@ -83,7 +83,7 @@ const useTLSPolicyActions = (obj: K8sResourceCommon): ExtensionHookResult<Action
     ];
 
     return actionsList;
-  }, [history, obj, tlsPolicyModel, launchAnnotationsModal, launchDeleteModal, launchLabelsModal]);
+  }, [navigate, obj, tlsPolicyModel, launchAnnotationsModal, launchDeleteModal, launchLabelsModal]);
 
   return [actions, true, undefined];
 };
