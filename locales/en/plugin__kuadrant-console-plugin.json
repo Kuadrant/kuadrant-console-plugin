@@ -152,6 +152,7 @@
   "Enter use case": "Enter use case",
   "Error": "Error",
   "Error approving API keys": "Error approving API keys",
+  "Error Code": "Error Code",
   "Error Codes": "Error Codes",
   "Error creating {{policyType}}": "Error creating {{policyType}}",
   "Error creating AuthPolicy": "Error creating AuthPolicy",
