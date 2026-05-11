@@ -209,7 +209,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
 
   //Cancel
   const handleCancelResource = () => {
-    handleCancel(selectedNamespace, tlsPolicy, navigate);
+    handleCancel(navigate);
   };
 
   if (
