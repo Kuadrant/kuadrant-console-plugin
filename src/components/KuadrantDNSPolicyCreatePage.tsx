@@ -169,7 +169,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const [dnsData, dnsLoaded, dnsError] = useK8sWatchResource(
     nameEdit
       ? { groupVersionKind: dnsPolicyGVK, isList: false, name: nameEdit, namespace: namespaceEdit }
-      : { groupVersionKind: dnsPolicyGVK, isList: false, name: '', namespace: '' },
+      : null,
   );
 
   React.useEffect(() => {
