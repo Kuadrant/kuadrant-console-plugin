@@ -1,0 +1,126 @@
+# API Management RBAC personas for e2e testing
+# These extend the base test-rbac.yaml with API Management-specific permissions
+#
+# Personas:
+# - test-consumer: Developer who requests API access via APIKeys
+# - test-owner: API owner who publishes APIProducts and approves access requests
+# - test-admin: Already defined in test-rbac.yaml, updated here with API Management permissions
+---
+# test-consumer: can browse APIProducts and create APIKeys to request access
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: test-consumer
+  namespace: kuadrant-test
+rules:
+  # Consumer can read published API catalog
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list"]
+  # Consumer can manage their own API keys
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # Consumer needs to read secrets to retrieve their API key values
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+  # Consumer needs to read HTTPRoutes to understand API endpoints
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: test-consumer
+  namespace: kuadrant-test
+subjects:
+  - kind: User
+    name: test-consumer
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: test-consumer
+  apiGroup: rbac.authorization.k8s.io
+---
+# test-owner: can publish APIProducts and approve/reject APIKey requests
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: test-owner
+  namespace: kuadrant-test
+rules:
+  # Owner can create and manage APIProducts (publish APIs)
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # Owner can approve/reject APIKey requests via APIKeyApproval resources
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeyapprovals"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # Owner can view APIKeyRequest shadow resources in their namespace
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeyrequests"]
+    verbs: ["get", "list"]
+  # Owner needs to read HTTPRoutes to target them in APIProducts
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["httproutes"]
+    verbs: ["get", "list"]
+  # Owner needs to read Gateways to understand routing
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways"]
+    verbs: ["get", "list"]
+  # Owner needs to read AuthPolicies and PlanPolicies that will be linked to APIProducts
+  - apiGroups: ["kuadrant.io"]
+    resources: ["authpolicies"]
+    verbs: ["get", "list"]
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["planpolicies"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: test-owner
+  namespace: kuadrant-test
+subjects:
+  - kind: User
+    name: test-owner
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: test-owner
+  apiGroup: rbac.authorization.k8s.io
+---
+# Update test-admin ClusterRole with API Management permissions
+# This extends the existing test-admin ClusterRole from test-rbac.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: test-admin-api-management
+rules:
+  # Admin has full access to all API Management resources for troubleshooting
+  - apiGroups: ["extensions.kuadrant.io"]
+    resources: ["apiproducts"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  - apiGroups: ["devportal.kuadrant.io"]
+    resources: ["apikeys", "apikeyapprovals", "apikeyrequests"]
+    verbs: ["get", "list", "create", "update", "delete"]
+  # Admin can read secrets to troubleshoot API key issues
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: test-admin-api-management
+subjects:
+  - kind: User
+    name: test-admin
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: test-admin-api-management
+  apiGroup: rbac.authorization.k8s.io

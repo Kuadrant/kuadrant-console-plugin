@@ -18,6 +18,9 @@ source "${REPO_DIR}/scripts/lib.sh"
 log "creating test namespace and RBAC..."
 kubectl apply -f "${SCRIPT_DIR}/manifests/test-rbac.yaml"
 
+log "creating API Management RBAC personas..."
+kubectl apply -f "${SCRIPT_DIR}/manifests/api-management-rbac.yaml"
+
 log "creating test resources..."
 kubectl apply -f "${SCRIPT_DIR}/manifests/test-resources.yaml"
 
