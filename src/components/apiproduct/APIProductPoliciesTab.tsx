@@ -9,12 +9,14 @@ import {
   EmptyState,
   EmptyStateBody,
   Alert,
+  Spinner,
 } from '@patternfly/react-core';
 import { SearchIcon } from '@patternfly/react-icons';
 import {
   useK8sWatchResource,
   useK8sWatchResources,
   useActiveNamespace,
+  useAccessReview,
   ResourceLink,
   K8sResourceCommon,
   VirtualizedTable,
@@ -27,6 +29,8 @@ import { APIProduct } from './types';
 import { RESOURCES } from '../../utils/resources';
 import { getStatusLabel } from '../../utils/statusLabel';
 import extractResourceNameFromURL from '../../utils/nameFromPath';
+import { getResourceNameFromKind } from '../../utils/getModelFromResource';
+import NoPermissionsView from '../NoPermissionsView';
 import '../kuadrant.css';
 
 type PolicyKind = 'PlanPolicy' | 'AuthPolicy' | 'RateLimitPolicy' | 'OIDCPolicy';
@@ -49,6 +53,13 @@ const APIProductPoliciesTab: React.FC = () => {
   const [activeNamespace] = useActiveNamespace();
   const location = useLocation();
   const productName = extractResourceNameFromURL(location.pathname);
+
+  const [canList, canListLoading] = useAccessReview({
+    group: RESOURCES.APIProduct.gvk.group,
+    resource: getResourceNameFromKind(RESOURCES.APIProduct.gvk.kind),
+    verb: 'list',
+    namespace: activeNamespace,
+  });
 
   // Fetch the APIProduct
   const [apiProduct, productLoaded, productLoadError] = useK8sWatchResource<APIProduct>({
@@ -194,6 +205,22 @@ const APIProductPoliciesTab: React.FC = () => {
       </>
     );
   };
+
+  if (canListLoading) {
+    return (
+      <PageSection hasBodyWrapper={false}>
+        <Spinner size="lg" />
+      </PageSection>
+    );
+  }
+
+  if (!canList) {
+    return (
+      <NoPermissionsView
+        primaryMessage={t('You do not have permission to view API Products')}
+      />
+    );
+  }
 
   // Error states
   if (productLoadError) {
