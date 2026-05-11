@@ -54,20 +54,25 @@ const APIProductPoliciesTab: React.FC = () => {
   const location = useLocation();
   const productName = extractResourceNameFromURL(location.pathname);
 
-  const [canList, canListLoading] = useAccessReview({
+  const [canGet, canGetLoading] = useAccessReview({
     group: RESOURCES.APIProduct.gvk.group,
     resource: getResourceNameFromKind(RESOURCES.APIProduct.gvk.kind),
-    verb: 'list',
+    verb: 'get',
     namespace: activeNamespace,
+    name: productName,
   });
 
   // Fetch the APIProduct
-  const [apiProduct, productLoaded, productLoadError] = useK8sWatchResource<APIProduct>({
-    groupVersionKind: RESOURCES.APIProduct.gvk,
-    namespace: activeNamespace,
-    name: productName,
-    isList: false,
-  });
+  const [apiProduct, productLoaded, productLoadError] = useK8sWatchResource<APIProduct>(
+    canGet && !canGetLoading
+      ? {
+          groupVersionKind: RESOURCES.APIProduct.gvk,
+          namespace: activeNamespace,
+          name: productName,
+          isList: false,
+        }
+      : null,
+  );
 
   // Extract target HTTPRoute reference
   const targetRef = apiProduct?.spec?.targetRef;
@@ -206,7 +211,7 @@ const APIProductPoliciesTab: React.FC = () => {
     );
   };
 
-  if (canListLoading) {
+  if (canGetLoading) {
     return (
       <PageSection hasBodyWrapper={false}>
         <Spinner size="lg" />
@@ -214,11 +219,9 @@ const APIProductPoliciesTab: React.FC = () => {
     );
   }
 
-  if (!canList) {
+  if (!canGet) {
     return (
-      <NoPermissionsView
-        primaryMessage={t('You do not have permission to view API Products')}
-      />
+      <NoPermissionsView primaryMessage={t('You do not have permission to view API Products')} />
     );
   }
 

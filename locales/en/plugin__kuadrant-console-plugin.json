@@ -348,6 +348,7 @@
   "You do not have permission to create an API Product": "You do not have permission to create an API Product",
   "You do not have permission to delete this API Key": "You do not have permission to delete this API Key",
   "You do not have permission to request an API Key": "You do not have permission to request an API Key",
+  "You do not have permission to view API Products": "You do not have permission to view API Products",
   "You do not have permission to view Gateways": "You do not have permission to view Gateways",
   "You do not have permission to view GRPCRoutes": "You do not have permission to view GRPCRoutes",
   "You do not have permission to view HTTPRoutes": "You do not have permission to view HTTPRoutes",

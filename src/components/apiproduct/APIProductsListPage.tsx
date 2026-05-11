@@ -650,13 +650,20 @@ const APIProductsListPage: React.FC = () => {
     );
   };
 
-  if (!canListLoading && !canList) {
+  if (canListLoading) {
     return (
-      <PageSection>
+      <PageSection hasBodyWrapper={false}>
         <NamespaceBar onNamespaceChange={handleNamespaceChange} />
-        <NoPermissionsView
-          primaryMessage={t('You do not have permission to view API Products')}
-        />
+        <div>{t('Loading Permissions...')}</div>
+      </PageSection>
+    );
+  }
+
+  if (!canList) {
+    return (
+      <PageSection hasBodyWrapper={false}>
+        <NamespaceBar onNamespaceChange={handleNamespaceChange} />
+        <NoPermissionsView primaryMessage={t('You do not have permission to view API Products')} />
       </PageSection>
     );
   }

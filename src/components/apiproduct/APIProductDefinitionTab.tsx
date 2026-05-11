@@ -17,7 +17,11 @@ import { FileCodeIcon } from '@patternfly/react-icons';
 import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 import * as yaml from 'js-yaml';
-import { useK8sWatchResource, useActiveNamespace, useAccessReview } from '@openshift-console/dynamic-plugin-sdk';
+import {
+  useK8sWatchResource,
+  useActiveNamespace,
+  useAccessReview,
+} from '@openshift-console/dynamic-plugin-sdk';
 import { APIProduct } from './types';
 import { RESOURCES } from '../../utils/resources';
 import extractResourceNameFromURL from '../../utils/nameFromPath';
@@ -31,19 +35,24 @@ const APIProductDefinitionTab: React.FC = () => {
   const location = useLocation();
   const productName = extractResourceNameFromURL(location.pathname);
 
-  const [canList, canListLoading] = useAccessReview({
+  const [canGet, canGetLoading] = useAccessReview({
     group: RESOURCES.APIProduct.gvk.group,
     resource: getResourceNameFromKind(RESOURCES.APIProduct.gvk.kind),
-    verb: 'list',
-    namespace: activeNamespace,
-  });
-
-  const [apiProduct, loaded, loadError] = useK8sWatchResource<APIProduct>({
-    groupVersionKind: RESOURCES.APIProduct.gvk,
+    verb: 'get',
     namespace: activeNamespace,
     name: productName,
-    isList: false,
   });
+
+  const [apiProduct, loaded, loadError] = useK8sWatchResource<APIProduct>(
+    canGet && !canGetLoading
+      ? {
+          groupVersionKind: RESOURCES.APIProduct.gvk,
+          namespace: activeNamespace,
+          name: productName,
+          isList: false,
+        }
+      : null,
+  );
 
   // Extract the OpenAPI spec
   const openapiSpec = apiProduct?.status?.openapi?.raw;
@@ -84,7 +93,7 @@ const APIProductDefinitionTab: React.FC = () => {
     return result;
   }, [specToUse]);
 
-  if (canListLoading) {
+  if (canGetLoading) {
     return (
       <PageSection hasBodyWrapper={false}>
         <Spinner size="lg" />
@@ -92,11 +101,9 @@ const APIProductDefinitionTab: React.FC = () => {
     );
   }
 
-  if (!canList) {
+  if (!canGet) {
     return (
-      <NoPermissionsView
-        primaryMessage={t('You do not have permission to view API Products')}
-      />
+      <NoPermissionsView primaryMessage={t('You do not have permission to view API Products')} />
     );
   }
 
