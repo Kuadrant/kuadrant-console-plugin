@@ -52,6 +52,7 @@ import DropdownWithKebab from '../DropdownWithKebab';
 import '../kuadrant.css';
 import { getResourceNameFromKind } from '../../utils/getModelFromResource';
 import { useKuadrantNamespaceChange } from '../../hooks/useKuadrantNamespaceChange';
+import NoPermissionsView from '../NoPermissionsView';
 
 const APIProductsListPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -112,6 +113,22 @@ const APIProductsListPage: React.FC = () => {
           group: RESOURCES.APIProduct.gvk.group,
           resource: getResourceNameFromKind(RESOURCES.APIProduct.gvk.kind),
           verb: 'create',
+          namespace: '',
+        },
+  );
+
+  const [canList, canListLoading] = useAccessReview(
+    !isAllNamespaces
+      ? {
+          group: RESOURCES.APIProduct.gvk.group,
+          resource: getResourceNameFromKind(RESOURCES.APIProduct.gvk.kind),
+          verb: 'list',
+          namespace: activeNamespace,
+        }
+      : {
+          group: RESOURCES.APIProduct.gvk.group,
+          resource: getResourceNameFromKind(RESOURCES.APIProduct.gvk.kind),
+          verb: 'list',
           namespace: '',
         },
   );
@@ -632,6 +649,17 @@ const APIProductsListPage: React.FC = () => {
       </>
     );
   };
+
+  if (!canListLoading && !canList) {
+    return (
+      <PageSection>
+        <NamespaceBar onNamespaceChange={handleNamespaceChange} />
+        <NoPermissionsView
+          primaryMessage={t('You do not have permission to view API Products')}
+        />
+      </PageSection>
+    );
+  }
 
   return (
     <>
