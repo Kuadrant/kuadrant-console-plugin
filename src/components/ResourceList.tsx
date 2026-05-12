@@ -198,7 +198,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
     {
       title: '', // No title for the kebab column
       id: 'kebab',
-      props: { className: 'pf-v5-c-table__action' },
+      props: { className: 'pf-v6-c-table__action' },
     },
   ];
 
@@ -363,14 +363,14 @@ const ResourceList: React.FC<ResourceListProps> = ({
                 </ToolbarItem>
 
                 <ToolbarItem>
-                  <InputGroup className="pf-v5-c-input-group co-filter-group">
+                  <InputGroup className="pf-v6-c-input-group co-filter-group">
                     <TextInput
                       type="text"
                       placeholder={t('Search by {{filterValue}}...', {
                         filterValue: filterSelected.toLowerCase(),
                       })}
                       onChange={(_event, value) => handleFilterChange(value)}
-                      className="pf-v5-c-form-control co-text-filter-with-icon"
+                      className="pf-v6-c-form-control co-text-filter-with-icon"
                       aria-label="Resource search"
                     />
                   </InputGroup>
