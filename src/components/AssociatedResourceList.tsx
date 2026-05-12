@@ -145,7 +145,7 @@ const AssociatedResourceList: React.FC<AssociatedResourceListProps> = ({ resourc
     <>
       {combinedLoadError && (
         <AlertGroup>
-          <Alert title="Error loading associated resources" variant="danger" isInline>
+          <Alert title={t('Error loading associated resources')} variant="danger" isInline>
             {combinedLoadError.message}
           </Alert>
         </AlertGroup>

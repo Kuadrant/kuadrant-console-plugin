@@ -628,12 +628,12 @@ const KuadrantOverviewPage: React.FC = () => {
                           alignItems={{ default: 'alignItemsCenter' }}
                         >
                           <FlexItem>
-                            <strong>Code: {code}</strong>
+                            <strong>{t('Code: {{code}}', { code })}</strong>
                           </FlexItem>
                           <FlexItem align={{ default: 'alignRight' }}>
                             {dist.total.toFixed(0) === '1'
-                              ? '1 request'
-                              : `${dist.total.toFixed(0)} requests`}
+                              ? t('1 request')
+                              : t('{{count}} requests', { count: dist.total.toFixed(0) })}
                           </FlexItem>
                         </Flex>
                       }
@@ -852,7 +852,7 @@ const KuadrantOverviewPage: React.FC = () => {
                                 className="kuadrant-dashboard-resource-link"
                                 target="_blank"
                               >
-                                Observability for {t('Kuadrant')} <ExternalLinkAltIcon />
+                                {t('Observability for Kuadrant')} <ExternalLinkAltIcon />
                               </Content>
                             </StackItem>
                             <StackItem>
@@ -893,7 +893,7 @@ const KuadrantOverviewPage: React.FC = () => {
                           alignItems={{ default: 'alignItemsCenter' }}
                         >
                           <strong style={{ fontSize: '1.3rem' }}>{gateways.length}</strong>
-                          <span>Total Gateways</span>
+                          <span>{t('Total Gateways')}</span>
                         </Flex>
                       </FlexItem>
 
@@ -916,7 +916,7 @@ const KuadrantOverviewPage: React.FC = () => {
                               </div>
                             }
                           >
-                            <span>Healthy Gateways</span>
+                            <span>{t('Healthy Gateways')}</span>
                           </Tooltip>
                         </Flex>
                       </FlexItem>
@@ -940,7 +940,7 @@ const KuadrantOverviewPage: React.FC = () => {
                               </div>
                             }
                           >
-                            <span>Unhealthy Gateways</span>
+                            <span>{t('Unhealthy Gateways')}</span>
                           </Tooltip>
                         </Flex>
                       </FlexItem>
@@ -956,7 +956,7 @@ const KuadrantOverviewPage: React.FC = () => {
                   <CardTitle className="kuadrant-resource-create-container">
                     <Title headingLevel="h2">{t('Gateways - Traffic Analysis')}</Title>
                     {!resourceRBAC['Gateway']?.create ? (
-                      <Tooltip content="You do not have permission to create a Gateway">
+                      <Tooltip content={t('You do not have permission to create a Gateway')}>
                         <Button className="kuadrant-overview-create-button" isAriaDisabled>
                           {t(`Create Gateway`)}
                         </Button>
@@ -976,7 +976,7 @@ const KuadrantOverviewPage: React.FC = () => {
                       columns={gatewayTrafficColumns}
                       renderers={gatewayTrafficRenders}
                       namespace={watchNamespace}
-                      emptyResourceName="Gateways"
+                      emptyResourceName={t('Gateways')}
                     />
                   </CardBody>
                 </Card>
@@ -1105,7 +1105,7 @@ const KuadrantOverviewPage: React.FC = () => {
                   <CardTitle className="kuadrant-resource-create-container">
                     <Title headingLevel="h2">{t('HTTPRoutes')}</Title>
                     {!resourceRBAC['HTTPRoute']?.create ? (
-                      <Tooltip content="You do not have permission to create a HTTPRoute">
+                      <Tooltip content={t('You do not have permission to create a HTTPRoute')}>
                         <Button className="kuadrant-overview-create-button" isAriaDisabled>
                           {t(`Create HTTPRoute`)}
                         </Button>
@@ -1124,7 +1124,7 @@ const KuadrantOverviewPage: React.FC = () => {
                       resources={[resourceGVKMapping['HTTPRoute']]}
                       columns={columns}
                       namespace={watchNamespace}
-                      emptyResourceName="HTTPRoutes"
+                      emptyResourceName={t('HTTPRoutes')}
                     />
                   </CardBody>
                 </Card>
@@ -1182,7 +1182,7 @@ const KuadrantOverviewPage: React.FC = () => {
                       resources={[resourceGVKMapping['GRPCRoute']]}
                       columns={columns}
                       namespace={watchNamespace}
-                      emptyResourceName="GRPCRoutes"
+                      emptyResourceName={t('GRPCRoutes')}
                     />
                   </CardBody>
                 </Card>
