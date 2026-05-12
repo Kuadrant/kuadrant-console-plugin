@@ -15,6 +15,8 @@ function useAccessReviews(resource: Resource[]) {
 
   useEffect(() => {
     const checkRBAC = async () => {
+      setLoading(true);
+
       const results = await Promise.all(
         resource.flatMap(({ group, kind, namespace }) =>
           verbs.map(async (verb) => {
@@ -24,20 +26,26 @@ function useAccessReviews(resource: Resource[]) {
               verb,
               ...(namespace ? { namespace } : {}),
             });
-            return { key: `${kind}-${verb}`, isAllowed: result.status?.allowed };
+
+            return {
+              key: `${kind}-${verb}`,
+              isAllowed: result.status?.allowed,
+            };
           }),
         ),
       );
+
       const RBACMap = results.reduce((acc, { key, isAllowed }) => {
         acc[key] = isAllowed;
         return acc;
       }, {} as Record<string, boolean>);
+
       setUserRBAC(RBACMap);
       setLoading(false);
     };
 
     checkRBAC();
-  }, []);
+  }, [resource]);
 
   return { userRBAC, loading };
 }
