@@ -68,13 +68,17 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
   const resolvedNamespace = namespace === '#ALL_NS#' ? undefined : namespace;
-  const accessResources = resources.map((r) => ({
-    ...r,
-    kind: getResourceNameFromKind(r.kind),
-    namespace: resolvedNamespace,
-  }));
+  const accessResources = React.useMemo(
+  () =>
+    resources.map((r) => ({
+      ...r,
+      kind: getResourceNameFromKind(r.kind),
+      namespace: resolvedNamespace,
+    })),
+  [resources, resolvedNamespace],
+);
 
-  const { userRBAC, loading: rbacLoading } = useAccessReviews(accessResources);
+const { userRBAC, loading: rbacLoading } = useAccessReviews(accessResources);
 
   // Generate resource mappings dynamically from the resources prop
   const resourceMappings = resources.map((resource) => ({
