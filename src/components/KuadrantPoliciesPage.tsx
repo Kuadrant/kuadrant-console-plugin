@@ -395,7 +395,7 @@ const KuadrantPoliciesPage: React.FC = () => {
 
   const permsLoaded = policyKinds.every((key) => resourceRBAC[key]?.loaded);
   if (!permsLoaded) {
-    return <div>Loading permissions...</div>;
+    return <div>{t('Loading permissions...')}</div>;
   }
 
   const policyRBACNil = policyKinds.every((policy) => !resourceRBAC[policy]?.list);
