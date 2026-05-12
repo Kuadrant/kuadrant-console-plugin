@@ -1,13 +1,5 @@
 import * as React from 'react';
 import Helmet from 'react-helmet';
-import {
-  Button,
-  ButtonVariant,
-  Modal,
-  ModalVariant,
-  ModalBody,
-  ModalFooter,
-} from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import { ResourceYAMLEditor, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
 import { resourceGVKMapping } from '../utils/resources';
@@ -61,9 +53,6 @@ const KuadrantAuthPolicyCreatePage: React.FC = () => {
     },
   };
 
-  const [isErrorModalOpen, setIsErrorModalOpen] = React.useState(false);
-  const [errorModalMsg] = React.useState('');
-
   return (
     <>
       <Helmet>
@@ -71,22 +60,6 @@ const KuadrantAuthPolicyCreatePage: React.FC = () => {
       </Helmet>
 
       <ResourceYAMLEditor initialResource={yamlResource} header="Create AuthPolicy" create={true} />
-
-      <Modal
-        isOpen={isErrorModalOpen}
-        onClose={() => setIsErrorModalOpen(false)}
-        variant={ModalVariant.medium}
-        title={t('Error creating AuthPolicy')}
-      >
-        <ModalBody>
-          <b>{errorModalMsg}</b>
-        </ModalBody>
-        <ModalFooter>
-          <Button key="ok" variant={ButtonVariant.link} onClick={() => setIsErrorModalOpen(false)}>
-            {t('OK')}
-          </Button>
-        </ModalFooter>
-      </Modal>
     </>
   );
 };
