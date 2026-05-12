@@ -48,13 +48,16 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   const policyType = obj.kind.toLowerCase();
   const resourceName = getResourceNameFromKind(obj.kind);
 
-  const resourceGVK: { group: string; kind: string; namespace?: string }[] = [
-    {
-      group: RESOURCES[obj.kind as ResourceKind].gvk.group,
-      kind: resourceName,
-      namespace: obj.metadata?.namespace,
-    },
-  ];
+  const resourceGVK = React.useMemo(
+    () => [
+      {
+        group: RESOURCES[obj.kind as ResourceKind].gvk.group,
+        kind: resourceName,
+        namespace: obj.metadata?.namespace,
+      },
+    ],
+    [obj.kind, obj.metadata?.namespace, resourceName],
+  );
   const { userRBAC, loading: rbacLoading } = useAccessReviews(resourceGVK);
 
   // keys from useAccessReviews use the plural resource name (e.g. authpolicies-delete)
