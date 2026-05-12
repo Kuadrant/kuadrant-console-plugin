@@ -2,7 +2,7 @@
 
 <!-- Clear description of what this PR does and why -->
 
-Fixes # (issue)
+Fixes #
 
 ## Type of change
 
@@ -37,6 +37,6 @@ Fixes # (issue)
 ## Checklist
 
 - [ ] All user-facing strings use `t()` and are added to `locales/en/plugin__kuadrant-console-plugin.json`
-- [ ] CSS classes are prefixed with `kuadrant-` — no bare `.pf-*` or `.co-*` selectors, no hex colours
+- [ ] CSS classes are prefixed with `kuadrant-` — no bare `.pf-*` or `.co-*` selectors, no hex colors
 - [ ] No `console.log` statements left in
 - [ ] Commits include `Signed-off-by` line (`git commit -s`)
