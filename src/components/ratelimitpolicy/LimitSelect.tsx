@@ -58,8 +58,12 @@ const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
           {Object.keys(limits).length > 0 ? (
             Object.entries(limits).map(([name, limitConfig], index) => (
               <Label key={index} color="blue" onClose={() => handleRemoveLimit(name)}>
-                <strong>{name}</strong>: {limitConfig.rates?.[0]?.limit} requests per{' '}
-                {limitConfig.rates?.[0]?.duration} {limitConfig.rates?.[0]?.unit}(s)
+                <strong>{name}</strong>:{' '}
+                {t('{{limit}} requests per {{duration}} {{unit}}(s)', {
+                  limit: limitConfig.rates?.[0]?.limit,
+                  duration: limitConfig.rates?.[0]?.duration,
+                  unit: limitConfig.rates?.[0]?.unit,
+                })}
               </Label>
             ))
           ) : (
