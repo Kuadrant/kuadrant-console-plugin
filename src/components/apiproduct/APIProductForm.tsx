@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+  Alert,
   Card,
   CardBody,
   Form,
@@ -483,6 +484,20 @@ const APIProductForm: React.FC<APIProductFormProps> = ({
                 description={t('Keys are created without need to be approved.')}
               />
             </FormGroup>
+            {isEditMode &&
+              obj?.spec?.approvalMode === 'manual' &&
+              formData.approvalMode === 'automatic' && (
+                <Alert
+                  variant="warning"
+                  isInline
+                  title={t('Approval mode change')}
+                  style={{ marginTop: 'var(--pf-v6-global--spacer--md)' }}
+                >
+                  {t(
+                    'Changing from manual to automatic approval will cause any pending API key requests to be automatically approved.',
+                  )}
+                </Alert>
+              )}
           </div>
 
           <ActionGroup style={{ marginTop: 'var(--pf-v6-global--spacer--lg)' }}>
