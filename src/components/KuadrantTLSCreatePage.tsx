@@ -118,19 +118,16 @@ const KuadrantTLSCreatePage: React.FC = () => {
   }
 
   //Checking if the policy already exists and is to be edited or if its new and is being created
-  let tlsResource = null;
-  if (nameEdit) {
-    tlsResource = {
-      groupVersionKind: tlsPolicyGVK,
-      isList: false,
-      name: nameEdit,
-      namespace: namespaceEdit,
-    };
-  }
+  const tlsResource = nameEdit
+    ? {
+        groupVersionKind: tlsPolicyGVK,
+        isList: false,
+        name: nameEdit,
+        namespace: namespaceEdit,
+      }
+    : null;
 
-  const [tlsData, tlsLoaded, tlsError] = tlsResource
-    ? useK8sWatchResource(tlsResource)
-    : [null, false, null]; //Syntax allows for tlsResource to be null in the case of a create
+  const [tlsData, tlsLoaded, tlsError] = useK8sWatchResource(tlsResource);
 
   // When a resource is being updated setting the form from the yaml it gets from useK8sWatchResource
   React.useEffect(() => {
