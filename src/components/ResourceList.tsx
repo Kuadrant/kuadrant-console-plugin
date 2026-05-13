@@ -69,15 +69,11 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
   const resolvedNamespace = namespace === '#ALL_NS#' ? undefined : namespace;
 
-  const accessResources = React.useMemo(
-    () =>
-      resources.map((r) => ({
-        ...r,
-        kind: getResourceNameFromKind(r.kind),
-        namespace: resolvedNamespace,
-      })),
-    [resources, resolvedNamespace],
-  );
+  const accessResources = resources.map((r) => ({
+    ...r,
+    kind: getResourceNameFromKind(r.kind),
+    namespace: resolvedNamespace,
+  }));
 
   const { userRBAC, loading: rbacLoading } = useAccessReviews(accessResources);
 
