@@ -120,7 +120,7 @@ naming conflicts. For example, the plugin template uses the
 with this namespace as follows:
 
 ```tsx
-conster Header: React.FC = () => {
+const Header: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   return <h1>{t('Hello, World!')}</h1>;
 };
