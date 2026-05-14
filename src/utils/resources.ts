@@ -313,6 +313,7 @@ export const RESOURCES = {
     isGatewayAPI: false,
     showInTopologyByDefault: false,
     isKuadrantInternal: false,
+    createPath: '/kuadrant/apikeys/ns/:ns/~new',
   },
 } as const;
 

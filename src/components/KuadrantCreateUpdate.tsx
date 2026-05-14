@@ -41,9 +41,11 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
           model: model,
           data: resource,
         });
-        // APIProduct uses different URL pattern
+        // APIProduct and APIKey use different URL patterns
         if (policyType === 'apiproduct') {
           navigate(`/kuadrant/apiproducts/ns/${resource.metadata.namespace}`);
+        } else if (policyType === 'apikey') {
+          navigate(`/kuadrant/apikeys/ns/${resource.metadata.namespace}`);
         } else {
           navigate(`/kuadrant/policies/ns/${resource.metadata.namespace}/${policyType}`);
         }
@@ -52,9 +54,11 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
           model: model,
           data: resource,
         });
-        // APIProduct uses different URL pattern
+        // APIProduct and APIKey use different URL patterns
         if (policyType === 'apiproduct') {
           navigate(`/kuadrant/apiproducts/ns/${resource.metadata.namespace}`);
+        } else if (policyType === 'apikey') {
+          navigate(`/kuadrant/apikeys/ns/${resource.metadata.namespace}`);
         } else {
           navigate(`/kuadrant/policies/ns/${resource.metadata.namespace}/${policyType}`);
         }
