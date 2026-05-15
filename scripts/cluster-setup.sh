@@ -24,8 +24,8 @@ PLUGIN_NAME=$(node -p "require('${REPO_DIR}/package.json').consolePlugin.name")
 
 log "creating oinc cluster with addons..."
 oinc create \
-  --addons gateway-api,cert-manager,metallb,istio,kuadrant \
-  --console-plugin "${PLUGIN_NAME}=http://${HOST}:${PLUGIN_PORT}"
+	--addons gateway-api,cert-manager,metallb,istio,kuadrant@latest \
+	--console-plugin "${PLUGIN_NAME}=http://${HOST}:${PLUGIN_PORT}"
 
 # --- MetalLB IP pool ---
 
