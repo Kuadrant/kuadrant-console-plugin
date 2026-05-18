@@ -1,5 +1,7 @@
 import * as React from 'react';
+import { useNavigate, useLocation, useParams } from 'react-router-dom-v5-compat';
 import { useTranslation } from 'react-i18next';
+import Helmet from 'react-helmet';
 import { Link } from 'react-router-dom-v5-compat';
 import { sortable } from '@patternfly/react-table';
 import {
@@ -27,7 +29,6 @@ import {
   Tooltip,
 } from '@patternfly/react-core';
 import {
-  useActiveNamespace,
   useK8sWatchResource,
   VirtualizedTable,
   TableColumn,
@@ -39,19 +40,180 @@ import {
   k8sDelete,
   consoleFetchJSON,
   useAccessReview,
+  NamespaceBar,
+  checkAccess,
+  k8sGet,
+  useK8sModel,
 } from '@openshift-console/dynamic-plugin-sdk';
-import { SearchIcon, EllipsisVIcon } from '@patternfly/react-icons';
-import { RESOURCES, APIKey, OpenshiftUser, SelfSubjectReviewResponse } from '../../utils/resources';
+import { SearchIcon, EllipsisVIcon, EyeIcon, EyeSlashIcon } from '@patternfly/react-icons';
+import {
+  RESOURCES,
+  APIKey,
+  OpenshiftUser,
+  SelfSubjectReviewResponse,
+  getAPIKeyPhase,
+  Secret,
+} from '../../utils/resources';
 import { getModelFromResource, getResourceNameFromKind } from '../../utils/getModelFromResource';
 import APIKeyRevealModal from './APIKeyRevealModal';
 import APIKeyDeleteModal from './APIKeyDeleteModal';
 import RequestAPIKeyModal from './RequestAPIKeyModal';
 import { APIKeyStatusBadge } from './APIKeyStatusBadge';
 import '../kuadrant.css';
+import { useKuadrantNamespaceChange } from '../../hooks/useKuadrantNamespaceChange';
+
+// APIKeyRow component defined outside to avoid hooks violations
+const APIKeyRow: React.FC<
+  RowProps<APIKey> & {
+    activeNamespace: string;
+    viewedSecrets: Record<string, boolean>;
+    onReveal: (apiKey: APIKey) => void;
+    onDelete: (apiKey: APIKey) => void;
+    canDelete: boolean;
+    canDeleteLoading: boolean;
+  }
+> = ({
+  obj,
+  activeColumnIDs,
+  activeNamespace,
+  viewedSecrets,
+  onReveal,
+  onDelete,
+  canDelete,
+  canDeleteLoading,
+}) => {
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
+  const [isKebabOpen, setIsKebabOpen] = React.useState(false);
+
+  return (
+    <>
+      <TableData id="name" activeColumnIDs={activeColumnIDs}>
+        <Link to={`/kuadrant/ns/${obj.metadata.namespace}/apikeys/name/${obj.metadata.name}`}>
+          {obj.metadata.name}
+        </Link>
+      </TableData>
+      {activeNamespace === '#ALL_NS#' && (
+        <TableData id="namespace" activeColumnIDs={activeColumnIDs}>
+          {obj.metadata.namespace ? (
+            <ResourceLink
+              groupVersionKind={{ version: 'v1', kind: 'Namespace' }}
+              name={obj.metadata.namespace}
+            />
+          ) : (
+            '-'
+          )}
+        </TableData>
+      )}
+      <TableData id="owner" activeColumnIDs={activeColumnIDs}>
+        {obj.spec?.requestedBy?.userId || '-'}
+      </TableData>
+      <TableData id="apiProduct" activeColumnIDs={activeColumnIDs}>
+        {obj.spec?.apiProductRef?.name || '-'}
+      </TableData>
+      <TableData id="status" activeColumnIDs={activeColumnIDs}>
+        <APIKeyStatusBadge phase={getAPIKeyPhase(obj)} />
+      </TableData>
+      <TableData id="tier" activeColumnIDs={activeColumnIDs}>
+        {obj.spec?.planTier || '-'}
+      </TableData>
+      <TableData id="apiKey" activeColumnIDs={activeColumnIDs}>
+        {(() => {
+          if (getAPIKeyPhase(obj) !== 'Approved' || !obj.spec?.secretRef?.name) {
+            return '-';
+          }
+
+          const secretKey = `${obj.metadata.namespace}/${obj.spec.secretRef.name}`;
+          const isViewed = viewedSecrets[secretKey];
+
+          if (isViewed) {
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: 'var(--pf-v6-global--disabled-color--100)',
+                }}
+              >
+                <EyeSlashIcon />
+                <span>{t('Already viewed')}</span>
+              </div>
+            );
+          }
+
+          return (
+            <div
+              onClick={(e) => {
+                e.stopPropagation();
+                onReveal(obj);
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                userSelect: 'none',
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onReveal(obj);
+                }
+              }}
+              aria-label={t('Reveal API key')}
+            >
+              <span style={{ fontFamily: 'monospace' }}>••••••••••••••••</span>
+              <EyeIcon style={{ color: 'var(--pf-v6-global--primary-color--100)' }} />
+            </div>
+          );
+        })()}
+      </TableData>
+      <TableData id="requestedTime" activeColumnIDs={activeColumnIDs}>
+        <Timestamp timestamp={obj.metadata.creationTimestamp} />
+      </TableData>
+      <TableData id="actions" activeColumnIDs={activeColumnIDs}>
+        <Dropdown
+          isOpen={isKebabOpen}
+          onOpenChange={(isOpen) => setIsKebabOpen(isOpen)}
+          toggle={(toggleRef) => (
+            <MenuToggle
+              ref={toggleRef}
+              variant="plain"
+              onClick={() => setIsKebabOpen(!isKebabOpen)}
+              isExpanded={isKebabOpen}
+              aria-label={t('Actions')}
+            >
+              <EllipsisVIcon />
+            </MenuToggle>
+          )}
+        >
+          <DropdownList>
+            <DropdownItem
+              key="delete"
+              onClick={() => {
+                setIsKebabOpen(false);
+                onDelete(obj);
+              }}
+              isDisabled={canDeleteLoading || !canDelete}
+            >
+              {t('Delete')}
+            </DropdownItem>
+          </DropdownList>
+        </Dropdown>
+      </TableData>
+    </>
+  );
+};
 
 const MyAPIKeysPage: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { ns } = useParams<{ ns: string }>();
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
-  const [activeNamespace] = useActiveNamespace();
+  const { handleNamespaceChange, activeNamespace } = useKuadrantNamespaceChange('/apikeys');
 
   const [username, setUsername] = React.useState<string>('');
   const [usernameLoaded, setUsernameLoaded] = React.useState(false);
@@ -61,6 +223,43 @@ const MyAPIKeysPage: React.FC = () => {
     namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
     isList: true,
   });
+
+  // Smart default redirect: check cluster-wide permissions and redirect namespace-scoped users
+  React.useEffect(() => {
+    const performRedirect = async () => {
+      if (location.pathname === '/kuadrant/apikeys/all-namespaces') {
+        try {
+          const result = await checkAccess({
+            group: RESOURCES.APIKey.gvk.group,
+            resource: getResourceNameFromKind(RESOURCES.APIKey.gvk.kind),
+            verb: 'list',
+            namespace: activeNamespace,
+          });
+
+          // If user doesn't have cluster-wide access, redirect to namespace-scoped view
+          if (!result.status?.allowed) {
+            const targetNamespace =
+              activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
+            navigate(`/kuadrant/apikeys/ns/${targetNamespace}`, { replace: true });
+          }
+          // Otherwise, stay on current path (cluster-wide view)
+        } catch (error) {
+          // On error, redirect to namespace-scoped view
+          const targetNamespace =
+            activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
+          navigate(`/kuadrant/apikeys/ns/${targetNamespace}`, { replace: true });
+        }
+      }
+    };
+
+    performRedirect();
+  }, [location.pathname, activeNamespace, navigate]);
+
+  React.useEffect(() => {
+    if (ns && ns !== activeNamespace) {
+      handleNamespaceChange(ns);
+    }
+  }, [ns, handleNamespaceChange]);
 
   // Fetch current username (works in both MicroShift and OpenShift)
   React.useEffect(() => {
@@ -117,6 +316,50 @@ const MyAPIKeysPage: React.FC = () => {
   // Request API Key modal state
   const [isRequestModalOpen, setIsRequestModalOpen] = React.useState(false);
 
+  // Reveal API Key modal state (lifted to parent to persist across table re-renders)
+  const [revealAPIKey, setRevealAPIKey] = React.useState<APIKey | null>(null);
+
+  // Track which API keys have been viewed
+  const [viewedSecrets, setViewedSecrets] = React.useState<Record<string, boolean>>({});
+
+  // Get the Secret model
+  const [secretModel] = useK8sModel({ version: 'v1', kind: 'Secret' });
+
+  // Check viewed status for all API keys on mount and when apiKeys change
+  React.useEffect(() => {
+    const checkViewedStatus = async () => {
+      if (!secretModel || !loaded) return;
+
+      const viewedStatus: Record<string, boolean> = {};
+
+      for (const apiKey of apiKeys) {
+        if (
+          getAPIKeyPhase(apiKey) === 'Approved' &&
+          apiKey.spec?.secretRef?.name &&
+          apiKey.metadata.namespace
+        ) {
+          try {
+            const secret = await k8sGet<Secret>({
+              model: secretModel,
+              name: apiKey.spec.secretRef.name,
+              ns: apiKey.metadata.namespace,
+            });
+
+            const secretKey = `${apiKey.metadata.namespace}/${apiKey.spec.secretRef.name}`;
+            viewedStatus[secretKey] =
+              secret.metadata?.annotations?.['devportal.kuadrant.io/apikey-viewed'] === 'true';
+          } catch (err) {
+            console.error('Error checking secret viewed status:', err);
+          }
+        }
+      }
+
+      setViewedSecrets(viewedStatus);
+    };
+
+    checkViewedStatus();
+  }, [secretModel, apiKeys, loaded]);
+
   // RBAC permission checks
   const isAllNamespaces = activeNamespace === '#ALL_NS#';
   const [canCreate, canCreateLoading] = useAccessReview(
@@ -161,7 +404,7 @@ const MyAPIKeysPage: React.FC = () => {
 
       // Status filter (multiple selection)
       if (statusFilters.length > 0) {
-        const phase = key.status?.phase || 'Unknown';
+        const phase = getAPIKeyPhase(key);
         if (!statusFilters.includes(phase)) {
           return false;
         }
@@ -238,10 +481,10 @@ const MyAPIKeysPage: React.FC = () => {
     setOwnerFilter('');
   };
 
-  const handleDeleteClick = (apiKey: APIKey) => {
+  const handleDeleteClick = React.useCallback((apiKey: APIKey) => {
     setDeleteAPIKey(apiKey);
     setDeleteError('');
-  };
+  }, []);
 
   const handleDeleteConfirm = async () => {
     if (!deleteAPIKey) return;
@@ -319,86 +562,28 @@ const MyAPIKeysPage: React.FC = () => {
     return cols;
   }, [t, activeNamespace]);
 
-  const APIKeyRow: React.FC<RowProps<APIKey>> = ({ obj, activeColumnIDs }) => {
-    const [isKebabOpen, setIsKebabOpen] = React.useState(false);
-
-    return (
-      <>
-        <TableData id="name" activeColumnIDs={activeColumnIDs}>
-          <Link to={`/kuadrant/ns/${obj.metadata.namespace}/apikeys/name/${obj.metadata.name}`}>
-            {obj.metadata.name}
-          </Link>
-        </TableData>
-        {activeNamespace === '#ALL_NS#' && (
-          <TableData id="namespace" activeColumnIDs={activeColumnIDs}>
-            {obj.metadata.namespace ? (
-              <ResourceLink
-                groupVersionKind={{ version: 'v1', kind: 'Namespace' }}
-                name={obj.metadata.namespace}
-              />
-            ) : (
-              '-'
-            )}
-          </TableData>
-        )}
-        <TableData id="owner" activeColumnIDs={activeColumnIDs}>
-          {obj.spec?.requestedBy?.userId || '-'}
-        </TableData>
-        <TableData id="apiProduct" activeColumnIDs={activeColumnIDs}>
-          {obj.spec?.apiProductRef?.name || '-'}
-        </TableData>
-        <TableData id="status" activeColumnIDs={activeColumnIDs}>
-          <APIKeyStatusBadge phase={obj.status?.phase} />
-        </TableData>
-        <TableData id="tier" activeColumnIDs={activeColumnIDs}>
-          {obj.spec?.planTier || '-'}
-        </TableData>
-        <TableData id="apiKey" activeColumnIDs={activeColumnIDs}>
-          {obj.status?.phase === 'Approved' && obj.status?.secretRef?.name ? (
-            <APIKeyRevealModal apiKeyObj={obj} />
-          ) : (
-            '-'
-          )}
-        </TableData>
-        <TableData id="requestedTime" activeColumnIDs={activeColumnIDs}>
-          <Timestamp timestamp={obj.metadata.creationTimestamp} />
-        </TableData>
-        <TableData id="actions" activeColumnIDs={activeColumnIDs}>
-          <Dropdown
-            isOpen={isKebabOpen}
-            onOpenChange={(isOpen) => setIsKebabOpen(isOpen)}
-            toggle={(toggleRef) => (
-              <MenuToggle
-                ref={toggleRef}
-                variant="plain"
-                onClick={() => setIsKebabOpen(!isKebabOpen)}
-                isExpanded={isKebabOpen}
-                aria-label={t('Actions')}
-              >
-                <EllipsisVIcon />
-              </MenuToggle>
-            )}
-          >
-            <DropdownList>
-              <DropdownItem
-                key="delete"
-                onClick={() => {
-                  setIsKebabOpen(false);
-                  handleDeleteClick(obj);
-                }}
-                isDisabled={canDeleteLoading || !canDelete}
-              >
-                {t('Delete')}
-              </DropdownItem>
-            </DropdownList>
-          </Dropdown>
-        </TableData>
-      </>
-    );
-  };
+  // Create a memoized wrapper for APIKeyRow with bound props
+  const BoundAPIKeyRow = React.useCallback(
+    (props: RowProps<APIKey>) => (
+      <APIKeyRow
+        {...props}
+        activeNamespace={activeNamespace}
+        viewedSecrets={viewedSecrets}
+        onReveal={setRevealAPIKey}
+        onDelete={handleDeleteClick}
+        canDelete={canDelete}
+        canDeleteLoading={canDeleteLoading}
+      />
+    ),
+    [activeNamespace, viewedSecrets, handleDeleteClick, canDelete, canDeleteLoading],
+  );
 
   return (
     <>
+      <Helmet>
+        <title data-test="example-page-title">{t('My API Keys')}</title>
+      </Helmet>
+      <NamespaceBar onNamespaceChange={handleNamespaceChange} />
       <PageSection hasBodyWrapper={false}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Title headingLevel="h1">{t('My API Keys')}</Title>
@@ -526,10 +711,17 @@ const MyAPIKeysPage: React.FC = () => {
                     </SelectOption>
                     <SelectOption
                       hasCheckbox
-                      value="Rejected"
-                      isSelected={statusFilters.includes('Rejected')}
+                      value="Denied"
+                      isSelected={statusFilters.includes('Denied')}
                     >
-                      {t('Rejected')}
+                      {t('Denied')}
+                    </SelectOption>
+                    <SelectOption
+                      hasCheckbox
+                      value="Failed"
+                      isSelected={statusFilters.includes('Failed')}
+                    >
+                      {t('Failed')}
                     </SelectOption>
                   </Select>
                 </ToolbarFilter>
@@ -581,7 +773,7 @@ const MyAPIKeysPage: React.FC = () => {
               loaded={loaded}
               loadError={apiKeysLoadError}
               columns={columns}
-              Row={APIKeyRow}
+              Row={BoundAPIKeyRow}
             />
           )}
         </ListPageBody>
@@ -602,6 +794,21 @@ const MyAPIKeysPage: React.FC = () => {
         onClose={() => setIsRequestModalOpen(false)}
         username={username}
       />
+
+      {/* Reveal API Key Modal (lifted to parent to persist across table re-renders) */}
+      {revealAPIKey && (
+        <APIKeyRevealModal
+          apiKeyObj={revealAPIKey}
+          onClose={() => {
+            setRevealAPIKey(null);
+            // Refresh viewed status after closing
+            if (revealAPIKey.spec?.secretRef?.name) {
+              const secretKey = `${revealAPIKey.metadata.namespace}/${revealAPIKey.spec.secretRef.name}`;
+              setViewedSecrets((prev) => ({ ...prev, [secretKey]: true }));
+            }
+          }}
+        />
+      )}
     </>
   );
 };

@@ -37,9 +37,31 @@ export interface PlanLimits {
   }>;
 }
 
+export interface Condition {
+  type: string;
+  status: string;
+  lastTransitionTime?: string;
+  reason?: string;
+  message?: string;
+}
+
+export interface Secret extends K8sResourceCommon {
+  type?: string;
+  data?: {
+    [key: string]: string;
+  };
+  stringData?: {
+    [key: string]: string;
+  };
+}
+
 export interface APIKey extends K8sResourceCommon {
   spec?: {
     apiProductRef?: {
+      name: string;
+      namespace?: string;
+    };
+    secretRef?: {
       name: string;
     };
     planTier?: string;
@@ -50,20 +72,46 @@ export interface APIKey extends K8sResourceCommon {
     useCase?: string;
   };
   status?: {
-    phase?: 'Pending' | 'Approved' | 'Rejected';
-    secretRef?: {
-      name: string;
-    };
     limits?: PlanLimits;
-    conditions?: Array<{
-      type: string;
-      status: string;
-      lastTransitionTime?: string;
-      reason?: string;
-      message?: string;
-    }>;
+    conditions?: Condition[];
+    apiHostname?: string;
   };
 }
+
+// Utility function to derive APIKey status from conditions
+// Following Kubernetes conditions pattern (similar to CertificateSigningRequest)
+export type APIKeyPhase = 'Pending' | 'Approved' | 'Denied' | 'Failed';
+
+export const getAPIKeyPhase = (apiKey: APIKey): APIKeyPhase => {
+  const conditions = apiKey.status?.conditions || [];
+
+  // Check for Approved condition with status "True"
+  const approvedCondition = conditions.find((c) => c.type === 'Approved' && c.status === 'True');
+  if (approvedCondition) {
+    return 'Approved';
+  }
+
+  // Check for Denied condition with status "True"
+  const deniedCondition = conditions.find((c) => c.type === 'Denied' && c.status === 'True');
+  if (deniedCondition) {
+    return 'Denied';
+  }
+
+  // Check for Failed condition with status "True"
+  const failedCondition = conditions.find((c) => c.type === 'Failed' && c.status === 'True');
+  if (failedCondition) {
+    return 'Failed';
+  }
+
+  // Check for explicit Pending condition with status "True"
+  const pendingCondition = conditions.find((c) => c.type === 'Pending' && c.status === 'True');
+  if (pendingCondition) {
+    return 'Pending';
+  }
+
+  // Default to Pending if no conditions or no recognized condition
+  return 'Pending';
+};
 
 // resource definitions
 export const RESOURCES = {

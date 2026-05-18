@@ -27,8 +27,9 @@ import {
   useK8sWatchResource,
   useActiveNamespace,
   k8sCreate,
+  useK8sModel,
 } from '@openshift-console/dynamic-plugin-sdk';
-import { RESOURCES, APIKey } from '../../utils/resources';
+import { RESOURCES, APIKey, Secret } from '../../utils/resources';
 import { getModelFromResource } from '../../utils/getModelFromResource';
 import { formatLimits } from '../../utils/apiKeyUtils';
 import { APIProduct, PlanSpec } from '../apiproduct/types';
@@ -60,6 +61,9 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [submitError, setSubmitError] = React.useState<string>('');
 
+  // Get the Secret model
+  const [secretModel] = useK8sModel({ version: 'v1', kind: 'Secret' });
+
   // Fetch API Products cluster-wide (all namespaces)
   const [apiProducts, apiProductsLoaded] = useK8sWatchResource<APIProduct[]>({
     groupVersionKind: RESOURCES.APIProduct.gvk,
@@ -69,7 +73,7 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
 
   // Filter only active API products (not being deleted) that have discovered plans
   const activeAPIProducts = React.useMemo(() => {
-    return apiProducts.filter(
+    return (Array.isArray(apiProducts) ? apiProducts : []).filter(
       (product) =>
         !product.metadata?.deletionTimestamp &&
         product.status?.discoveredPlans &&
@@ -188,6 +192,13 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
     return username.replace(/[^a-zA-Z0-9._%+-]/g, '-');
   };
 
+  const generateApiKey = (): string => {
+    // Generate a secure random API key (32 bytes = 64 hex characters)
+    const array = new Uint8Array(32);
+    crypto.getRandomValues(array);
+    return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
+  };
+
   const validateApiKeyName = (name: string): string => {
     if (!name) {
       return t('API key name is required');
@@ -216,7 +227,7 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
 
   const handleSubmit = async () => {
     // Validate required fields
-    if (!username || !selectedAPIProduct || !selectedTier || !apiKeyName) {
+    if (!username || !selectedAPIProduct || !selectedTier || !apiKeyName || !secretModel) {
       return;
     }
 
@@ -230,6 +241,46 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
 
     try {
       const sanitizedUsername = sanitizeUsernameForEmail(username);
+      const secretName = `${apiKeyName}-secret`;
+
+      // Step 1: Generate API key
+      const generatedKey = generateApiKey();
+
+      // Step 2: Create Secret with the generated API key
+      const secretResource: Secret = {
+        apiVersion: 'v1',
+        kind: 'Secret',
+        metadata: {
+          name: secretName,
+          namespace: activeNamespace,
+        },
+        type: 'Opaque',
+        stringData: {
+          api_key: generatedKey,
+        },
+      };
+
+      try {
+        await k8sCreate({ model: secretModel, data: secretResource });
+      } catch (secretError: any) {
+        // If secret already exists, continue (idempotent operation)
+        const isAlreadyExists =
+          secretError?.code === 409 ||
+          secretError?.reason === 'AlreadyExists' ||
+          (typeof secretError?.message === 'string' &&
+            (secretError.message.includes('already exists') ||
+              secretError.message.includes('AlreadyExists')));
+
+        if (!isAlreadyExists) {
+          // Re-throw any other secret creation error
+          throw secretError;
+        }
+      }
+
+      // Step 3: Create APIKey with reference to the secret
+      // Get selected API product to include namespace in cross-namespace reference
+      const product = activeAPIProducts.find((p) => p.metadata.name === selectedAPIProduct);
+
       const apiKeyResource: APIKey = {
         apiVersion: `${RESOURCES.APIKey.gvk.group}/${RESOURCES.APIKey.gvk.version}`,
         kind: RESOURCES.APIKey.gvk.kind,
@@ -240,6 +291,10 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
         spec: {
           apiProductRef: {
             name: selectedAPIProduct,
+            namespace: product?.metadata.namespace,
+          },
+          secretRef: {
+            name: secretName,
           },
           planTier: selectedTier,
           requestedBy: {
@@ -258,7 +313,7 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setSubmitError(errorMessage);
-      console.error('Failed to create API Key:', error);
+      console.error('Failed to create API Key or Secret:', error);
     } finally {
       setIsSubmitting(false);
     }

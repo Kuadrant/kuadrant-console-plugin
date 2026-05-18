@@ -37,7 +37,7 @@ async function spaNavigate(page: Page, path: string): Promise<void> {
 }
 
 async function navigateToMyAPIKeys(page: Page, namespace: string): Promise<void> {
-  await spaNavigate(page, `/k8s/ns/${namespace}/devportal.kuadrant.io~v1alpha1~APIKey`);
+  await spaNavigate(page, `/kuadrant/apikeys/ns/${namespace}`);
 }
 
 async function navigateToAPIKeyDetails(
@@ -62,6 +62,9 @@ test.describe('API Key Lifecycle', () => {
     // Step 1: Navigate to My API Keys page
     await navigateToMyAPIKeys(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
+
+    // Dismiss tour modal if it appears after navigation
+    await dismissConsoleTour(page);
 
     // Verify we're on the My API Keys page
     await expect(page.getByRole('heading', { name: 'My API Keys', exact: true })).toBeVisible({
@@ -244,8 +247,9 @@ test.describe('API Key Lifecycle', () => {
 
   test('should show disabled request button when namespace is not selected', async ({ page }) => {
     // Navigate to all namespaces view
-    await spaNavigate(page, '/k8s/all-namespaces/devportal.kuadrant.io~v1alpha1~APIKey');
+    await spaNavigate(page, '/kuadrant/apikeys/all-namespaces');
     await page.waitForLoadState('networkidle');
+    await dismissConsoleTour(page);
 
     // Request button should be disabled in all-namespaces view
     const requestButton = page.locator('button:has-text("Request API Key")');
@@ -262,6 +266,7 @@ test.describe('API Key Lifecycle', () => {
   test('should validate API key name format in request form', async ({ page }) => {
     await navigateToMyAPIKeys(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
+    await dismissConsoleTour(page);
 
     // Open request modal
     const requestButton = page.locator('button:has-text("Request API Key")');
@@ -311,6 +316,7 @@ test.describe('API Key Lifecycle', () => {
   test('should filter API products in request form', async ({ page }) => {
     await navigateToMyAPIKeys(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
+    await dismissConsoleTour(page);
 
     // Open request modal
     const requestButton = page.locator('button:has-text("Request API Key")');

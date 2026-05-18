@@ -11,21 +11,10 @@ import {
   CodeBlockAction,
   CodeBlockCode,
   ClipboardCopyButton,
-  Spinner,
-  Alert,
 } from '@patternfly/react-core';
-import { K8sResourceCommon, k8sGet, useK8sModel } from '@openshift-console/dynamic-plugin-sdk';
-import { APIKey } from '../../utils/resources';
+import { APIKey, getAPIKeyPhase } from '../../utils/resources';
 import { generateAuthCodeSnippets, AuthCodeSnippets } from '../../utils/generateAuthCodeSnippets';
 import '../kuadrant.css';
-
-interface APIProduct extends K8sResourceCommon {
-  spec?: {
-    gateway?: {
-      hostname?: string;
-    };
-  };
-}
 
 interface UsageExamplesProps {
   apiKey: APIKey;
@@ -35,18 +24,7 @@ const UsageExamples: React.FC<UsageExamplesProps> = ({ apiKey }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activeTabKey, setActiveTabKey] = React.useState<string | number>(0);
   const [snippets, setSnippets] = React.useState<AuthCodeSnippets | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string>('');
   const [copied, setCopied] = React.useState<{ [key: number]: boolean }>({});
-
-  const [apiProductModel] = useK8sModel({
-    group: 'devportal.kuadrant.io',
-    version: 'v1alpha1',
-    kind: 'APIProduct',
-  });
-
-  const namespace = apiKey.metadata.namespace || '';
-  const apiProductName = apiKey.spec?.apiProductRef?.name || '';
 
   const handleCopy = (tabKey: number, text: string) => {
     navigator.clipboard.writeText(text);
@@ -57,41 +35,17 @@ const UsageExamples: React.FC<UsageExamplesProps> = ({ apiKey }) => {
   };
 
   React.useEffect(() => {
-    const fetchData = async () => {
-      if (
-        !apiProductModel ||
-        !namespace ||
-        !apiProductName ||
-        apiKey.status?.phase !== 'Approved'
-      ) {
-        return;
-      }
+    // Only show usage examples for approved APIKeys with hostname
+    if (getAPIKeyPhase(apiKey) !== 'Approved') {
+      return;
+    }
 
-      setLoading(true);
-      setError('');
+    const hostname = apiKey.status?.apiHostname || 'api.example.com';
+    const placeholderKey = 'YOUR_API_KEY';
 
-      try {
-        const apiProduct = await k8sGet<APIProduct>({
-          model: apiProductModel,
-          name: apiProductName,
-          ns: namespace,
-        });
-
-        const hostname = apiProduct.spec?.gateway?.hostname || 'api.example.com';
-        const placeholderKey = 'YOUR_API_KEY';
-
-        const codeSnippets = generateAuthCodeSnippets(placeholderKey, hostname);
-        setSnippets(codeSnippets);
-      } catch (err) {
-        console.error('Error fetching data for usage examples:', err);
-        setError(t('Failed to load usage examples'));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [apiProductModel, namespace, apiProductName, apiKey.status?.phase, t]);
+    const codeSnippets = generateAuthCodeSnippets(placeholderKey, hostname);
+    setSnippets(codeSnippets);
+  }, [apiKey]);
 
   const handleTabClick = (
     _event: React.MouseEvent<HTMLElement, MouseEvent>,
@@ -100,33 +54,7 @@ const UsageExamples: React.FC<UsageExamplesProps> = ({ apiKey }) => {
     setActiveTabKey(tabIndex);
   };
 
-  if (apiKey.status?.phase !== 'Approved') {
-    return null;
-  }
-
-  if (loading) {
-    return (
-      <Card isCompact>
-        <CardTitle>{t('Usage Examples')}</CardTitle>
-        <CardBody>
-          <Spinner size="lg" />
-        </CardBody>
-      </Card>
-    );
-  }
-
-  if (error) {
-    return (
-      <Card isCompact>
-        <CardTitle>{t('Usage Examples')}</CardTitle>
-        <CardBody>
-          <Alert variant="danger" title={error} isInline />
-        </CardBody>
-      </Card>
-    );
-  }
-
-  if (!snippets) {
+  if (getAPIKeyPhase(apiKey) !== 'Approved' || !snippets) {
     return null;
   }
 

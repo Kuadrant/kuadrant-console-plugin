@@ -25,7 +25,7 @@ import {
   k8sDelete,
   useAccessReview,
 } from '@openshift-console/dynamic-plugin-sdk';
-import { RESOURCES, APIKey } from '../../utils/resources';
+import { RESOURCES, APIKey, getAPIKeyPhase } from '../../utils/resources';
 import { getModelFromResource, getResourceNameFromKind } from '../../utils/getModelFromResource';
 import APIKeyDetailsTab from './APIKeyDetailsTab';
 import APIKeyDeleteModal from './APIKeyDeleteModal';
@@ -81,7 +81,7 @@ const APIKeyDetailPage: React.FC = () => {
       setIsDeleteModalOpen(false);
       setDeleteError('');
       // Navigate back to list page
-      navigate(`/k8s/ns/${ns}/devportal.kuadrant.io~v1alpha1~APIKey`);
+      navigate(`/kuadrant/apikeys/ns/${ns}`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       setDeleteError(errorMessage);
@@ -119,9 +119,7 @@ const APIKeyDetailPage: React.FC = () => {
       <PageSection hasBodyWrapper={false}>
         <Breadcrumb>
           <BreadcrumbItem>
-            <Link to={`/k8s/ns/${ns}/devportal.kuadrant.io~v1alpha1~APIKey`}>
-              {t('My API Keys')}
-            </Link>
+            <Link to={`/kuadrant/apikeys/ns/${ns}`}>{t('My API Keys')}</Link>
           </BreadcrumbItem>
           <BreadcrumbItem isActive>{apiKeyToUse.metadata.name}</BreadcrumbItem>
         </Breadcrumb>
@@ -140,7 +138,7 @@ const APIKeyDetailPage: React.FC = () => {
                 <Title headingLevel="h1">{apiKeyToUse.metadata.name}</Title>
               </FlexItem>
               <FlexItem>
-                <APIKeyStatusBadge phase={apiKeyToUse.status?.phase} />
+                <APIKeyStatusBadge phase={getAPIKeyPhase(apiKeyToUse)} />
               </FlexItem>
             </Flex>
           </FlexItem>

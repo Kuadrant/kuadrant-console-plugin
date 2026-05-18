@@ -75,7 +75,9 @@ demo-install:
 	@kubectl apply -f demo/toystore-demo.yaml
 	@kubectl apply -f demo/gamestore-demo.yaml
 	@kubectl apply -f demo/additional-demos.yaml
-	@kubectl patch apikey rejected-shipping-apikey -n toystore --subresource=status --type=merge -p '{"status":{"phase":"Rejected"}}'
+	@echo ""
+	@echo "Creating rejection for rejected-shipping-apikey..."
+	@bash $(PROJECT_PATH)/demo/reject-shipping-apikey.sh
 	@echo ""
 	@echo "demo resources installed!"
 	@echo ""
@@ -129,3 +131,4 @@ demo-install:
 	@echo "  kubectl get pods -n toystore"
 	@echo "  kubectl get apiproducts -n toystore"
 	@echo "  kubectl get namespaces | grep -E 'consumer-team|api-team'"
+	@echo ""
