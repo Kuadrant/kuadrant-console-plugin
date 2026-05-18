@@ -10,6 +10,7 @@ import {
   FormHelperText,
   HelperText,
   HelperTextItem,
+  Alert,
 } from '@patternfly/react-core';
 import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { APIProductKind, APIKeyKind, PlanInfo } from './types';
@@ -17,7 +18,6 @@ import { APIProductKind, APIKeyKind, PlanInfo } from './types';
 type APIKeyFormProps = {
   obj?: APIKeyKind;
   onChange: (apikey: APIKeyKind) => void;
-  namespace?: string;
 };
 
 export const APIKeyForm: React.FC<APIKeyFormProps> = ({ obj, onChange }) => {
@@ -57,7 +57,7 @@ export const APIKeyForm: React.FC<APIKeyFormProps> = ({ obj, onChange }) => {
   }, [obj]);
 
   // Watch all APIProducts cluster-wide
-  const [apiProducts, apiProductsLoaded] = useK8sWatchResource<APIProductKind[]>({
+  const [apiProducts, apiProductsLoaded, apiProductsError] = useK8sWatchResource<APIProductKind[]>({
     groupVersionKind: {
       group: 'devportal.kuadrant.io',
       version: 'v1alpha1',
@@ -152,6 +152,11 @@ export const APIKeyForm: React.FC<APIKeyFormProps> = ({ obj, onChange }) => {
 
   return (
     <Form>
+      {apiProductsError && (
+        <Alert variant="danger" isInline title={t('Error loading API Products')}>
+          {apiProductsError.message}
+        </Alert>
+      )}
       <FormGroup label={t('Name')} isRequired fieldId="name">
         <TextInput
           isRequired
@@ -174,9 +179,14 @@ export const APIKeyForm: React.FC<APIKeyFormProps> = ({ obj, onChange }) => {
           id="namespace"
           value={formData.metadata?.namespace || ''}
           onChange={(_event, value) => handleChange('namespace', value as string)}
-          isDisabled={!isCreate}
+          isDisabled={!isCreate || !apiProductsLoaded}
         >
-          <FormSelectOption key="placeholder" value="" label={t('Select a namespace')} isDisabled />
+          <FormSelectOption
+            key="placeholder"
+            value=""
+            label={!apiProductsLoaded ? t('Loading...') : t('Select a namespace')}
+            isDisabled
+          />
           {namespaces.map((ns) => (
             <FormSelectOption key={ns} value={ns} label={ns} />
           ))}
@@ -193,8 +203,14 @@ export const APIKeyForm: React.FC<APIKeyFormProps> = ({ obj, onChange }) => {
           id="apiproduct-namespace"
           value={formData.spec?.apiProductRef?.namespace || formData.metadata?.namespace || ''}
           onChange={(_event, value) => handleChange('apiProductRef.namespace', value as string)}
+          isDisabled={!apiProductsLoaded}
         >
-          <FormSelectOption key="placeholder" value="" label={t('Select a namespace')} isDisabled />
+          <FormSelectOption
+            key="placeholder"
+            value=""
+            label={!apiProductsLoaded ? t('Loading...') : t('Select a namespace')}
+            isDisabled
+          />
           {namespaces.map((ns) => (
             <FormSelectOption key={ns} value={ns} label={ns} />
           ))}

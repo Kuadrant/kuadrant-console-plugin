@@ -133,7 +133,7 @@ const APIKeyCreatePage: React.FC = () => {
             </Alert>
           </AlertGroup>
         )}
-        <APIKeyForm obj={formData} onChange={setFormData} namespace={selectedNamespace} />
+        <APIKeyForm obj={formData} onChange={setFormData} />
         <ActionGroup>
           <Button
             type="submit"

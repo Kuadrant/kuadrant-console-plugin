@@ -389,6 +389,6 @@
   "inherited from gateway": "inherited from gateway",
   "to confirm deletion.": "to confirm deletion.",
   "to display - please create some.": "to display - please create some.",
-  "{{count}} tags selected_one": "{{count}} tags selected_one",
-  "{{count}} tags selected_other": "{{count}} tags selected_other"
+  "{{count}} tags selected_one": "{{count}} tag selected",
+  "{{count}} tags selected_other": "{{count}} tags selected"
 }
