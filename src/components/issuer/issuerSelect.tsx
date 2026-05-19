@@ -76,10 +76,10 @@ const IssuerSelect: React.FC<IssuerSelectProps> = ({ selectedIssuer, onChange })
               )}{' '}
               <ResourceLink
                 groupVersionKind={gvk}
-                title="Create an Issuer"
+                title={t('Create an Issuer')}
                 hideIcon={true}
                 inline={true}
-                displayName="here"
+                displayName={t('here')}
               />
             </HelperTextItem>
           </HelperText>

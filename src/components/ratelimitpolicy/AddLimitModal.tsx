@@ -70,10 +70,10 @@ const LimitConfigForm: React.FC<{
             })
           }
         >
-          <FormSelectOption value="second" label="Second" />
-          <FormSelectOption value="minute" label="Minute" />
-          <FormSelectOption value="hour" label="Hour" />
-          <FormSelectOption value="day" label="Day" />
+          <FormSelectOption value="second" label={t('Second')} />
+          <FormSelectOption value="minute" label={t('Minute')} />
+          <FormSelectOption value="hour" label={t('Hour')} />
+          <FormSelectOption value="day" label={t('Day')} />
         </FormSelect>
       </FormGroup>
     </>

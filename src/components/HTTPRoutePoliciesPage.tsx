@@ -41,9 +41,9 @@ const HTTPRoutePoliciesPage: React.FC = () => {
       <PageSection hasBodyWrapper={false}>
         <Title headingLevel="h2">{t('Kuadrant Policies')}</Title>
         {!loaded ? (
-          <div>Loading...</div>
+          <div>{t('Loading...')}</div>
         ) : loadError ? (
-          <div>Error loading HTTPRoute: {loadError.message}</div>
+          <div>{t('Error loading HTTPRoute: {{message}}', { message: loadError.message })}</div>
         ) : (
           <AssociatedResourceList resource={httpRoute} />
         )}
