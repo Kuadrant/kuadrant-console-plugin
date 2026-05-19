@@ -1,0 +1,245 @@
+---
+# Demo RBAC Setup for API Management
+# Creates demo namespaces and role bindings for testing RBAC functionality
+#
+# Demo Users:
+# - 2 Consumers: alice-mobile-dev, bob-backend-dev
+# - 2 API Owners: charlie-payments-team, dave-shipping-team
+# - 1 Admin: eve-admin
+#
+# Apply with: kubectl apply -f rbac-demo-users.yaml
+#
+# Test with user impersonation:
+#   kubectl auth can-i list apiproducts --as=alice-mobile-dev --all-namespaces
+#   kubectl auth can-i create apikeys --as=alice-mobile-dev -n consumer-team-mobile
+
+# ============================================================================
+# Consumer Namespaces
+# ============================================================================
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: consumer-team-mobile
+  labels:
+    app.kubernetes.io/part-of: api-management-demo
+    api-management-role: consumer
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: consumer-team-backend
+  labels:
+    app.kubernetes.io/part-of: api-management-demo
+    api-management-role: consumer
+
+# ============================================================================
+# Owner Namespaces
+# ============================================================================
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-team-payments
+  labels:
+    app.kubernetes.io/part-of: api-management-demo
+    api-management-role: owner
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: api-team-shipping
+  labels:
+    app.kubernetes.io/part-of: api-management-demo
+    api-management-role: owner
+
+# ============================================================================
+# Consumer RoleBindings
+# ============================================================================
+
+---
+# Alice - Mobile Developer Consumer Permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: api-consumer-alice-mobile-dev
+  namespace: consumer-team-mobile
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: api-consumer
+subjects:
+  - kind: User
+    name: alice-mobile-dev
+    apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: api-catalog-browser-alice-mobile-dev
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: api-catalog-browser
+subjects:
+  - kind: User
+    name: alice-mobile-dev
+    apiGroup: rbac.authorization.k8s.io
+---
+# Alice - Namespace visibility (using demo-namespace-viewer ClusterRole)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: namespace-viewer-alice-mobile-dev
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: demo-namespace-viewer
+subjects:
+  - kind: User
+    name: alice-mobile-dev
+    apiGroup: rbac.authorization.k8s.io
+
+---
+# Bob - Backend Developer Consumer Permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: api-consumer-bob-backend-dev
+  namespace: consumer-team-backend
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: api-consumer
+subjects:
+  - kind: User
+    name: bob-backend-dev
+    apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: api-catalog-browser-bob-backend-dev
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: api-catalog-browser
+subjects:
+  - kind: User
+    name: bob-backend-dev
+    apiGroup: rbac.authorization.k8s.io
+---
+# Bob - Namespace visibility (using demo-namespace-viewer ClusterRole)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: namespace-viewer-bob-backend-dev
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: demo-namespace-viewer
+subjects:
+  - kind: User
+    name: bob-backend-dev
+    apiGroup: rbac.authorization.k8s.io
+
+# ============================================================================
+# Owner RoleBindings
+# ============================================================================
+
+---
+# Charlie - Payments Team Owner Permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: api-owner-charlie-payments-team
+  namespace: api-team-payments
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: api-owner
+subjects:
+  - kind: User
+    name: charlie-payments-team
+    apiGroup: rbac.authorization.k8s.io
+---
+# Charlie - Namespace visibility (using demo-namespace-viewer ClusterRole)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: namespace-viewer-charlie-payments-team
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: demo-namespace-viewer
+subjects:
+  - kind: User
+    name: charlie-payments-team
+    apiGroup: rbac.authorization.k8s.io
+
+---
+# Dave - Shipping Team Owner Permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: api-owner-dave-shipping-team
+  namespace: api-team-shipping
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: api-owner
+subjects:
+  - kind: User
+    name: dave-shipping-team
+    apiGroup: rbac.authorization.k8s.io
+---
+# Dave - Namespace visibility (using demo-namespace-viewer ClusterRole)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: namespace-viewer-dave-shipping-team
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: demo-namespace-viewer
+subjects:
+  - kind: User
+    name: dave-shipping-team
+    apiGroup: rbac.authorization.k8s.io
+
+# ============================================================================
+# Admin ClusterRoleBinding (cluster-wide)
+# ============================================================================
+
+---
+# Eve - Platform Admin Permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: api-admin-eve-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: api-admin
+subjects:
+  - kind: User
+    name: eve-admin
+    apiGroup: rbac.authorization.k8s.io
+---
+# Eve - Namespace visibility (using demo-namespace-viewer ClusterRole)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: namespace-viewer-eve-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: demo-namespace-viewer
+subjects:
+  - kind: User
+    name: eve-admin
+    apiGroup: rbac.authorization.k8s.io

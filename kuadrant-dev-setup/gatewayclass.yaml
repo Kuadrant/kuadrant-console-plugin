@@ -1,6 +1,17 @@
+# both gatewayclasses needed.
+# The "openshift-default" one activates cluster ingress operator
+# The "istio" one is being referenced by gateways
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: openshift-default
 spec:
   controllerName: openshift.io/gateway-controller/v1 
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: istio
+spec:
+  controllerName: openshift.io/gateway-controller/v1

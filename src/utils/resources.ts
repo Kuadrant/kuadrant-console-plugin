@@ -1,5 +1,7 @@
 // comprehensive resource registry - single source of truth for all kuadrant resources
 
+import { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
+
 export interface ResourceGVK {
   group: string;
   version: string;
@@ -21,6 +23,95 @@ export interface ResourceMetadata {
   // navigation path for create page (if creatable via UI)
   createPath?: string;
 }
+
+// Resource type definitions
+
+export interface PlanLimits {
+  daily?: number;
+  weekly?: number;
+  monthly?: number;
+  yearly?: number;
+  custom?: Array<{
+    limit: number;
+    window: string;
+  }>;
+}
+
+export interface Condition {
+  type: string;
+  status: string;
+  lastTransitionTime?: string;
+  reason?: string;
+  message?: string;
+}
+
+export interface Secret extends K8sResourceCommon {
+  type?: string;
+  data?: {
+    [key: string]: string;
+  };
+  stringData?: {
+    [key: string]: string;
+  };
+}
+
+export interface APIKey extends K8sResourceCommon {
+  spec?: {
+    apiProductRef?: {
+      name: string;
+      namespace?: string;
+    };
+    secretRef?: {
+      name: string;
+    };
+    planTier?: string;
+    requestedBy?: {
+      userId: string;
+      email: string;
+    };
+    useCase?: string;
+  };
+  status?: {
+    limits?: PlanLimits;
+    conditions?: Condition[];
+    apiHostname?: string;
+  };
+}
+
+// Utility function to derive APIKey status from conditions
+// Following Kubernetes conditions pattern (similar to CertificateSigningRequest)
+export type APIKeyPhase = 'Pending' | 'Approved' | 'Denied' | 'Failed';
+
+export const getAPIKeyPhase = (apiKey: APIKey): APIKeyPhase => {
+  const conditions = apiKey.status?.conditions || [];
+
+  // Check for Approved condition with status "True"
+  const approvedCondition = conditions.find((c) => c.type === 'Approved' && c.status === 'True');
+  if (approvedCondition) {
+    return 'Approved';
+  }
+
+  // Check for Denied condition with status "True"
+  const deniedCondition = conditions.find((c) => c.type === 'Denied' && c.status === 'True');
+  if (deniedCondition) {
+    return 'Denied';
+  }
+
+  // Check for Failed condition with status "True"
+  const failedCondition = conditions.find((c) => c.type === 'Failed' && c.status === 'True');
+  if (failedCondition) {
+    return 'Failed';
+  }
+
+  // Check for explicit Pending condition with status "True"
+  const pendingCondition = conditions.find((c) => c.type === 'Pending' && c.status === 'True');
+  if (pendingCondition) {
+    return 'Pending';
+  }
+
+  // Default to Pending if no conditions or no recognized condition
+  return 'Pending';
+};
 
 // resource definitions
 export const RESOURCES = {
@@ -290,3 +381,17 @@ export const getPoliciesForResource = (resourceKind: ResourceKind): ResourceKind
 };
 
 export default resourceGVKMapping;
+
+export interface OpenshiftUser {
+  metadata?: {
+    name?: string;
+  };
+}
+
+export interface SelfSubjectReviewResponse {
+  status?: {
+    userInfo?: {
+      username?: string;
+    };
+  };
+}

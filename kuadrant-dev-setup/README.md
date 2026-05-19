@@ -1,8 +1,9 @@
 # kuadrant development setup
 
-Development environment for kuadrant console plugin. 
+Development environment for kuadrant console plugin.
 
 # Requirements
+
 * [oc](https://console.redhat.com/openshift/downloads) are required.
 * `oc login` (requires [oc](https://console.redhat.com/openshift/downloads) and an [OpenShift cluster 4.19+](https://console.redhat.com/openshift/create))
 
@@ -17,52 +18,53 @@ make local-setup
 ### Core Components
 
 1. **cert-manager Operator**
-   - Certificate management for Kubernetes
-   - Required for TLS certificate automation
+   * Certificate management for Kubernetes
+   * Required for TLS certificate automation
 
 2. **GatewayClass**
-   - Default OpenShift Gateway controller (`openshift-default`)
-   - Enables Kubernetes Gateway API resources
+   * Default OpenShift Gateway controller
+   * Enables Kubernetes Gateway API resources
 
 3. **Kuadrant Operator**
-   - Installed via OLM (Operator Lifecycle Manager)
-   - Namespace: `kuadrant-system`
-   - Includes all Kuadrant CRDs (AuthPolicy, RateLimitPolicy, DNSPolicy, TLSPolicy)
+   * Installed via OLM (Operator Lifecycle Manager)
+   * Namespace: `kuadrant-system`
+   * Includes all Kuadrant CRDs (AuthPolicy, RateLimitPolicy, DNSPolicy, TLSPolicy)
 
 4. **Kuadrant Instance**
-   - Developer Portal enabled
-   - Manages API Products and API Key Requests
+   * Developer Portal enabled
+   * Manages API Products and API Key Requests
 
 ### Demo Resources
 
 **Toystore Demo** (`toystore` namespace):
-- Gateway: `external` (in `api-gateway` namespace)
-- HTTPRoute: `toystore` (hostname: `api.toystore.com`)
-- Deployment: toystore application
-- AuthPolicy: API key authentication
-- PlanPolicy: Gold (100/day), Silver (50/day), Bronze (10/day) tiers
-- APIProduct: `toystore-api`
-- Secrets: `alice-key` (gold tier), `bob-key` (silver tier)
+* Gateway: `external` (in `api-gateway` namespace)
+* HTTPRoute: `toystore` (hostname: `api.toystore.com`)
+* Deployment: toystore application
+* AuthPolicy: API key authentication
+* PlanPolicy: Gold (100/day), Silver (50/day), Bronze (10/day) tiers
+* APIProduct: `toystore-api`
+* Secrets: `alice-key` (gold tier), `bob-key` (silver tier)
 
 **Gamestore Demo** (`gamestore` namespace):
-- Gateway: `external` (in `gamestore` namespace)
-- HTTPRoute: `gamestore` (hostname: `api.gamestore.example.com`)
-- HTTPRoute: `gamestore-admin` (hostname: `admin.gamestore.example.com`)
-- HTTPRoute: `policy-free` (no policies attached)
-- Deployment: gamestore application
-- AuthPolicy: JWT authentication on `gamestore`, JWT + API key on `gamestore-admin`
-- RateLimitPolicy: Basic rate limiting (100 req/60s)
-- PlanPolicy: Admin tier (1M/day) on `gamestore-admin`
-- APIProduct: `gamestore-api`, `gamestore-admin`
+* Gateway: `external` (in `gamestore` namespace)
+* HTTPRoute: `gamestore` (hostname: `api.gamestore.example.com`)
+* HTTPRoute: `gamestore-admin` (hostname: `admin.gamestore.example.com`)
+* HTTPRoute: `policy-free` (no policies attached)
+* Deployment: gamestore application
+* AuthPolicy: JWT authentication on `gamestore`, JWT + API key on `gamestore-admin`
+* RateLimitPolicy: Basic rate limiting (100 req/60s)
+* PlanPolicy: Admin tier (1M/day) on `gamestore-admin`
+* APIProduct: `gamestore-api`, `gamestore-admin`
 
 **Additional API Products** (`toystore` namespace):
-- 6 additional APIProducts demonstrating different owners (owner1, owner2, admin)
-- Mix of manual and automatic approval modes
-- Includes one Draft (unpublished) API product
+* 6 additional APIProducts demonstrating different owners (owner1, owner2, admin)
+* Mix of manual and automatic approval modes
+* Includes one Draft (unpublished) API product
 
 ### Verify Installation
 
 #### 1. Verify Toystore Demo Resources
+
 ```bash
 # check toystore namespace
 oc get pods -n toystore
@@ -92,6 +94,7 @@ oc get secrets -n toystore -l app=toystore
 ```
 
 #### 2. Verify Gamestore Demo Resources
+
 ```bash
 # check gamestore namespace
 oc get pods -n gamestore
@@ -118,6 +121,7 @@ oc get apiproduct -n gamestore
 ```
 
 #### 3. Quick Health Check
+
 ```bash
 # all-in-one verification
 oc get kuadrant,gateway,httproute,authpolicy,ratelimitpolicy,planpolicy,apiproduct --all-namespaces

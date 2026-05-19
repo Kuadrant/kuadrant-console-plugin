@@ -15,7 +15,7 @@ metadata:
   name: external
   namespace: api-gateway
 spec:
-  gatewayClassName: openshift-default
+  gatewayClassName: istio
   listeners:
     - name: http
       protocol: HTTP
