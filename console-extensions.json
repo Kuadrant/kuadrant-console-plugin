@@ -395,36 +395,6 @@
     }
   },
   {
-    "type": "console.tab/horizontalNav",
-    "properties": {
-      "model": {
-        "group": "devportal.kuadrant.io",
-        "version": "v1alpha1",
-        "kind": "APIProduct"
-      },
-      "page": {
-        "name": "Definition",
-        "href": "definition"
-      },
-      "component": { "$codeRef": "APIProductDefinitionTab" }
-    }
-  },
-  {
-    "type": "console.tab/horizontalNav",
-    "properties": {
-      "model": {
-        "group": "devportal.kuadrant.io",
-        "version": "v1alpha1",
-        "kind": "APIProduct"
-      },
-      "page": {
-        "name": "Policies",
-        "href": "policies"
-      },
-      "component": { "$codeRef": "APIProductPoliciesTab" }
-    }
-  },
-  {
     "type": "console.navigation/href",
     "properties": {
       "id": "kuadrant-policy-topology-admin",
