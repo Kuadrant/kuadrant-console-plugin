@@ -93,7 +93,7 @@ const canRead = accessReviews[0];
 
 ### 5. Configuration
 
-The plugin supports configurable Topology andPrometheus metrics for gateway traffic monitoring. This allows the console to work with different Gateway API implementations (OpenShift 4.19+, OSSM, etc.).
+The plugin supports configurable Topology and Prometheus metrics for gateway traffic monitoring. This allows the console to work with different Gateway API implementations (OpenShift 4.19+, OSSM, etc.).
 
 **Configuration is managed through:**
 - `src/utils/configLoader.ts` - Configuration schema and defaults
