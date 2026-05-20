@@ -23,6 +23,13 @@ spec:
             - containerPort: {{ .Values.plugin.port }}
               protocol: TCP
           imagePullPolicy: {{ .Values.plugin.imagePullPolicy }}
+          env:
+            - name: TOPOLOGY_CONFIGMAP_NAME
+              value: {{ .Values.plugin.topologyConfigMapName | default "topology" | quote }}
+            - name: TOPOLOGY_CONFIGMAP_NAMESPACE
+              value: {{ .Values.plugin.topologyConfigMapNamespace | default "kuadrant-system" | quote }}
+            - name: METRICS_WORKLOAD_SUFFIX
+              value: {{ .Values.plugin.metricsWorkloadSuffix | default "-openshift-default" | quote }}
           {{- if and (.Values.plugin.securityContext.enabled) (.Values.plugin.containerSecurityContext) }}
           securityContext: {{ tpl (toYaml (omit .Values.plugin.containerSecurityContext "enabled")) $ | nindent 12 }}
           {{- end }}

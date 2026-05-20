@@ -91,6 +91,22 @@ const accessReviews = useAccessReviews(resourceAttributes);
 const canRead = accessReviews[0];
 ```
 
+### 5. Configuration
+
+The plugin supports configurable Topology andPrometheus metrics for gateway traffic monitoring. This allows the console to work with different Gateway API implementations (OpenShift 4.19+, OSSM, etc.).
+
+**Configuration is managed through:**
+- `src/utils/configLoader.ts` - Configuration schema and defaults
+- `src/utils/metricsQueries.ts` - Query utilities
+- Environment variables in deployment manifests
+
+**Example ENV Configuration:**
+```yaml
+TOPOLOGY_CONFIGMAP_NAME: "topology"
+TOPOLOGY_CONFIGMAP_NAMESPACE: "kuadrant-system"
+METRICS_WORKLOAD_SUFFIX: "-openshift-default"
+```
+
 ## Key Components
 
 - **KuadrantOverviewPage**: Main dashboard with gateway health status
