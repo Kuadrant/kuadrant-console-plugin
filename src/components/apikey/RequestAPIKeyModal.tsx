@@ -73,11 +73,18 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
   });
 
   // Fetch existing APIKeys in the active namespace to check for uniqueness
-  const [existingAPIKeys] = useK8sWatchResource<APIKey[]>({
-    groupVersionKind: RESOURCES.APIKey.gvk,
-    namespace: activeNamespace,
-    isList: true,
-  });
+  const effectiveNamespace =
+    activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : undefined;
+
+  const [existingAPIKeys, existingAPIKeysLoaded] = useK8sWatchResource<APIKey[]>(
+    effectiveNamespace
+      ? {
+          groupVersionKind: RESOURCES.APIKey.gvk,
+          namespace: effectiveNamespace,
+          isList: true,
+        }
+      : null,
+  );
 
   // Filter only active API products (not being deleted) that have discovered plans
   const activeAPIProducts = React.useMemo(() => {
@@ -222,6 +229,9 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
     if (name.length > 63) {
       return t('Must be no more than 63 characters');
     }
+    if (!existingAPIKeysLoaded) {
+      return '';
+    }
     const isDuplicate = (existingAPIKeys || []).some(
       (key) => key.metadata?.name?.toLowerCase() === name.toLowerCase(),
     );
@@ -237,7 +247,7 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
     } else {
       setApiKeyNameError(validateApiKeyName(apiKeyName));
     }
-  }, [apiKeyName, existingAPIKeys, apiKeyNameTouched]);
+  }, [apiKeyName, existingAPIKeys, existingAPIKeysLoaded, apiKeyNameTouched]);
 
   const handleApiKeyNameChange = (_event: React.FormEvent<HTMLInputElement>, value: string) => {
     setApiKeyName(value);
@@ -254,7 +264,7 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
     }
 
     // Check for validation errors
-    if (apiKeyNameError) {
+    if (apiKeyNameError || !existingAPIKeysLoaded) {
       return;
     }
 
@@ -550,7 +560,8 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
                 !selectedTier ||
                 !apiKeyName ||
                 !!apiKeyNameError ||
-                isSubmitting
+                isSubmitting ||
+                !existingAPIKeysLoaded
               }
               isLoading={isSubmitting}
             >
