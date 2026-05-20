@@ -262,17 +262,23 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
 
       try {
         await k8sCreate({ model: secretModel, data: secretResource });
-      } catch (secretError: any) {
+      } catch (secretError: unknown) {
         // If secret already exists, continue (idempotent operation)
-        const isAlreadyExists =
-          secretError?.code === 409 ||
-          secretError?.reason === 'AlreadyExists' ||
-          (typeof secretError?.message === 'string' &&
-            (secretError.message.includes('already exists') ||
-              secretError.message.includes('AlreadyExists')));
+        if (typeof secretError === 'object' && secretError !== null) {
+          const error = secretError as Record<string, unknown>;
+          const isAlreadyExists =
+            error.code === 409 ||
+            error.reason === 'AlreadyExists' ||
+            (typeof error.message === 'string' &&
+              (error.message.includes('already exists') ||
+                error.message.includes('AlreadyExists')));
 
-        if (!isAlreadyExists) {
-          // Re-throw any other secret creation error
+          if (!isAlreadyExists) {
+            // Re-throw any other secret creation error
+            throw secretError;
+          }
+        } else {
+          // Re-throw non-object errors
           throw secretError;
         }
       }
@@ -310,8 +316,8 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
 
       // Success - close modal
       handleClose();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       setSubmitError(errorMessage);
       console.error('Failed to create API Key or Secret:', error);
     } finally {

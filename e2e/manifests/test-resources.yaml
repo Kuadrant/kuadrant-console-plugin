@@ -200,6 +200,9 @@ spec:
       namespaces:
         from: Same
 ---
+# HTTPRoute for testing in kuadrant-test-2 namespace
+# Note: The referenced backend Service "test-service" is intentionally not defined.
+# E2E tests only verify resource creation and UI display, not actual routing functionality.
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
