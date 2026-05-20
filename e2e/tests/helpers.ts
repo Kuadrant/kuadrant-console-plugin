@@ -90,7 +90,6 @@ export async function stopImpersonation(page: Page): Promise<void> {
 // Wait for Kuadrant plugin to load by checking for sidebar menu item
 async function waitForKuadrantPlugin(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Kuadrant', exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
-  await page.waitForTimeout(2000);
 }
 
 // SPA navigation using pushState - preserves redux state (including impersonation)
