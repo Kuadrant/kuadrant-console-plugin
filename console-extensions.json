@@ -155,7 +155,7 @@
         "kind": "APIProduct"
       },
       "page": {
-        "name": "API keys",
+        "name": "API Keys",
         "href": "apikeys"
       },
       "component": { "$codeRef": "APIProductAPIKeysTab" }

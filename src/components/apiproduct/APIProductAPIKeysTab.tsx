@@ -83,7 +83,7 @@ const APIProductAPIKeysTab: React.FC = () => {
 
   // Filter state
   const [isFilterTypeOpen, setIsFilterTypeOpen] = React.useState(false);
-  const [filterType, setFilterType] = React.useState<string>('Name');
+  const [filterType, setFilterType] = React.useState<string>(t('Name'));
   const [isFilterValueOpen, setIsFilterValueOpen] = React.useState(false);
   const [nameFilter, setNameFilter] = React.useState<string>('');
   const [statusFilters, setStatusFilters] = React.useState<string[]>([]);
@@ -506,9 +506,9 @@ const APIProductAPIKeysTab: React.FC = () => {
                     onOpenChange={setIsFilterTypeOpen}
                     isOpen={isFilterTypeOpen}
                   >
-                    <SelectOption value="Name">{t('Name')}</SelectOption>
-                    <SelectOption value="Status">{t('Status')}</SelectOption>
-                    <SelectOption value="Requester">{t('Requester')}</SelectOption>
+                    <SelectOption value={t('Name')}>{t('Name')}</SelectOption>
+                    <SelectOption value={t('Status')}>{t('Status')}</SelectOption>
+                    <SelectOption value={t('Requester')}>{t('Requester')}</SelectOption>
                   </Select>
                 </ToolbarItem>
 
@@ -517,7 +517,7 @@ const APIProductAPIKeysTab: React.FC = () => {
                   labels={nameFilter ? [nameFilter] : []}
                   deleteLabel={onDeleteNameFilter}
                   deleteLabelGroup={onDeleteNameGroup}
-                  showToolbarItem={filterType === 'Name'}
+                  showToolbarItem={filterType === t('Name')}
                 >
                   <InputGroup className="pf-v5-c-input-group co-filter-group">
                     <TextInput
@@ -528,7 +528,7 @@ const APIProductAPIKeysTab: React.FC = () => {
                       onChange={handleNameFilterChange}
                       value={nameFilter}
                       className="pf-v5-c-form-control co-text-filter-with-icon"
-                      aria-label="Name filter"
+                      aria-label={t('Name filter')}
                     />
                   </InputGroup>
                 </ToolbarFilter>
@@ -538,7 +538,7 @@ const APIProductAPIKeysTab: React.FC = () => {
                   labels={statusFilters}
                   deleteLabel={onDeleteStatusFilter}
                   deleteLabelGroup={onDeleteStatusGroup}
-                  showToolbarItem={filterType === 'Status'}
+                  showToolbarItem={filterType === t('Status')}
                 >
                   <Select
                     toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
@@ -584,7 +584,7 @@ const APIProductAPIKeysTab: React.FC = () => {
                   labels={ownerFilter ? [ownerFilter] : []}
                   deleteLabel={onDeleteOwnerFilter}
                   deleteLabelGroup={onDeleteOwnerGroup}
-                  showToolbarItem={filterType === 'Requester'}
+                  showToolbarItem={filterType === t('Requester')}
                 >
                   <InputGroup className="pf-v5-c-input-group co-filter-group">
                     <TextInput
@@ -595,7 +595,7 @@ const APIProductAPIKeysTab: React.FC = () => {
                       onChange={handleOwnerFilterChange}
                       value={ownerFilter}
                       className="pf-v5-c-form-control co-text-filter-with-icon"
-                      aria-label="Requester filter"
+                      aria-label={t('Requester filter')}
                     />
                   </InputGroup>
                 </ToolbarFilter>
