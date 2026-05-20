@@ -104,6 +104,7 @@
       "APIProductDefinitionTab": "./components/apiproduct/APIProductDefinitionTab",
       "MyAPIKeysPage": "./components/apikey/MyAPIKeysPage",
       "APIKeyDetailPage": "./components/apikey/APIKeyDetailPage",
+      "APIKeyApprovalPage": "./components/apikey/APIKeyApprovalPage",
       "useDNSPolicyActions": "./components/dnspolicy/useDNSPolicyActions",
       "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions"
     },

@@ -1,0 +1,33 @@
+/* Rejection Modal Styles - scoped with kuadrant-rejection-modal__ prefix */
+
+/* 4 rows × 44px per row (PatternFly compact table row height) */
+.kuadrant-rejection-modal__table-container {
+  max-height: 176px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+
+.kuadrant-rejection-modal__sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* Light theme */
+.pf-v6-theme-light .kuadrant-rejection-modal__sticky-header {
+  background-color: var(--pf-v6-global--BackgroundColor--100);
+}
+
+/* Dark theme */
+.pf-v6-theme-dark .kuadrant-rejection-modal__sticky-header {
+  background-color: var(--pf-v6-global--BackgroundColor--100);
+}
+
+.kuadrant-rejection-modal__single-details {
+  margin-bottom: 1rem;
+}
+
+.kuadrant-rejection-modal__bulk-note {
+  margin-top: 1rem;
+  font-style: italic;
+}
