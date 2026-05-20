@@ -213,7 +213,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
     policyName &&
     selectedNamespace &&
     selectedGateway.name &&
-    (selectedClusterIssuers.name || selectedIssuer.name)
+    (certIssuerType === 'clusterissuer' ? !!selectedClusterIssuers.name : !!selectedIssuer.name)
   ) {
     isFormValid = true;
   }
