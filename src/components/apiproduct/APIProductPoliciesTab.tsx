@@ -9,12 +9,14 @@ import {
   EmptyState,
   EmptyStateBody,
   Alert,
+  Spinner,
 } from '@patternfly/react-core';
 import { SearchIcon } from '@patternfly/react-icons';
 import {
   useK8sWatchResource,
   useK8sWatchResources,
   useActiveNamespace,
+  useAccessReview,
   ResourceLink,
   K8sResourceCommon,
   VirtualizedTable,
@@ -27,6 +29,8 @@ import { APIProduct } from './types';
 import { RESOURCES } from '../../utils/resources';
 import { getStatusLabel } from '../../utils/statusLabel';
 import extractResourceNameFromURL from '../../utils/nameFromPath';
+import { getResourceNameFromKind } from '../../utils/getModelFromResource';
+import NoPermissionsView from '../NoPermissionsView';
 import '../kuadrant.css';
 
 type PolicyKind = 'PlanPolicy' | 'AuthPolicy' | 'RateLimitPolicy' | 'OIDCPolicy';
@@ -50,13 +54,25 @@ const APIProductPoliciesTab: React.FC = () => {
   const location = useLocation();
   const productName = extractResourceNameFromURL(location.pathname);
 
-  // Fetch the APIProduct
-  const [apiProduct, productLoaded, productLoadError] = useK8sWatchResource<APIProduct>({
-    groupVersionKind: RESOURCES.APIProduct.gvk,
+  const [canGet, canGetLoading] = useAccessReview({
+    group: RESOURCES.APIProduct.gvk.group,
+    resource: getResourceNameFromKind(RESOURCES.APIProduct.gvk.kind),
+    verb: 'get',
     namespace: activeNamespace,
     name: productName,
-    isList: false,
   });
+
+  // Fetch the APIProduct
+  const [apiProduct, productLoaded, productLoadError] = useK8sWatchResource<APIProduct>(
+    canGet && !canGetLoading
+      ? {
+          groupVersionKind: RESOURCES.APIProduct.gvk,
+          namespace: activeNamespace,
+          name: productName,
+          isList: false,
+        }
+      : null,
+  );
 
   // Extract target HTTPRoute reference
   const targetRef = apiProduct?.spec?.targetRef;
@@ -194,6 +210,20 @@ const APIProductPoliciesTab: React.FC = () => {
       </>
     );
   };
+
+  if (canGetLoading) {
+    return (
+      <PageSection hasBodyWrapper={false}>
+        <Spinner size="lg" />
+      </PageSection>
+    );
+  }
+
+  if (!canGet) {
+    return (
+      <NoPermissionsView primaryMessage={t('You do not have permission to view API Products')} />
+    );
+  }
 
   // Error states
   if (productLoadError) {
