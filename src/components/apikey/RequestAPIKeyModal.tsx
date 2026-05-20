@@ -54,6 +54,7 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
   const [tierSearchValue, setTierSearchValue] = React.useState<string>('');
 
   const [apiKeyName, setApiKeyName] = React.useState<string>('');
+  const [apiKeyNameTouched, setApiKeyNameTouched] = React.useState(false);
   const [apiKeyNameError, setApiKeyNameError] = React.useState<string>('');
 
   const [useCase, setUseCase] = React.useState<string>('');
@@ -68,6 +69,13 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
   const [apiProducts, apiProductsLoaded] = useK8sWatchResource<APIProduct[]>({
     groupVersionKind: RESOURCES.APIProduct.gvk,
     namespace: undefined,
+    isList: true,
+  });
+
+  // Fetch existing APIKeys in the active namespace to check for uniqueness
+  const [existingAPIKeys] = useK8sWatchResource<APIKey[]>({
+    groupVersionKind: RESOURCES.APIKey.gvk,
+    namespace: activeNamespace,
     isList: true,
   });
 
@@ -158,6 +166,7 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
     setTierSearchValue('');
     setIsTierSelectOpen(false);
     setApiKeyName('');
+    setApiKeyNameTouched(false);
     setApiKeyNameError('');
     setUseCase('');
     setIsSubmitting(false);
@@ -210,16 +219,29 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
         "Must consist of lowercase alphanumeric characters or '-', and must start and end with an alphanumeric character",
       );
     }
-    if (name.length > 253) {
-      return t('Must be no more than 253 characters');
+    if (name.length > 63) {
+      return t('Must be no more than 63 characters');
+    }
+    const isDuplicate = (existingAPIKeys || []).some(
+      (key) => key.metadata?.name?.toLowerCase() === name.toLowerCase(),
+    );
+    if (isDuplicate) {
+      return t('API key name is already in use');
     }
     return '';
   };
 
+  React.useEffect(() => {
+    if (apiKeyName === '') {
+      setApiKeyNameError(apiKeyNameTouched ? t('API key name is required') : '');
+    } else {
+      setApiKeyNameError(validateApiKeyName(apiKeyName));
+    }
+  }, [apiKeyName, existingAPIKeys, apiKeyNameTouched]);
+
   const handleApiKeyNameChange = (_event: React.FormEvent<HTMLInputElement>, value: string) => {
     setApiKeyName(value);
-    const error = validateApiKeyName(value);
-    setApiKeyNameError(error);
+    setApiKeyNameTouched(true);
   };
 
   const hasNoAPIProducts = apiProductsLoaded && activeAPIProducts.length === 0;
