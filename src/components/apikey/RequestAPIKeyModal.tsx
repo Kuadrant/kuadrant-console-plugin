@@ -76,15 +76,11 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
   const effectiveNamespace =
     activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : undefined;
 
-  const [existingAPIKeys, existingAPIKeysLoaded] = useK8sWatchResource<APIKey[]>(
-    effectiveNamespace
-      ? {
-          groupVersionKind: RESOURCES.APIKey.gvk,
-          namespace: effectiveNamespace,
-          isList: true,
-        }
-      : null,
-  );
+  const [existingAPIKeys, existingAPIKeysLoaded] = useK8sWatchResource<APIKey[]>({
+    groupVersionKind: RESOURCES.APIKey.gvk,
+    namespace: effectiveNamespace,
+    isList: true,
+  });
 
   // Filter only active API products (not being deleted) that have discovered plans
   const activeAPIProducts = React.useMemo(() => {
