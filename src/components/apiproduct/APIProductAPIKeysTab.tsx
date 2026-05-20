@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useLocation, Link } from 'react-router-dom-v5-compat';
+import { useLocation } from 'react-router-dom-v5-compat';
 import { sortable } from '@patternfly/react-table';
 import {
   PageSection,
@@ -40,7 +40,11 @@ import {
   consoleFetchJSON,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { SearchIcon, EllipsisVIcon, InfoCircleIcon } from '@patternfly/react-icons';
-import { RESOURCES } from '../../utils/resources';
+import {
+  RESOURCES,
+  OpenshiftUser,
+  SelfSubjectReviewResponse,
+} from '../../utils/resources';
 import { getModelFromResource, getResourceNameFromKind } from '../../utils/getModelFromResource';
 import { APIKeyRequest, APIKeyApproval } from '../apikey/types';
 import { getRequestStatus } from '../apikey/utils';
@@ -102,15 +106,42 @@ const APIProductAPIKeysTab: React.FC = () => {
     namespace: activeNamespace,
   });
 
-  // Fetch current username
+  // Fetch current username (works in both MicroShift and OpenShift)
   React.useEffect(() => {
-    consoleFetchJSON('/api/kubernetes/apis/user.openshift.io/v1/users/~')
-      .then((user: { metadata: { name: string } }) => {
-        setCurrentUser(user.metadata.name);
-      })
-      .catch((err: unknown) => {
-        console.error('Failed to get current user:', err);
-      });
+    const fetchUsername = async () => {
+      try {
+        // Try OpenShift User API first (OpenShift 4.x)
+        try {
+          const user = (await consoleFetchJSON(
+            '/api/kubernetes/apis/user.openshift.io/v1/users/~',
+          )) as OpenshiftUser;
+          if (user?.metadata?.name) {
+            setCurrentUser(user.metadata.name);
+            return;
+          }
+        } catch (_openshiftError) {
+          // OpenShift User API not available, fall back to SelfSubjectReview
+        }
+
+        // Fallback: Try Kubernetes SelfSubjectReview (K8s 1.27+, MicroShift)
+        const response = (await consoleFetchJSON.post(
+          '/api/kubernetes/apis/authentication.k8s.io/v1/selfsubjectreviews',
+          {
+            apiVersion: 'authentication.k8s.io/v1',
+            kind: 'SelfSubjectReview',
+          },
+        )) as SelfSubjectReviewResponse;
+
+        const username = response?.status?.userInfo?.username;
+        if (username) {
+          setCurrentUser(username);
+        }
+      } catch (_error) {
+        // Failed to fetch username, proceeding without it
+      }
+    };
+
+    fetchUsername();
   }, []);
 
   // Filter data based on filter type and value AND the API product
@@ -359,7 +390,9 @@ const APIProductAPIKeysTab: React.FC = () => {
               headerContent={<div>{t('Use Case')}</div>}
               bodyContent={<div>{obj.spec.useCase}</div>}
             >
-              <InfoCircleIcon style={{ color: 'var(--pf-v6-global--info-color--100)', cursor: 'pointer' }} />
+              <InfoCircleIcon
+                style={{ color: 'var(--pf-v6-global--info-color--100)', cursor: 'pointer' }}
+              />
             </Popover>
           ) : (
             '-'
@@ -567,7 +600,7 @@ const APIProductAPIKeysTab: React.FC = () => {
                   </InputGroup>
                 </ToolbarFilter>
               </ToolbarGroup>
-              <ToolbarItem variant="pagination" align={{ default: 'alignRight' }}>
+              <ToolbarItem variant="pagination" align={{ default: 'alignEnd' }}>
                 <Pagination
                   itemCount={filteredData.length}
                   perPage={perPage}
