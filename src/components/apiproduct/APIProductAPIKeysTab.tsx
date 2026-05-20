@@ -40,11 +40,7 @@ import {
   consoleFetchJSON,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { SearchIcon, EllipsisVIcon, InfoCircleIcon } from '@patternfly/react-icons';
-import {
-  RESOURCES,
-  OpenshiftUser,
-  SelfSubjectReviewResponse,
-} from '../../utils/resources';
+import { RESOURCES, OpenshiftUser, SelfSubjectReviewResponse } from '../../utils/resources';
 import { getModelFromResource, getResourceNameFromKind } from '../../utils/getModelFromResource';
 import { APIKeyRequest, APIKeyApproval } from '../apikey/types';
 import { getRequestStatus } from '../apikey/utils';
@@ -187,6 +183,7 @@ const APIProductAPIKeysTab: React.FC = () => {
   ) => {
     setFilterType(selection);
     setIsFilterTypeOpen(false);
+    setPage(1);
   };
 
   const onFilterValueToggle = () => setIsFilterValueOpen(!isFilterValueOpen);
@@ -198,44 +195,54 @@ const APIProductAPIKeysTab: React.FC = () => {
     setStatusFilters((prev) =>
       prev.includes(selection) ? prev.filter((s) => s !== selection) : [...prev, selection],
     );
+    setPage(1);
   };
 
   const handleNameFilterChange = (_event: React.FormEvent<HTMLInputElement>, value: string) => {
     setNameFilter(value);
+    setPage(1);
   };
 
   const handleOwnerFilterChange = (_event: React.FormEvent<HTMLInputElement>, value: string) => {
     setOwnerFilter(value);
+    setPage(1);
   };
 
   const onDeleteNameFilter = () => {
     setNameFilter('');
+    setPage(1);
   };
 
   const onDeleteStatusFilter = (_category: string, label: string) => {
     setStatusFilters((prev) => prev.filter((s) => s !== label));
+    setPage(1);
   };
 
   const onDeleteOwnerFilter = () => {
     setOwnerFilter('');
+    setPage(1);
   };
 
   const onDeleteNameGroup = () => {
     setNameFilter('');
+    setPage(1);
   };
 
   const onDeleteStatusGroup = () => {
     setStatusFilters([]);
+    setPage(1);
   };
 
   const onDeleteOwnerGroup = () => {
     setOwnerFilter('');
+    setPage(1);
   };
 
   const onClearAllFilters = () => {
     setNameFilter('');
     setStatusFilters([]);
     setOwnerFilter('');
+    setPage(1);
   };
 
   // Pagination handlers
