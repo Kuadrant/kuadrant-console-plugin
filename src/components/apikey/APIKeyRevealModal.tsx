@@ -7,12 +7,11 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
-  Checkbox,
   ClipboardCopy,
   Alert,
 } from '@patternfly/react-core';
 import { ExclamationTriangleIcon } from '@patternfly/react-icons';
-import { k8sGet, useK8sModel, k8sUpdate } from '@openshift-console/dynamic-plugin-sdk';
+import { k8sGet, useK8sModel } from '@openshift-console/dynamic-plugin-sdk';
 import { APIKey, Secret } from '../../utils/resources';
 import '../kuadrant.css';
 
@@ -26,7 +25,6 @@ const APIKeyRevealModal: React.FC<APIKeyRevealModalProps> = ({ apiKeyObj, onClos
   const [showRevealModal, setShowRevealModal] = React.useState(false);
   const [apiKey, setApiKey] = React.useState<string>('');
   const [loading, setLoading] = React.useState(false);
-  const [confirmed, setConfirmed] = React.useState(false);
   const [error, setError] = React.useState<string>('');
 
   const secretName = apiKeyObj.spec?.secretRef?.name || '';
@@ -56,30 +54,6 @@ const APIKeyRevealModal: React.FC<APIKeyRevealModalProps> = ({ apiKeyObj, onClos
         // Decode from base64
         const decodedKey = atob(encodedKey);
         setApiKey(decodedKey);
-
-        // Update the Secret annotation to mark it as viewed
-        try {
-          // Add annotation to the secret
-          const updatedSecret = {
-            ...secret,
-            metadata: {
-              ...secret.metadata,
-              annotations: {
-                ...secret.metadata?.annotations,
-                'devportal.kuadrant.io/apikey-viewed': 'true',
-              },
-            },
-          };
-
-          await k8sUpdate({
-            model: secretModel,
-            data: updatedSecret,
-          });
-        } catch (updateErr) {
-          console.error('Failed to update apikey-viewed annotation:', updateErr);
-          // Continue showing the key even if annotation update fails
-        }
-
         setShowRevealModal(true);
       } else {
         setError(t('API key not found in secret'));
@@ -101,11 +75,8 @@ const APIKeyRevealModal: React.FC<APIKeyRevealModalProps> = ({ apiKeyObj, onClos
   };
 
   const handleRevealModalClose = () => {
-    if (confirmed) {
-      setShowRevealModal(false);
-      setConfirmed(false);
-      onClose();
-    }
+    setShowRevealModal(false);
+    onClose();
   };
 
   return (
@@ -127,9 +98,7 @@ const APIKeyRevealModal: React.FC<APIKeyRevealModalProps> = ({ apiKeyObj, onClos
             }
           />
           <ModalBody>
-            {t(
-              'The API Key can only be viewed once. After you reveal it, you will not be able to retrieve it again.',
-            )}
+            {t('You are about to reveal your API key. Make sure to store it securely.')}
             {error && (
               <Alert variant="danger" isInline title={t('Error')} style={{ marginTop: '16px' }}>
                 {error}
@@ -177,25 +146,9 @@ const APIKeyRevealModal: React.FC<APIKeyRevealModalProps> = ({ apiKeyObj, onClos
             <ClipboardCopy isReadOnly hoverTip={t('Copy')} clickTip={t('Copied')}>
               {apiKey}
             </ClipboardCopy>
-            <div style={{ marginTop: '16px' }}>
-              <Checkbox
-                id="confirm-copied"
-                label={t("I've copied the key and I'm aware that it's only shown once.")}
-                isChecked={confirmed}
-                onChange={(event, checked) => {
-                  event.stopPropagation();
-                  setConfirmed(checked);
-                }}
-              />
-            </div>
           </ModalBody>
           <ModalFooter>
-            <Button
-              key="close"
-              variant="primary"
-              onClick={handleRevealModalClose}
-              isDisabled={!confirmed}
-            >
+            <Button key="close" variant="primary" onClick={handleRevealModalClose}>
               {t('Close')}
             </Button>
           </ModalFooter>
