@@ -90,6 +90,21 @@ roleRef:
   name: test-viewer
   apiGroup: rbac.authorization.k8s.io
 ---
+# test-api-owner: binds test-api-owner user to the api-owner ClusterRole (defined in config/rbac/api-management/)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: test-api-owner
+  namespace: kuadrant-test
+subjects:
+  - kind: User
+    name: test-api-owner
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: api-owner
+  apiGroup: rbac.authorization.k8s.io
+---
 # test-admin: full access to all kuadrant + gateway api resources
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole

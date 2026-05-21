@@ -1,0 +1,26 @@
+/* Scoped styles for APIKey approval modal */
+.kuadrant-approval-modal__table-container {
+  /* 4 rows × 44px per row (PatternFly compact table row height) */
+  max-height: 176px;
+  overflow-y: auto;
+}
+
+.kuadrant-approval-modal__sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+/* Light theme - white background */
+.pf-v6-theme-light .kuadrant-approval-modal__sticky-header {
+  background-color: var(--pf-v6-global--BackgroundColor--100);
+}
+
+/* Dark theme - dark background */
+.pf-v6-theme-dark .kuadrant-approval-modal__sticky-header {
+  background-color: var(--pf-v6-global--BackgroundColor--100);
+}
+
+.kuadrant-approval-modal__confirmation-text {
+  margin-top: var(--pf-v6-global--spacer--md);
+}

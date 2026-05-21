@@ -1,19 +1,20 @@
 import { test, expect } from '@playwright/test';
-import { impersonateUser, stopImpersonation, waitForPermissionsLoaded } from './helpers';
-
-const navigateToAPIProducts = async (page, namespace = 'kuadrant-test') => {
-  await page.evaluate((ns) => {
-    window.history.pushState({}, '', `/kuadrant/apiproducts/ns/${ns}`);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }, namespace);
-  await page.waitForLoadState('networkidle');
-};
+import {
+  impersonateUser,
+  stopImpersonation,
+  waitForPermissionsLoaded,
+  navigateToAPIProducts,
+  dismissConsoleTour,
+} from './helpers';
 
 test.describe('APIProduct List Page - Display and Filters', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await impersonateUser(page, 'test-admin');
+    await navigateToAPIProducts(page);
+    await dismissConsoleTour(page);
+    await page.waitForLoadState('networkidle');
   });
 
   test.afterEach(async ({ page }) => {
@@ -21,7 +22,6 @@ test.describe('APIProduct List Page - Display and Filters', () => {
   });
 
   test('displays API Products list with correct columns', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Verify page title
@@ -43,7 +43,6 @@ test.describe('APIProduct List Page - Display and Filters', () => {
   });
 
   test('displays API Products from test fixtures', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for table rows to load
@@ -67,7 +66,6 @@ test.describe('APIProduct List Page - Display and Filters', () => {
   });
 
   test('displays correct status labels', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for table to load
@@ -85,7 +83,6 @@ test.describe('APIProduct List Page - Display and Filters', () => {
   });
 
   test('displays PlanPolicy links correctly', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for table to load
@@ -101,7 +98,6 @@ test.describe('APIProduct List Page - Display and Filters', () => {
   });
 
   test('displays tags with correct styling', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Find the row for gamestore-api (has a PlanPolicy)
@@ -119,6 +115,9 @@ test.describe('APIProduct List Page - Status Filter', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await impersonateUser(page, 'test-admin');
+    await navigateToAPIProducts(page);
+    await dismissConsoleTour(page);
+    await page.waitForLoadState('networkidle');
   });
 
   test.afterEach(async ({ page }) => {
@@ -126,7 +125,6 @@ test.describe('APIProduct List Page - Status Filter', () => {
   });
 
   test('filters by Published status', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -160,7 +158,6 @@ test.describe('APIProduct List Page - Status Filter', () => {
   });
 
   test('filters by Draft status', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -192,7 +189,6 @@ test.describe('APIProduct List Page - Status Filter', () => {
   });
 
   test('clears status filter when clicking X on filter label', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Apply Published filter
@@ -235,6 +231,9 @@ test.describe('APIProduct List Page - Name Filter', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await impersonateUser(page, 'test-admin');
+    await navigateToAPIProducts(page);
+    await dismissConsoleTour(page);
+    await page.waitForLoadState('networkidle');
   });
 
   test.afterEach(async ({ page }) => {
@@ -242,7 +241,6 @@ test.describe('APIProduct List Page - Name Filter', () => {
   });
 
   test('filters by name (partial match)', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -268,7 +266,6 @@ test.describe('APIProduct List Page - Name Filter', () => {
   });
 
   test('filters by name (case insensitive)', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -286,7 +283,6 @@ test.describe('APIProduct List Page - Name Filter', () => {
   });
 
   test('shows empty state when no results match name filter', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -305,7 +301,6 @@ test.describe('APIProduct List Page - Name Filter', () => {
   });
 
   test('clears name filter when input is cleared', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -335,6 +330,9 @@ test.describe('APIProduct List Page - Namespace Filter', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await impersonateUser(page, 'test-admin');
+    await navigateToAPIProducts(page);
+    await dismissConsoleTour(page);
+    await page.waitForLoadState('networkidle');
   });
 
   test.afterEach(async ({ page }) => {
@@ -342,7 +340,6 @@ test.describe('APIProduct List Page - Namespace Filter', () => {
   });
 
   test('switches to namespace filter type', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -370,7 +367,6 @@ test.describe('APIProduct List Page - Namespace Filter', () => {
   });
 
   test('filters by namespace (partial match)', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -400,7 +396,6 @@ test.describe('APIProduct List Page - Namespace Filter', () => {
   });
 
   test('clears namespace filter when input is cleared', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -434,6 +429,9 @@ test.describe('APIProduct List Page - HTTPRoute Filter', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await impersonateUser(page, 'test-admin');
+    await navigateToAPIProducts(page);
+    await dismissConsoleTour(page);
+    await page.waitForLoadState('networkidle');
   });
 
   test.afterEach(async ({ page }) => {
@@ -441,7 +439,6 @@ test.describe('APIProduct List Page - HTTPRoute Filter', () => {
   });
 
   test('switches to HTTPRoute filter type', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -469,7 +466,6 @@ test.describe('APIProduct List Page - HTTPRoute Filter', () => {
   });
 
   test('filters by HTTPRoute', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -503,7 +499,6 @@ test.describe('APIProduct List Page - HTTPRoute Filter', () => {
   });
 
   test('clears HTTPRoute filter when clicking X on filter label', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -548,7 +543,6 @@ test.describe('APIProduct List Page - HTTPRoute Filter', () => {
   });
 
   test('selects multiple HTTPRoutes', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -591,6 +585,9 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await impersonateUser(page, 'test-admin');
+    await navigateToAPIProducts(page);
+    await dismissConsoleTour(page);
+    await page.waitForLoadState('networkidle');
   });
 
   test.afterEach(async ({ page }) => {
@@ -598,7 +595,6 @@ test.describe('APIProduct List Page - Combined Filters', () => {
   });
 
   test('applies both status and name filters together', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -635,7 +631,6 @@ test.describe('APIProduct List Page - Combined Filters', () => {
   });
 
   test('applies status and namespace filters together', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -676,7 +671,6 @@ test.describe('APIProduct List Page - Combined Filters', () => {
   });
 
   test('applies status and HTTPRoute filters together', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -720,7 +714,6 @@ test.describe('APIProduct List Page - Combined Filters', () => {
   });
 
   test('shows empty state when combined filters match nothing', async ({ page }) => {
-    await navigateToAPIProducts(page);
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
