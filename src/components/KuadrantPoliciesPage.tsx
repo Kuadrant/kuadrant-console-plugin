@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useState } from 'react';
-import { useParams, useHistory } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom-v5-compat';
 import { useTranslation } from 'react-i18next';
 import { sortable } from '@patternfly/react-table';
 import {
@@ -107,7 +107,7 @@ export const AllPoliciesListPage: React.FC<{
   }
 
   const [isOpen, setIsOpen] = useState(false);
-  const history = useHistory();
+  const navigate = useNavigate();
 
   const onToggleClick = () => setIsOpen(!isOpen);
 
@@ -115,7 +115,7 @@ export const AllPoliciesListPage: React.FC<{
     const resource = resourceGVKMapping[policyType];
     const resolvedNamespace = activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
     const targetUrl = `/k8s/ns/${resolvedNamespace}/${resource.group}~${resource.version}~${resource.kind}/~new`;
-    history.push(targetUrl);
+    navigate(targetUrl);
     setIsOpen(false); // Close the dropdown after selecting an option
   };
 
@@ -231,7 +231,7 @@ const KuadrantPoliciesPage: React.FC = () => {
   const { ns } = useParams<{ ns: string }>();
   const [activeNamespace, setActiveNamespace] = useActiveNamespace();
   const [activePerspective] = useActivePerspective();
-  const history = useHistory();
+  const navigate = useNavigate();
 
   React.useEffect(() => {
     if (ns && ns !== activeNamespace) {
@@ -420,7 +420,7 @@ const KuadrantPoliciesPage: React.FC = () => {
       currentTab = `/kuadrant/all-namespaces/policies/${activeTab}`;
     }
 
-    history.replace(currentTab);
+    navigate(currentTab, { replace: true });
   };
 
   return (
