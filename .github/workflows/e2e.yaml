@@ -31,11 +31,11 @@ jobs:
           chmod +x minc
           sudo mv minc /usr/local/bin/
 
-      - name: Install Playwright
-        run: npx playwright install --with-deps chromium
-
       - name: Install dependencies
         run: yarn install
+
+      - name: Install Playwright browsers
+        run: yarn playwright install --with-deps chromium
 
       - name: Setup cluster
         run: sudo ./e2e/setup.sh
