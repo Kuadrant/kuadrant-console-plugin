@@ -112,6 +112,14 @@
     "type": "console.tab/horizontalNav",
     "properties": {
       "model": { "group": "devportal.kuadrant.io", "version": "v1alpha1", "kind": "APIProduct" },
+      "page": { "name": "Overview", "href": "overview" },
+      "component": { "$codeRef": "APIProductOverviewTab" }
+    }
+  },
+  {
+    "type": "console.tab/horizontalNav",
+    "properties": {
+      "model": { "group": "devportal.kuadrant.io", "version": "v1alpha1", "kind": "APIProduct" },
       "page": { "name": "Target", "href": "targetref" },
       "component": { "$codeRef": "PolicyTargetRefPage" }
     }

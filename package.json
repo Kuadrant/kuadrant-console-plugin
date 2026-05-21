@@ -100,6 +100,7 @@
       "PolicyTargetRefPage": "./components/PolicyTargetRefPage",
       "APIProductCreatePage": "./components/apiproduct/APIProductCreatePage",
       "APIProductsListPage": "./components/apiproduct/APIProductsListPage",
+      "APIProductOverviewTab": "./components/apiproduct/APIProductOverviewTab",
       "APIProductPoliciesTab": "./components/apiproduct/APIProductPoliciesTab",
       "APIProductDefinitionTab": "./components/apiproduct/APIProductDefinitionTab",
       "APIProductAPIKeysTab": "./components/apiproduct/APIProductAPIKeysTab",
