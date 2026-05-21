@@ -43,7 +43,7 @@ jobs:
         run: yarn playwright install --with-deps chromium
 
       - name: Setup cluster
-        run: sudo ./e2e/setup.sh
+        run: ./e2e/setup.sh
 
       - name: Start plugin dev server
         run: yarn clean && yarn start &
@@ -75,4 +75,4 @@ jobs:
 
       - name: Teardown
         if: always()
-        run: sudo ./e2e/teardown.sh
+        run: ./e2e/teardown.sh
