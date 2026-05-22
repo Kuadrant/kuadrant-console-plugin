@@ -36,6 +36,7 @@ git push upstream vX.Y.Z
 This triggers the `Build and Push Versioned Multi-arch Image (Release)` [GitHub workflow](https://github.com/Kuadrant/kuadrant-console-plugin/blob/da4dc0582c442be725a534ff2790811d9cf7ecd7/.github/workflows/build.yaml#L51), which:
 - Builds the `kuadrant-console-plugin` image.
 - Pushes the versioned image to [Quay.io](https://quay.io/repository/kuadrant/console-plugin?tab=tags).
+- Uploads a versioned install manifest asset as `install-vX.Y.Z.yaml` on the GitHub release.
 
 ## 5. Bump to the Next Development Version
 

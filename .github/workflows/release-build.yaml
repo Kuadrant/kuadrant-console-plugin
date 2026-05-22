@@ -6,9 +6,13 @@ on:
       - published
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 env:
   IMAGE_BASE_NAME: kuadrant/console-plugin
   REGISTRY: quay.io
+  RELEASE_TAG: ${{ github.event_name == 'release' && (github.event.release.tag_name || github.event.release.name) || github.ref_name }}
 
 jobs:
   build:
@@ -33,7 +37,7 @@ jobs:
         uses: redhat-actions/buildah-build@v2
         with:
           image: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}
-          tags: ${{ github.event.release.name }}-${{ matrix.arch }}
+          tags: ${{ env.RELEASE_TAG }}-${{ matrix.arch }}
           archs: ${{ matrix.arch }}
           containerfiles: |
             ./Dockerfile
@@ -45,25 +49,40 @@ jobs:
           username: ${{ secrets.QUAY_USER }}
           password: ${{ secrets.QUAY_PASSWORD }}
           image: ${{ env.IMAGE_BASE_NAME }}
-          tags: ${{ github.event.release.name }}-${{ matrix.arch }}
+          tags: ${{ env.RELEASE_TAG }}-${{ matrix.arch }}
 
   manifest:
     name: Create and Push Multi-Arch Release Manifest
     needs: build
     runs-on: ubuntu-22.04
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Install Buildah
         run: sudo apt-get update && sudo apt-get install -y buildah
 
       - name: Create Release Manifest
         run: |
-          buildah manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }}
-          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }}-amd64
-          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }}-arm64
-          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }}-s390x
-          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }}-ppc64le
+          buildah manifest create ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ env.RELEASE_TAG }}
+          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ env.RELEASE_TAG }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ env.RELEASE_TAG }}-amd64
+          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ env.RELEASE_TAG }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ env.RELEASE_TAG }}-arm64
+          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ env.RELEASE_TAG }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ env.RELEASE_TAG }}-s390x
+          buildah manifest add ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ env.RELEASE_TAG }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ env.RELEASE_TAG }}-ppc64le
 
       - name: Push Multi-Arch Release Manifest
         run: |
-          buildah manifest push --all ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ github.event.release.name }} \
+          buildah manifest push --all ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ env.RELEASE_TAG }} docker://${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ env.RELEASE_TAG }} \
             --creds=${{ secrets.QUAY_USER }}:${{ secrets.QUAY_PASSWORD }}
+
+      - name: Generate release install manifest
+        run: |
+          RELEASE_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}:${{ env.RELEASE_TAG }}"
+          sed "s|image: quay.io/kuadrant/console-plugin:.*|image: ${RELEASE_IMAGE}|" install.yaml > "install-${{ env.RELEASE_TAG }}.yaml"
+
+      - name: Upload release install manifest asset
+        if: ${{ github.event_name == 'release' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ env.RELEASE_TAG }}" "install-${{ env.RELEASE_TAG }}.yaml" --clobber
