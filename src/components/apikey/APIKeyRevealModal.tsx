@@ -142,7 +142,7 @@ const APIKeyRevealModal: React.FC<APIKeyRevealModalProps> = ({ apiKeyObj, onClos
             <div style={{ marginBottom: '16px' }}>
               {t('Make sure to copy and store it securely before closing this view.')}
             </div>
-            <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>{t('API key')}</div>
+            <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>{t('API Key')}</div>
             <ClipboardCopy isReadOnly hoverTip={t('Copy')} clickTip={t('Copied')}>
               {apiKey}
             </ClipboardCopy>
