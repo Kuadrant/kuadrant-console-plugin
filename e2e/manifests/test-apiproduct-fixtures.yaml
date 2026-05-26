@@ -21,6 +21,33 @@ spec:
           port: 8080
 
 ---
+# AuthPolicy with API Key authentication for testing approval mode
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: test-httproute-auth
+  namespace: kuadrant-test
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-httproute
+  rules:
+    authentication:
+      "api-key-auth":
+        apiKey:
+          selector:
+            matchLabels:
+              authorino.kuadrant.io/managed-by: authorino
+          allNamespaces: true
+    response:
+      success:
+        headers:
+          "x-auth-data":
+            plain:
+              value: "authenticated"
+
+---
 # APIProduct for testing edit functionality
 apiVersion: devportal.kuadrant.io/v1alpha1
 kind: APIProduct
@@ -39,6 +66,11 @@ spec:
   documentation:
     openAPISpecURL: https://api.example.com/spec.yaml
     docsURL: https://api.example.com/docs
+  contact:
+    team: Platform Team
+    email: platform@example.com
+    slack: "#platform-support"
+    url: "https://platform.example.com/support"
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
@@ -109,3 +141,118 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: test-httproute
+
+---
+# HTTPRoute without AuthPolicy for testing "not set" auth methods
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: test-httproute-no-auth
+  namespace: kuadrant-test
+spec:
+  parentRefs:
+    - name: test-gateway
+      namespace: kuadrant-test
+  hostnames:
+    - "api-noauth.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: test-backend
+          port: 8080
+
+---
+# APIProduct without authentication for testing "not set" display
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: test-product-no-auth
+  namespace: kuadrant-test
+spec:
+  displayName: Test Product No Auth
+  version: v1.0.0
+  description: Product for testing no authentication methods
+  tags:
+    - test
+    - no-auth
+  publishStatus: Draft
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-httproute-no-auth
+
+---
+# HTTPRoute with both API Key and JWT authentication
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: test-httproute-multi-auth
+  namespace: kuadrant-test
+spec:
+  parentRefs:
+    - name: test-gateway
+      namespace: kuadrant-test
+  hostnames:
+    - "api-multi.example.com"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: test-backend
+          port: 8080
+
+---
+# AuthPolicy with both API Key and JWT authentication
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: test-httproute-multi-auth
+  namespace: kuadrant-test
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-httproute-multi-auth
+  rules:
+    authentication:
+      "api-key-auth":
+        apiKey:
+          selector:
+            matchLabels:
+              authorino.kuadrant.io/managed-by: authorino
+          allNamespaces: true
+      "jwt-auth":
+        jwt:
+          issuerUrl: https://auth.example.com
+    response:
+      success:
+        headers:
+          "x-auth-data":
+            plain:
+              value: "authenticated"
+
+---
+# APIProduct with multiple authentication methods
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: test-product-multi-auth
+  namespace: kuadrant-test
+spec:
+  displayName: Test Product Multi Auth
+  version: v1.0.0
+  description: Product for testing multiple authentication methods
+  tags:
+    - test
+  publishStatus: Draft
+  approvalMode: manual
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-httproute-multi-auth
+

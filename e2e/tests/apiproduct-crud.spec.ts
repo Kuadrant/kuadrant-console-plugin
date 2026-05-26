@@ -146,9 +146,11 @@ test.describe('APIProduct CRUD Operations', () => {
     await httpRouteSelect.click();
 
     // Wait for menu to appear and select the HTTPRoute option
-    const httpRouteOption = page.locator(
-      '[role="menuitem"]:has-text("kuadrant-test/test-httproute")',
-    );
+    // Use getByRole with exact: true to avoid ambiguous partial matches
+    const httpRouteOption = page.getByRole('menuitem', {
+      name: 'kuadrant-test/test-httproute',
+      exact: true,
+    });
     await httpRouteOption.waitFor({ state: 'visible', timeout: 10000 });
     await httpRouteOption.click();
 
@@ -233,9 +235,11 @@ test.describe('APIProduct CRUD Operations', () => {
     }
 
     // Wait for menu to appear and select the HTTPRoute option
-    const httpRouteOption = page.locator(
-      '[role="menuitem"]:has-text("kuadrant-test/test-httproute")',
-    );
+    // Use getByRole with exact: true to avoid ambiguous partial matches
+    const httpRouteOption = page.getByRole('menuitem', {
+      name: 'kuadrant-test/test-httproute',
+      exact: true,
+    });
     await httpRouteOption.waitFor({ state: 'visible', timeout: 5000 });
     await httpRouteOption.click();
 
