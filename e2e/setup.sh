@@ -30,8 +30,8 @@ kubectl apply -f "${SCRIPT_DIR}/manifests/test-apiproduct-fixtures.yaml"
 log "creating APIKey consumer fixtures (controller will create APIKeyRequests)..."
 kubectl apply -f "${SCRIPT_DIR}/manifests/test-apikey-fixtures.yaml"
 
-log "waiting for controller to create all 7 APIKeyRequests in kuadrant-test..."
-timeout 90 bash -c 'until [ "$(kubectl get apikeyrequests -n kuadrant-test --no-headers 2>/dev/null | wc -l)" -ge 7 ]; do sleep 2; done' \
+log "waiting for controller to create all 9 APIKeyRequests in kuadrant-test..."
+timeout 90 bash -c 'until [ "$(kubectl get apikeyrequests -n kuadrant-test --no-headers 2>/dev/null | wc -l)" -ge 9 ]; do sleep 2; done' \
   || { echo "ERROR: APIKeyRequests not all created after 90s (found $(kubectl get apikeyrequests -n kuadrant-test --no-headers 2>/dev/null | wc -l))"; exit 1; }
 
 log "e2e setup complete"

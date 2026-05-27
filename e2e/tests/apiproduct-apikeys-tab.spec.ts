@@ -239,9 +239,9 @@ test.describe('APIProduct API Keys Tab - View and Actions', () => {
     // Click to open the actions menu
     await actionsButton.click();
 
-    // Verify both Approve and Reject actions are available
+    // Verify both Approve and Deny actions are available
     await expect(page.locator('[role="menuitem"]:has-text("Approve")')).toBeVisible();
-    await expect(page.locator('[role="menuitem"]:has-text("Reject")')).toBeVisible();
+    await expect(page.locator('[role="menuitem"]:has-text("Deny")')).toBeVisible();
 
     // Close the menu by clicking elsewhere
     await page.locator('body').click();
@@ -310,9 +310,9 @@ test.describe('APIProduct API Keys Tab - Approve Request', () => {
     // Wait for modal to close
     await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 10_000 });
 
-    // Verify approval was successful by checking the actions button is gone
-    // The status update via watch may take time, so we rely on the absence of actions as confirmation
-    await expect(ivanRow.locator('[aria-label="Actions"]')).not.toBeVisible({ timeout: 30_000 });
+    // Verify approval was successful by checking for Active status
+    // Note: Actions button remains visible (approved keys can be denied)
+    await expect(ivanRow.locator('text=Active')).toBeVisible({ timeout: 30_000 });
   });
 });
 
@@ -350,27 +350,96 @@ test.describe('APIProduct API Keys Tab - Reject Request', () => {
     // Judy row should already be visible from beforeEach filter
     const judyRow = page.locator('tr:has-text("judy-apikey")');
 
-    // Open actions menu and click Reject
+    // Open actions menu and click Deny
     const actionsButton = judyRow.locator('[aria-label="Actions"]');
     await expect(actionsButton).toBeEnabled();
     await actionsButton.click();
-    await page.locator('[role="menuitem"]:has-text("Reject")').click();
+    await page.locator('[role="menuitem"]:has-text("Deny")').click();
 
-    // Verify rejection modal appears
+    // Verify denial modal appears
     await expect(page.locator('.pf-v6-c-modal-box')).toBeVisible();
     await expect(page.locator('.pf-v6-c-modal-box').locator('text=judy')).toBeVisible();
 
-    // Fill rejection reason
+    // Fill denial reason
     await page.locator('#rejection-reason').fill('Does not meet usage requirements');
 
-    // Click Reject button in modal
-    await page.locator('.pf-v6-c-modal-box').locator('button:has-text("Reject")').click();
+    // Click Deny button in modal
+    await page.locator('.pf-v6-c-modal-box').locator('button:has-text("Deny")').click();
 
     // Wait for modal to close
     await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 10_000 });
 
-    // Verify rejection was successful by checking the actions button is gone
-    // The status update via watch may take time, so we rely on the absence of actions as confirmation
-    await expect(judyRow.locator('[aria-label="Actions"]')).not.toBeVisible({ timeout: 30_000 });
+    // Verify denial was successful by checking for Denied status
+    await expect(judyRow.locator('text=Denied')).toBeVisible({ timeout: 30_000 });
+  });
+});
+
+// ── Deny Active Key ───────────────────────────────────────────────────────────
+
+test.describe('APIProduct API Keys Tab - Deny Active Key', () => {
+  test.beforeEach(async ({ page }) => {
+    // Create dedicated test fixture
+    await createNamespace('kate');
+    await createAPIKey({
+      name: 'kate-apikey',
+      namespace: 'kate',
+      userId: 'kate',
+      email: 'kate@tech.io',
+      planTier: 'silver',
+      useCase: 'Testing active key denial',
+      apiKeySecret: 'test-kate-key-11111',
+    });
+
+    await navigateAsOwner(page);
+
+    // Use the search filter to find our specific test resource
+    const searchInput = page.locator('input[placeholder*="Search by name"]');
+    await searchInput.fill('kate');
+    await expect(page.locator('tr:has-text("kate-apikey")')).toBeVisible({ timeout: 10_000 });
+  });
+
+  test.afterEach(async ({ page }) => {
+    await stopImpersonation(page);
+    await deleteAPIKey('kate', 'kate-apikey');
+    await deleteNamespace('kate');
+  });
+
+  test('should deny an active API key', async ({ page }) => {
+    const kateRow = page.locator('tr:has-text("kate-apikey")');
+
+    // Step 1: Approve the pending request
+    const actionsButton = kateRow.locator('[aria-label="Actions"]');
+    await expect(actionsButton).toBeEnabled({ timeout: 30_000 });
+    await actionsButton.click();
+    await page.locator('[role="menuitem"]:has-text("Approve")').click();
+
+    await expect(page.locator('.pf-v6-c-modal-box')).toBeVisible();
+    await page.locator('.pf-v6-c-modal-box').locator('button:has-text("Approve")').click();
+
+    await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 10_000 });
+
+    // Step 2: Wait for status to become "Active"
+    await expect(kateRow.locator('text=Active')).toBeVisible({
+      timeout: 30_000,
+    });
+
+    // Step 3: Deny the now-active key
+    await expect(actionsButton).toBeVisible({ timeout: 5_000 });
+    await expect(actionsButton).toBeEnabled();
+    await actionsButton.click();
+    await page.locator('[role="menuitem"]:has-text("Deny")').click();
+
+    await expect(page.locator('.pf-v6-c-modal-box')).toBeVisible();
+    await expect(page.locator('.pf-v6-c-modal-box').locator('text=kate')).toBeVisible();
+
+    await page.locator('.pf-v6-c-modal-box').locator('button:has-text("Deny")').click();
+
+    // Step 4: Verify modal closes
+    await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 10_000 });
+
+    // Step 5: Verify status changed to "Denied"
+    await expect(kateRow.locator('text=Denied')).toBeVisible({
+      timeout: 30_000,
+    });
   });
 });
