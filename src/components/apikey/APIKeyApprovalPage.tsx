@@ -297,7 +297,7 @@ const APIKeyApprovalPage: React.FC = () => {
     setRejectionModalRequests(toReject);
   };
 
-  if (canReadRequestsLoaded && canReadRequests === false) {
+  if (!canListLoading && canList === false) {
     return (
       <>
         <NamespaceBar />
@@ -310,7 +310,7 @@ const APIKeyApprovalPage: React.FC = () => {
     );
   }
 
-  if (!requestsLoaded) {
+  if (!requestsLoaded && canList) {
     return (
       <>
         <NamespaceBar />
@@ -326,13 +326,13 @@ const APIKeyApprovalPage: React.FC = () => {
     );
   }
 
-  if (requestsError) {
+  if (requestsLoadError) {
     return (
       <>
         <NamespaceBar />
         <PageSection hasBodyWrapper={false}>
           <Alert variant="danger" title={t('Error loading API key requests')}>
-            {String(requestsError)}
+            {String(requestsLoadError)}
           </Alert>
         </PageSection>
       </>

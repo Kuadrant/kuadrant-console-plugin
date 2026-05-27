@@ -29,6 +29,7 @@ import {
   Tooltip,
   Pagination,
   Label,
+  Spinner,
 } from '@patternfly/react-core';
 import {
   useK8sWatchResource,
@@ -60,6 +61,7 @@ import RequestAPIKeyModal from './RequestAPIKeyModal';
 import { APIKeyStatusBadge } from './APIKeyStatusBadge';
 import { APIProduct } from '../apiproduct/types';
 import { formatLimits } from '../../utils/apiKeyUtils';
+import NoPermissionsView from '../NoPermissionsView';
 import '../kuadrant.css';
 import { useKuadrantNamespaceChange } from '../../hooks/useKuadrantNamespaceChange';
 
@@ -216,16 +218,31 @@ const MyAPIKeysPage: React.FC = () => {
   const [username, setUsername] = React.useState<string>('');
   const [usernameLoaded, setUsernameLoaded] = React.useState(false);
 
-  const [apiKeys, loaded, apiKeysLoadError] = useK8sWatchResource<APIKey[]>({
-    groupVersionKind: RESOURCES.APIKey.gvk,
-    namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
-    isList: true,
+  const namespace = activeNamespace === '#ALL_NS#' ? undefined : activeNamespace;
+
+  // Check list permission before watching resources
+  const [canList, canListLoading] = useAccessReview({
+    group: RESOURCES.APIKey.gvk.group,
+    resource: getResourceNameFromKind(RESOURCES.APIKey.gvk.kind),
+    verb: 'list',
+    namespace,
   });
+
+  // Only watch APIKeys if user has permission
+  const [apiKeys, loaded, apiKeysLoadError] = useK8sWatchResource<APIKey[]>(
+    canList && !canListLoading
+      ? {
+          groupVersionKind: RESOURCES.APIKey.gvk,
+          namespace,
+          isList: true,
+        }
+      : null,
+  );
 
   // Watch APIProduct resources to get plan limits
   const [products, productsLoaded] = useK8sWatchResource<APIProduct[]>({
     groupVersionKind: RESOURCES.APIProduct.gvk,
-    namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
+    namespace,
     isList: true,
   });
 
@@ -381,6 +398,7 @@ const MyAPIKeysPage: React.FC = () => {
 
   // Filter data based on filter type and value
   const filteredData = React.useMemo(() => {
+    if (!Array.isArray(apiKeys)) return [];
     return apiKeys.filter((key) => {
       // Name filter
       if (nameFilter && !key.metadata.name.toLowerCase().includes(nameFilter.toLowerCase())) {
@@ -599,6 +617,41 @@ const MyAPIKeysPage: React.FC = () => {
     ),
     [activeNamespace, handleDeleteClick, canDelete, canDeleteLoading, getPlanLimits],
   );
+
+  // No permissions view
+  if (!canListLoading && canList === false) {
+    return (
+      <>
+        <Helmet>
+          <title data-test="example-page-title">{t('My API Keys')}</title>
+        </Helmet>
+        <NamespaceBar onNamespaceChange={handleNamespaceChange} />
+        <PageSection hasBodyWrapper={false}>
+          <NoPermissionsView primaryMessage={t('You do not have permission to view API keys')} />
+        </PageSection>
+      </>
+    );
+  }
+
+  // Loading view - only show when we have permission and resources are loading
+  if (canList && !loaded) {
+    return (
+      <>
+        <Helmet>
+          <title data-test="example-page-title">{t('My API Keys')}</title>
+        </Helmet>
+        <NamespaceBar onNamespaceChange={handleNamespaceChange} />
+        <PageSection hasBodyWrapper={false}>
+          <EmptyState>
+            <Spinner size="xl" />
+            <Title headingLevel="h2" size="lg">
+              {t('Loading API Keys...')}
+            </Title>
+          </EmptyState>
+        </PageSection>
+      </>
+    );
+  }
 
   return (
     <>
