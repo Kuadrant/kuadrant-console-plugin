@@ -18,7 +18,11 @@ import {
   NamespaceBar,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
-import { RESOURCES } from '../../utils/resources';
+import {
+  RESOURCES,
+  OpenshiftUser,
+  SelfSubjectReviewResponse,
+} from '../../utils/resources';
 import { getModelFromResource } from '../../utils/getModelFromResource';
 import { APIKeyRequest, APIKeyApproval } from './types';
 import { getRequestStatus } from './utils';
@@ -60,15 +64,46 @@ const APIKeyApprovalPage: React.FC = () => {
   });
 
   React.useEffect(() => {
-    consoleFetchJSON('/api/kubernetes/apis/user.openshift.io/v1/users/~')
-      .then((user: { metadata: { name: string } }) => {
-        setCurrentUser(user.metadata.name);
-        setUserLoaded(true);
-      })
-      .catch((err: unknown) => {
+    const fetchCurrentUser = async () => {
+      try {
+        // Try OpenShift User API first (OpenShift 4.x)
+        try {
+          const user = (await consoleFetchJSON(
+            '/api/kubernetes/apis/user.openshift.io/v1/users/~',
+          )) as OpenshiftUser;
+          if (user?.metadata?.name) {
+            setCurrentUser(user.metadata.name);
+            setUserLoaded(true);
+            return;
+          }
+        } catch (_openshiftError) {
+          // OpenShift User API not available, fall back to SelfSubjectReview
+        }
+
+        // Fallback: Try Kubernetes SelfSubjectReview (K8s 1.27+, MicroShift)
+        const response = (await consoleFetchJSON.post(
+          '/api/kubernetes/apis/authentication.k8s.io/v1/selfsubjectreviews',
+          {
+            apiVersion: 'authentication.k8s.io/v1',
+            kind: 'SelfSubjectReview',
+          },
+        )) as SelfSubjectReviewResponse;
+
+        const username = response?.status?.userInfo?.username;
+        if (username) {
+          setCurrentUser(username);
+          setUserLoaded(true);
+        } else {
+          throw new Error('Username not found in SelfSubjectReview response');
+        }
+      } catch (err: unknown) {
         console.error('Failed to get current user:', err);
         setUserError(true);
-      });
+        setUserLoaded(true);
+      }
+    };
+
+    fetchCurrentUser();
   }, []);
 
   const requestResource = React.useMemo(
