@@ -43,8 +43,8 @@ const RejectionModal: React.FC<RejectionModalProps> = ({
   const isBulk = requests.length > 1;
   const title =
     requests.length === 1
-      ? t('Reject API Key')
-      : t('Reject {{count}} API keys', { count: requests.length });
+      ? t('Deny API Key')
+      : t('Deny {{count}} API keys', { count: requests.length });
 
   const handleClose = () => {
     setReason('');
@@ -72,7 +72,7 @@ const RejectionModal: React.FC<RejectionModalProps> = ({
       await onReject(requests, reason || undefined);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('Failed to reject API keys'));
+      setError(err instanceof Error ? err.message : t('Failed to deny API keys'));
     } finally {
       setIsRejecting(false);
     }
@@ -88,7 +88,7 @@ const RejectionModal: React.FC<RejectionModalProps> = ({
       <ModalHeader title={title} />
       <ModalBody>
         {error && (
-          <Alert variant="danger" isInline title={t('Error rejecting API keys')}>
+          <Alert variant="danger" isInline title={t('Error denying API keys')}>
             {error}
           </Alert>
         )}
@@ -101,7 +101,7 @@ const RejectionModal: React.FC<RejectionModalProps> = ({
                   <Th>{t('Requester')}</Th>
                   <Th>{t('API Product')}</Th>
                   <Th>{t('Plan')}</Th>
-                  <Th width={10}></Th>
+                  <Th width={10} screenReaderText={t('Actions')}></Th>
                 </Tr>
               </Thead>
               <Tbody>
@@ -141,20 +141,20 @@ const RejectionModal: React.FC<RejectionModalProps> = ({
           </div>
         )}
 
-        <FormGroup label={t('Rejection Reason (optional)')} fieldId="rejection-reason">
+        <FormGroup label={t('Denial Reason (optional)')} fieldId="rejection-reason">
           <TextArea
             id="rejection-reason"
             value={reason}
             onChange={(_event, value) => setReason(value)}
-            aria-label={t('Rejection reason')}
+            aria-label={t('Denial reason')}
             rows={3}
-            placeholder={t('Provide a reason for rejecting this request...')}
+            placeholder={t('Provide a reason for denying this request...')}
           />
         </FormGroup>
 
         {isBulk && (
           <p className="kuadrant-rejection-modal__bulk-note">
-            {t('The rejection reason will apply to all selected requests.')}
+            {t('The denial reason will apply to all selected requests.')}
           </p>
         )}
       </ModalBody>
@@ -165,7 +165,7 @@ const RejectionModal: React.FC<RejectionModalProps> = ({
           isDisabled={isRejecting || requests.length === 0}
           isLoading={isRejecting}
         >
-          {t('Reject')}
+          {t('Deny')}
         </Button>
         <Button variant={ButtonVariant.link} onClick={handleClose}>
           {t('Cancel')}

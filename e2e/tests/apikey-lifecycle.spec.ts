@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { execSync } from 'child_process';
 import { TEST_NAMESPACE, dismissConsoleTour } from './helpers';
 
 /**
@@ -56,6 +57,11 @@ test.describe('API Key Lifecycle', () => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await dismissConsoleTour(page);
+  });
+
+  test.afterEach(async () => {
+    // Clean up any APIKey resources created during the test
+    execSync(`kubectl delete apikey ${testAPIKeyName} -n ${TEST_NAMESPACE} --ignore-not-found=true`, { stdio: 'inherit' });
   });
 
   test('should complete full API key lifecycle: request, reveal, and delete', async ({ page }) => {
@@ -162,7 +168,7 @@ test.describe('API Key Lifecycle', () => {
       timeout: 10000,
     });
     await expect(
-      page.locator('text=You are about to reveal your API key'),
+      page.locator('text=You are about to reveal the API key'),
     ).toBeVisible();
 
     const revealConfirmButton = page.locator('button:has-text("Reveal")').last();

@@ -127,7 +127,7 @@ const APIKeyApprovalToolbar: React.FC<APIKeyApprovalToolbarProps> = ({
             </ToolbarItem>
             <ToolbarItem>
               <Button variant="danger" onClick={onBulkReject} isDisabled={isActionsDisabled}>
-                {t('Reject {{count}} selected', { count: selectedCount })}
+                {t('Deny {{count}} selected', { count: selectedCount })}
               </Button>
             </ToolbarItem>
           </>
