@@ -12,17 +12,13 @@ import {
   useK8sWatchResource,
   useAccessReview,
   consoleFetchJSON,
-  k8sCreate,
-  k8sUpdate,
-  k8sList,
   NamespaceBar,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import { RESOURCES, OpenshiftUser, SelfSubjectReviewResponse } from '../../utils/resources';
-import { getModelFromResource } from '../../utils/getModelFromResource';
-import { APIKeyRequest, APIKeyApproval } from './types';
+import { APIKeyRequest } from './types';
 import { APIProduct } from '../apiproduct/types';
-import { getRequestStatus } from './utils';
+import { getRequestStatus, handleAPIKeyApprovalOrDenial } from './utils';
 import APIKeyApprovalToolbar, { FilterState } from './APIKeyApprovalToolbar';
 import APIKeyApprovalTable from './APIKeyApprovalTable';
 import ApprovalModal from './ApprovalModal';
@@ -57,6 +53,13 @@ const APIKeyApprovalPage: React.FC = () => {
     group: RESOURCES.APIKeyApproval.gvk.group,
     resource: 'apikeyapprovals',
     verb: 'create',
+    namespace: ns,
+  });
+
+  const [canListProducts, canListProductsLoading] = useAccessReview({
+    group: RESOURCES.APIProduct.gvk.group,
+    resource: 'apiproducts',
+    verb: 'list',
     namespace: ns,
   });
 
@@ -115,15 +118,15 @@ const APIKeyApprovalPage: React.FC = () => {
       : null,
   );
 
-  const productResource = React.useMemo(
-    () => ({
-      groupVersionKind: RESOURCES.APIProduct.gvk,
-      isList: true,
-    }),
-    [],
+  const [products, productsLoaded] = useK8sWatchResource<APIProduct[]>(
+    canListProducts && !canListProductsLoading
+      ? {
+          groupVersionKind: RESOURCES.APIProduct.gvk,
+          namespace: ns,
+          isList: true,
+        }
+      : null,
   );
-
-  const [products, productsLoaded] = useK8sWatchResource<APIProduct[]>(productResource);
 
   const productOptions = React.useMemo(() => {
     if (!productsLoaded || !Array.isArray(products)) return [];
@@ -146,84 +149,9 @@ const APIKeyApprovalPage: React.FC = () => {
     });
   }, [requests, filters]);
 
-  const createApproval = async (
-    request: APIKeyRequest,
-    approved: boolean,
-    message?: string,
-  ): Promise<void> => {
-    const requestName = request.metadata?.name || '';
-    const namespace = request.metadata?.namespace;
-    const requestStatus = getRequestStatus(request);
-
-    const approvalSpec = {
-      apiKeyRequestRef: { name: requestName },
-      approved,
-      reviewedBy: currentUser,
-      reviewedAt: new Date().toISOString(),
-      reason: approved ? 'ApprovedByOwner' : 'DeniedByOwner',
-      message: message || (approved ? 'Approved' : 'Denied'),
-    };
-
-    // Create a minimal approval object for getModelFromResource
-    const approvalForModel: APIKeyApproval = {
-      apiVersion: 'devportal.kuadrant.io/v1alpha1',
-      kind: 'APIKeyApproval',
-      metadata: {
-        name: 'placeholder',
-        namespace: namespace || 'placeholder',
-      },
-      spec: approvalSpec,
-    };
-
-    const model = getModelFromResource(approvalForModel);
-
-    if (requestStatus === 'Approved') {
-      // Active key - find and update existing approval
-      const approvalsResponse = await k8sList<APIKeyApproval>({
-        model,
-        queryParams: { ns: namespace },
-      });
-
-      const approvalsList = Array.isArray(approvalsResponse)
-        ? approvalsResponse
-        : approvalsResponse.items || [];
-
-      const existingApproval = approvalsList.find(
-        (approval) => approval.spec.apiKeyRequestRef.name === requestName,
-      );
-
-      if (!existingApproval) {
-        throw new Error(
-          `Could not find existing approval for active API key: ${requestName}. Found ${approvalsList.length} approvals in namespace ${namespace}`,
-        );
-      }
-
-      await k8sUpdate({
-        model,
-        data: {
-          ...existingApproval,
-          spec: approvalSpec,
-        },
-      });
-    } else {
-      // Pending key - create new approval
-      const newApproval: APIKeyApproval = {
-        apiVersion: 'devportal.kuadrant.io/v1alpha1',
-        kind: 'APIKeyApproval',
-        metadata: {
-          name: `${requestName}-approval`,
-          namespace,
-        },
-        spec: approvalSpec,
-      };
-
-      await k8sCreate({ model, data: newApproval });
-    }
-  };
-
   const handleApprove = async (requestsToApprove: APIKeyRequest[]) => {
     const results = await Promise.allSettled(
-      requestsToApprove.map((req) => createApproval(req, true)),
+      requestsToApprove.map((req) => handleAPIKeyApprovalOrDenial(req, true, currentUser)),
     );
     const succeeded = results.filter((r) => r.status === 'fulfilled').length;
     const failed = results.filter((r) => r.status === 'rejected').length;
@@ -246,7 +174,7 @@ const APIKeyApprovalPage: React.FC = () => {
 
   const handleReject = async (requestsToReject: APIKeyRequest[], reason?: string) => {
     const results = await Promise.allSettled(
-      requestsToReject.map((req) => createApproval(req, false, reason)),
+      requestsToReject.map((req) => handleAPIKeyApprovalOrDenial(req, false, currentUser, reason)),
     );
     const succeeded = results.filter((r) => r.status === 'fulfilled').length;
     const failed = results.filter((r) => r.status === 'rejected').length;
@@ -296,6 +224,22 @@ const APIKeyApprovalPage: React.FC = () => {
     const toReject = filteredRequests.filter((r) => selectedRequests.has(r.metadata?.name || ''));
     setRejectionModalRequests(toReject);
   };
+
+  if (canListLoading || canListProductsLoading) {
+    return (
+      <>
+        <NamespaceBar />
+        <PageSection hasBodyWrapper={false}>
+          <EmptyState>
+            <Spinner size="xl" />
+            <Title headingLevel="h2" size="lg">
+              {t('Loading...')}
+            </Title>
+          </EmptyState>
+        </PageSection>
+      </>
+    );
+  }
 
   if (!canListLoading && canList === false) {
     return (
