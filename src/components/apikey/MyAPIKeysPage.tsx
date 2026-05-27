@@ -471,44 +471,54 @@ const MyAPIKeysPage: React.FC = () => {
     setStatusFilters((prev) =>
       prev.includes(selection) ? prev.filter((s) => s !== selection) : [...prev, selection],
     );
+    setCurrentPage(1);
   };
 
   const handleNameFilterChange = (_event: React.FormEvent<HTMLInputElement>, value: string) => {
     setNameFilter(value);
+    setCurrentPage(1);
   };
 
   const handleOwnerFilterChange = (_event: React.FormEvent<HTMLInputElement>, value: string) => {
     setOwnerFilter(value);
+    setCurrentPage(1);
   };
 
   const onDeleteNameFilter = () => {
     setNameFilter('');
+    setCurrentPage(1);
   };
 
   const onDeleteStatusFilter = (_category: string, label: string) => {
     setStatusFilters((prev) => prev.filter((s) => s !== label));
+    setCurrentPage(1);
   };
 
   const onDeleteOwnerFilter = () => {
     setOwnerFilter('');
+    setCurrentPage(1);
   };
 
   const onDeleteNameGroup = () => {
     setNameFilter('');
+    setCurrentPage(1);
   };
 
   const onDeleteStatusGroup = () => {
     setStatusFilters([]);
+    setCurrentPage(1);
   };
 
   const onDeleteOwnerGroup = () => {
     setOwnerFilter('');
+    setCurrentPage(1);
   };
 
   const onClearAllFilters = () => {
     setNameFilter('');
     setStatusFilters([]);
     setOwnerFilter('');
+    setCurrentPage(1);
   };
 
   const handleDeleteClick = React.useCallback((apiKey: APIKey) => {
