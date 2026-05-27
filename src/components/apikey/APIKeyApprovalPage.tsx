@@ -44,12 +44,12 @@ const APIKeyApprovalPage: React.FC = () => {
   const [userLoaded, setUserLoaded] = React.useState(false);
   const [userError, setUserError] = React.useState(false);
 
-  const ns = activeNamespace === '#ALL_NS#' ? '' : activeNamespace;
+  const ns = activeNamespace === '#ALL_NS#' ? undefined : activeNamespace;
 
-  const [canReadRequests, canReadRequestsLoaded] = useAccessReview({
+  const [canList, canListLoading] = useAccessReview({
     group: RESOURCES.APIKeyRequest.gvk.group,
     resource: 'apikeyrequests',
-    verb: 'get',
+    verb: 'list',
     namespace: ns,
   });
 
@@ -103,17 +103,17 @@ const APIKeyApprovalPage: React.FC = () => {
     fetchCurrentUser();
   }, []);
 
-  const requestResource = React.useMemo(
-    () => ({
-      groupVersionKind: RESOURCES.APIKeyRequest.gvk,
-      isList: true,
-      namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
-    }),
-    [activeNamespace],
+  // Watch APIKeyRequests in the product's namespace (shadow resources)
+  // Only watch if user has permission
+  const [requests, requestsLoaded, requestsLoadError] = useK8sWatchResource<APIKeyRequest[]>(
+    canList && !canListLoading
+      ? {
+          groupVersionKind: RESOURCES.APIKeyRequest.gvk,
+          namespace: ns,
+          isList: true,
+        }
+      : null,
   );
-
-  const [requests, requestsLoaded, requestsError] =
-    useK8sWatchResource<APIKeyRequest[]>(requestResource);
 
   const productResource = React.useMemo(
     () => ({
@@ -297,7 +297,7 @@ const APIKeyApprovalPage: React.FC = () => {
     setRejectionModalRequests(toReject);
   };
 
-  if (canReadRequestsLoaded && canReadRequests === false) {
+  if (!canListLoading && canList === false) {
     return (
       <>
         <NamespaceBar />
@@ -310,7 +310,7 @@ const APIKeyApprovalPage: React.FC = () => {
     );
   }
 
-  if (!requestsLoaded) {
+  if (!requestsLoaded && canList) {
     return (
       <>
         <NamespaceBar />
@@ -326,13 +326,13 @@ const APIKeyApprovalPage: React.FC = () => {
     );
   }
 
-  if (requestsError) {
+  if (requestsLoadError) {
     return (
       <>
         <NamespaceBar />
         <PageSection hasBodyWrapper={false}>
           <Alert variant="danger" title={t('Error loading API key requests')}>
-            {String(requestsError)}
+            {String(requestsLoadError)}
           </Alert>
         </PageSection>
       </>
