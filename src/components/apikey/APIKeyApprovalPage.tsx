@@ -18,13 +18,10 @@ import {
   NamespaceBar,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
-import {
-  RESOURCES,
-  OpenshiftUser,
-  SelfSubjectReviewResponse,
-} from '../../utils/resources';
+import { RESOURCES, OpenshiftUser, SelfSubjectReviewResponse } from '../../utils/resources';
 import { getModelFromResource } from '../../utils/getModelFromResource';
 import { APIKeyRequest, APIKeyApproval } from './types';
+import { APIProduct } from '../apiproduct/types';
 import { getRequestStatus } from './utils';
 import APIKeyApprovalToolbar, { FilterState } from './APIKeyApprovalToolbar';
 import APIKeyApprovalTable from './APIKeyApprovalTable';
@@ -126,8 +123,7 @@ const APIKeyApprovalPage: React.FC = () => {
     [],
   );
 
-  const [products, productsLoaded] =
-    useK8sWatchResource<{ metadata: { name: string; namespace: string } }[]>(productResource);
+  const [products, productsLoaded] = useK8sWatchResource<APIProduct[]>(productResource);
 
   const productOptions = React.useMemo(() => {
     if (!productsLoaded || !Array.isArray(products)) return [];
@@ -372,6 +368,7 @@ const APIKeyApprovalPage: React.FC = () => {
           onReject={(req) => setRejectionModalRequests([req])}
           canApprove={canApprove}
           canApproveLoading={canApproveLoading}
+          products={products || []}
         />
       </PageSection>
 

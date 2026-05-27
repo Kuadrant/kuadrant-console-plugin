@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Link } from 'react-router-dom-v5-compat';
 import { Table, Thead, Tr, Th, Tbody, Td, SortByDirection } from '@patternfly/react-table';
 import {
   Dropdown,
@@ -7,11 +8,15 @@ import {
   DropdownItem,
   Tooltip,
   Pagination,
+  Label,
 } from '@patternfly/react-core';
 import { Timestamp } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import { APIKeyRequest } from './types';
 import { getRequestStatus, truncateUseCase, getStatusSortWeight } from './utils';
+import { APIKeyStatusBadge } from './APIKeyStatusBadge';
+import { APIProduct } from '../apiproduct/types';
+import { formatLimits } from '../../utils/apiKeyUtils';
 import { EllipsisVIcon } from '@patternfly/react-icons';
 
 interface APIKeyApprovalTableProps {
@@ -23,6 +28,7 @@ interface APIKeyApprovalTableProps {
   onReject: (request: APIKeyRequest) => void;
   canApprove?: boolean;
   canApproveLoading?: boolean;
+  products: APIProduct[];
 }
 
 const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
@@ -34,6 +40,7 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
   onReject,
   canApprove = true,
   canApproveLoading = false,
+  products,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [sortBy, setSortBy] = React.useState<{ index?: number; direction?: 'asc' | 'desc' }>({
@@ -43,6 +50,19 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
   const [openActionMenus, setOpenActionMenus] = React.useState<Set<string>>(new Set());
   const [page, setPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(20);
+
+  // Helper function to find plan limits from APIProduct
+  const getPlanLimits = (request: APIKeyRequest): string | null => {
+    const product = products.find(
+      (p) =>
+        p.metadata.name === request.spec.apiProductRef.name &&
+        p.metadata.namespace === request.metadata.namespace,
+    );
+    if (!product?.status?.discoveredPlans) return null;
+
+    const plan = product.status.discoveredPlans.find((p) => p.tier === request.spec.planTier);
+    return plan ? formatLimits(plan.limits) : null;
+  };
 
   const toggleActionMenu = (requestName: string) => {
     setOpenActionMenus((prev) => {
@@ -173,8 +193,24 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
                   }}
                 />
                 <Td dataLabel={t('Requester')}>{request.spec.requestedBy.email}</Td>
-                <Td dataLabel={t('API Product')}>{request.spec.apiProductRef.name}</Td>
-                <Td dataLabel={t('Plan')}>{request.spec.planTier}</Td>
+                <Td dataLabel={t('API Product')}>
+                  <Link
+                    to={`/k8s/ns/${request.metadata.namespace}/devportal.kuadrant.io~v1alpha1~APIProduct/${request.spec.apiProductRef.name}/overview`}
+                  >
+                    {request.spec.apiProductRef.name}
+                  </Link>
+                </Td>
+                <Td dataLabel={t('Plan')}>
+                  {(() => {
+                    const limitsText = getPlanLimits(request);
+                    return (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        {request.spec.planTier && <Label isCompact>{request.spec.planTier}</Label>}
+                        {limitsText && <span>{limitsText}</span>}
+                      </div>
+                    );
+                  })()}
+                </Td>
                 <Td dataLabel={t('Use Case')}>
                   <Tooltip content={request.spec.useCase}>
                     <span>{truncateUseCase(request.spec.useCase)}</span>
@@ -183,7 +219,9 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
                 <Td dataLabel={t('Date')}>
                   <Timestamp timestamp={request.metadata?.creationTimestamp || ''} />
                 </Td>
-                <Td dataLabel={t('Status')}>{status}</Td>
+                <Td dataLabel={t('Status')}>
+                  <APIKeyStatusBadge phase={status} />
+                </Td>
                 <Td isActionCell>
                   {isPending && (
                     <Dropdown

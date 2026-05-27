@@ -27,6 +27,7 @@ import {
   DropdownItem,
   Button,
   Tooltip,
+  Label,
 } from '@patternfly/react-core';
 import {
   useK8sWatchResource,
@@ -56,6 +57,8 @@ import APIKeyRevealModal from './APIKeyRevealModal';
 import APIKeyDeleteModal from './APIKeyDeleteModal';
 import RequestAPIKeyModal from './RequestAPIKeyModal';
 import { APIKeyStatusBadge } from './APIKeyStatusBadge';
+import { APIProduct } from '../apiproduct/types';
+import { formatLimits } from '../../utils/apiKeyUtils';
 import '../kuadrant.css';
 import { useKuadrantNamespaceChange } from '../../hooks/useKuadrantNamespaceChange';
 
@@ -67,6 +70,7 @@ const APIKeyRow: React.FC<
     onDelete: (apiKey: APIKey) => void;
     canDelete: boolean;
     canDeleteLoading: boolean;
+    getPlanLimits: (apiKey: APIKey) => string | null;
   }
 > = ({
   obj,
@@ -76,6 +80,7 @@ const APIKeyRow: React.FC<
   onDelete,
   canDelete,
   canDeleteLoading,
+  getPlanLimits,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [isKebabOpen, setIsKebabOpen] = React.useState(false);
@@ -103,13 +108,33 @@ const APIKeyRow: React.FC<
         {obj.spec?.requestedBy?.userId || '-'}
       </TableData>
       <TableData id="apiProduct" activeColumnIDs={activeColumnIDs}>
-        {obj.spec?.apiProductRef?.name || '-'}
+        {obj.spec?.apiProductRef?.name ? (
+          <Link
+            to={`/k8s/ns/${
+              obj.spec.apiProductRef.namespace || obj.metadata.namespace
+            }/devportal.kuadrant.io~v1alpha1~APIProduct/${obj.spec.apiProductRef.name}/overview`}
+          >
+            {obj.spec.apiProductRef.name}
+          </Link>
+        ) : (
+          '-'
+        )}
       </TableData>
       <TableData id="status" activeColumnIDs={activeColumnIDs}>
         <APIKeyStatusBadge phase={getAPIKeyPhase(obj)} />
       </TableData>
       <TableData id="tier" activeColumnIDs={activeColumnIDs}>
-        {obj.spec?.planTier || '-'}
+        {(() => {
+          const limitsText = getPlanLimits(obj);
+          return obj.spec?.planTier || limitsText ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {obj.spec?.planTier && <Label isCompact>{obj.spec.planTier}</Label>}
+              {limitsText && <span>{limitsText}</span>}
+            </div>
+          ) : (
+            '-'
+          );
+        })()}
       </TableData>
       <TableData id="apiKey" activeColumnIDs={activeColumnIDs}>
         {getAPIKeyPhase(obj) !== 'Approved' || !obj.spec?.secretRef?.name ? (
@@ -195,6 +220,32 @@ const MyAPIKeysPage: React.FC = () => {
     namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
     isList: true,
   });
+
+  // Watch APIProduct resources to get plan limits
+  const [products, productsLoaded] = useK8sWatchResource<APIProduct[]>({
+    groupVersionKind: RESOURCES.APIProduct.gvk,
+    namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
+    isList: true,
+  });
+
+  // Helper function to find plan limits from APIProduct
+  const getPlanLimits = React.useCallback(
+    (apiKey: APIKey): string | null => {
+      if (!productsLoaded || !products) return null;
+
+      const product = products.find(
+        (p) =>
+          p.metadata.name === apiKey.spec?.apiProductRef?.name &&
+          (p.metadata.namespace === apiKey.spec?.apiProductRef?.namespace ||
+            p.metadata.namespace === apiKey.metadata.namespace),
+      );
+      if (!product?.status?.discoveredPlans) return null;
+
+      const plan = product.status.discoveredPlans.find((p) => p.tier === apiKey.spec?.planTier);
+      return plan ? formatLimits(plan.limits) : null;
+    },
+    [products, productsLoaded],
+  );
 
   // Smart default redirect: check cluster-wide permissions and redirect namespace-scoped users
   React.useEffect(() => {
@@ -503,9 +554,10 @@ const MyAPIKeysPage: React.FC = () => {
         onDelete={handleDeleteClick}
         canDelete={canDelete}
         canDeleteLoading={canDeleteLoading}
+        getPlanLimits={getPlanLimits}
       />
     ),
-    [activeNamespace, handleDeleteClick, canDelete, canDeleteLoading],
+    [activeNamespace, handleDeleteClick, canDelete, canDeleteLoading, getPlanLimits],
   );
 
   return (
