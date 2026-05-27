@@ -44,6 +44,21 @@ export interface PlanSpec {
   limits?: any; // planpolicyv1alpha1.Limits - complex type
 }
 
+export interface AuthenticationSpec {
+  apiKey?: {
+    selector?: unknown;
+    allNamespaces?: boolean;
+  };
+  // Other auth methods can be added here
+  [key: string]: unknown;
+}
+
+export interface AuthSchemeSpec {
+  authentication?: {
+    [key: string]: AuthenticationSpec;
+  };
+}
+
 export interface APIProductStatus {
   observedGeneration?: number;
   discoveredPlans?: PlanSpec[];
@@ -59,8 +74,7 @@ export interface APIProductStatus {
     maxSizeUsed: number;
     raw?: string;
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  discoveredAuthScheme?: any; // kuadrantapiv1.AuthSchemeSpec - complex type
+  discoveredAuthScheme?: AuthSchemeSpec;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   oidcDiscovery?: any; // OIDCDiscoveryStatus - complex type
 }

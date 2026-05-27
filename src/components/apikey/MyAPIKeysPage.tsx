@@ -28,6 +28,7 @@ import {
   Button,
   Tooltip,
   Pagination,
+  Label,
 } from '@patternfly/react-core';
 import {
   useK8sWatchResource,
@@ -43,23 +44,22 @@ import {
   useAccessReview,
   NamespaceBar,
   checkAccess,
-  k8sGet,
-  useK8sModel,
 } from '@openshift-console/dynamic-plugin-sdk';
-import { SearchIcon, EllipsisVIcon, EyeIcon, EyeSlashIcon } from '@patternfly/react-icons';
+import { SearchIcon, EllipsisVIcon, EyeIcon } from '@patternfly/react-icons';
 import {
   RESOURCES,
   APIKey,
   OpenshiftUser,
   SelfSubjectReviewResponse,
   getAPIKeyPhase,
-  Secret,
 } from '../../utils/resources';
 import { getModelFromResource, getResourceNameFromKind } from '../../utils/getModelFromResource';
 import APIKeyRevealModal from './APIKeyRevealModal';
 import APIKeyDeleteModal from './APIKeyDeleteModal';
 import RequestAPIKeyModal from './RequestAPIKeyModal';
 import { APIKeyStatusBadge } from './APIKeyStatusBadge';
+import { APIProduct } from '../apiproduct/types';
+import { formatLimits } from '../../utils/apiKeyUtils';
 import '../kuadrant.css';
 import { useKuadrantNamespaceChange } from '../../hooks/useKuadrantNamespaceChange';
 
@@ -67,21 +67,21 @@ import { useKuadrantNamespaceChange } from '../../hooks/useKuadrantNamespaceChan
 const APIKeyRow: React.FC<
   RowProps<APIKey> & {
     activeNamespace: string;
-    viewedSecrets: Record<string, boolean>;
     onReveal: (apiKey: APIKey) => void;
     onDelete: (apiKey: APIKey) => void;
     canDelete: boolean;
     canDeleteLoading: boolean;
+    getPlanLimits: (apiKey: APIKey) => string | null;
   }
 > = ({
   obj,
   activeColumnIDs,
   activeNamespace,
-  viewedSecrets,
   onReveal,
   onDelete,
   canDelete,
   canDeleteLoading,
+  getPlanLimits,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [isKebabOpen, setIsKebabOpen] = React.useState(false);
@@ -109,68 +109,65 @@ const APIKeyRow: React.FC<
         {obj.spec?.requestedBy?.userId || '-'}
       </TableData>
       <TableData id="apiProduct" activeColumnIDs={activeColumnIDs}>
-        {obj.spec?.apiProductRef?.name || '-'}
+        {obj.spec?.apiProductRef?.name ? (
+          <Link
+            to={`/k8s/ns/${
+              obj.spec.apiProductRef.namespace || obj.metadata.namespace
+            }/devportal.kuadrant.io~v1alpha1~APIProduct/${obj.spec.apiProductRef.name}/overview`}
+          >
+            {obj.spec.apiProductRef.name}
+          </Link>
+        ) : (
+          '-'
+        )}
       </TableData>
       <TableData id="status" activeColumnIDs={activeColumnIDs}>
         <APIKeyStatusBadge phase={getAPIKeyPhase(obj)} />
       </TableData>
       <TableData id="tier" activeColumnIDs={activeColumnIDs}>
-        {obj.spec?.planTier || '-'}
-      </TableData>
-      <TableData id="apiKey" activeColumnIDs={activeColumnIDs}>
         {(() => {
-          if (getAPIKeyPhase(obj) !== 'Approved' || !obj.spec?.secretRef?.name) {
-            return '-';
-          }
-
-          const secretKey = `${obj.metadata.namespace}/${obj.spec.secretRef.name}`;
-          const isViewed = viewedSecrets[secretKey];
-
-          if (isViewed) {
-            return (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  color: 'var(--pf-v6-global--disabled-color--100)',
-                }}
-              >
-                <EyeSlashIcon />
-                <span>{t('Already viewed')}</span>
-              </div>
-            );
-          }
-
-          return (
-            <div
-              onClick={(e) => {
-                e.stopPropagation();
-                onReveal(obj);
-              }}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer',
-                userSelect: 'none',
-              }}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onReveal(obj);
-                }
-              }}
-              aria-label={t('Reveal API key')}
-            >
-              <span style={{ fontFamily: 'monospace' }}>••••••••••••••••</span>
-              <EyeIcon style={{ color: 'var(--pf-v6-global--primary-color--100)' }} />
+          const limitsText = getPlanLimits(obj);
+          return obj.spec?.planTier || limitsText ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {obj.spec?.planTier && <Label isCompact>{obj.spec.planTier}</Label>}
+              {limitsText && <span>{limitsText}</span>}
             </div>
+          ) : (
+            '-'
           );
         })()}
+      </TableData>
+      <TableData id="apiKey" activeColumnIDs={activeColumnIDs}>
+        {getAPIKeyPhase(obj) !== 'Approved' || !obj.spec?.secretRef?.name ? (
+          '-'
+        ) : (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              onReveal(obj);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: 'pointer',
+              userSelect: 'none',
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                onReveal(obj);
+              }
+            }}
+            aria-label={t('Reveal API key')}
+          >
+            <span style={{ fontFamily: 'monospace' }}>••••••••••••••••</span>
+            <EyeIcon style={{ color: 'var(--pf-v6-global--primary-color--100)' }} />
+          </div>
+        )}
       </TableData>
       <TableData id="requestedTime" activeColumnIDs={activeColumnIDs}>
         <Timestamp timestamp={obj.metadata.creationTimestamp} />
@@ -224,6 +221,32 @@ const MyAPIKeysPage: React.FC = () => {
     namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
     isList: true,
   });
+
+  // Watch APIProduct resources to get plan limits
+  const [products, productsLoaded] = useK8sWatchResource<APIProduct[]>({
+    groupVersionKind: RESOURCES.APIProduct.gvk,
+    namespace: activeNamespace === '#ALL_NS#' ? undefined : activeNamespace,
+    isList: true,
+  });
+
+  // Helper function to find plan limits from APIProduct
+  const getPlanLimits = React.useCallback(
+    (apiKey: APIKey): string | null => {
+      if (!productsLoaded || !products) return null;
+
+      const product = products.find(
+        (p) =>
+          p.metadata.name === apiKey.spec?.apiProductRef?.name &&
+          (p.metadata.namespace === apiKey.spec?.apiProductRef?.namespace ||
+            p.metadata.namespace === apiKey.metadata.namespace),
+      );
+      if (!product?.status?.discoveredPlans) return null;
+
+      const plan = product.status.discoveredPlans.find((p) => p.tier === apiKey.spec?.planTier);
+      return plan ? formatLimits(plan.limits) : null;
+    },
+    [products, productsLoaded],
+  );
 
   // Smart default redirect: check cluster-wide permissions and redirect namespace-scoped users
   React.useEffect(() => {
@@ -321,47 +344,6 @@ const MyAPIKeysPage: React.FC = () => {
 
   // Reveal API Key modal state (lifted to parent to persist across table re-renders)
   const [revealAPIKey, setRevealAPIKey] = React.useState<APIKey | null>(null);
-
-  // Track which API keys have been viewed
-  const [viewedSecrets, setViewedSecrets] = React.useState<Record<string, boolean>>({});
-
-  // Get the Secret model
-  const [secretModel] = useK8sModel({ version: 'v1', kind: 'Secret' });
-
-  // Check viewed status for all API keys on mount and when apiKeys change
-  React.useEffect(() => {
-    const checkViewedStatus = async () => {
-      if (!secretModel || !loaded) return;
-
-      const viewedStatus: Record<string, boolean> = {};
-
-      for (const apiKey of apiKeys) {
-        if (
-          getAPIKeyPhase(apiKey) === 'Approved' &&
-          apiKey.spec?.secretRef?.name &&
-          apiKey.metadata.namespace
-        ) {
-          try {
-            const secret = await k8sGet<Secret>({
-              model: secretModel,
-              name: apiKey.spec.secretRef.name,
-              ns: apiKey.metadata.namespace,
-            });
-
-            const secretKey = `${apiKey.metadata.namespace}/${apiKey.spec.secretRef.name}`;
-            viewedStatus[secretKey] =
-              secret.metadata?.annotations?.['devportal.kuadrant.io/apikey-viewed'] === 'true';
-          } catch (err) {
-            console.error('Error checking secret viewed status:', err);
-          }
-        }
-      }
-
-      setViewedSecrets(viewedStatus);
-    };
-
-    checkViewedStatus();
-  }, [secretModel, apiKeys, loaded]);
 
   // RBAC permission checks
   const isAllNamespaces = activeNamespace === '#ALL_NS#';
@@ -608,14 +590,14 @@ const MyAPIKeysPage: React.FC = () => {
       <APIKeyRow
         {...props}
         activeNamespace={activeNamespace}
-        viewedSecrets={viewedSecrets}
         onReveal={setRevealAPIKey}
         onDelete={handleDeleteClick}
         canDelete={canDelete}
         canDeleteLoading={canDeleteLoading}
+        getPlanLimits={getPlanLimits}
       />
     ),
-    [activeNamespace, viewedSecrets, handleDeleteClick, canDelete, canDeleteLoading],
+    [activeNamespace, handleDeleteClick, canDelete, canDeleteLoading, getPlanLimits],
   );
 
   return (
@@ -854,17 +836,7 @@ const MyAPIKeysPage: React.FC = () => {
 
       {/* Reveal API Key Modal (lifted to parent to persist across table re-renders) */}
       {revealAPIKey && (
-        <APIKeyRevealModal
-          apiKeyObj={revealAPIKey}
-          onClose={() => {
-            setRevealAPIKey(null);
-            // Refresh viewed status after closing
-            if (revealAPIKey.spec?.secretRef?.name) {
-              const secretKey = `${revealAPIKey.metadata.namespace}/${revealAPIKey.spec.secretRef.name}`;
-              setViewedSecrets((prev) => ({ ...prev, [secretKey]: true }));
-            }
-          }}
-        />
+        <APIKeyRevealModal apiKeyObj={revealAPIKey} onClose={() => setRevealAPIKey(null)} />
       )}
     </>
   );

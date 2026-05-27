@@ -33,7 +33,7 @@ git push upstream vX.Y.Z
 - [Create a new GitHub release](https://github.com/Kuadrant/kuadrant-console-plugin/releases) from the tag you just pushed.
 - Use auto-generated release notes.
 
-This triggers the `Build and Push Versioned Multi-arch Image (Release)` [GitHub workflow](https://github.com/Kuadrant/kuadrant-console-plugin/blob/da4dc0582c442be725a534ff2790811d9cf7ecd7/.github/workflows/build.yaml#L51), which:
+This triggers the `Build and Push Versioned Multi-arch Image (Release)` [GitHub workflow](https://github.com/Kuadrant/kuadrant-console-plugin/blob/main/.github/workflows/release-build.yaml#L51), which:
 - Builds the `kuadrant-console-plugin` image.
 - Pushes the versioned image to [Quay.io](https://quay.io/repository/kuadrant/console-plugin?tab=tags).
 
