@@ -13,8 +13,8 @@ import {
   useAccessReview,
   consoleFetchJSON,
   k8sCreate,
-  k8sGet,
   k8sUpdate,
+  k8sList,
   NamespaceBar,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
@@ -151,43 +151,73 @@ const APIKeyApprovalPage: React.FC = () => {
     approved: boolean,
     message?: string,
   ): Promise<void> => {
-    const suffix = approved ? 'approval' : 'rejection';
-    const approval: APIKeyApproval = {
+    const requestName = request.metadata?.name || '';
+    const namespace = request.metadata?.namespace;
+    const requestStatus = getRequestStatus(request);
+
+    const approvalSpec = {
+      apiKeyRequestRef: { name: requestName },
+      approved,
+      reviewedBy: currentUser,
+      reviewedAt: new Date().toISOString(),
+      reason: approved ? 'ApprovedByOwner' : 'DeniedByOwner',
+      message: message || (approved ? 'Approved' : 'Denied'),
+    };
+
+    // Create a minimal approval object for getModelFromResource
+    const approvalForModel: APIKeyApproval = {
       apiVersion: 'devportal.kuadrant.io/v1alpha1',
       kind: 'APIKeyApproval',
       metadata: {
-        name: `${request.metadata?.name}-${suffix}`,
-        namespace: request.metadata?.namespace,
+        name: 'placeholder',
+        namespace: namespace || 'placeholder',
       },
-      spec: {
-        apiKeyRequestRef: { name: request.metadata?.name || '' },
-        approved,
-        reviewedBy: currentUser,
-        reviewedAt: new Date().toISOString(),
-        reason: approved ? 'ApprovedByOwner' : 'RejectedByOwner',
-        message: message || (approved ? 'Approved' : 'Rejected'),
-      },
+      spec: approvalSpec,
     };
-    const model = getModelFromResource(approval);
-    try {
-      await k8sCreate({ model, data: approval });
-    } catch (err: unknown) {
-      if ((err as { code?: number })?.code === 409) {
-        const existing = await k8sGet<APIKeyApproval>({
-          model,
-          name: approval.metadata.name,
-          ns: approval.metadata.namespace,
-        });
-        await k8sUpdate({
-          model,
-          data: {
-            ...approval,
-            metadata: { ...approval.metadata, resourceVersion: existing.metadata.resourceVersion },
-          },
-        });
-      } else {
-        throw err;
+
+    const model = getModelFromResource(approvalForModel);
+
+    if (requestStatus === 'Approved') {
+      // Active key - find and update existing approval
+      const approvalsResponse = await k8sList<APIKeyApproval>({
+        model,
+        queryParams: { ns: namespace },
+      });
+
+      const approvalsList = Array.isArray(approvalsResponse)
+        ? approvalsResponse
+        : approvalsResponse.items || [];
+
+      const existingApproval = approvalsList.find(
+        (approval) => approval.spec.apiKeyRequestRef.name === requestName,
+      );
+
+      if (!existingApproval) {
+        throw new Error(
+          `Could not find existing approval for active API key: ${requestName}. Found ${approvalsList.length} approvals in namespace ${namespace}`,
+        );
       }
+
+      await k8sUpdate({
+        model,
+        data: {
+          ...existingApproval,
+          spec: approvalSpec,
+        },
+      });
+    } else {
+      // Pending key - create new approval
+      const newApproval: APIKeyApproval = {
+        apiVersion: 'devportal.kuadrant.io/v1alpha1',
+        kind: 'APIKeyApproval',
+        metadata: {
+          name: `${requestName}-approval`,
+          namespace,
+        },
+        spec: approvalSpec,
+      };
+
+      await k8sCreate({ model, data: newApproval });
     }
   };
 
@@ -198,12 +228,16 @@ const APIKeyApprovalPage: React.FC = () => {
     const succeeded = results.filter((r) => r.status === 'fulfilled').length;
     const failed = results.filter((r) => r.status === 'rejected').length;
     if (failed > 0) {
-      setToastMessage(
-        t('{{succeeded}} API key(s) approved, {{failed}} failed', { succeeded, failed }),
-      );
+      const successText = succeeded === 1 ? '1 API key' : `${succeeded} API keys`;
+      const failText = failed === 1 ? '1 failed' : `${failed} failed`;
+      setToastMessage(t('{{successText}} approved, {{failText}}', { successText, failText }));
       setToastVariant('danger');
     } else {
-      setToastMessage(t('{{count}} API key(s) approved successfully', { count: succeeded }));
+      setToastMessage(
+        succeeded === 1
+          ? t('API key approved successfully')
+          : t('{{count}} API keys approved successfully', { count: succeeded }),
+      );
       setToastVariant('success');
     }
     setSelectedRequests(new Set());
@@ -217,12 +251,16 @@ const APIKeyApprovalPage: React.FC = () => {
     const succeeded = results.filter((r) => r.status === 'fulfilled').length;
     const failed = results.filter((r) => r.status === 'rejected').length;
     if (failed > 0) {
-      setToastMessage(
-        t('{{succeeded}} API key(s) rejected, {{failed}} failed', { succeeded, failed }),
-      );
+      const successText = succeeded === 1 ? '1 API key' : `${succeeded} API keys`;
+      const failText = failed === 1 ? '1 failed' : `${failed} failed`;
+      setToastMessage(t('{{successText}} denied, {{failText}}', { successText, failText }));
       setToastVariant('danger');
     } else {
-      setToastMessage(t('{{count}} API key(s) rejected', { count: succeeded }));
+      setToastMessage(
+        succeeded === 1
+          ? t('API key denied successfully')
+          : t('{{count}} API keys denied successfully', { count: succeeded }),
+      );
       setToastVariant('success');
     }
     setSelectedRequests(new Set());

@@ -98,7 +98,7 @@ const APIKeyRevealModal: React.FC<APIKeyRevealModalProps> = ({ apiKeyObj, onClos
             }
           />
           <ModalBody>
-            {t('You are about to reveal your API key. Make sure to store it securely.')}
+            {t('You are about to reveal the API key. Make sure to copy and store it securely.')}
             {error && (
               <Alert variant="danger" isInline title={t('Error')} style={{ marginTop: '16px' }}>
                 {error}
@@ -140,7 +140,7 @@ const APIKeyRevealModal: React.FC<APIKeyRevealModalProps> = ({ apiKeyObj, onClos
           />
           <ModalBody>
             <div style={{ marginBottom: '16px' }}>
-              {t('Make sure to copy and store it securely before closing this view.')}
+              {t('The key will remain accessible for future viewing if needed.')}
             </div>
             <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>{t('API Key')}</div>
             <ClipboardCopy isReadOnly hoverTip={t('Copy')} clickTip={t('Copied')}>

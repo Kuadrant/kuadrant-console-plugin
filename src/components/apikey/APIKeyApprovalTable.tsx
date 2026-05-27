@@ -165,6 +165,7 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
                 onSelect: (_event, checked) => handleSelectAll(checked),
                 isSelected: allPendingSelected,
               }}
+              screenReaderText={t('Select all rows')}
             />
             <Th sort={{ sortBy, onSort, columnIndex: 1 }}>{t('Requester')}</Th>
             <Th sort={{ sortBy, onSort, columnIndex: 2 }}>{t('API Product')}</Th>
@@ -223,7 +224,7 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
                   <APIKeyStatusBadge phase={status} />
                 </Td>
                 <Td isActionCell>
-                  {isPending && (
+                  {(isPending || status === 'Approved') && (
                     <Dropdown
                       isOpen={openActionMenus.has(requestName)}
                       onOpenChange={(isOpen) => {
@@ -246,26 +247,28 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
                       )}
                     >
                       <DropdownList>
-                        <Tooltip
-                          content={t(
-                            'You do not have permission to approve or reject API key requests',
-                          )}
-                          trigger={!canApprove && !canApproveLoading ? 'mouseenter' : 'manual'}
-                        >
-                          <DropdownItem
-                            key="approve"
-                            isDisabled={canApproveLoading || !canApprove}
-                            onClick={() => {
-                              onApprove(request);
-                              toggleActionMenu(requestName);
-                            }}
+                        {isPending && (
+                          <Tooltip
+                            content={t(
+                              'You do not have permission to approve or deny API key requests',
+                            )}
+                            trigger={!canApprove && !canApproveLoading ? 'mouseenter' : 'manual'}
                           >
-                            {t('Approve')}
-                          </DropdownItem>
-                        </Tooltip>
+                            <DropdownItem
+                              key="approve"
+                              isDisabled={canApproveLoading || !canApprove}
+                              onClick={() => {
+                                onApprove(request);
+                                toggleActionMenu(requestName);
+                              }}
+                            >
+                              {t('Approve')}
+                            </DropdownItem>
+                          </Tooltip>
+                        )}
                         <Tooltip
                           content={t(
-                            'You do not have permission to approve or reject API key requests',
+                            'You do not have permission to approve or deny API key requests',
                           )}
                           trigger={!canApprove && !canApproveLoading ? 'mouseenter' : 'manual'}
                         >
@@ -277,7 +280,7 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
                               toggleActionMenu(requestName);
                             }}
                           >
-                            {t('Reject')}
+                            {t('Deny')}
                           </DropdownItem>
                         </Tooltip>
                       </DropdownList>

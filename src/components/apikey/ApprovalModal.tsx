@@ -97,7 +97,7 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
                   <Th>{t('Requester')}</Th>
                   <Th>{t('API Product')}</Th>
                   <Th>{t('Plan')}</Th>
-                  <Th width={10}></Th>
+                  <Th width={10} screenReaderText={t('Actions')}></Th>
                 </Tr>
               </Thead>
               <Tbody>
