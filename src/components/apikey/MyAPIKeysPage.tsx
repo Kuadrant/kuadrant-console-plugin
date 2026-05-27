@@ -27,6 +27,7 @@ import {
   DropdownItem,
   Button,
   Tooltip,
+  Pagination,
   Label,
 } from '@patternfly/react-core';
 import {
@@ -331,6 +332,8 @@ const MyAPIKeysPage: React.FC = () => {
   const [nameFilter, setNameFilter] = React.useState<string>('');
   const [statusFilters, setStatusFilters] = React.useState<string[]>([]);
   const [ownerFilter, setOwnerFilter] = React.useState<string>('');
+  const [currentPage, setCurrentPage] = React.useState<number>(1);
+  const [perPage, setPerPage] = React.useState<number>(10);
 
   // Delete modal state
   const [deleteAPIKey, setDeleteAPIKey] = React.useState<APIKey | null>(null);
@@ -404,6 +407,33 @@ const MyAPIKeysPage: React.FC = () => {
     });
   }, [apiKeys, nameFilter, statusFilters, ownerFilter]);
 
+  // Pagination
+  const startIndex = (currentPage - 1) * perPage;
+  const endIndex = startIndex + perPage;
+  const paginatedData = filteredData.slice(startIndex, endIndex);
+
+  React.useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(filteredData.length / perPage));
+    if (currentPage > lastPage) {
+      setCurrentPage(lastPage);
+    }
+  }, [currentPage, filteredData.length, perPage]);
+
+  const onSetPage = (
+    _event: React.MouseEvent | React.KeyboardEvent | MouseEvent,
+    pageNumber: number,
+  ) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const onPerPageSelect = (
+    _event: React.MouseEvent | React.KeyboardEvent | MouseEvent,
+    perPageNumber: number,
+  ) => {
+    setPerPage(perPageNumber);
+    setCurrentPage(1);
+  };
+
   const onFilterTypeToggle = () => setIsFilterTypeOpen(!isFilterTypeOpen);
 
   const onFilterTypeSelect = (
@@ -423,44 +453,54 @@ const MyAPIKeysPage: React.FC = () => {
     setStatusFilters((prev) =>
       prev.includes(selection) ? prev.filter((s) => s !== selection) : [...prev, selection],
     );
+    setCurrentPage(1);
   };
 
   const handleNameFilterChange = (_event: React.FormEvent<HTMLInputElement>, value: string) => {
     setNameFilter(value);
+    setCurrentPage(1);
   };
 
   const handleOwnerFilterChange = (_event: React.FormEvent<HTMLInputElement>, value: string) => {
     setOwnerFilter(value);
+    setCurrentPage(1);
   };
 
   const onDeleteNameFilter = () => {
     setNameFilter('');
+    setCurrentPage(1);
   };
 
   const onDeleteStatusFilter = (_category: string, label: string) => {
     setStatusFilters((prev) => prev.filter((s) => s !== label));
+    setCurrentPage(1);
   };
 
   const onDeleteOwnerFilter = () => {
     setOwnerFilter('');
+    setCurrentPage(1);
   };
 
   const onDeleteNameGroup = () => {
     setNameFilter('');
+    setCurrentPage(1);
   };
 
   const onDeleteStatusGroup = () => {
     setStatusFilters([]);
+    setCurrentPage(1);
   };
 
   const onDeleteOwnerGroup = () => {
     setOwnerFilter('');
+    setCurrentPage(1);
   };
 
   const onClearAllFilters = () => {
     setNameFilter('');
     setStatusFilters([]);
     setOwnerFilter('');
+    setCurrentPage(1);
   };
 
   const handleDeleteClick = React.useCallback((apiKey: APIKey) => {
@@ -750,13 +790,30 @@ const MyAPIKeysPage: React.FC = () => {
             </EmptyState>
           ) : (
             <VirtualizedTable<APIKey>
-              data={filteredData}
-              unfilteredData={apiKeys}
+              data={paginatedData}
+              unfilteredData={filteredData}
               loaded={loaded}
               loadError={apiKeysLoadError}
               columns={columns}
               Row={BoundAPIKeyRow}
             />
+          )}
+          {filteredData.length > 0 && (
+            <div className="kuadrant-pagination-left">
+              <Pagination
+                itemCount={filteredData.length}
+                perPage={perPage}
+                page={currentPage}
+                onSetPage={onSetPage}
+                onPerPageSelect={onPerPageSelect}
+                variant="bottom"
+                perPageOptions={[
+                  { title: '5', value: 5 },
+                  { title: '10', value: 10 },
+                  { title: '20', value: 20 },
+                ]}
+              />
+            </div>
           )}
         </ListPageBody>
       </PageSection>
