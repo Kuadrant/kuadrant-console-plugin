@@ -228,6 +228,13 @@ const MyAPIKeysPage: React.FC = () => {
     namespace,
   });
 
+  const [canListProducts, canListProductsLoading] = useAccessReview({
+    group: RESOURCES.APIProduct.gvk.group,
+    resource: 'apiproducts',
+    verb: 'list',
+    namespace,
+  });
+
   // Only watch APIKeys if user has permission
   const [apiKeys, loaded, apiKeysLoadError] = useK8sWatchResource<APIKey[]>(
     canList && !canListLoading
@@ -239,12 +246,16 @@ const MyAPIKeysPage: React.FC = () => {
       : null,
   );
 
-  // Watch APIProduct resources to get plan limits
-  const [products, productsLoaded] = useK8sWatchResource<APIProduct[]>({
-    groupVersionKind: RESOURCES.APIProduct.gvk,
-    namespace,
-    isList: true,
-  });
+  // Watch APIProduct resources to get plan limits - only if user has permission
+  const [products, productsLoaded] = useK8sWatchResource<APIProduct[]>(
+    canListProducts && !canListProductsLoading
+      ? {
+          groupVersionKind: RESOURCES.APIProduct.gvk,
+          namespace,
+          isList: true,
+        }
+      : null,
+  );
 
   // Helper function to find plan limits from APIProduct
   const getPlanLimits = React.useCallback(
@@ -617,6 +628,26 @@ const MyAPIKeysPage: React.FC = () => {
     ),
     [activeNamespace, handleDeleteClick, canDelete, canDeleteLoading, getPlanLimits],
   );
+
+  // Loading view while checking permissions
+  if (canListLoading || canListProductsLoading) {
+    return (
+      <>
+        <Helmet>
+          <title data-test="example-page-title">{t('My API Keys')}</title>
+        </Helmet>
+        <NamespaceBar onNamespaceChange={handleNamespaceChange} />
+        <PageSection hasBodyWrapper={false}>
+          <EmptyState>
+            <Spinner size="xl" />
+            <Title headingLevel="h2" size="lg">
+              {t('Loading...')}
+            </Title>
+          </EmptyState>
+        </PageSection>
+      </>
+    );
+  }
 
   // No permissions view
   if (!canListLoading && canList === false) {

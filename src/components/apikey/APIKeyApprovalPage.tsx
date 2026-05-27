@@ -56,6 +56,13 @@ const APIKeyApprovalPage: React.FC = () => {
     namespace: ns,
   });
 
+  const [canListProducts, canListProductsLoading] = useAccessReview({
+    group: RESOURCES.APIProduct.gvk.group,
+    resource: 'apiproducts',
+    verb: 'list',
+    namespace: ns,
+  });
+
   React.useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
@@ -111,15 +118,15 @@ const APIKeyApprovalPage: React.FC = () => {
       : null,
   );
 
-  const productResource = React.useMemo(
-    () => ({
-      groupVersionKind: RESOURCES.APIProduct.gvk,
-      isList: true,
-    }),
-    [],
+  const [products, productsLoaded] = useK8sWatchResource<APIProduct[]>(
+    canListProducts && !canListProductsLoading
+      ? {
+          groupVersionKind: RESOURCES.APIProduct.gvk,
+          namespace: ns,
+          isList: true,
+        }
+      : null,
   );
-
-  const [products, productsLoaded] = useK8sWatchResource<APIProduct[]>(productResource);
 
   const productOptions = React.useMemo(() => {
     if (!productsLoaded || !Array.isArray(products)) return [];
@@ -217,6 +224,22 @@ const APIKeyApprovalPage: React.FC = () => {
     const toReject = filteredRequests.filter((r) => selectedRequests.has(r.metadata?.name || ''));
     setRejectionModalRequests(toReject);
   };
+
+  if (canListLoading || canListProductsLoading) {
+    return (
+      <>
+        <NamespaceBar />
+        <PageSection hasBodyWrapper={false}>
+          <EmptyState>
+            <Spinner size="xl" />
+            <Title headingLevel="h2" size="lg">
+              {t('Loading...')}
+            </Title>
+          </EmptyState>
+        </PageSection>
+      </>
+    );
+  }
 
   if (!canListLoading && canList === false) {
     return (
