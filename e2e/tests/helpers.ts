@@ -94,7 +94,7 @@ async function waitForKuadrantPlugin(page: Page): Promise<void> {
 
 // SPA navigation using pushState - preserves redux state (including impersonation)
 // page.goto() causes a full reload which destroys impersonation state
-async function spaNavigate(page: Page, path: string): Promise<void> {
+export async function spaNavigate(page: Page, path: string): Promise<void> {
   // Wait for plugin to be ready before navigating to plugin routes
   await waitForKuadrantPlugin(page);
 
