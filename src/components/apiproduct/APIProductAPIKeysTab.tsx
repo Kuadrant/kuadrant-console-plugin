@@ -36,16 +36,13 @@ import {
   Timestamp,
   ListPageBody,
   useAccessReview,
-  k8sCreate,
-  k8sList,
-  k8sUpdate,
   consoleFetchJSON,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { SearchIcon, EllipsisVIcon, InfoCircleIcon } from '@patternfly/react-icons';
 import { RESOURCES, OpenshiftUser, SelfSubjectReviewResponse } from '../../utils/resources';
-import { getModelFromResource, getResourceNameFromKind } from '../../utils/getModelFromResource';
-import { APIKeyRequest, APIKeyApproval } from '../apikey/types';
-import { getRequestStatus } from '../apikey/utils';
+import { getResourceNameFromKind } from '../../utils/getModelFromResource';
+import { APIKeyRequest } from '../apikey/types';
+import { getRequestStatus, handleAPIKeyApprovalOrDenial } from '../apikey/utils';
 import { APIKeyStatusBadge } from '../apikey/APIKeyStatusBadge';
 import ApprovalModal from '../apikey/ApprovalModal';
 import RejectionModal from '../apikey/RejectionModal';
@@ -278,85 +275,10 @@ const APIProductAPIKeysTab: React.FC = () => {
     setRejectionModalRequests([request]);
   };
 
-  const handleApproveOrDeny = async (
-    request: APIKeyRequest,
-    approved: boolean,
-    message?: string,
-  ): Promise<void> => {
-    const requestName = request.metadata.name;
-    const namespace = request.metadata.namespace;
-    const requestStatus = getRequestStatus(request);
-
-    const approvalSpec = {
-      apiKeyRequestRef: { name: requestName },
-      approved,
-      reviewedBy: currentUser,
-      reviewedAt: new Date().toISOString(),
-      reason: approved ? 'ApprovedByOwner' : 'DeniedByOwner',
-      message: message || (approved ? 'Approved' : 'Denied'),
-    };
-
-    // Create a minimal approval object for getModelFromResource
-    const approvalForModel: APIKeyApproval = {
-      apiVersion: 'devportal.kuadrant.io/v1alpha1',
-      kind: 'APIKeyApproval',
-      metadata: {
-        name: 'placeholder',
-        namespace: namespace || 'placeholder',
-      },
-      spec: approvalSpec,
-    };
-
-    const model = getModelFromResource(approvalForModel);
-
-    if (requestStatus === 'Approved') {
-      // Active key - find and update existing approval
-      const approvalsResponse = await k8sList<APIKeyApproval>({
-        model,
-        queryParams: { ns: namespace },
-      });
-
-      const approvalsList = Array.isArray(approvalsResponse)
-        ? approvalsResponse
-        : approvalsResponse.items || [];
-
-      const existingApproval = approvalsList.find(
-        (approval) => approval.spec.apiKeyRequestRef.name === requestName,
-      );
-
-      if (!existingApproval) {
-        throw new Error(
-          `Could not find existing approval for active API key: ${requestName}. Found ${approvalsList.length} approvals in namespace ${namespace}`,
-        );
-      }
-
-      await k8sUpdate({
-        model,
-        data: {
-          ...existingApproval,
-          spec: approvalSpec,
-        },
-      });
-    } else {
-      // Pending key - create new approval
-      const newApproval: APIKeyApproval = {
-        apiVersion: 'devportal.kuadrant.io/v1alpha1',
-        kind: 'APIKeyApproval',
-        metadata: {
-          name: `${requestName}-approval`,
-          namespace,
-        },
-        spec: approvalSpec,
-      };
-
-      await k8sCreate({ model, data: newApproval });
-    }
-  };
-
   const handleApprove = async (requests: APIKeyRequest[]) => {
     try {
       for (const request of requests) {
-        await handleApproveOrDeny(request, true);
+        await handleAPIKeyApprovalOrDenial(request, true, currentUser);
       }
       setApprovalModalRequests([]);
     } catch (error) {
@@ -368,7 +290,7 @@ const APIProductAPIKeysTab: React.FC = () => {
   const handleReject = async (requests: APIKeyRequest[], reason?: string) => {
     try {
       for (const request of requests) {
-        await handleApproveOrDeny(request, false, reason);
+        await handleAPIKeyApprovalOrDenial(request, false, currentUser, reason);
       }
       setRejectionModalRequests([]);
     } catch (error) {
