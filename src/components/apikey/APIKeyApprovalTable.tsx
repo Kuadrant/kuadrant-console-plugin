@@ -99,6 +99,13 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
     return sortedRequests.slice(startIdx, endIdx);
   }, [sortedRequests, page, perPage]);
 
+  React.useEffect(() => {
+    const lastPage = Math.max(1, Math.ceil(sortedRequests.length / perPage));
+    if (page > lastPage) {
+      setPage(lastPage);
+    }
+  }, [page, perPage, sortedRequests.length]);
+
   const onSetPage = (
     _event: React.MouseEvent | React.KeyboardEvent | MouseEvent,
     newPage: number,
