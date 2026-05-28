@@ -4,12 +4,24 @@ The Kuadrant OpenShift Console Plugin extends the OpenShift web console with UI 
 
 ## What the plugin provides
 
-The plugin adds a **Kuadrant** section to the OpenShift console with the following pages:
+The plugin adds two main sections to the OpenShift console:
+
+### Kuadrant section
+
+The **Kuadrant** section provides gateway and policy management with the following pages:
 
 - **Overview** - dashboard showing gateway health, policy counts, and HTTPRoute summary across the cluster
 - **Policies** - tabbed list of all Kuadrant policy types (AuthPolicy, RateLimitPolicy, DNSPolicy, TLSPolicy, and extension policies). Supports create, edit, and delete with RBAC-aware UI controls.
+- **API Products** - manage published API products that can be consumed through the API Catalog
 - **Policy Topology** - visual graph of the relationships between Gateways, HTTPRoutes, and the Kuadrant policies attached to them
 - **Policy creation forms** - guided forms for creating AuthPolicy, RateLimitPolicy, DNSPolicy, and TLSPolicy resources, with a toggle to switch between form and YAML views
+
+### Kuadrant API Catalog section
+
+The **Kuadrant API Catalog** section provides developer portal functionality for API management:
+
+- **API Key Approvals** - manage and approve API key requests for accessing published API products
+- **My API Keys** - view and manage your API keys for accessing published APIs
 
 All pages respect Kubernetes RBAC. UI elements (tabs, buttons, kebab menu actions) are shown, hidden, or disabled based on the impersonated user's permissions.
 
