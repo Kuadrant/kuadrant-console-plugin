@@ -10,22 +10,28 @@ This is an OpenShift Console dynamic plugin for managing Kuadrant resources. It'
 kuadrant-console-plugin/
 ├── src/
 │   ├── components/         # React components
-│   │   ├── authpolicy/    # AuthPolicy components and types
+│   │   ├── apikey/        # API Key request and approval components
+│   │   ├── apiproduct/    # API Product catalog components
 │   │   ├── dnspolicy/     # DNSPolicy components and types
 │   │   ├── gateway/       # Gateway components
 │   │   ├── httproute/     # HTTPRoute components
 │   │   ├── issuer/        # Certificate issuer components
 │   │   ├── ratelimitpolicy/ # RateLimitPolicy components
 │   │   ├── tlspolicy/     # TLSPolicy components
-│   │   └── apimanagement/ # API Management portal components
+│   │   └── topology/      # Topology visualization components
+│   ├── hooks/             # Custom React hooks
+│   │   └── topology/      # Topology-specific hooks
 │   ├── utils/             # Utility functions
+│   │   └── topology/      # Topology utilities and parsers
 │   └── constants/         # Configuration constants
 ├── charts/                # Helm chart for deployment
-├── locales/              # i18n translation files
+├── locales/               # i18n translation files
 ├── config/
 │   ├── crd/              # Custom Resource Definitions
 │   └── rbac/             # RBAC role definitions
-└── docs/                 # Documentation and images
+├── e2e/                   # End-to-end Playwright tests
+├── docs/                  # Documentation and images
+└── scripts/               # Build and deployment scripts
 ```
 
 ## Key Technologies
@@ -119,7 +125,14 @@ METRICS_WORKLOAD_SUFFIX: "-openshift-default"
   - `graphParser`: DOT string parsing and transitive edge preservation
 - **ResourceList**: Generic component for displaying K8s resources
 - **KuadrantCreateUpdate**: Handles create/update operations for all policy types
-- **ApiManagementPage**: API catalog and access request management (see API Management section)
+- **APIProductsListPage**: API product catalog browsing and management
+- **APIProductCreatePage**: Form for creating/editing API products with metadata
+- **APIProductOverviewTab**: Overview tab for API product details page
+- **APIProductDefinitionTab**: Definition/OpenAPI spec tab for API product details
+- **APIProductPoliciesTab**: Policies tab showing associated rate limit policies
+- **APIProductAPIKeysTab**: API keys tab showing approved keys for the product
+- **APIKeyApprovalPage**: Admin interface for reviewing and approving API key requests
+- **MyAPIKeysPage**: User interface for requesting and managing API keys
 
 ## Policy Topology Architecture
 
@@ -170,10 +183,38 @@ yarn start-console
 
 ## Testing
 
-Currently limited testing infrastructure:
-- TypeScript provides type safety
-- Linting with ESLint and Stylelint
-- i18n file consistency check via `test-frontend.sh`
+The project uses multiple testing approaches:
+- **TypeScript**: Type safety and compile-time checks
+- **ESLint & Stylelint**: Code quality and style enforcement
+- **i18n validation**: Translation file consistency check via `test-frontend.sh`
+- **Playwright E2E tests**: End-to-end browser testing for critical user flows
+
+### E2E Testing
+
+End-to-end tests are located in the `e2e/` directory and use Playwright:
+
+```bash
+# Run all e2e tests
+yarn test:e2e
+
+# Run a single test file
+npx playwright test --config=e2e/playwright.config.ts e2e/tests/apikey-approvals.spec.ts
+
+# Run a specific test by name (using grep filter)
+npx playwright test --config=e2e/playwright.config.ts e2e/tests/apikey-approvals.spec.ts -g "reject request with reason shows success toast"
+
+# Setup test environment
+yarn test:e2e:setup
+
+# Teardown test environment
+yarn test:e2e:teardown
+```
+
+E2E tests cover key workflows including:
+- API Product creation and management
+- API Key request and approval flows
+- Gateway and policy management
+- Topology visualization
 
 ## Important Notes
 
@@ -240,6 +281,18 @@ To ensure text visibility in both light and dark themes:
 - Apply contrasting colours: white text (#ffffff) for dark theme, dark text (#151515) for light theme
 - Policy nodes use light blue backgrounds with theme-appropriate opacity
 - Always test components in both light and dark themes
+
+## Planning New Work
+
+When planning a new feature, enhancement, or significant change:
+
+1. **Interview relentlessly**: Ask questions about every aspect of the plan until reaching a shared understanding with the user
+2. **Walk the design tree**: Go down each branch of the design tree, resolving dependencies between decisions one-by-one
+3. **Ask questions one at a time**: Don't overwhelm with multiple questions at once
+4. **Provide recommendations**: For each question, provide a recommended answer based on codebase patterns
+5. **Explore first**: If a question can be answered by exploring the codebase, do that instead of asking
+
+This ensures alignment before implementation and prevents wasted effort on incorrect assumptions.
 
 ## Contributing
 
