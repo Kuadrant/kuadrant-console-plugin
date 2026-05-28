@@ -36,7 +36,7 @@ In another terminal window, run:
 
 This will run the OpenShift console in a container connected to the cluster
 you've logged into. The plugin HTTP server runs on port 9001 with CORS enabled.
-Navigate to <http://localhost:9000/example> to see the running plugin.
+Navigate to <http://localhost:9000> and click "Kuadrant" in the left sidebar menu to see the running plugin.
 
 ### Option 2: oinc (no cluster required)
 
@@ -71,7 +71,7 @@ OC_PASS=<password>
 
 2. `(Ctrl+Shift+P) => Remote Containers: Open Folder in Container...`
 3. `yarn run start`
-4. Navigate to <http://localhost:9000/example>
+4. Navigate to <http://localhost:9000> and click "Kuadrant" in the left sidebar menu
 
 ## Docker image
 
@@ -196,3 +196,4 @@ Openshift console is configured to share modules with its dynamic plugins (conso
 ## Troubleshooting
 
 For troubleshooting common issues, please see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
