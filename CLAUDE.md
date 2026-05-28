@@ -127,9 +127,12 @@ METRICS_WORKLOAD_SUFFIX: "-openshift-default"
 - **KuadrantCreateUpdate**: Handles create/update operations for all policy types
 - **APIProductsListPage**: API product catalog browsing and management
 - **APIProductCreatePage**: Form for creating/editing API products with metadata
+- **APIProductOverviewTab**: Overview tab for API product details page
+- **APIProductDefinitionTab**: Definition/OpenAPI spec tab for API product details
+- **APIProductPoliciesTab**: Policies tab showing associated rate limit policies
+- **APIProductAPIKeysTab**: API keys tab showing approved keys for the product
 - **APIKeyApprovalPage**: Admin interface for reviewing and approving API key requests
 - **MyAPIKeysPage**: User interface for requesting and managing API keys
-- **APIProductDetailsPage**: Detailed view with tabs for overview, definition, policies, and API keys
 
 ## Policy Topology Architecture
 
