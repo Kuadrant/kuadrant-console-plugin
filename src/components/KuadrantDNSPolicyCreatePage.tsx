@@ -163,22 +163,18 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
     };
   }
 
-  //Checking if the policy already exists and is to be edited or if its new and is being created
-  let dnsResource = null;
-  if (nameEdit) {
-    dnsResource = {
-      groupVersionKind: dnsPolicyGVK,
-      isList: false,
-      name: nameEdit,
-      namespace: namespaceEdit,
-    };
-  }
-
-  const [dnsData, dnsLoaded, dnsError] = dnsResource
-    ? useK8sWatchResource(dnsResource)
-    : [null, false, null]; //Syntax allows for dnsResource to be null in the case of a create
+  // Always call useK8sWatchResource unconditionally to comply with React's Rules of Hooks.
+  // In create mode (no nameEdit), a no-op descriptor is passed and the result is ignored
+  // via the early-return guard inside the useEffect below.
+  const [dnsData, dnsLoaded, dnsError] = useK8sWatchResource(
+    nameEdit
+      ? { groupVersionKind: dnsPolicyGVK, isList: false, name: nameEdit, namespace: namespaceEdit }
+      : null,
+  );
 
   React.useEffect(() => {
+    // Skip in create mode — the no-op watch resource has no meaningful data to load
+    if (!nameEdit) return;
     if (dnsLoaded && !dnsError) {
       if (!Array.isArray(dnsData)) {
         const dnsPolicyUpdate = dnsData as dnsPolicyEdit;
@@ -216,7 +212,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
     } else if (dnsError) {
       console.error('Failed to fetch the resource:', dnsError);
     }
-  }, [dnsData, dnsLoaded, dnsError]);
+  }, [dnsData, dnsLoaded, dnsError, nameEdit]);
 
   const handleYAMLChange = (yamlInput: string) => {
     try {
