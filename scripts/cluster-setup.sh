@@ -25,7 +25,34 @@ PLUGIN_NAME=$(node -p "require('${REPO_DIR}/package.json').consolePlugin.name")
 log "creating oinc cluster with addons..."
 oinc create \
 	--addons gateway-api,cert-manager,metallb,istio,kuadrant@latest \
-	--console-plugin "${PLUGIN_NAME}=http://${HOST}:${PLUGIN_PORT}"
+	--console-plugin "${PLUGIN_NAME}=http://${HOST}:${PLUGIN_PORT}" || {
+	log "oinc create failed, checking if kuadrant needs more time..."
+
+	if ! kubectl get kuadrant kuadrant -n kuadrant-system &>/dev/null; then
+		log "ERROR: Kuadrant CR not found — setup failed before creating it"
+		kubectl get pods -n kuadrant-system 2>/dev/null || true
+		exit 1
+	fi
+
+	log "kuadrant CR exists, waiting for readiness (extended timeout: 10 minutes)..."
+	timeout 600 bash -c '
+		while true; do
+			status=$(kubectl get kuadrant kuadrant -n kuadrant-system \
+				-o jsonpath="{.status.conditions[?(@.type==\"Ready\")].status}" 2>/dev/null)
+			if [ "$status" = "True" ]; then
+				break
+			fi
+			echo "  waiting for kuadrant Ready condition (current: ${status:-not set})..."
+			sleep 10
+		done
+	' || {
+		log "ERROR: Kuadrant not ready after extended timeout"
+		kubectl get kuadrant kuadrant -n kuadrant-system -o yaml 2>/dev/null || true
+		kubectl get pods -n kuadrant-system 2>/dev/null || true
+		exit 1
+	}
+	log "kuadrant ready after extended wait"
+}
 
 log "patch kuadrant to enable developer portal controller..."
 kubectl patch kuadrant kuadrant -n kuadrant-system --type merge --patch '{"spec": {"components": {"developerPortal": {"enabled": true}}}}'
