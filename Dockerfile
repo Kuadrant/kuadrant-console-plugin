@@ -1,20 +1,17 @@
-FROM registry.access.redhat.com/ubi9/ubi:latest
+# Stage 1: Build static assets on native amd64 (avoids QEMU emulation issues
+# with OpenSSL/TLS when running dnf on ppc64le/s390x under emulation)
+FROM --platform=linux/amd64 registry.access.redhat.com/ubi9/ubi:latest AS builder
 
 USER root
 
-RUN dnf update -y && \
-    dnf upgrade -y && \
-    dnf module enable nodejs:22 nginx:1.24 -y && \
-    dnf install -y nodejs nginx npm gcc-c++ make python3
+RUN dnf module enable nodejs:22 -y && \
+    dnf install -y nodejs npm gcc-c++ make python3 && \
+    dnf clean all
 
-# Enable corepack for Yarn v4 support
 RUN npm install -g corepack && \
     corepack enable
 
 RUN yarn config set --home enableGlobalCache true
-
-RUN mkdir -p /var/cache/nginx /var/log/nginx /run && \
-    chmod -R 777 /var/cache/nginx /var/log/nginx /run /usr/share/nginx/html/
 
 WORKDIR /usr/src/app
 
@@ -24,17 +21,23 @@ RUN YARN_ENABLE_SCRIPTS=false yarn install --immutable
 COPY . .
 
 RUN yarn build
-RUN pwd && ls -la
-RUN ls -la ./dist
 
-RUN cp -r ./dist/* /usr/share/nginx/html/
-
-COPY entrypoint.sh /usr/share/nginx/html/entrypoint.sh
-
-RUN test -f /usr/share/nginx/html/plugin-manifest.json && \
-    test -f /usr/share/nginx/html/entrypoint.sh && \
-    test -d /usr/share/nginx/html/locales && \
+RUN test -f ./dist/plugin-manifest.json && \
+    test -d ./dist/locales && \
     echo "All required files are present."
+
+# Stage 2: Runtime image on target architecture
+FROM registry.access.redhat.com/ubi9/ubi-minimal:latest
+
+RUN microdnf module enable nginx:1.24 -y && \
+    microdnf install -y nginx && \
+    microdnf clean all
+
+RUN mkdir -p /var/cache/nginx /var/log/nginx /run && \
+    chmod -R 777 /var/cache/nginx /var/log/nginx /run /usr/share/nginx/html/
+
+COPY --from=builder /usr/src/app/dist/ /usr/share/nginx/html/
+COPY entrypoint.sh /usr/share/nginx/html/entrypoint.sh
 
 USER 1001
 ENTRYPOINT ["/usr/share/nginx/html/entrypoint.sh"]
