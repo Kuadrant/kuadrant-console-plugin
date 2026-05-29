@@ -34,7 +34,9 @@ RUN microdnf module enable nginx:1.24 -y && \
     microdnf clean all
 
 RUN mkdir -p /var/cache/nginx /var/log/nginx /run && \
-    chmod -R 777 /var/cache/nginx /var/log/nginx /run /usr/share/nginx/html/
+    chown -R root:0 /var/cache/nginx /var/log/nginx /run /usr/share/nginx/html && \
+    chmod -R g+rwX /var/cache/nginx /var/log/nginx /run && \
+    chmod -R g+rX /usr/share/nginx/html
 
 COPY --from=builder /usr/src/app/dist/ /usr/share/nginx/html/
 COPY entrypoint.sh /usr/share/nginx/html/entrypoint.sh
