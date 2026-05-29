@@ -117,12 +117,14 @@ API consumers are developers who need to integrate with services provided by oth
 The authentication experience depends on how the API is protected:
 
 **For API Key Authentication:**
+
 - Create an APIKey resource requesting access to an APIProduct
 - Wait for approval (automatic or manual depending on the product)
 - Receive an API key once approved (credentials are shown once and must be saved immediately)
 - Use the API key in the `Authorization` header when making requests
 
 **For OIDC/JWT Authentication:**
+
 - View the OIDC provider details and token endpoint
 - Obtain an access token from the identity provider using their credentials
 - Use the JWT token in the `Authorization` header when making requests
@@ -138,7 +140,6 @@ API owners are the teams responsible for specific services. They control how the
   - Review pending APIKey requests
   - Approve or reject requests by creating APIKeyApproval resources
 - Set documentation links so consumers can self-serve
-- Monitor API usage through the API Keys tab on their APIProduct detail pages
 
 ### 3. The API Admin
 
@@ -167,7 +168,7 @@ The platform team doesn't need to be involved in individual API publications or 
 
 ## RBAC Requirements
 
-All console pages respect Kubernetes RBAC. See the [RBAC guide](../rbac.md) for detailed permission requirements for each persona.
+All console pages respect Kubernetes RBAC. See the [RBAC guide](rbac.md) for detailed permission requirements for each persona.
 
 Key resource access patterns:
 
@@ -190,5 +191,6 @@ This integration means the API management features don't duplicate functionality
 
 ## Next Steps
 
-- [RBAC Configuration](../rbac.md): Configure permissions for different API management personas
+- [Getting Started Tutorial](getting-started.md): Set up a complete example with an API product and access request
+- [RBAC Configuration](rbac.md): Configure permissions for different API management personas
 - [Kuadrant Documentation](https://docs.kuadrant.io/): Learn about the broader Kuadrant ecosystem
