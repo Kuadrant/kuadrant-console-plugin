@@ -1,14 +1,5 @@
 import * as React from 'react';
 import Helmet from 'react-helmet';
-import {
-  Button,
-  ButtonVariant,
-  Modal,
-  ModalVariant,
-  ModalBody,
-  ModalFooter,
-} from '@patternfly/react-core';
-
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
 import { ResourceYAMLEditor, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
@@ -17,8 +8,6 @@ import { resourceGVKMapping } from '../utils/resources';
 const KuadrantPlanPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [selectedNamespace] = useActiveNamespace();
-  const [isErrorModalOpen, setIsErrorModalOpen] = React.useState(false);
-  const [errorModalMsg] = React.useState('');
 
   const planPolicy = {
     apiVersion:
@@ -53,21 +42,6 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
       </Helmet>
 
       <ResourceYAMLEditor initialResource={planPolicy} header="Create Plan Policy" create />
-      <Modal
-        isOpen={isErrorModalOpen}
-        onClose={() => setIsErrorModalOpen(false)}
-        variant={ModalVariant.medium}
-        title={t('Error creating Plan Policy')}
-      >
-        <ModalBody>
-          <b>{errorModalMsg}</b>
-        </ModalBody>
-        <ModalFooter>
-          <Button key="ok" variant={ButtonVariant.link} onClick={() => setIsErrorModalOpen(false)}>
-            {t('OK')}
-          </Button>
-        </ModalFooter>
-      </Modal>
     </>
   );
 };
