@@ -28,14 +28,14 @@ git tag -a vX.Y.Z -m "vX.Y.Z" -s
 git push upstream vX.Y.Z
 ```
 
+Pushing the tag triggers the `Build and Push` [GitHub workflow](https://github.com/Kuadrant/kuadrant-console-plugin/blob/main/.github/workflows/build-push.yaml), which:
+- Builds the `kuadrant-console-plugin` image.
+- Pushes the versioned image to [Quay.io](https://quay.io/repository/kuadrant/console-plugin?tab=tags).
+
 ## 4. Publish the Release on GitHub
 
 - [Create a new GitHub release](https://github.com/Kuadrant/kuadrant-console-plugin/releases) from the tag you just pushed.
 - Use auto-generated release notes.
-
-This triggers the `Build and Push Versioned Multi-arch Image (Release)` [GitHub workflow](https://github.com/Kuadrant/kuadrant-console-plugin/blob/main/.github/workflows/release-build.yaml#L51), which:
-- Builds the `kuadrant-console-plugin` image.
-- Pushes the versioned image to [Quay.io](https://quay.io/repository/kuadrant/console-plugin?tab=tags).
 
 ## 5. Bump to the Next Development Version
 
