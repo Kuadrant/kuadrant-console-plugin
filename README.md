@@ -63,7 +63,7 @@ cached containers will help you start developing in seconds.
 1. Create a `dev.env` file inside the `.devcontainer` folder with the correct values for your cluster:
 
 ```bash
-OC_PLUGIN_NAME=console-plugin-template
+OC_PLUGIN_NAME=kuadrant-console-plugin
 OC_URL=https://api.example.com:6443
 OC_USER=kubeadmin
 OC_PASS=<password>
@@ -113,10 +113,10 @@ Install via the [`kuadrant-operator`](https://www.github.com/kuadrant/kuadrant-o
 
 ## i18n
 
-The plugin template demonstrates how you can translate messages in with [react-i18next](https://react.i18next.com/). The i18n namespace must match
+The plugin demonstrates how you can translate messages with [react-i18next](https://react.i18next.com/). The i18n namespace must match
 the name of the `ConsolePlugin` resource with the `plugin__` prefix to avoid
-naming conflicts. For example, the plugin template uses the
-`plugin__kuadrant-console` namespace. You can use the `useTranslation` hook
+naming conflicts. For example, this plugin uses the
+`plugin__kuadrant-console-plugin` namespace. You can use the `useTranslation` hook
 with this namespace as follows:
 
 ```tsx
@@ -128,7 +128,7 @@ const Header: React.FC = () => {
 
 For labels in `console-extensions.json`, you can use the format
 `%plugin__kuadrant-console-plugin~My Label%`. Console will replace the value with
-the message for the current language from the `plugin__kuadrant-console`
+the message for the current language from the `plugin__kuadrant-console-plugin`
 namespace. For example:
 
 ```json
@@ -137,13 +137,13 @@ namespace. For example:
   "properties": {
     "id": "admin-demo-section",
     "perspective": "admin",
-    "name": "%plugin__kuadrant-console-plugin~Plugin Template%"
+    "name": "%plugin__kuadrant-console-plugin~Kuadrant%"
   }
 }
 ```
 
 Running `yarn i18n` updates the JSON files in the `locales` folder of the
-plugin template when adding or changing messages.
+plugin when adding or changing messages.
 
 ## Linting
 
