@@ -13,29 +13,52 @@ const DEFAULT_CONFIG: KuadrantConfig = {
 
 // Module-level cache for boot-time configuration
 let configPromise: Promise<KuadrantConfig> | null = null;
-// Fetch the config.js file dynamically at runtime (once, then cached)
-// Normally served from <cluster-host>/api/plugins/kuadrant-console-plugin/config.js
+
+/**
+ * Validates that the config object has the expected structure
+ * @param config - Configuration object to validate
+ * @returns true if valid, false otherwise
+ */
+const isValidConfig = (config: any): config is KuadrantConfig => {
+  return (
+    config &&
+    typeof config === 'object' &&
+    typeof config.TOPOLOGY_CONFIGMAP_NAME === 'string' &&
+    typeof config.TOPOLOGY_CONFIGMAP_NAMESPACE === 'string' &&
+    typeof config.METRICS_WORKLOAD_SUFFIX === 'string'
+  );
+};
+
+/**
+ * Fetch the config.json file dynamically at runtime (once, then cached)
+ * Normally served from <cluster-host>/api/plugins/kuadrant-console-plugin/config.json
+ *
+ * Security: Uses JSON instead of executable JavaScript to prevent XSS attacks
+ */
 const loadConfig = async (): Promise<KuadrantConfig> => {
   try {
-    const response = await fetch('/api/plugins/kuadrant-console-plugin/config.js');
+    const response = await fetch('/api/plugins/kuadrant-console-plugin/config.json');
     if (!response.ok) {
       if (response.status === 404) {
-        console.warn('config.js not found (running locally perhaps). Falling back to defaults.');
+        console.warn('config.json not found (running locally perhaps). Falling back to defaults.');
       } else {
-        throw new Error(`Failed to fetch config.js: ${response.statusText}`);
+        throw new Error(`Failed to fetch config.json: ${response.statusText}`);
       }
       return DEFAULT_CONFIG;
     }
 
-    const script = await response.text();
+    // Parse JSON response (safe - no code execution)
+    const config = await response.json();
 
-    const configScript = document.createElement('script');
-    configScript.innerHTML = script;
-    document.head.appendChild(configScript);
+    // Validate config structure before using
+    if (!isValidConfig(config)) {
+      console.warn('Invalid config.json structure. Falling back to defaults.', config);
+      return DEFAULT_CONFIG;
+    }
 
-    return (window as any).kuadrant_config || DEFAULT_CONFIG;
+    return config;
   } catch (error) {
-    console.error('Error loading config.js:', error);
+    console.error('Error loading config.json:', error);
     return DEFAULT_CONFIG;
   }
 };
