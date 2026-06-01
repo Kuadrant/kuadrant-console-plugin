@@ -22,6 +22,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import { handleCancel } from '../utils/cancel';
+import extractResourceNameFromURL, { extractNamespaceFromURL } from '../utils/nameFromPath';
 import { useNavigate, useLocation } from 'react-router-dom-v5-compat';
 import * as yaml from 'js-yaml';
 import { useTranslation } from 'react-i18next';
@@ -52,9 +53,8 @@ const KuadrantTLSCreatePage: React.FC = () => {
   );
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const location = useLocation();
-  const pathSplit = location.pathname.split('/');
-  const nameEdit = pathSplit[6];
-  const namespaceEdit = pathSplit[3];
+  const nameEdit = extractResourceNameFromURL(location.pathname);
+  const namespaceEdit = extractNamespaceFromURL(location.pathname);
   const [formDisabled, setFormDisabled] = React.useState(false);
   const [create, setCreate] = React.useState(true);
   const [creationTimestamp, setCreationTimestamp] = React.useState('');

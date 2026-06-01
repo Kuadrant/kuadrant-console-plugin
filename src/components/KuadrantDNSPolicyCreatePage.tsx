@@ -33,6 +33,7 @@ import GatewaySelect from './gateway/GatewaySelect';
 import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
+import extractResourceNameFromURL, { extractNamespaceFromURL } from '../utils/nameFromPath';
 import { resourceGVKMapping } from '../utils/resources';
 
 const KuadrantDNSPolicyCreatePage: React.FC = () => {
@@ -59,9 +60,8 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
   const [resourceVersion, setResourceVersion] = React.useState('');
   const location = useLocation();
-  const pathSplit = location.pathname.split('/');
-  const nameEdit = pathSplit[6];
-  const namespaceEdit = pathSplit[3];
+  const nameEdit = extractResourceNameFromURL(location.pathname);
+  const namespaceEdit = extractNamespaceFromURL(location.pathname);
   const [formDisabled, setFormDisabled] = React.useState(false);
   const [create, setCreate] = React.useState(true);
   const [loadBalancingExpanded, setLoadBalancingExpanded] = React.useState(false);
