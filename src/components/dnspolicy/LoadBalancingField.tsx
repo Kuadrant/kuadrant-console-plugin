@@ -44,7 +44,7 @@ const LoadBalancingField: React.FC<LoadBalancingProps> = ({
           }}
           isRequired
           type="number"
-          placeholder="0"
+          placeholder="120"
           isDisabled={formDisabled}
         />
         <FormHelperText>

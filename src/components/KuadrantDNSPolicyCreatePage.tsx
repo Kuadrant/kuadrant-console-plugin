@@ -46,7 +46,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   });
   const [loadBalancing, setLoadBalancing] = React.useState<LoadBalancing>({
     geo: '',
-    weight: null,
+    weight: 120,
     defaultGeo: '',
   });
   const [healthCheck, setHealthCheck] = React.useState<HealthCheck>({
