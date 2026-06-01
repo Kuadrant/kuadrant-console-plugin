@@ -34,13 +34,14 @@ const LoadBalancingField: React.FC<LoadBalancingProps> = ({
       >
         <TextInput
           id="weight"
-          value={loadBalancing.weight}
-          onChange={(event) =>
+          value={loadBalancing.weight ?? ''}
+          onChange={(event) => {
+            const value = event.currentTarget.value;
             onChange({
               ...loadBalancing,
-              weight: Number(event.currentTarget.value),
-            })
-          }
+              weight: value === '' ? null : Number(value),
+            });
+          }}
           isRequired
           type="number"
           placeholder="0"

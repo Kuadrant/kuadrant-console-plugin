@@ -77,7 +77,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       healthCheck.protocol !== '';
 
     const hasLoadBalancing =
-      loadBalancing.geo || loadBalancing.defaultGeo !== '' || loadBalancing.weight;
+      loadBalancing.geo || loadBalancing.defaultGeo !== '' || loadBalancing.weight != null;
 
     return {
       apiVersion:
@@ -99,7 +99,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         ...(hasLoadBalancing
           ? {
               loadBalancing: {
-                ...(loadBalancing?.weight ? { weight: loadBalancing.weight } : {}),
+                ...(loadBalancing?.weight != null ? { weight: loadBalancing.weight } : {}),
                 ...(loadBalancing?.geo ? { geo: loadBalancing.geo } : {}),
                 ...(loadBalancing.defaultGeo !== ''
                   ? { defaultGeo: loadBalancing.defaultGeo }
@@ -206,7 +206,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         setProviderRefs([providerRef]);
         setLoadBalancing({
           geo: dnsPolicyUpdate.spec?.loadBalancing?.geo || '',
-          weight: dnsPolicyUpdate.spec?.loadBalancing?.weight || 0,
+          weight: dnsPolicyUpdate.spec?.loadBalancing?.weight ?? null,
           defaultGeo:
             dnsPolicyUpdate.spec?.loadBalancing?.defaultGeo !== undefined
               ? dnsPolicyUpdate.spec.loadBalancing?.defaultGeo
@@ -242,7 +242,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
 
       setLoadBalancing({
         geo: parsedYaml.spec?.loadBalancing?.geo || '',
-        weight: parsedYaml.spec?.loadBalancing?.weight || '',
+        weight: parsedYaml.spec?.loadBalancing?.weight ?? null,
         defaultGeo:
           parsedYaml.spec?.loadBalancing?.defaultGeo !== undefined
             ? parsedYaml.spec.loadBalancing?.defaultGeo
@@ -273,7 +273,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       selectedGateway.name &&
       providerRefs.length > 0 &&
       (!loadBalancingExpanded ||
-        (loadBalancing.geo && loadBalancing.weight && loadBalancing.defaultGeo !== '')) &&
+        (loadBalancing.geo && loadBalancing.weight != null && loadBalancing.defaultGeo !== '')) &&
       (!healthExpanded ||
         (healthCheck.endpoint &&
           healthCheck.failureThreshold > 0 &&
