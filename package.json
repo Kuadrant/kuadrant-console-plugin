@@ -9,8 +9,8 @@
     "url": "https://github.com/kuadrant/kuadrant-console-plugin.git"
   },
   "scripts": {
-    "clean": "rm -rf dist",
-    "build": "yarn clean && NODE_ENV=production yarn webpack",
+    "clean": "rimraf dist",
+    "build": "yarn clean && cross-env NODE_ENV=production yarn webpack",
     "build-dev": "yarn clean && yarn webpack",
     "start": "yarn webpack serve --progress",
     "start-console": "./start-console.sh",
@@ -21,7 +21,7 @@
     "test:e2e": "npx playwright test --config=e2e/playwright.config.ts",
     "test:e2e:setup": "./e2e/setup.sh",
     "test:e2e:teardown": "./e2e/teardown.sh",
-    "webpack": "node -r ts-node/register ./node_modules/.bin/webpack",
+    "webpack": "node -r ts-node/register ./node_modules/webpack/bin/webpack.js",
     "downstream-replacements": "node downstream.js && yarn i18n && yarn lint",
     "upstream-replacements": "node downstream.js --upstream && yarn i18n && yarn lint"
   },
@@ -47,6 +47,7 @@
     "@typescript-eslint/eslint-plugin": "^5.14.0",
     "@typescript-eslint/parser": "^5.14.0",
     "copy-webpack-plugin": "^12.0.2",
+    "cross-env": "^10.1.0",
     "css-loader": "^6.7.1",
     "eslint": "^8.10.0",
     "eslint-config-prettier": "^8.5.0",
@@ -64,6 +65,7 @@
     "react-i18next": "^11.7.3",
     "react-router": "5.3.x",
     "react-router-dom": "5.3.x",
+    "rimraf": "^6.1.3",
     "style-loader": "^3.3.1",
     "stylelint": "^15.3.0",
     "stylelint-config-standard": "^31.0.0",

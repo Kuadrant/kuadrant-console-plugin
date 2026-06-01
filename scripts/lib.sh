@@ -17,7 +17,7 @@ detect_runtime() {
 # resolve the hostname that containers use to reach the host machine
 container_host() {
   local runtime="${1:-docker}"
-  if [ "$(uname -s)" = "Linux" ]; then
+  if [ "$(uname -s)" = "Linux" ] && ! grep -qiE 'microsoft|wsl' /proc/sys/kernel/osrelease /proc/version 2>/dev/null; then
     echo "localhost"
   elif [ "${runtime}" = "podman" ]; then
     echo "host.containers.internal"
