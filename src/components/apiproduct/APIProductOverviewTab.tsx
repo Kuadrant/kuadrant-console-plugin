@@ -13,7 +13,11 @@ import {
   Spinner,
   Title,
   Button,
+  ActionGroup,
   Divider,
+  TextInput,
+  FormSelect,
+  FormSelectOption,
 } from '@patternfly/react-core';
 import { PencilAltIcon } from '@patternfly/react-icons';
 import {
@@ -21,11 +25,13 @@ import {
   useActiveNamespace,
   useAccessReview,
   Timestamp,
+  k8sUpdate,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { APIProduct, PlanSpec } from './types';
 import { RESOURCES } from '../../utils/resources';
 import extractResourceNameFromURL from '../../utils/nameFromPath';
 import { getResourceNameFromKind } from '../../utils/getModelFromResource';
+import { getModelFromResource } from '../../utils/getModelFromResource';
 import NoPermissionsView from '../NoPermissionsView';
 import ContactInfoEditModal from './ContactInfoEditModal';
 import TagsEditModal from './TagsEditModal';
@@ -42,6 +48,20 @@ const APIProductOverviewTab: React.FC = () => {
   const [activeNamespace] = useActiveNamespace();
   const location = useLocation();
   const productName = extractResourceNameFromURL(location.pathname);
+  const [isEditingDisplayName, setIsEditingDisplayName] = React.useState(false);
+  const [editDisplayNameValue, setEditDisplayNameValue] = React.useState('');
+  const [displayNameError, setDisplayNameError] = React.useState('');
+  const [isSavingDisplayName, setIsSavingDisplayName] = React.useState(false);
+  const [isEditingVersion, setIsEditingVersion] = React.useState(false);
+  const [editVersionValue, setEditVersionValue] = React.useState('');
+  const [versionError, setVersionError] = React.useState('');
+  const [isSavingVersion, setIsSavingVersion] = React.useState(false);
+  const [isEditingApprovalMode, setIsEditingApprovalMode] = React.useState(false);
+  const [editApprovalModeValue, setEditApprovalModeValue] = React.useState<'manual' | 'automatic'>(
+    'manual',
+  );
+  const [approvalModeError, setApprovalModeError] = React.useState('');
+  const [isSavingApprovalMode, setIsSavingApprovalMode] = React.useState(false);
   const [editingField, setEditingField] = React.useState<ContactField | null>(null);
   const [editingDocField, setEditingDocField] = React.useState<DocumentationField | null>(null);
   const [isEditingTags, setIsEditingTags] = React.useState(false);
@@ -89,6 +109,105 @@ const APIProductOverviewTab: React.FC = () => {
   // Get discovered plans
   const discoveredPlans = apiProduct?.status?.discoveredPlans || [];
   const hasPlans = discoveredPlans.length > 0;
+
+  const updateAPIProduct = async (updatedSpec: Partial<APIProduct['spec']>) => {
+    const model = getModelFromResource(apiProduct);
+    const updatedResource: APIProduct = {
+      ...apiProduct,
+      spec: {
+        ...apiProduct.spec,
+        ...updatedSpec,
+      },
+    };
+
+    await k8sUpdate({
+      model,
+      data: updatedResource,
+    });
+  };
+
+  const handleEditDisplayName = () => {
+    setEditDisplayNameValue(apiProduct.spec.displayName || apiProduct.metadata.name);
+    setDisplayNameError('');
+    setIsEditingDisplayName(true);
+  };
+
+  const handleSaveDisplayName = async () => {
+    setIsSavingDisplayName(true);
+    setDisplayNameError('');
+
+    try {
+      await updateAPIProduct({
+        displayName: editDisplayNameValue.trim() || apiProduct.metadata.name,
+      });
+      setIsEditingDisplayName(false);
+    } catch (err) {
+      setDisplayNameError(err instanceof Error ? err.message : t('Failed to update display name'));
+    } finally {
+      setIsSavingDisplayName(false);
+    }
+  };
+
+  const handleCancelDisplayName = () => {
+    setIsEditingDisplayName(false);
+    setDisplayNameError('');
+  };
+
+  const handleEditVersion = () => {
+    setEditVersionValue(apiProduct.spec.version || '');
+    setVersionError('');
+    setIsEditingVersion(true);
+  };
+
+  const handleSaveVersion = async () => {
+    setIsSavingVersion(true);
+    setVersionError('');
+
+    try {
+      await updateAPIProduct({
+        version: editVersionValue.trim() || undefined,
+      });
+      setIsEditingVersion(false);
+    } catch (err) {
+      setVersionError(err instanceof Error ? err.message : t('Failed to update version'));
+    } finally {
+      setIsSavingVersion(false);
+    }
+  };
+
+  const handleCancelVersion = () => {
+    setIsEditingVersion(false);
+    setVersionError('');
+  };
+
+  const handleEditApprovalMode = () => {
+    setEditApprovalModeValue(apiProduct.spec.approvalMode || 'manual');
+    setApprovalModeError('');
+    setIsEditingApprovalMode(true);
+  };
+
+  const handleSaveApprovalMode = async () => {
+    setIsSavingApprovalMode(true);
+    setApprovalModeError('');
+
+    try {
+      await updateAPIProduct({
+        approvalMode: editApprovalModeValue,
+      });
+      setIsEditingApprovalMode(false);
+    } catch (err) {
+      setApprovalModeError(
+        err instanceof Error ? err.message : t('Failed to update approval mode'),
+      );
+    } finally {
+      setIsSavingApprovalMode(false);
+    }
+  };
+
+  const handleCancelApprovalMode = () => {
+    setIsEditingApprovalMode(false);
+    setApprovalModeError('');
+  };
 
   // Get authentication methods from discoveredAuthScheme
   const authMethods = React.useMemo(() => {
@@ -231,7 +350,52 @@ const APIProductOverviewTab: React.FC = () => {
         <DescriptionListGroup>
           <DescriptionListTerm>{t('Display Name')}</DescriptionListTerm>
           <DescriptionListDescription>
-            {apiProduct.spec.displayName || apiProduct.metadata.name}
+            {isEditingDisplayName ? (
+              <>
+                <TextInput
+                  value={editDisplayNameValue}
+                  onChange={(_event, value) => setEditDisplayNameValue(value)}
+                  aria-label={t('Display Name')}
+                  isDisabled={isSavingDisplayName}
+                />
+                <ActionGroup style={{ marginTop: '8px' }}>
+                  <Button
+                    variant="primary"
+                    onClick={handleSaveDisplayName}
+                    isDisabled={isSavingDisplayName}
+                    isLoading={isSavingDisplayName}
+                  >
+                    {t('Save')}
+                  </Button>
+                  <Button
+                    variant="link"
+                    onClick={handleCancelDisplayName}
+                    isDisabled={isSavingDisplayName}
+                  >
+                    {t('Cancel')}
+                  </Button>
+                </ActionGroup>
+                {displayNameError && (
+                  <Alert variant="danger" isInline title={t('Error updating display name')}>
+                    {displayNameError}
+                  </Alert>
+                )}
+              </>
+            ) : (
+              <>
+                {apiProduct.spec.displayName || apiProduct.metadata.name}
+                {canUpdate && !canUpdateLoading && (
+                  <Button
+                    variant="plain"
+                    onClick={handleEditDisplayName}
+                    aria-label={t('Edit display name')}
+                    style={{ marginLeft: '8px', padding: '0 4px' }}
+                  >
+                    <PencilAltIcon />
+                  </Button>
+                )}
+              </>
+            )}
           </DescriptionListDescription>
         </DescriptionListGroup>
 
@@ -245,7 +409,54 @@ const APIProductOverviewTab: React.FC = () => {
         {apiProduct.spec.version && (
           <DescriptionListGroup>
             <DescriptionListTerm>{t('Version')}</DescriptionListTerm>
-            <DescriptionListDescription>{apiProduct.spec.version}</DescriptionListDescription>
+            <DescriptionListDescription>
+              {isEditingVersion ? (
+                <>
+                  <TextInput
+                    value={editVersionValue}
+                    onChange={(_event, value) => setEditVersionValue(value)}
+                    aria-label={t('Version')}
+                    isDisabled={isSavingVersion}
+                  />
+                  <ActionGroup style={{ marginTop: '8px' }}>
+                    <Button
+                      variant="primary"
+                      onClick={handleSaveVersion}
+                      isDisabled={isSavingVersion}
+                      isLoading={isSavingVersion}
+                    >
+                      {t('Save')}
+                    </Button>
+                    <Button
+                      variant="link"
+                      onClick={handleCancelVersion}
+                      isDisabled={isSavingVersion}
+                    >
+                      {t('Cancel')}
+                    </Button>
+                  </ActionGroup>
+                  {versionError && (
+                    <Alert variant="danger" isInline title={t('Error updating version')}>
+                      {versionError}
+                    </Alert>
+                  )}
+                </>
+              ) : (
+                <>
+                  {apiProduct.spec.version}
+                  {canUpdate && !canUpdateLoading && (
+                    <Button
+                      variant="plain"
+                      onClick={handleEditVersion}
+                      aria-label={t('Edit version')}
+                      style={{ marginLeft: '8px', padding: '0 4px' }}
+                    >
+                      <PencilAltIcon />
+                    </Button>
+                  )}
+                </>
+              )}
+            </DescriptionListDescription>
           </DescriptionListGroup>
         )}
 
@@ -286,7 +497,59 @@ const APIProductOverviewTab: React.FC = () => {
         {apiProduct.spec.approvalMode && hasApiKeyAuth && (
           <DescriptionListGroup>
             <DescriptionListTerm>{t('Approval Mode')}</DescriptionListTerm>
-            <DescriptionListDescription>{apiProduct.spec.approvalMode}</DescriptionListDescription>
+            <DescriptionListDescription>
+              {isEditingApprovalMode ? (
+                <>
+                  <FormSelect
+                    value={editApprovalModeValue}
+                    onChange={(_event, value) =>
+                      setEditApprovalModeValue(value as 'manual' | 'automatic')
+                    }
+                    aria-label={t('Approval Mode')}
+                    isDisabled={isSavingApprovalMode}
+                  >
+                    <FormSelectOption value="manual" label={t('Manual')} />
+                    <FormSelectOption value="automatic" label={t('Automatic')} />
+                  </FormSelect>
+                  <ActionGroup style={{ marginTop: '8px' }}>
+                    <Button
+                      variant="primary"
+                      onClick={handleSaveApprovalMode}
+                      isDisabled={isSavingApprovalMode}
+                      isLoading={isSavingApprovalMode}
+                    >
+                      {t('Save')}
+                    </Button>
+                    <Button
+                      variant="link"
+                      onClick={handleCancelApprovalMode}
+                      isDisabled={isSavingApprovalMode}
+                    >
+                      {t('Cancel')}
+                    </Button>
+                  </ActionGroup>
+                  {approvalModeError && (
+                    <Alert variant="danger" isInline title={t('Error updating approval mode')}>
+                      {approvalModeError}
+                    </Alert>
+                  )}
+                </>
+              ) : (
+                <>
+                  {apiProduct.spec.approvalMode === 'automatic' ? t('Automatic') : t('Manual')}
+                  {canUpdate && !canUpdateLoading && (
+                    <Button
+                      variant="plain"
+                      onClick={handleEditApprovalMode}
+                      aria-label={t('Edit approval mode')}
+                      style={{ marginLeft: '8px', padding: '0 4px' }}
+                    >
+                      <PencilAltIcon />
+                    </Button>
+                  )}
+                </>
+              )}
+            </DescriptionListDescription>
           </DescriptionListGroup>
         )}
 
