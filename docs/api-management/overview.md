@@ -2,29 +2,17 @@
 
 The Kuadrant Console Plugin provides API management capabilities directly within the OpenShift web console. It brings self-service API access management to Kubernetes-native organizations by bridging the gap between API providers who want to share their services and developers who need to consume them.
 
-## The Problem: API Access at Scale
-
-Organizations running microservices on Kubernetes face a common challenge: how do you let developers both internal and external discover and consume your APIs safely and efficiently?
-
-Without a structured approach, teams resort to ad-hoc solutions:
-
-- Sharing API keys through Slack messages or wikis
-- Manual onboarding processes that don't scale
-- No visibility into who is using which APIs
-- Inconsistent rate limiting and access controls
-- APIs that exist but remain undiscoverable
-
-The API management features address this by providing a Kubernetes-native system where APIs are cataloged, access is requested through a formal workflow, and credentials are managed automatically.
-
 ## How It Works
 
-The API management functionality introduces three Custom Resource Definitions (CRDs) that model API products, access requests, and approvals:
+The API management functionality introduces four Custom Resource Definitions (CRDs) that model API products, access requests, and approvals:
 
 **APIProduct** (`devportal.kuadrant.io/v1alpha1`) represents an API offering. It wraps an existing HTTPRoute with the business context needed for consumption: a human-readable name, documentation links, contact information, and access policies. When an API owner creates an APIProduct and sets its `publishStatus` to `Published`, it becomes discoverable in the catalog.
 
-**APIKey** (`devportal.kuadrant.io/v1alpha1`) represents a developer's request for API access. It captures the requester's identity, their intended use case, and their desired service tier.
+**APIKeyRequest** (`devportal.kuadrant.io/v1alpha1`) represents a shadow resource in the API owner's namespace that enables request discovery without exposing API key values. This allows API owners to see and manage access requests for their APIs. These resources are fully managed by the Kuadrant controller and should not be created or modified manually.
 
-**APIKeyApproval** (`devportal.kuadrant.io/v1alpha1`) represents an approval or rejection action on an APIKey request. API owners and admins create APIKeyApproval resources to approve or reject pending requests.
+**APIKey** (`devportal.kuadrant.io/v1alpha1`) represents the actual API access credentials in the consumer's namespace. It contains the secret reference and is created when an access request is approved.
+
+**APIKeyApproval** (`devportal.kuadrant.io/v1alpha1`) represents an approval or rejection action on an APIKeyRequest. API owners and admins create APIKeyApproval resources to approve or reject pending requests.
 
 This model means that API access follows the same patterns as other Kubernetes resources: declarative, auditable, and managed through standard tooling.
 
@@ -34,7 +22,11 @@ The API management system supports two authentication methods for protecting API
 
 ### API Key Authentication
 
-API key authentication uses Kubernetes Secrets to store credentials. This method involves a request and approval workflow:
+API key authentication uses Kubernetes Secrets to store credentials. This method involves a request and approval workflow.
+
+Learn more: [API Key authentication](https://docs.kuadrant.io/latest/authorino/docs/features/#api-key-authenticationapikey)
+
+**Workflow:**
 
 1. API consumer creates an APIKey resource requesting access to an APIProduct
 2. Depending on the APIProduct's `approvalMode`:
@@ -49,7 +41,11 @@ This method is ideal for internal APIs, development environments, or scenarios w
 
 ### OIDC/JWT Authentication
 
-OIDC (OpenID Connect) authentication delegates credential management to an external identity provider. There is no request/approval workflow in the console:
+OIDC (OpenID Connect) authentication delegates credential management to an external identity provider. There is no request/approval workflow in the console.
+
+Learn more: [JWT verification](https://docs.kuadrant.io/latest/authorino/docs/features/#jwt-verification-authenticationjwt)
+
+**Workflow:**
 
 1. Platform engineer configures AuthPolicy with JWT validation pointing to an OIDC issuer
 2. The controller discovers the JWT authentication scheme and performs OIDC discovery to find the token endpoint
@@ -89,6 +85,7 @@ Located in the **Kuadrant API Catalog** section, this page shows all pending and
 - View request details (requester, use case, tier selection)
 - Filter by status (Pending, Approved, Denied) and API product
 - Bulk approve multiple pending requests
+- Bulk reject multiple pending requests
 
 ### My API Keys Page
 
@@ -97,8 +94,7 @@ Located in the **Kuadrant API Catalog** section, this page shows the current use
 - Request access to API products by creating new APIKey resources
 - View all their API key requests across different products
 - See approval status (Pending, Approved, Denied)
-- Access approved credentials (shown once after approval and must be saved immediately)
-- Monitor their service tier and rate limits
+- Access approved credentials
 - View authentication examples for using their API keys
 
 ## API Management Personas
@@ -173,7 +169,7 @@ All console pages respect Kubernetes RBAC. See the [RBAC guide](rbac.md) for det
 Key resource access patterns:
 
 - **API Consumers** need read access to APIProduct and create/read access to APIKey in their namespaces
-- **API Owners** need full access to APIProduct and APIKey in their namespaces, plus create access to APIKeyApproval for approvals
+- **API Owners** need full access to APIProduct in their namespaces, plus full access to APIKeyApproval for approvals
 - **API Admins** need full access to APIProduct, APIKey, and APIKeyApproval across all namespaces
 - **Platform Engineers** need full access to all resources including AuthPolicy, PlanPolicy, and HTTPRoute
 
@@ -191,6 +187,13 @@ This integration means the API management features don't duplicate functionality
 
 ## Next Steps
 
-- [Getting Started Tutorial](getting-started.md): Set up a complete example with an API product and access request
-- [RBAC Configuration](rbac.md): Configure permissions for different API management personas
+To get started with the Kuadrant API management features:
+
+1. **Get Access to OpenShift**: Ensure you have access to an OpenShift cluster
+2. **Install Kuadrant**: Follow the [Kuadrant installation guide](https://docs.kuadrant.io/dev/install-helm/)
+3. **Enable the Console Plugin**: Enable the `kuadrant-console-plugin` entry in the **Dynamic Plugins** section
+4. **Configure RBAC**: Set up [permissions](rbac.md) for different API management personas
+
+Additional resources:
+
 - [Kuadrant Documentation](https://docs.kuadrant.io/): Learn about the broader Kuadrant ecosystem
