@@ -84,6 +84,10 @@ const config: Configuration = {
     devMiddleware: {
       writeToDisk: true,
     },
+    client: {
+      // Disable error overlay to prevent it from blocking Playwright test interactions
+      overlay: false,
+    },
   },
   plugins: [
     new ConsoleRemotePlugin(),

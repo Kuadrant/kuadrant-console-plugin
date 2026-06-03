@@ -183,6 +183,29 @@ spec:
     userId: developer1
     email: developer1@example.com
 ---
+# pending apikey 2 targeting manual approval api
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: pending-payment-apikey-2
+  namespace: consumer-team-backend
+  annotations:
+    backstage.io/owner: user:default/developer1
+  labels:
+    app.kubernetes.io/name: developer-portal-controller
+    app.kubernetes.io/managed-by: kustomize
+spec:
+  apiProductRef:
+    name: owner1-payment-api
+    namespace: toystore
+  secretRef:
+    name: pending-payment-apikey
+  planTier: silver
+  useCase: "Payment processing for mobile app integration"
+  requestedBy:
+    userId: developer2
+    email: developer2@example.com
+---
 apiVersion: v1
 kind: Secret
 metadata:

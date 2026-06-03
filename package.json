@@ -1,6 +1,6 @@
 {
   "name": "kuadrant-console-plugin",
-  "version": "0.3.7-dev",
+  "version": "0.5.0-dev",
   "description": "Kuadrant OpenShift Console plugin",
   "private": true,
   "license": "Apache-2.0",
@@ -35,7 +35,7 @@
   },
   "devDependencies": {
     "@openshift-console/dynamic-plugin-sdk": "^1.6.0",
-    "@openshift-console/dynamic-plugin-sdk-webpack": "^1.2.0",
+    "@openshift-console/dynamic-plugin-sdk-webpack": "1.2.0",
     "@patternfly/react-core": "^6.2.2",
     "@patternfly/react-icons": "^6.2.2",
     "@playwright/test": "^1.50.0",
@@ -71,12 +71,12 @@
     "ts-node": "^10.8.1",
     "typescript": "^5.0.0",
     "webpack": "5.75.0",
-    "webpack-cli": "^4.9.2",
-    "webpack-dev-server": "^4.7.4"
+    "webpack-cli": "5.1.4",
+    "webpack-dev-server": "5.2.4"
   },
   "consolePlugin": {
     "name": "kuadrant-console-plugin",
-    "version": "0.3.7-dev",
+    "version": "0.5.0-dev",
     "displayName": "Kuadrant OpenShift Console Plugin",
     "description": "Kuadrant OpenShift Console Plugin",
     "latestSupportedOpenshiftVersion": "4.19",
@@ -100,10 +100,13 @@
       "PolicyTargetRefPage": "./components/PolicyTargetRefPage",
       "APIProductCreatePage": "./components/apiproduct/APIProductCreatePage",
       "APIProductsListPage": "./components/apiproduct/APIProductsListPage",
+      "APIProductOverviewTab": "./components/apiproduct/APIProductOverviewTab",
       "APIProductPoliciesTab": "./components/apiproduct/APIProductPoliciesTab",
       "APIProductDefinitionTab": "./components/apiproduct/APIProductDefinitionTab",
+      "APIProductAPIKeysTab": "./components/apiproduct/APIProductAPIKeysTab",
       "MyAPIKeysPage": "./components/apikey/MyAPIKeysPage",
       "APIKeyDetailPage": "./components/apikey/APIKeyDetailPage",
+      "APIKeyApprovalPage": "./components/apikey/APIKeyApprovalPage",
       "useDNSPolicyActions": "./components/dnspolicy/useDNSPolicyActions",
       "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions"
     },

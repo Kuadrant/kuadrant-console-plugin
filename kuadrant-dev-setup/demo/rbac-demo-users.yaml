@@ -43,7 +43,7 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: api-team-payments
+  name: toystore
   labels:
     app.kubernetes.io/part-of: api-management-demo
     api-management-role: owner
@@ -52,7 +52,7 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: api-team-shipping
+  name: gamestore
   labels:
     app.kubernetes.io/part-of: api-management-demo
     api-management-role: owner
@@ -152,12 +152,12 @@ subjects:
 # ============================================================================
 
 ---
-# Charlie - Payments Team Owner Permissions
+# Charlie - Payments Team Owner Permissions (bound to toystore namespace)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: api-owner-charlie-payments-team
-  namespace: api-team-payments
+  namespace: toystore
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
@@ -182,12 +182,12 @@ subjects:
     apiGroup: rbac.authorization.k8s.io
 
 ---
-# Dave - Shipping Team Owner Permissions
+# Dave - Shipping Team Owner Permissions (bound to gamestore namespace)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: api-owner-dave-shipping-team
-  namespace: api-team-shipping
+  namespace: gamestore
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
