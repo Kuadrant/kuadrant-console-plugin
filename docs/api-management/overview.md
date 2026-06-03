@@ -10,7 +10,7 @@ The API management functionality introduces four Custom Resource Definitions (CR
 
 **APIKeyRequest** (`devportal.kuadrant.io/v1alpha1`) represents a shadow resource in the API owner's namespace that enables request discovery without exposing API key values. This allows API owners to see and manage access requests for their APIs. These resources are fully managed by the Kuadrant controller and should not be created or modified manually.
 
-**APIKey** (`devportal.kuadrant.io/v1alpha1`) represents the actual API access credentials in the consumer's namespace. It contains the secret reference and is created when an access request is approved.
+**APIKey** (`devportal.kuadrant.io/v1alpha1`) represents an API access request created by the consumer in their namespace. It contains the secret reference with the actual API key value. The controller reconciles the APIKey resource and, upon approval, enables it for traffic authentication.
 
 **APIKeyApproval** (`devportal.kuadrant.io/v1alpha1`) represents an approval or rejection action on an APIKeyRequest. API owners and admins create APIKeyApproval resources to approve or reject pending requests.
 
