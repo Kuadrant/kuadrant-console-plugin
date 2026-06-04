@@ -52,6 +52,17 @@ jobs:
             # Manual: git sha as fallback
             type=raw,value=${{ github.sha }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
+      - name: Read quay image expiry
+        id: quay-expiry
+        run: |
+          if [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_type }}" == "tag" && "${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-.*)?$ ]]; then
+            echo "expiry=never" >> $GITHUB_OUTPUT
+            echo "Setting expiry to 'never' for ref ${{ github.ref_name }}"
+          else
+            echo "expiry=3w" >> $GITHUB_OUTPUT
+            echo "Setting expiry to '3w' for ref ${{ github.ref_name }}"
+          fi
+
       - name: Build and Push Image
         if: github.repository_owner == 'kuadrant'
         uses: docker/build-push-action@v5
@@ -62,6 +73,8 @@ jobs:
           push: true
           provenance: false
           tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            QUAY_IMAGE_EXPIRY=${{ steps.quay-expiry.outputs.expiry }}
 
       - name: Print Image URL
         run: |
