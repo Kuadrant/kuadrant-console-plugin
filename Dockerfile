@@ -2,6 +2,9 @@ FROM registry.access.redhat.com/ubi9/ubi:latest
 
 USER root
 
+ARG QUAY_IMAGE_EXPIRY="never"
+LABEL quay.expires-after=${QUAY_IMAGE_EXPIRY}
+
 RUN dnf update -y && \
     dnf upgrade -y && \
     dnf module enable nodejs:22 nginx:1.24 -y && \
