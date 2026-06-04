@@ -163,6 +163,21 @@
         "kind": "APIProduct"
       },
       "page": {
+        "name": "Accepted Paths",
+        "href": "acceptedpaths"
+      },
+      "component": { "$codeRef": "APIProductAcceptedPathsTab" }
+    }
+  },
+  {
+    "type": "console.tab/horizontalNav",
+    "properties": {
+      "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIProduct"
+      },
+      "page": {
         "name": "API Keys",
         "href": "apikeys"
       },

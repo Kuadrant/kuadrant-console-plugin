@@ -102,6 +102,7 @@
       "APIProductsListPage": "./components/apiproduct/APIProductsListPage",
       "APIProductOverviewTab": "./components/apiproduct/APIProductOverviewTab",
       "APIProductPoliciesTab": "./components/apiproduct/APIProductPoliciesTab",
+      "APIProductAcceptedPathsTab": "./components/apiproduct/APIProductAcceptedPathsTab",
       "APIProductDefinitionTab": "./components/apiproduct/APIProductDefinitionTab",
       "APIProductAPIKeysTab": "./components/apiproduct/APIProductAPIKeysTab",
       "MyAPIKeysPage": "./components/apikey/MyAPIKeysPage",
