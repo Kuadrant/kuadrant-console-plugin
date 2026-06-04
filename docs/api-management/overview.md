@@ -116,7 +116,7 @@ The authentication experience depends on how the API is protected:
 
 - Create an APIKey resource requesting access to an APIProduct
 - Wait for approval (automatic or manual depending on the product)
-- Receive an API key once approved (credentials are shown once and must be saved immediately)
+- Receive an API key once approved
 - Use the API key in the `Authorization` header when making requests
 
 **For OIDC/JWT Authentication:**
