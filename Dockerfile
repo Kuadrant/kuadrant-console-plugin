@@ -41,5 +41,8 @@ RUN mkdir -p /var/cache/nginx /var/log/nginx /run && \
 COPY --from=builder /usr/src/app/dist/ /usr/share/nginx/html/
 COPY entrypoint.sh /usr/share/nginx/html/entrypoint.sh
 
+ARG QUAY_IMAGE_EXPIRY="never"
+LABEL quay.expires-after=${QUAY_IMAGE_EXPIRY}
+
 USER 1001
 ENTRYPOINT ["/usr/share/nginx/html/entrypoint.sh"]
