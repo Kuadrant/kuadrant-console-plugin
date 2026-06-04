@@ -1,6 +1,6 @@
 export interface LoadBalancing {
   geo: string;
-  weight: number;
+  weight: number | null;
   defaultGeo: boolean | '';
 }
 
