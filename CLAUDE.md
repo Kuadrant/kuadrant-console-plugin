@@ -27,7 +27,6 @@ kuadrant-console-plugin/
 ├── charts/                # Helm chart for deployment
 ├── locales/               # i18n translation files
 ├── config/
-│   ├── crd/              # Custom Resource Definitions
 │   └── rbac/             # RBAC role definitions
 ├── e2e/                   # End-to-end Playwright tests
 ├── docs/                  # Documentation and images
