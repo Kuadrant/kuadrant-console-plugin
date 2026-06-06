@@ -24,11 +24,42 @@ PLUGIN_NAME=$(node -p "require('${REPO_DIR}/package.json').consolePlugin.name")
 
 log "creating oinc cluster with addons..."
 oinc create \
-	--addons gateway-api,cert-manager,metallb,istio,kuadrant@latest \
+	--addons gateway-api,cert-manager,metallb,istio \
 	--console-plugin "${PLUGIN_NAME}=http://${HOST}:${PLUGIN_PORT}"
 
-log "patch kuadrant to enable developer portal controller..."
-kubectl patch kuadrant kuadrant -n kuadrant-system --type merge --patch '{"spec": {"components": {"developerPortal": {"enabled": true}}}}'
+log "installing kuadrant addon (helm-based)..."
+MAX_RETRIES=3
+RETRY_DELAY=30
+
+for attempt in $(seq 1 $MAX_RETRIES); do
+  if oinc addon install kuadrant; then
+    log "Kuadrant addon installed successfully"
+    break
+  fi
+  if [ $attempt -lt $MAX_RETRIES ]; then
+    log "Attempt $attempt/$MAX_RETRIES failed, dumping diagnostics..."
+    kubectl get pods -n kuadrant-system 2>/dev/null || true
+    kubectl get events -n kuadrant-system --sort-by='.lastTimestamp' 2>/dev/null | tail -10 || true
+    log "Retrying in ${RETRY_DELAY}s..."
+    sleep $RETRY_DELAY
+  else
+    log "Kuadrant addon failed after $MAX_RETRIES attempts. Final diagnostics:"
+    kubectl get pods -A 2>/dev/null || true
+    kubectl get events -n kuadrant-system --sort-by='.lastTimestamp' 2>/dev/null || true
+    exit 1
+  fi
+done
+
+log "installing Developer Portal Controller from main..."
+kubectl apply -k https://github.com/Kuadrant/developer-portal-controller/config/default?ref=main
+
+log "patching Developer Portal Controller image to quay.io..."
+kubectl set image deployment/developer-portal-controller-controller-manager \
+  manager=quay.io/kuadrant/developer-portal-controller:v0.2.0 \
+  -n developer-portal-controller-system
+
+log "waiting for Developer Portal Controller to become ready..."
+kubectl rollout status deployment/developer-portal-controller-controller-manager -n developer-portal-controller-system --timeout=120s
 
 # --- MetalLB IP pool ---
 
