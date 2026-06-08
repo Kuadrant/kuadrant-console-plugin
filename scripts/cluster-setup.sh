@@ -12,6 +12,11 @@ source "${SCRIPT_DIR}/lib.sh"
 
 PLUGIN_PORT="${PLUGIN_PORT:-9001}"
 
+# the console plugin tracks the latest Kuadrant CRDs, so default to the latest
+# operator. override (e.g. KUADRANT_VERSION=1.4.4) to pin to a known-good version
+# if a latest release breaks plugin development or CI (GH-361).
+KUADRANT_VERSION="${KUADRANT_VERSION:-latest}"
+
 check_command oinc "Install from https://github.com/jasonmadigan/oinc"
 check_command kubectl "Install from https://kubernetes.io/docs/tasks/tools/"
 
@@ -22,10 +27,28 @@ HOST=$(container_host "${RUNTIME}")
 
 PLUGIN_NAME=$(node -p "require('${REPO_DIR}/package.json').consolePlugin.name")
 
-log "creating oinc cluster with addons..."
-oinc create \
-	--addons gateway-api,cert-manager,metallb,istio,kuadrant@latest \
-	--console-plugin "${PLUGIN_NAME}=http://${HOST}:${PLUGIN_PORT}"
+# on a failed cluster create, dump kuadrant addon state so the "kuadrant not
+# ready after 5m0s" timeout (GH-361) is debuggable from CI logs instead of
+# opaque. oinc waits on more than the operator deployment, so capture the
+# Kuadrant CR conditions, namespace events, and the operator logs.
+dump_kuadrant_diagnostics() {
+	log "oinc create failed - dumping kuadrant addon diagnostics for GH-361..."
+	kubectl get kuadrant kuadrant -n kuadrant-system -o yaml 2>&1 || true
+	kubectl get pods -n kuadrant-system -o wide 2>&1 || true
+	kubectl get events -n kuadrant-system --sort-by='.lastTimestamp' 2>&1 || true
+	kubectl logs deployment/kuadrant-operator-controller-manager -n kuadrant-system --tail=200 --all-containers 2>&1 || true
+}
+
+# bash suspends `set -e` (errexit) for a command used as an `if` condition, so a
+# failed `oinc create` won't abort here - it falls through to the diagnostics
+# dump and an explicit exit instead of dying silently.
+log "creating oinc cluster with addons (kuadrant@${KUADRANT_VERSION})..."
+if ! oinc create \
+	--addons "gateway-api,cert-manager,metallb,istio,kuadrant@${KUADRANT_VERSION}" \
+	--console-plugin "${PLUGIN_NAME}=http://${HOST}:${PLUGIN_PORT}"; then
+	dump_kuadrant_diagnostics
+	exit 1
+fi
 
 log "patch kuadrant to enable developer portal controller..."
 kubectl patch kuadrant kuadrant -n kuadrant-system --type merge --patch '{"spec": {"components": {"developerPortal": {"enabled": true}}}}'
