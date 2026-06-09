@@ -38,8 +38,8 @@ const replacements = {
     type: 'regex',
     patterns: [
       {
-        search: /%plugin__kuadrant-console-plugin~Kuadrant%/g,
-        replace: 'Connectivity Link',
+        search: /(%plugin__kuadrant-console-plugin~)Kuadrant([^%]*%)/g,
+        replace: '$1Connectivity Link$2',
       },
     ],
   },
