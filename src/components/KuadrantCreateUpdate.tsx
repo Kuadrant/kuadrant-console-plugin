@@ -29,11 +29,13 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [errorAlertMsg, setErrorAlertMsg] = React.useState('');
+  const [isSaving, setIsSaving] = React.useState(false);
   const update = updateProp ?? !!resource.metadata.creationTimestamp;
 
   const handleCreateUpdate = async () => {
-    if (!validation) return; // Early return if form is not valid
+    if (!validation || isSaving) return; // Early return if form is not valid or save is already in flight
     setErrorAlertMsg('');
+    setIsSaving(true);
 
     try {
       if (update) {
@@ -68,6 +70,8 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
         console.error(`Cannot create ${policyType}:`, error);
       }
       setErrorAlertMsg(message);
+      // Only reset isSaving on error — the success path navigates away and unmounts this component
+      setIsSaving(false);
     }
   };
   return (
@@ -87,7 +91,11 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
           </Alert>
         </AlertGroup>
       )}
-      <Button onClick={handleCreateUpdate} isDisabled={!validation}>
+      <Button
+        onClick={handleCreateUpdate}
+        isDisabled={!validation || isSaving}
+        isLoading={isSaving}
+      >
         {update ? t(`Save`) : t(`Create`)}
       </Button>
     </>
