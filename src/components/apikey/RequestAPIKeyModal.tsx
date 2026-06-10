@@ -27,6 +27,7 @@ import {
   useK8sWatchResource,
   useActiveNamespace,
   k8sCreate,
+  k8sDelete,
   useK8sModel,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { RESOURCES, APIKey, Secret } from '../../utils/resources';
@@ -246,45 +247,7 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
       // Step 1: Generate API key
       const generatedKey = generateApiKey();
 
-      // Step 2: Create Secret with the generated API key
-      const secretResource: Secret = {
-        apiVersion: 'v1',
-        kind: 'Secret',
-        metadata: {
-          name: secretName,
-          namespace: activeNamespace,
-        },
-        type: 'Opaque',
-        stringData: {
-          api_key: generatedKey,
-        },
-      };
-
-      try {
-        await k8sCreate({ model: secretModel, data: secretResource });
-      } catch (secretError: unknown) {
-        // If secret already exists, continue (idempotent operation)
-        if (typeof secretError === 'object' && secretError !== null) {
-          const error = secretError as Record<string, unknown>;
-          const isAlreadyExists =
-            error.code === 409 ||
-            error.reason === 'AlreadyExists' ||
-            (typeof error.message === 'string' &&
-              (error.message.includes('already exists') ||
-                error.message.includes('AlreadyExists')));
-
-          if (!isAlreadyExists) {
-            // Re-throw any other secret creation error
-            throw secretError;
-          }
-        } else {
-          // Re-throw non-object errors
-          throw secretError;
-        }
-      }
-
-      // Step 3: Create APIKey with reference to the secret
-      // Get selected API product to include namespace in cross-namespace reference
+      // Step 2: Create the APIKey first so the Secret can reference its uid as owner
       const product = activeAPIProducts.find((p) => p.metadata.name === selectedAPIProduct);
 
       const apiKeyResource: APIKey = {
@@ -312,7 +275,42 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
       };
 
       const model = getModelFromResource(apiKeyResource);
-      await k8sCreate({ model, data: apiKeyResource });
+      const createdAPIKey = await k8sCreate<APIKey>({ model, data: apiKeyResource });
+
+      // Step 3: Create the Secret owned by the APIKey so it is garbage-collected on delete
+      const secretResource: Secret = {
+        apiVersion: 'v1',
+        kind: 'Secret',
+        metadata: {
+          name: secretName,
+          namespace: activeNamespace,
+          ownerReferences: [
+            {
+              apiVersion: createdAPIKey.apiVersion,
+              kind: createdAPIKey.kind,
+              name: createdAPIKey.metadata.name,
+              uid: createdAPIKey.metadata.uid,
+              blockOwnerDeletion: false,
+            },
+          ],
+        },
+        type: 'Opaque',
+        stringData: {
+          api_key: generatedKey,
+        },
+      };
+
+      try {
+        await k8sCreate({ model: secretModel, data: secretResource });
+      } catch (secretError: unknown) {
+        // Roll back the APIKey so a failed Secret create doesn't leave it dangling
+        try {
+          await k8sDelete({ model, resource: createdAPIKey });
+        } catch (rollbackError) {
+          console.error('Failed to roll back APIKey after Secret creation error:', rollbackError);
+        }
+        throw secretError;
+      }
 
       // Success - close modal
       handleClose();
