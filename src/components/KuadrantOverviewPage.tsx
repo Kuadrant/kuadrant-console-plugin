@@ -56,6 +56,7 @@ import {
   TableData,
   NamespaceBar,
   checkAccess,
+  QueryBrowser,
 } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import ResourceList from './ResourceList';
@@ -1008,6 +1009,57 @@ const KuadrantOverviewPage: React.FC = () => {
                 </Card>
               </GridItem>
             )}
+
+            <GridItem>
+              <Flex>
+                <FlexItem flex={{ default: 'flex_1' }}>
+                  <Card>
+                    <CardTitle>
+                      <Title headingLevel="h2">{t('Gateways - Total req/s')}</Title>
+                    </CardTitle>
+                    <CardBody className="pf-u-p-10">
+                      <QueryBrowser
+                        defaultTimespan={30 * 60 * 1000}
+                        pollInterval={30 * 1000}
+                        formatSeriesTitle={(labels) =>
+                          labels.source_workload_namespace + '/' + labels.source_workload
+                        }
+                        units={'req/s'}
+                        showLegend={false}
+                        queries={[
+                          'topk(10, sum(rate(istio_requests_total{}[5m])) by (source_workload, source_workload_namespace))',
+                        ]}
+                      />
+                    </CardBody>
+                  </Card>
+                </FlexItem>
+                <FlexItem flex={{ default: 'flex_1' }}>
+                  <Card>
+                    <CardTitle>
+                      <Title headingLevel="h2">{t('Gateways - Errors req/s')}</Title>
+                    </CardTitle>
+                    <CardBody className="pf-u-p-10">
+                      <QueryBrowser
+                        defaultTimespan={30 * 60 * 1000}
+                        pollInterval={30 * 1000}
+                        formatSeriesTitle={(labels) =>
+                          labels.response_code +
+                          ' - ' +
+                          labels.source_workload_namespace +
+                          '/' +
+                          labels.source_workload
+                        }
+                        units={'req/s'}
+                        showLegend={false}
+                        queries={[
+                          'topk(10, sum(rate(istio_requests_total{response_code!~"2(.*)|3(.*)"}[5m])) by (response_code, source_workload, source_workload_namespace))',
+                        ]}
+                      />
+                    </CardBody>
+                  </Card>
+                </FlexItem>
+              </Flex>
+            </GridItem>
 
             {policyRBACNill ? (
               <GridItem lg={6}>
