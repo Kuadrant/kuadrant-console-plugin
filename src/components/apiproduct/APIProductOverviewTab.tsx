@@ -13,7 +13,11 @@ import {
   Spinner,
   Title,
   Button,
+  ActionGroup,
   Divider,
+  TextInput,
+  FormSelect,
+  FormSelectOption,
 } from '@patternfly/react-core';
 import { PencilAltIcon } from '@patternfly/react-icons';
 import {
@@ -21,11 +25,13 @@ import {
   useActiveNamespace,
   useAccessReview,
   Timestamp,
+  k8sUpdate,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { APIProduct, PlanSpec } from './types';
 import { RESOURCES } from '../../utils/resources';
 import extractResourceNameFromURL from '../../utils/nameFromPath';
 import { getResourceNameFromKind } from '../../utils/getModelFromResource';
+import { getModelFromResource } from '../../utils/getModelFromResource';
 import NoPermissionsView from '../NoPermissionsView';
 import ContactInfoEditModal from './ContactInfoEditModal';
 import TagsEditModal from './TagsEditModal';
@@ -37,11 +43,59 @@ import '../kuadrant.css';
 type ContactField = 'team' | 'email' | 'slack' | 'url';
 type DocumentationField = 'openAPISpecURL' | 'docsURL';
 
+function useInlineEdit<T>(initialValue: T) {
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editValue, setEditValue] = React.useState<T>(initialValue);
+  const [error, setError] = React.useState('');
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  const startEdit = (currentValue: T) => {
+    setEditValue(currentValue);
+    setError('');
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setError('');
+  };
+
+  const save = async (saveFn: () => Promise<void>) => {
+    setIsSaving(true);
+    setError('');
+    try {
+      await saveFn();
+      setIsEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return {
+    isEditing,
+    editValue,
+    setEditValue,
+    error,
+    setError,
+    isSaving,
+    startEdit,
+    cancelEdit,
+    save,
+  };
+}
+
 const APIProductOverviewTab: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activeNamespace] = useActiveNamespace();
   const location = useLocation();
   const productName = extractResourceNameFromURL(location.pathname);
+  const displayName = useInlineEdit('');
+  const version = useInlineEdit('');
+  const approvalMode = useInlineEdit<'manual' | 'automatic'>('manual');
+  const description = useInlineEdit('');
+
   const [editingField, setEditingField] = React.useState<ContactField | null>(null);
   const [editingDocField, setEditingDocField] = React.useState<DocumentationField | null>(null);
   const [isEditingTags, setIsEditingTags] = React.useState(false);
@@ -89,6 +143,22 @@ const APIProductOverviewTab: React.FC = () => {
   // Get discovered plans
   const discoveredPlans = apiProduct?.status?.discoveredPlans || [];
   const hasPlans = discoveredPlans.length > 0;
+
+  const updateAPIProduct = async (updatedSpec: Partial<APIProduct['spec']>) => {
+    const model = getModelFromResource(apiProduct);
+    const updatedResource: APIProduct = {
+      ...apiProduct,
+      spec: {
+        ...apiProduct.spec,
+        ...updatedSpec,
+      },
+    };
+
+    await k8sUpdate({
+      model,
+      data: updatedResource,
+    });
+  };
 
   // Get authentication methods from discoveredAuthScheme
   const authMethods = React.useMemo(() => {
@@ -231,23 +301,188 @@ const APIProductOverviewTab: React.FC = () => {
         <DescriptionListGroup>
           <DescriptionListTerm>{t('Display Name')}</DescriptionListTerm>
           <DescriptionListDescription>
-            {apiProduct.spec.displayName || apiProduct.metadata.name}
+            {displayName.isEditing ? (
+              <>
+                <TextInput
+                  value={displayName.editValue}
+                  onChange={(_event, value) => displayName.setEditValue(value)}
+                  aria-label={t('Display Name')}
+                  isDisabled={displayName.isSaving}
+                />
+                <ActionGroup style={{ marginTop: '8px' }}>
+                  <Button
+                    variant="primary"
+                    onClick={() =>
+                      displayName.save(() =>
+                        updateAPIProduct({
+                          displayName: displayName.editValue.trim() || apiProduct.metadata.name,
+                        }),
+                      )
+                    }
+                    isDisabled={displayName.isSaving}
+                    isLoading={displayName.isSaving}
+                  >
+                    {t('Save')}
+                  </Button>
+                  <Button
+                    variant="link"
+                    onClick={displayName.cancelEdit}
+                    isDisabled={displayName.isSaving}
+                  >
+                    {t('Cancel')}
+                  </Button>
+                </ActionGroup>
+                {displayName.error && (
+                  <Alert variant="danger" isInline title={t('Error updating display name')}>
+                    {displayName.error}
+                  </Alert>
+                )}
+              </>
+            ) : (
+              <>
+                {apiProduct.spec.displayName || apiProduct.metadata.name}
+                {canUpdate && !canUpdateLoading && (
+                  <Button
+                    variant="plain"
+                    onClick={() =>
+                      displayName.startEdit(apiProduct.spec.displayName || apiProduct.metadata.name)
+                    }
+                    aria-label={t('Edit display name')}
+                    style={{ marginLeft: '8px', padding: '0 4px' }}
+                  >
+                    <PencilAltIcon />
+                  </Button>
+                )}
+              </>
+            )}
           </DescriptionListDescription>
         </DescriptionListGroup>
 
-        {apiProduct.spec.description && (
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('Description')}</DescriptionListTerm>
-            <DescriptionListDescription>{apiProduct.spec.description}</DescriptionListDescription>
-          </DescriptionListGroup>
-        )}
+        <DescriptionListGroup>
+          <DescriptionListTerm>{t('Description')}</DescriptionListTerm>
+          <DescriptionListDescription>
+            {description.isEditing ? (
+              <>
+                <TextInput
+                  value={description.editValue}
+                  onChange={(_event, value) => description.setEditValue(value)}
+                  aria-label={t('Description')}
+                  isDisabled={description.isSaving}
+                />
+                <ActionGroup style={{ marginTop: '8px' }}>
+                  <Button
+                    variant="primary"
+                    onClick={() =>
+                      description.save(() =>
+                        updateAPIProduct({
+                          description: description.editValue.trim() || undefined,
+                        }),
+                      )
+                    }
+                    isDisabled={description.isSaving}
+                    isLoading={description.isSaving}
+                  >
+                    {t('Save')}
+                  </Button>
+                  <Button
+                    variant="link"
+                    onClick={description.cancelEdit}
+                    isDisabled={description.isSaving}
+                  >
+                    {t('Cancel')}
+                  </Button>
+                </ActionGroup>
+                {description.error && (
+                  <Alert variant="danger" isInline title={t('Error updating description')}>
+                    {description.error}
+                  </Alert>
+                )}
+              </>
+            ) : (
+              <>
+                <span
+                  style={{
+                    color: apiProduct.spec.description
+                      ? 'inherit'
+                      : 'var(--pf-v6-global--Color--200)',
+                  }}
+                >
+                  {apiProduct.spec.description || t('Not set')}
+                </span>
+                {canUpdate && !canUpdateLoading && (
+                  <Button
+                    variant="plain"
+                    onClick={() => description.startEdit(apiProduct.spec.description || '')}
+                    aria-label={t('Edit description')}
+                    style={{ marginLeft: '8px', padding: '0 4px' }}
+                  >
+                    <PencilAltIcon />
+                  </Button>
+                )}
+              </>
+            )}
+          </DescriptionListDescription>
+        </DescriptionListGroup>
 
-        {apiProduct.spec.version && (
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('Version')}</DescriptionListTerm>
-            <DescriptionListDescription>{apiProduct.spec.version}</DescriptionListDescription>
-          </DescriptionListGroup>
-        )}
+        <DescriptionListGroup>
+          <DescriptionListTerm>{t('Version')}</DescriptionListTerm>
+          <DescriptionListDescription>
+            {version.isEditing ? (
+              <>
+                <TextInput
+                  value={version.editValue}
+                  onChange={(_event, value) => version.setEditValue(value)}
+                  aria-label={t('Version')}
+                  isDisabled={version.isSaving}
+                />
+                <ActionGroup style={{ marginTop: '8px' }}>
+                  <Button
+                    variant="primary"
+                    onClick={() =>
+                      version.save(() =>
+                        updateAPIProduct({
+                          version: version.editValue.trim() || undefined,
+                        }),
+                      )
+                    }
+                    isDisabled={version.isSaving}
+                    isLoading={version.isSaving}
+                  >
+                    {t('Save')}
+                  </Button>
+                  <Button variant="link" onClick={version.cancelEdit} isDisabled={version.isSaving}>
+                    {t('Cancel')}
+                  </Button>
+                </ActionGroup>
+                {version.error && (
+                  <Alert variant="danger" isInline title={t('Error updating version')}>
+                    {version.error}
+                  </Alert>
+                )}
+              </>
+            ) : (
+              <>
+                <span
+                  style={{
+                    color: apiProduct.spec.version ? 'inherit' : 'var(--pf-v6-global--Color--200)',
+                  }}
+                >
+                  {apiProduct.spec.version || t('Not set')}
+                </span>
+                {canUpdate && !canUpdateLoading && (
+                  <Button
+                    variant="plain"
+                    onClick={() => version.startEdit(apiProduct.spec.version || '')}
+                    aria-label={t('Edit version')}
+                    style={{ marginLeft: '8px', padding: '0 4px' }}
+                  >
+                    <PencilAltIcon />
+                  </Button>
+                )}
+              </>
+            )}
+          </DescriptionListDescription>
+        </DescriptionListGroup>
 
         {apiProduct.spec.publishStatus && (
           <DescriptionListGroup>
@@ -286,7 +521,65 @@ const APIProductOverviewTab: React.FC = () => {
         {apiProduct.spec.approvalMode && hasApiKeyAuth && (
           <DescriptionListGroup>
             <DescriptionListTerm>{t('Approval Mode')}</DescriptionListTerm>
-            <DescriptionListDescription>{apiProduct.spec.approvalMode}</DescriptionListDescription>
+            <DescriptionListDescription>
+              {approvalMode.isEditing ? (
+                <>
+                  <FormSelect
+                    value={approvalMode.editValue}
+                    onChange={(_event, value) =>
+                      approvalMode.setEditValue(value as 'manual' | 'automatic')
+                    }
+                    aria-label={t('Approval Mode')}
+                    isDisabled={approvalMode.isSaving}
+                  >
+                    <FormSelectOption value="manual" label={t('Manual')} />
+                    <FormSelectOption value="automatic" label={t('Automatic')} />
+                  </FormSelect>
+                  <ActionGroup style={{ marginTop: '8px' }}>
+                    <Button
+                      variant="primary"
+                      onClick={() =>
+                        approvalMode.save(() =>
+                          updateAPIProduct({ approvalMode: approvalMode.editValue }),
+                        )
+                      }
+                      isDisabled={approvalMode.isSaving}
+                      isLoading={approvalMode.isSaving}
+                    >
+                      {t('Save')}
+                    </Button>
+                    <Button
+                      variant="link"
+                      onClick={approvalMode.cancelEdit}
+                      isDisabled={approvalMode.isSaving}
+                    >
+                      {t('Cancel')}
+                    </Button>
+                  </ActionGroup>
+                  {approvalMode.error && (
+                    <Alert variant="danger" isInline title={t('Error updating approval mode')}>
+                      {approvalMode.error}
+                    </Alert>
+                  )}
+                </>
+              ) : (
+                <>
+                  {apiProduct.spec.approvalMode === 'automatic' ? t('Automatic') : t('Manual')}
+                  {canUpdate && !canUpdateLoading && (
+                    <Button
+                      variant="plain"
+                      onClick={() =>
+                        approvalMode.startEdit(apiProduct.spec.approvalMode || 'manual')
+                      }
+                      aria-label={t('Edit approval mode')}
+                      style={{ marginLeft: '8px', padding: '0 4px' }}
+                    >
+                      <PencilAltIcon />
+                    </Button>
+                  )}
+                </>
+              )}
+            </DescriptionListDescription>
           </DescriptionListGroup>
         )}
 
