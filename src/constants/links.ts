@@ -17,7 +17,7 @@ export const INTERNAL_LINKS = {
     }?keyword=cert-manager&details-item=openshift-cert-manager-operator-redhat-operators-openshift-marketplace`;
     const linkLatest = `/catalog/ns/${
       namespace === '#ALL_NS#' ? 'default' : namespace
-    }?selectedId=openshift-cert-manager-operator-redhat-operators-openshift-marketplace`;
+    }?catalogType=operator&selectedId=openshift-cert-manager-operator-redhat-operators-openshift-marketplace`;
 
     // Determine link based on cluster version 4.20+ vs 4.19 and lower
     return major > 4 || (major === 4 && minor >= 20) ? linkLatest : link419;
