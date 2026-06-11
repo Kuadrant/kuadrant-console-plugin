@@ -14,6 +14,7 @@ import {
   Title,
   Button,
   Divider,
+  ClipboardCopy,
 } from '@patternfly/react-core';
 import { PencilAltIcon } from '@patternfly/react-icons';
 import {
@@ -21,6 +22,7 @@ import {
   useActiveNamespace,
   useAccessReview,
   Timestamp,
+  K8sResourceCommon,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { APIProduct, PlanSpec } from './types';
 import { RESOURCES } from '../../utils/resources';
@@ -36,6 +38,14 @@ import '../kuadrant.css';
 
 type ContactField = 'team' | 'email' | 'slack' | 'url';
 type DocumentationField = 'openAPISpecURL' | 'docsURL';
+
+// Minimal shape of the HTTPRoute the APIProduct targets - we only read the
+// hostnames to derive the product's public address.
+interface LinkedHTTPRoute extends K8sResourceCommon {
+  spec?: {
+    hostnames?: string[];
+  };
+}
 
 const APIProductOverviewTab: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -73,6 +83,38 @@ const APIProductOverviewTab: React.FC = () => {
         }
       : null,
   );
+
+  // The APIProduct's public address is derived from the HTTPRoute it targets:
+  // its first hostname becomes the public URL. The APIProduct itself carries no
+  // address field, so we resolve it from the linked route's spec.hostnames.
+  const targetRef = apiProduct?.spec?.targetRef;
+
+  // Cache the targetRef so a transient watch reconnection (where spec is briefly
+  // absent) doesn't drop the linked route, matching APIProductPoliciesTab.
+  const [cachedTargetRef, setCachedTargetRef] = React.useState<typeof targetRef>(undefined);
+  React.useEffect(() => {
+    if (targetRef) {
+      setCachedTargetRef(targetRef);
+    }
+  }, [targetRef]);
+  const targetRefToUse = targetRef || cachedTargetRef;
+
+  const [httpRoute] = useK8sWatchResource<LinkedHTTPRoute>(
+    targetRefToUse && targetRefToUse.kind === 'HTTPRoute'
+      ? {
+          groupVersionKind: RESOURCES.HTTPRoute.gvk,
+          namespace: targetRefToUse.namespace || activeNamespace,
+          name: targetRefToUse.name,
+          isList: false,
+        }
+      : null,
+  );
+
+  // Use the first non-empty hostname as the public address.
+  const publicUrl = React.useMemo(() => {
+    const hostname = httpRoute?.spec?.hostnames?.find((h) => h.trim().length > 0);
+    return hostname ? `https://${hostname}` : undefined;
+  }, [httpRoute]);
 
   // Check if API Product has API Key authentication configured
   const hasApiKeyAuth = React.useMemo(() => {
@@ -232,6 +274,24 @@ const APIProductOverviewTab: React.FC = () => {
           <DescriptionListTerm>{t('Display Name')}</DescriptionListTerm>
           <DescriptionListDescription>
             {apiProduct.spec.displayName || apiProduct.metadata.name}
+          </DescriptionListDescription>
+        </DescriptionListGroup>
+
+        <DescriptionListGroup>
+          <DescriptionListTerm>{t('Address')}</DescriptionListTerm>
+          <DescriptionListDescription>
+            {publicUrl ? (
+              <ClipboardCopy
+                isReadOnly
+                hoverTip={t('Copy')}
+                clickTip={t('Copied')}
+                variant="inline-compact"
+              >
+                {publicUrl}
+              </ClipboardCopy>
+            ) : (
+              <span style={{ color: 'var(--pf-v6-global--Color--200)' }}>{t('Not set')}</span>
+            )}
           </DescriptionListDescription>
         </DescriptionListGroup>
 
