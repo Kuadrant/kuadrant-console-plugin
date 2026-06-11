@@ -43,25 +43,59 @@ import '../kuadrant.css';
 type ContactField = 'team' | 'email' | 'slack' | 'url';
 type DocumentationField = 'openAPISpecURL' | 'docsURL';
 
+function useInlineEdit<T>(initialValue: T) {
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [editValue, setEditValue] = React.useState<T>(initialValue);
+  const [error, setError] = React.useState('');
+  const [isSaving, setIsSaving] = React.useState(false);
+
+  const startEdit = (currentValue: T) => {
+    setEditValue(currentValue);
+    setError('');
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+    setError('');
+  };
+
+  const save = async (saveFn: () => Promise<void>) => {
+    setIsSaving(true);
+    setError('');
+    try {
+      await saveFn();
+      setIsEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return {
+    isEditing,
+    editValue,
+    setEditValue,
+    error,
+    setError,
+    isSaving,
+    startEdit,
+    cancelEdit,
+    save,
+  };
+}
+
 const APIProductOverviewTab: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activeNamespace] = useActiveNamespace();
   const location = useLocation();
   const productName = extractResourceNameFromURL(location.pathname);
-  const [isEditingDisplayName, setIsEditingDisplayName] = React.useState(false);
-  const [editDisplayNameValue, setEditDisplayNameValue] = React.useState('');
-  const [displayNameError, setDisplayNameError] = React.useState('');
-  const [isSavingDisplayName, setIsSavingDisplayName] = React.useState(false);
-  const [isEditingVersion, setIsEditingVersion] = React.useState(false);
-  const [editVersionValue, setEditVersionValue] = React.useState('');
-  const [versionError, setVersionError] = React.useState('');
-  const [isSavingVersion, setIsSavingVersion] = React.useState(false);
-  const [isEditingApprovalMode, setIsEditingApprovalMode] = React.useState(false);
-  const [editApprovalModeValue, setEditApprovalModeValue] = React.useState<'manual' | 'automatic'>(
-    'manual',
-  );
-  const [approvalModeError, setApprovalModeError] = React.useState('');
-  const [isSavingApprovalMode, setIsSavingApprovalMode] = React.useState(false);
+  const displayName = useInlineEdit('');
+  const version = useInlineEdit('');
+  const approvalMode = useInlineEdit<'manual' | 'automatic'>('manual');
+  const description = useInlineEdit('');
+
   const [editingField, setEditingField] = React.useState<ContactField | null>(null);
   const [editingDocField, setEditingDocField] = React.useState<DocumentationField | null>(null);
   const [isEditingTags, setIsEditingTags] = React.useState(false);
@@ -124,89 +158,6 @@ const APIProductOverviewTab: React.FC = () => {
       model,
       data: updatedResource,
     });
-  };
-
-  const handleEditDisplayName = () => {
-    setEditDisplayNameValue(apiProduct.spec.displayName || apiProduct.metadata.name);
-    setDisplayNameError('');
-    setIsEditingDisplayName(true);
-  };
-
-  const handleSaveDisplayName = async () => {
-    setIsSavingDisplayName(true);
-    setDisplayNameError('');
-
-    try {
-      await updateAPIProduct({
-        displayName: editDisplayNameValue.trim() || apiProduct.metadata.name,
-      });
-      setIsEditingDisplayName(false);
-    } catch (err) {
-      setDisplayNameError(err instanceof Error ? err.message : t('Failed to update display name'));
-    } finally {
-      setIsSavingDisplayName(false);
-    }
-  };
-
-  const handleCancelDisplayName = () => {
-    setIsEditingDisplayName(false);
-    setDisplayNameError('');
-  };
-
-  const handleEditVersion = () => {
-    setEditVersionValue(apiProduct.spec.version || '');
-    setVersionError('');
-    setIsEditingVersion(true);
-  };
-
-  const handleSaveVersion = async () => {
-    setIsSavingVersion(true);
-    setVersionError('');
-
-    try {
-      await updateAPIProduct({
-        version: editVersionValue.trim() || undefined,
-      });
-      setIsEditingVersion(false);
-    } catch (err) {
-      setVersionError(err instanceof Error ? err.message : t('Failed to update version'));
-    } finally {
-      setIsSavingVersion(false);
-    }
-  };
-
-  const handleCancelVersion = () => {
-    setIsEditingVersion(false);
-    setVersionError('');
-  };
-
-  const handleEditApprovalMode = () => {
-    setEditApprovalModeValue(apiProduct.spec.approvalMode || 'manual');
-    setApprovalModeError('');
-    setIsEditingApprovalMode(true);
-  };
-
-  const handleSaveApprovalMode = async () => {
-    setIsSavingApprovalMode(true);
-    setApprovalModeError('');
-
-    try {
-      await updateAPIProduct({
-        approvalMode: editApprovalModeValue,
-      });
-      setIsEditingApprovalMode(false);
-    } catch (err) {
-      setApprovalModeError(
-        err instanceof Error ? err.message : t('Failed to update approval mode'),
-      );
-    } finally {
-      setIsSavingApprovalMode(false);
-    }
-  };
-
-  const handleCancelApprovalMode = () => {
-    setIsEditingApprovalMode(false);
-    setApprovalModeError('');
   };
 
   // Get authentication methods from discoveredAuthScheme
@@ -350,34 +301,40 @@ const APIProductOverviewTab: React.FC = () => {
         <DescriptionListGroup>
           <DescriptionListTerm>{t('Display Name')}</DescriptionListTerm>
           <DescriptionListDescription>
-            {isEditingDisplayName ? (
+            {displayName.isEditing ? (
               <>
                 <TextInput
-                  value={editDisplayNameValue}
-                  onChange={(_event, value) => setEditDisplayNameValue(value)}
+                  value={displayName.editValue}
+                  onChange={(_event, value) => displayName.setEditValue(value)}
                   aria-label={t('Display Name')}
-                  isDisabled={isSavingDisplayName}
+                  isDisabled={displayName.isSaving}
                 />
                 <ActionGroup style={{ marginTop: '8px' }}>
                   <Button
                     variant="primary"
-                    onClick={handleSaveDisplayName}
-                    isDisabled={isSavingDisplayName}
-                    isLoading={isSavingDisplayName}
+                    onClick={() =>
+                      displayName.save(() =>
+                        updateAPIProduct({
+                          displayName: displayName.editValue.trim() || apiProduct.metadata.name,
+                        }),
+                      )
+                    }
+                    isDisabled={displayName.isSaving}
+                    isLoading={displayName.isSaving}
                   >
                     {t('Save')}
                   </Button>
                   <Button
                     variant="link"
-                    onClick={handleCancelDisplayName}
-                    isDisabled={isSavingDisplayName}
+                    onClick={displayName.cancelEdit}
+                    isDisabled={displayName.isSaving}
                   >
                     {t('Cancel')}
                   </Button>
                 </ActionGroup>
-                {displayNameError && (
+                {displayName.error && (
                   <Alert variant="danger" isInline title={t('Error updating display name')}>
-                    {displayNameError}
+                    {displayName.error}
                   </Alert>
                 )}
               </>
@@ -387,7 +344,9 @@ const APIProductOverviewTab: React.FC = () => {
                 {canUpdate && !canUpdateLoading && (
                   <Button
                     variant="plain"
-                    onClick={handleEditDisplayName}
+                    onClick={() =>
+                      displayName.startEdit(apiProduct.spec.displayName || apiProduct.metadata.name)
+                    }
                     aria-label={t('Edit display name')}
                     style={{ marginLeft: '8px', padding: '0 4px' }}
                   >
@@ -399,66 +358,131 @@ const APIProductOverviewTab: React.FC = () => {
           </DescriptionListDescription>
         </DescriptionListGroup>
 
-        {apiProduct.spec.description && (
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('Description')}</DescriptionListTerm>
-            <DescriptionListDescription>{apiProduct.spec.description}</DescriptionListDescription>
-          </DescriptionListGroup>
-        )}
+        <DescriptionListGroup>
+          <DescriptionListTerm>{t('Description')}</DescriptionListTerm>
+          <DescriptionListDescription>
+            {description.isEditing ? (
+              <>
+                <TextInput
+                  value={description.editValue}
+                  onChange={(_event, value) => description.setEditValue(value)}
+                  aria-label={t('Description')}
+                  isDisabled={description.isSaving}
+                />
+                <ActionGroup style={{ marginTop: '8px' }}>
+                  <Button
+                    variant="primary"
+                    onClick={() =>
+                      description.save(() =>
+                        updateAPIProduct({
+                          description: description.editValue.trim() || undefined,
+                        }),
+                      )
+                    }
+                    isDisabled={description.isSaving}
+                    isLoading={description.isSaving}
+                  >
+                    {t('Save')}
+                  </Button>
+                  <Button
+                    variant="link"
+                    onClick={description.cancelEdit}
+                    isDisabled={description.isSaving}
+                  >
+                    {t('Cancel')}
+                  </Button>
+                </ActionGroup>
+                {description.error && (
+                  <Alert variant="danger" isInline title={t('Error updating description')}>
+                    {description.error}
+                  </Alert>
+                )}
+              </>
+            ) : (
+              <>
+                <span
+                  style={{
+                    color: apiProduct.spec.description
+                      ? 'inherit'
+                      : 'var(--pf-v6-global--Color--200)',
+                  }}
+                >
+                  {apiProduct.spec.description || t('Not set')}
+                </span>
+                {canUpdate && !canUpdateLoading && (
+                  <Button
+                    variant="plain"
+                    onClick={() => description.startEdit(apiProduct.spec.description || '')}
+                    aria-label={t('Edit description')}
+                    style={{ marginLeft: '8px', padding: '0 4px' }}
+                  >
+                    <PencilAltIcon />
+                  </Button>
+                )}
+              </>
+            )}
+          </DescriptionListDescription>
+        </DescriptionListGroup>
 
-        {apiProduct.spec.version && (
-          <DescriptionListGroup>
-            <DescriptionListTerm>{t('Version')}</DescriptionListTerm>
-            <DescriptionListDescription>
-              {isEditingVersion ? (
-                <>
-                  <TextInput
-                    value={editVersionValue}
-                    onChange={(_event, value) => setEditVersionValue(value)}
-                    aria-label={t('Version')}
-                    isDisabled={isSavingVersion}
-                  />
-                  <ActionGroup style={{ marginTop: '8px' }}>
-                    <Button
-                      variant="primary"
-                      onClick={handleSaveVersion}
-                      isDisabled={isSavingVersion}
-                      isLoading={isSavingVersion}
-                    >
-                      {t('Save')}
-                    </Button>
-                    <Button
-                      variant="link"
-                      onClick={handleCancelVersion}
-                      isDisabled={isSavingVersion}
-                    >
-                      {t('Cancel')}
-                    </Button>
-                  </ActionGroup>
-                  {versionError && (
-                    <Alert variant="danger" isInline title={t('Error updating version')}>
-                      {versionError}
-                    </Alert>
-                  )}
-                </>
-              ) : (
-                <>
-                  {apiProduct.spec.version}
-                  {canUpdate && !canUpdateLoading && (
-                    <Button
-                      variant="plain"
-                      onClick={handleEditVersion}
-                      aria-label={t('Edit version')}
-                      style={{ marginLeft: '8px', padding: '0 4px' }}
-                    >
-                      <PencilAltIcon />
-                    </Button>
-                  )}
-                </>
-              )}
-            </DescriptionListDescription>
-          </DescriptionListGroup>
-        )}
+        <DescriptionListGroup>
+          <DescriptionListTerm>{t('Version')}</DescriptionListTerm>
+          <DescriptionListDescription>
+            {version.isEditing ? (
+              <>
+                <TextInput
+                  value={version.editValue}
+                  onChange={(_event, value) => version.setEditValue(value)}
+                  aria-label={t('Version')}
+                  isDisabled={version.isSaving}
+                />
+                <ActionGroup style={{ marginTop: '8px' }}>
+                  <Button
+                    variant="primary"
+                    onClick={() =>
+                      version.save(() =>
+                        updateAPIProduct({
+                          version: version.editValue.trim() || undefined,
+                        }),
+                      )
+                    }
+                    isDisabled={version.isSaving}
+                    isLoading={version.isSaving}
+                  >
+                    {t('Save')}
+                  </Button>
+                  <Button variant="link" onClick={version.cancelEdit} isDisabled={version.isSaving}>
+                    {t('Cancel')}
+                  </Button>
+                </ActionGroup>
+                {version.error && (
+                  <Alert variant="danger" isInline title={t('Error updating version')}>
+                    {version.error}
+                  </Alert>
+                )}
+              </>
+            ) : (
+              <>
+                <span
+                  style={{
+                    color: apiProduct.spec.version ? 'inherit' : 'var(--pf-v6-global--Color--200)',
+                  }}
+                >
+                  {apiProduct.spec.version || t('Not set')}
+                </span>
+                {canUpdate && !canUpdateLoading && (
+                  <Button
+                    variant="plain"
+                    onClick={() => version.startEdit(apiProduct.spec.version || '')}
+                    aria-label={t('Edit version')}
+                    style={{ marginLeft: '8px', padding: '0 4px' }}
+                  >
+                    <PencilAltIcon />
+                  </Button>
+                )}
+              </>
+            )}
+          </DescriptionListDescription>
+        </DescriptionListGroup>
 
         {apiProduct.spec.publishStatus && (
           <DescriptionListGroup>
@@ -498,15 +522,15 @@ const APIProductOverviewTab: React.FC = () => {
           <DescriptionListGroup>
             <DescriptionListTerm>{t('Approval Mode')}</DescriptionListTerm>
             <DescriptionListDescription>
-              {isEditingApprovalMode ? (
+              {approvalMode.isEditing ? (
                 <>
                   <FormSelect
-                    value={editApprovalModeValue}
+                    value={approvalMode.editValue}
                     onChange={(_event, value) =>
-                      setEditApprovalModeValue(value as 'manual' | 'automatic')
+                      approvalMode.setEditValue(value as 'manual' | 'automatic')
                     }
                     aria-label={t('Approval Mode')}
-                    isDisabled={isSavingApprovalMode}
+                    isDisabled={approvalMode.isSaving}
                   >
                     <FormSelectOption value="manual" label={t('Manual')} />
                     <FormSelectOption value="automatic" label={t('Automatic')} />
@@ -514,23 +538,27 @@ const APIProductOverviewTab: React.FC = () => {
                   <ActionGroup style={{ marginTop: '8px' }}>
                     <Button
                       variant="primary"
-                      onClick={handleSaveApprovalMode}
-                      isDisabled={isSavingApprovalMode}
-                      isLoading={isSavingApprovalMode}
+                      onClick={() =>
+                        approvalMode.save(() =>
+                          updateAPIProduct({ approvalMode: approvalMode.editValue }),
+                        )
+                      }
+                      isDisabled={approvalMode.isSaving}
+                      isLoading={approvalMode.isSaving}
                     >
                       {t('Save')}
                     </Button>
                     <Button
                       variant="link"
-                      onClick={handleCancelApprovalMode}
-                      isDisabled={isSavingApprovalMode}
+                      onClick={approvalMode.cancelEdit}
+                      isDisabled={approvalMode.isSaving}
                     >
                       {t('Cancel')}
                     </Button>
                   </ActionGroup>
-                  {approvalModeError && (
+                  {approvalMode.error && (
                     <Alert variant="danger" isInline title={t('Error updating approval mode')}>
-                      {approvalModeError}
+                      {approvalMode.error}
                     </Alert>
                   )}
                 </>
@@ -540,7 +568,9 @@ const APIProductOverviewTab: React.FC = () => {
                   {canUpdate && !canUpdateLoading && (
                     <Button
                       variant="plain"
-                      onClick={handleEditApprovalMode}
+                      onClick={() =>
+                        approvalMode.startEdit(apiProduct.spec.approvalMode || 'manual')
+                      }
                       aria-label={t('Edit approval mode')}
                       style={{ marginLeft: '8px', padding: '0 4px' }}
                     >
