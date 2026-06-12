@@ -19,6 +19,14 @@ data:
         listen              [::]:{{ .Values.plugin.port }} ssl;
         ssl_certificate     /var/cert/tls.crt;
         ssl_certificate_key /var/cert/tls.key;
-        root                /usr/share/nginx/html;
+
+        location / {
+          root                /usr/share/nginx/html;
+        }
+
+        # Serve config.js from /tmp
+        location /config.js {
+          root /tmp;
+        }
       }
     }
