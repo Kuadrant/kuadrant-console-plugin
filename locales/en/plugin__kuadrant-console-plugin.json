@@ -163,7 +163,6 @@
   "Error Codes": "Error Codes",
   "Error creating {{policyType}}": "Error creating {{policyType}}",
   "Error creating AuthPolicy": "Error creating AuthPolicy",
-  "Error creating OIDC Policy": "Error creating OIDC Policy",
   "Error creating Plan Policy": "Error creating Plan Policy",
   "Error creating Rate Limit Policy": "Error creating Rate Limit Policy",
   "Error creating Token Rate Limit Policy": "Error creating Token Rate Limit Policy",
