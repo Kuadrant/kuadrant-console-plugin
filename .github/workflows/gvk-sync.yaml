@@ -1,0 +1,49 @@
+name: GVK Sync Check
+
+# Keeps the GroupVersionKinds in src/utils/resources.ts in sync with the CRDs
+# shipped by the kuadrant-operator. Runs weekly; opens a PR when drift is found.
+# See issue #74.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # every Monday at 06:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  gvk-sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # kubectl (with `kubectl kustomize`) and yq are pre-installed on the
+      # ubuntu-latest runner image; the script fails fast if either is missing.
+      - name: Check and fix GVK drift
+        id: gvk
+        env:
+          KUADRANT_OPERATOR_REF: main
+          GVK_REPORT: ${{ runner.temp }}/gvk-drift-report.md
+        run: |
+          chmod +x scripts/check-gvks.sh
+          ./scripts/check-gvks.sh --fix
+          if [[ -f "${GVK_REPORT}" ]]; then echo "drift=true" >> "${GITHUB_OUTPUT}"; fi
+
+      - name: Open pull request on drift
+        if: steps.gvk.outputs.drift == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          add-paths: src/utils/resources.ts
+          branch: chore/sync-gvks
+          delete-branch: true
+          commit-message: 'chore: sync GVKs with kuadrant-operator'
+          title: 'chore: sync GVKs with kuadrant-operator'
+          body-path: ${{ runner.temp }}/gvk-drift-report.md
+          labels: |
+            enhancement
+            automated
+          signoff: true
