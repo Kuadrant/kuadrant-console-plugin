@@ -82,7 +82,10 @@ while read -r kind group version; do
     report+="- \`${kind}\`: \`${group}/${version}\` -> \`${up_group}/${up_version}\`"$'\n'
 
     if [[ "${FIX}" == true ]]; then
-      sed -i -E "s|(gvk: \{ group: ')[^']*(', version: ')[^']*(', kind: '${kind}' \})|\1${up_group}\2${up_version}\3|" "${RESOURCES_FILE}"
+      # Avoid `sed -i` (GNU and BSD/macOS syntax differ); write via a temp file.
+      tmp="$(mktemp)"
+      sed -E "s|(gvk: \{ group: ')[^']*(', version: ')[^']*(', kind: '${kind}' \})|\1${up_group}\2${up_version}\3|" "${RESOURCES_FILE}" > "${tmp}"
+      mv "${tmp}" "${RESOURCES_FILE}"
     fi
   else
     echo "OK     ${kind}: ${group}/${version}"
