@@ -42,20 +42,12 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
   });
   const [clientID, setClientID] = React.useState('');
   const [issuerURL, setIssuerURL] = React.useState('');
+  const [creationTimestamp, setCreationTimestamp] = React.useState('');
+  const [resourceVersion, setResourceVersion] = React.useState('');
+  const [formDisabled, setFormDisabled] = React.useState(false);
+  const [create, setCreate] = React.useState(true);
 
   const createOIDCPolicy = () => {
-    let creationTimestampVal = '';
-    let resourceVersionVal = '';
-    try {
-      creationTimestampVal = creationTimestamp;
-    } catch {
-      creationTimestampVal = '';
-    }
-    try {
-      resourceVersionVal = resourceVersion;
-    } catch {
-      resourceVersionVal = '';
-    }
     return {
       apiVersion:
         resourceGVKMapping['OIDCPolicy'].group + '/' + resourceGVKMapping['OIDCPolicy'].version,
@@ -63,14 +55,15 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
       metadata: {
         name: policyName,
         namespace: selectedNamespace,
-        ...(creationTimestampVal ? { creationTimestamp: creationTimestampVal } : {}),
-        ...(resourceVersionVal ? { resourceVersion: resourceVersionVal } : {}),
+        ...(creationTimestamp ? { creationTimestamp } : {}),
+        ...(resourceVersion ? { resourceVersion } : {}),
       },
       spec: {
         targetRef: {
           group: 'gateway.networking.k8s.io',
           kind: 'Gateway',
           name: selectedGateway.name,
+          namespace: selectedGateway.namespace,
         },
         provider: { clientID, issuerURL },
       },
@@ -78,10 +71,6 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
   };
 
   const [yamlInput, setYamlInput] = React.useState(createOIDCPolicy);
-  const [creationTimestamp, setCreationTimestamp] = React.useState('');
-  const [resourceVersion, setResourceVersion] = React.useState('');
-  const [formDisabled, setFormDisabled] = React.useState(false);
-  const [create, setCreate] = React.useState(true);
 
   const location = useLocation();
   const pathSplit = location.pathname.split('/');
@@ -107,6 +96,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
         group?: string;
         kind?: string;
         name?: string;
+        namespace?: string;
       };
       provider?: {
         clientID?: string;
@@ -140,7 +130,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
         setPolicyName(oidcPolicyUpdate.metadata?.name || '');
         setSelectedGateway({
           name: oidcPolicyUpdate.spec?.targetRef?.name || '',
-          namespace: oidcPolicyUpdate.metadata?.namespace || '',
+          namespace: oidcPolicyUpdate.spec?.targetRef?.namespace || '',
         });
         setClientID(oidcPolicyUpdate.spec?.provider?.clientID || '');
         setIssuerURL(oidcPolicyUpdate.spec?.provider?.issuerURL || '');
@@ -157,7 +147,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
         name: parsedYaml.spec?.targetRef?.name || '',
-        namespace: parsedYaml.metadata?.namespace || '',
+        namespace: parsedYaml.spec?.targetRef?.namespace || '',
       });
       setClientID(parsedYaml.spec?.provider?.clientID || '');
       setIssuerURL(parsedYaml.spec?.provider?.issuerURL || '');
@@ -168,7 +158,15 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
 
   React.useEffect(() => {
     setYamlInput(oidcPolicy);
-  }, [policyName, selectedNamespace, selectedGateway, clientID, issuerURL]);
+  }, [
+    policyName,
+    selectedNamespace,
+    selectedGateway,
+    clientID,
+    issuerURL,
+    creationTimestamp,
+    resourceVersion,
+  ]);
 
   const handleCancelResource = () => {
     handleCancel(navigate);
