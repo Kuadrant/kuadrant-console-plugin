@@ -1,0 +1,135 @@
+# NOTE:
+# We intentionally use pull_request_target to allow commenting on fork PRs.
+# This workflow NEVER checks out or executes PR code.
+# It only reads commit metadata via the GitHub API.
+name: PR Readiness Check
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  pr-readiness:
+    name: Review Readiness
+    runs-on: ubuntu-latest
+    steps:
+      - name: PR readiness checks
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const pull_number = context.issue.number;
+            const COMMENT_MARKER = "<!-- pr-readiness-check -->";
+            const baseBranch = context.payload.pull_request.base.ref;
+
+            // Fetch all commits in the PR (paginated)
+            const commits = await github.paginate(
+              github.rest.pulls.listCommits,
+              { owner, repo, pull_number }
+            );
+
+            const issues = [];
+
+            // Detect fixup! and squash! commits 
+            const fixupCommits = [];
+            for (const c of commits) {
+              const firstLine = c.commit.message.split("\n")[0].trim();
+              const sha = c.sha.substring(0, 7);
+              const commitLink = `[\`${sha}\`](https://github.com/${owner}/${repo}/commit/${c.sha})`;
+
+              if (firstLine.startsWith("fixup!") || firstLine.startsWith("squash!")) {
+                fixupCommits.push(commitLink);
+              }
+            }
+
+            if (fixupCommits.length > 0) {
+              const pl = fixupCommits.length === 1 ? "commit" : "commits";
+              issues.push(
+                `- **Fixup/squash ${pl} detected:** ${fixupCommits.join(", ")}\n` +
+                `  Please squash before merging: \`git rebase -i --autosquash origin/${baseBranch}\``
+              );
+            }
+
+            // Detect missing DCO sign-off
+            const missingDCO = [];
+            for (const c of commits) {
+              const message = c.commit.message;
+              const sha = c.sha.substring(0, 7);
+              const commitLink = `[\`${sha}\`](https://github.com/${owner}/${repo}/commit/${c.sha})`;
+
+              if (!/Signed-off-by: .+ <.+>/.test(message)) {
+                missingDCO.push(commitLink);
+              }
+            }
+
+            if (missingDCO.length > 0) {
+              const pl = missingDCO.length === 1 ? "commit" : "commits";
+              issues.push(
+                `- **Missing DCO in ${pl}:** ${missingDCO.join(", ")}\n` +
+                `  Add \`Signed-off-by\` trailer using \`git commit --amend -s\``
+              );
+            }
+
+            // Build the comment body
+            let body;
+            if (issues.length > 0) {
+              body = [
+                COMMENT_MARKER,
+                "# PR Readiness Check",
+                "",
+                "## ❌ This PR is not ready for review.",
+                "",
+                "**Issues found:**",
+                "",
+                ...issues,
+                "",
+                "---",
+                "**Please address the issues above and push your changes again.🔧**",
+              ].join("\n");
+            } else {
+              body = [
+                COMMENT_MARKER,
+                "# PR Readiness Check",
+                "",
+                "## ✅ All basic checks passed.",
+                "",
+                "- All commits are DCO signed off.",
+                "- No fixup/squash commits detected.",
+                "",
+                "**Keep up the good work! 👍**",
+              ].join("\n");
+            }
+
+            // Find existing bot comment to update (no comment spam)
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              { owner, repo, issue_number: pull_number }
+            );
+            const existingComment = comments.find(
+              (comment) => comment.body && comment.body.includes(COMMENT_MARKER)
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existingComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: pull_number,
+                body,
+              });
+            }
+
+            // Fail the CI check if any issues were found
+            if (issues.length > 0) {
+              core.setFailed("PR readiness checks failed. See the comment on the PR for details.");
+            }
