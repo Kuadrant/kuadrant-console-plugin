@@ -289,6 +289,14 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
+      "path": "/k8s/ns/:ns/oidcpolicy/name/:name/edit",
+      "component": { "$codeRef": "KuadrantOIDCPolicyCreatePage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
       "path": "/k8s/ns/:ns/dnspolicy/name/:name/edit",
       "component": { "$codeRef": "KuadrantDNSPolicyCreatePage" }
     }
@@ -390,6 +398,17 @@
         "kind": "TLSPolicy"
       },
       "provider": { "$codeRef": "useTLSPolicyActions" }
+    }
+  },
+  {
+    "type": "console.action/resource-provider",
+    "properties": {
+      "model": {
+        "group": "extensions.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "OIDCPolicy"
+      },
+      "provider": { "$codeRef": "useOIDCPolicyActions" }
     }
   },
   {

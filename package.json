@@ -108,7 +108,8 @@
       "APIKeyDetailPage": "./components/apikey/APIKeyDetailPage",
       "APIKeyApprovalPage": "./components/apikey/APIKeyApprovalPage",
       "useDNSPolicyActions": "./components/dnspolicy/useDNSPolicyActions",
-      "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions"
+      "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions",
+      "useOIDCPolicyActions": "./components/oidcpolicy/useOIDCPolicyActions"
     },
     "dependencies": {
       "@console/pluginAPI": "*"
