@@ -63,7 +63,6 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
           group: 'gateway.networking.k8s.io',
           kind: 'Gateway',
           name: selectedGateway.name,
-          namespace: selectedGateway.namespace,
         },
         provider: { clientID, issuerURL },
       },
@@ -96,7 +95,6 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
         group?: string;
         kind?: string;
         name?: string;
-        namespace?: string;
       };
       provider?: {
         clientID?: string;
@@ -130,7 +128,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
         setPolicyName(oidcPolicyUpdate.metadata?.name || '');
         setSelectedGateway({
           name: oidcPolicyUpdate.spec?.targetRef?.name || '',
-          namespace: oidcPolicyUpdate.spec?.targetRef?.namespace || '',
+          namespace: oidcPolicyUpdate.metadata?.namespace || '',
         });
         setClientID(oidcPolicyUpdate.spec?.provider?.clientID || '');
         setIssuerURL(oidcPolicyUpdate.spec?.provider?.issuerURL || '');
@@ -147,7 +145,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
         name: parsedYaml.spec?.targetRef?.name || '',
-        namespace: parsedYaml.spec?.targetRef?.namespace || '',
+        namespace: parsedYaml.metadata?.namespace || '',
       });
       setClientID(parsedYaml.spec?.provider?.clientID || '');
       setIssuerURL(parsedYaml.spec?.provider?.issuerURL || '');
