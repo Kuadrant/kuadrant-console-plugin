@@ -70,7 +70,6 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
       obj.kind === 'AuthPolicy' ||
       obj.kind === 'RateLimitPolicy' ||
       obj.kind === 'TokenRateLimitPolicy' ||
-      obj.kind === 'OIDCPolicy' ||
       obj.kind === 'PlanPolicy' ||
       obj.kind === 'Gateway' ||
       obj.kind === 'HTTPRoute'
