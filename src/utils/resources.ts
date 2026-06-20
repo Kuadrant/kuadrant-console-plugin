@@ -75,6 +75,13 @@ export interface APIKey extends K8sResourceCommon {
     limits?: PlanLimits;
     conditions?: Condition[];
     apiHostname?: string;
+    authScheme?: {
+      credentials?: {
+        authorizationHeader?: {
+          prefix?: string;
+        };
+      };
+    };
   };
 }
 

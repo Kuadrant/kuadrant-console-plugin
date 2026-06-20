@@ -42,8 +42,10 @@ const UsageExamples: React.FC<UsageExamplesProps> = ({ apiKey }) => {
 
     const hostname = apiKey.status?.apiHostname || 'api.example.com';
     const placeholderKey = 'YOUR_API_KEY';
+    const authPrefix =
+      apiKey.status?.authScheme?.credentials?.authorizationHeader?.prefix ?? 'Bearer';
 
-    const codeSnippets = generateAuthCodeSnippets(placeholderKey, hostname);
+    const codeSnippets = generateAuthCodeSnippets(placeholderKey, hostname, authPrefix);
     setSnippets(codeSnippets);
   }, [apiKey]);
 
