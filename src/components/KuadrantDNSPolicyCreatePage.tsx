@@ -94,6 +94,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
           group: 'gateway.networking.k8s.io',
           kind: 'Gateway',
           name: selectedGateway.name,
+          namespace: selectedGateway.namespace,
         },
         providerRefs: providerRefs.length > 0 ? [providerRefs[0]] : [],
         ...(hasLoadBalancing
@@ -143,6 +144,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         group?: string;
         kind?: string;
         name?: string;
+        namespace?: string;
       };
 
       loadBalancing: {
@@ -189,7 +191,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         setPolicyName(dnsPolicyUpdate.metadata?.name || '');
         setSelectedGateway({
           name: dnsPolicyUpdate.spec?.targetRef?.name || '',
-          namespace: dnsPolicyUpdate.metadata?.namespace || '',
+          namespace: dnsPolicyUpdate.spec?.targetRef?.namespace || '',
         });
         setHealthCheck({
           endpoint: dnsPolicyUpdate.spec?.healthCheck?.endpoint || '',
@@ -225,7 +227,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
         name: parsedYaml.spec?.targetRef?.name || '',
-        namespace: parsedYaml.metadata?.namespace || '',
+        namespace: parsedYaml.spec?.targetRef?.namespace || '',
       });
       setHealthCheck({
         endpoint: parsedYaml.spec?.healthCheck?.endpoint || '',
