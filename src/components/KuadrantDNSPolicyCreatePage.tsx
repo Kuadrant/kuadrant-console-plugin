@@ -76,8 +76,10 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       healthCheck.port ||
       healthCheck.protocol !== '';
 
-    const hasLoadBalancing =
-      loadBalancing.geo || loadBalancing.defaultGeo !== '' || loadBalancing.weight != null;
+    // Load balancing requires a geo value (see formValidation). Gate on geo rather than
+    // weight/defaultGeo: weight defaults to 120 and would otherwise always emit an
+    // incomplete loadBalancing block even when the user never opened the section.
+    const hasLoadBalancing = Boolean(loadBalancing.geo);
 
     return {
       apiVersion:
