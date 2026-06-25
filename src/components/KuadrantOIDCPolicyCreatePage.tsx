@@ -33,6 +33,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
         group: 'gateway.networking.k8s.io',
         kind: 'Gateway',
         name: 'my-gateway',
+        namespace: selectedNamespace,
       },
       provider: {
         clientID: 'my-client-id',
