@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
-import { TEST_NAMESPACE, dismissConsoleTour, ensureDeleteProductFixture } from './helpers';
+import { execSync } from 'child_process';
+import { TEST_NAMESPACE, dismissConsoleTour } from './helpers';
 
 // SPA navigation using pushState - preserves redux state
 async function spaNavigate(page: Page, path: string): Promise<void> {
@@ -365,25 +366,58 @@ test.describe('APIProduct CRUD Operations', () => {
     await expect(page.locator('text=Create API Product')).toBeVisible();
   });
 
-  test('should edit existing APIProduct (resource name immutable)', async ({ page }) => {
-    // This test assumes an APIProduct exists
-    // For a real e2e test, you would create one first via API or UI
-    // Then navigate to edit page
+  // ── Edit and Delete ──────────────────────────────────────────────────────────
+  // Nested describe so the APIProduct fixture is only created for these two tests
+  // rather than for every test in the outer describe.
+  test.describe('edit and delete', () => {
+    let editProductName = '';
 
-    // Placeholder: navigate to edit page for a test APIProduct
-    const testProductName = 'test-edit-product';
+    test.beforeEach(async () => {
+      editProductName = `test-edit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      execSync(`kubectl apply -f - <<'EOF'
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: ${editProductName}
+  namespace: ${TEST_NAMESPACE}
+spec:
+  displayName: Test Edit Product
+  description: product for edit testing
+  version: v1.0.0
+  approvalMode: manual
+  publishStatus: Draft
+  tags:
+    - test
+    - edit
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-httproute
+  contact:
+    team: Platform Team
+    email: platform@example.com
+    slack: "#platform-support"
+    url: https://platform.example.com/support
+  documentation:
+    openAPISpecURL: https://api.example.com/spec.yaml
+    docsURL: https://api.example.com/docs
+EOF`, { stdio: 'inherit' });
+    });
+
+    test.afterEach(async () => {
+      if (editProductName) {
+        execSync(
+          `kubectl delete apiproduct ${editProductName} -n ${TEST_NAMESPACE} --ignore-not-found=true`,
+          { stdio: 'inherit' },
+        );
+      }
+    });
+
+  test('should edit existing APIProduct (resource name immutable)', async ({ page }) => {
+    const testProductName = editProductName;
     await spaNavigate(page, `/kuadrant/apiproducts/ns/${TEST_NAMESPACE}/${testProductName}/edit`);
 
-    // Skip test if APIProduct doesn't exist (check for edit header)
     const editHeader = page.locator('text=Edit API Product');
-    const exists = await editHeader
-      .waitFor({ state: 'visible', timeout: 5000 })
-      .then(() => true)
-      .catch(() => false);
-    if (!exists) {
-      test.skip();
-      return;
-    }
 
     // Verify we're on edit page
     await expect(editHeader).toBeVisible();
@@ -432,11 +466,7 @@ test.describe('APIProduct CRUD Operations', () => {
   });
 
   test('should delete APIProduct with confirmation', async ({ page }) => {
-    const testProductName = 'test-delete-product';
-
-    // Ensure fixture exists before running test (applies e2e/manifests/test-apiproduct-fixtures.yaml)
-    // This makes the test repeatable - it recreates the product if it was deleted in a previous run
-    await ensureDeleteProductFixture();
+    const testProductName = editProductName;
 
     // Navigate to APIProducts list
     await navigateToAPIProducts(page, TEST_NAMESPACE);
@@ -500,6 +530,8 @@ test.describe('APIProduct CRUD Operations', () => {
     // Verify row no longer exists
     await expect(row).not.toBeVisible({ timeout: 5000 });
   });
+
+  }); // end of 'edit and delete' describe
 
   test('should display validation messages for required fields', async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
