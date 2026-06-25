@@ -147,9 +147,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
         setSelectedGateway({
           name: tlsPolicyUpdate.spec?.targetRef?.name || '',
           namespace:
-            tlsPolicyUpdate.spec?.targetRef?.namespace ??
-            tlsPolicyUpdate.metadata?.namespace ??
-            '',
+            tlsPolicyUpdate.spec?.targetRef?.namespace ?? tlsPolicyUpdate.metadata?.namespace ?? '',
         });
         if (tlsPolicyUpdate.spec?.issuerRef?.kind === 'ClusterIssuer') {
           setCertIssuerType('clusterissuer');
@@ -177,10 +175,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
         name: parsedYaml.spec?.targetRef?.name || '',
-        namespace:
-          parsedYaml.spec?.targetRef?.namespace ??
-          parsedYaml.metadata?.namespace ??
-          '',
+        namespace: parsedYaml.spec?.targetRef?.namespace ?? parsedYaml.metadata?.namespace ?? '',
       });
       if (parsedYaml.spec?.issuerRef?.kind === 'ClusterIssuer') {
         setCertIssuerType('clusterissuer');

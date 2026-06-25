@@ -192,9 +192,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         setSelectedGateway({
           name: dnsPolicyUpdate.spec?.targetRef?.name || '',
           namespace:
-            dnsPolicyUpdate.spec?.targetRef?.namespace ??
-            dnsPolicyUpdate.metadata?.namespace ??
-            '',
+            dnsPolicyUpdate.spec?.targetRef?.namespace ?? dnsPolicyUpdate.metadata?.namespace ?? '',
         });
         setHealthCheck({
           endpoint: dnsPolicyUpdate.spec?.healthCheck?.endpoint || '',
@@ -230,10 +228,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
         name: parsedYaml.spec?.targetRef?.name || '',
-        namespace:
-          parsedYaml.spec?.targetRef?.namespace ??
-          parsedYaml.metadata?.namespace ??
-          '',
+        namespace: parsedYaml.spec?.targetRef?.namespace ?? parsedYaml.metadata?.namespace ?? '',
       });
       setHealthCheck({
         endpoint: parsedYaml.spec?.healthCheck?.endpoint || '',
