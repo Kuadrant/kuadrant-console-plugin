@@ -7762,9 +7762,9 @@ __metadata:
   linkType: hard
 
 "fast-uri@npm:^3.0.1":
-  version: 3.0.1
-  resolution: "fast-uri@npm:3.0.1"
-  checksum: 10c0/3cd46d6006083b14ca61ffe9a05b8eef75ef87e9574b6f68f2e17ecf4daa7aaadeff44e3f0f7a0ef4e0f7e7c20fc07beec49ff14dc72d0b500f00386592f2d10
+  version: 3.1.2
+  resolution: "fast-uri@npm:3.1.2"
+  checksum: 10c0/5b35641895959f3f7ab7a7b1b5542bded159346f25ec9f256817b206d50b64eda5828e90d605a2e2fc645c90519a7259c2bab2c942ee728c88b88e5be21b090d
   languageName: node
   linkType: hard
 
@@ -10289,7 +10289,7 @@ __metadata:
     typescript: "npm:^5.0.0"
     webpack: "npm:5.75.0"
     webpack-cli: "npm:5.1.4"
-    webpack-dev-server: "npm:5.2.4"
+    webpack-dev-server: "npm:5.2.5"
   languageName: unknown
   linkType: soft
 
@@ -16277,9 +16277,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"webpack-dev-server@npm:5.2.4":
-  version: 5.2.4
-  resolution: "webpack-dev-server@npm:5.2.4"
+"webpack-dev-server@npm:5.2.5":
+  version: 5.2.5
+  resolution: "webpack-dev-server@npm:5.2.5"
   dependencies:
     "@types/bonjour": "npm:^3.5.13"
     "@types/connect-history-api-fallback": "npm:^1.5.4"
@@ -16318,7 +16318,7 @@ __metadata:
       optional: true
   bin:
     webpack-dev-server: bin/webpack-dev-server.js
-  checksum: 10c0/42f8afe11b7bfe65d72e30d861ddf1e4d05f27202c4c1162d204cb41a4a858dffc91c5a02bf44ec08acc8c02b4a57aaf46924ec12a5e5b97c307991379282669
+  checksum: 10c0/8963b3533197ebd820456f3cb14d9234ba4dff10412eb11200b8099c501559abf7a700e9a5d4136f17929374b61c1af5c6ef597471ea45b97ba6ca69a12e5ca8
   languageName: node
   linkType: hard
 

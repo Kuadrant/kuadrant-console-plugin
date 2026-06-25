@@ -608,14 +608,14 @@ const KuadrantOverviewPage: React.FC = () => {
     let lastCode = '';
     return (
       <Popover
-        className="custom-rounded-popover"
+        className="kuadrant-custom-rounded-popover"
         headerContent={t('Error Code')}
         bodyContent={
           <>
             <Content component={ContentVariants.p}>
               {t('Displays the distribution of error codes for request failures.')}
             </Content>
-            <div className="popover-codes">
+            <div className="kuadrant-popover-codes">
               {distribution.map(([code, dist]) => {
                 lastCode = code;
                 return (
