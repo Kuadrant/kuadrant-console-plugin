@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { execSync } from 'child_process';
 import { TEST_NAMESPACE, dismissConsoleTour, ensureDeleteProductFixture } from './helpers';
 
 // SPA navigation using pushState - preserves redux state
@@ -33,11 +34,52 @@ test.describe('APIProduct CRUD Operations', () => {
   const uniqueId = Date.now();
   const testAPIProductDisplayName = `Test API Product ${uniqueId}`;
   let generatedResourceName = '';
+  let editProductName = '';
 
   test.beforeEach(async ({ page }) => {
+    // Create a unique APIProduct for the edit test to avoid conflicts with other parallel tests
+    editProductName = `test-edit-${Date.now()}`;
+    execSync(`kubectl apply -f - <<'EOF'
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: ${editProductName}
+  namespace: ${TEST_NAMESPACE}
+spec:
+  displayName: Test Edit Product
+  description: product for edit testing
+  version: v1.0.0
+  approvalMode: manual
+  publishStatus: Draft
+  tags:
+    - test
+    - edit
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-httproute
+  contact:
+    team: Platform Team
+    email: platform@example.com
+    slack: "#platform-support"
+    url: https://platform.example.com/support
+  documentation:
+    openAPISpecURL: https://api.example.com/spec.yaml
+    docsURL: https://api.example.com/docs
+EOF`, { stdio: 'inherit' });
+
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await dismissConsoleTour(page);
+  });
+
+  test.afterEach(async () => {
+    if (editProductName) {
+      execSync(
+        `kubectl delete apiproduct ${editProductName} -n ${TEST_NAMESPACE} --ignore-not-found=true`,
+        { stdio: 'inherit' },
+      );
+    }
   });
 
   test('should navigate from list page to create page via Create button', async ({ page }) => {
@@ -370,8 +412,8 @@ test.describe('APIProduct CRUD Operations', () => {
     // For a real e2e test, you would create one first via API or UI
     // Then navigate to edit page
 
-    // Placeholder: navigate to edit page for a test APIProduct
-    const testProductName = 'test-edit-product';
+    // Navigate to edit page for the unique APIProduct created in beforeEach
+    const testProductName = editProductName;
     await spaNavigate(page, `/kuadrant/apiproducts/ns/${TEST_NAMESPACE}/${testProductName}/edit`);
 
     // Skip test if APIProduct doesn't exist (check for edit header)

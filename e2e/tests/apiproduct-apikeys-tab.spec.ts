@@ -170,22 +170,35 @@ async function navigateAsOwner(page: Parameters<typeof impersonateUser>[0]) {
 // ── View API Keys Tab ─────────────────────────────────────────────────────────
 
 test.describe('APIProduct API Keys Tab - View and Actions', () => {
+  let uid: string;
+  let georgeNs: string;
+  let georgeKey: string;
+  let helenNs: string;
+  let helenKey: string;
+
   test.beforeEach(async ({ page }) => {
+    // Unique suffix per test run to avoid parallel conflicts
+    uid = String(Date.now());
+    georgeNs = `george-${uid}`;
+    georgeKey = `george-${uid}`;
+    helenNs = `helen-${uid}`;
+    helenKey = `helen-${uid}`;
+
     // Create dedicated test fixtures
-    await createNamespace('george');
+    await createNamespace(georgeNs);
     await createAPIKey({
-      name: 'george-apikey',
-      namespace: 'george',
+      name: georgeKey,
+      namespace: georgeNs,
       userId: 'george',
       email: 'george@example.com',
       planTier: 'gold',
       useCase: 'Testing API integration',
       apiKeySecret: 'test-george-key-77777',
     });
-    await createNamespace('helen');
+    await createNamespace(helenNs);
     await createAPIKey({
-      name: 'helen-apikey',
-      namespace: 'helen',
+      name: helenKey,
+      namespace: helenNs,
       userId: 'helen',
       email: 'helen@mobile.io',
       planTier: 'silver',
@@ -197,38 +210,38 @@ test.describe('APIProduct API Keys Tab - View and Actions', () => {
 
     // Use the search filter to find our specific test resource
     const searchInput = page.locator('input[placeholder*="Search by name"]');
-    await searchInput.fill('george');
-    await expect(page.locator('tr:has-text("george-apikey")')).toBeVisible({ timeout: 10_000 });
+    await searchInput.fill(georgeKey);
+    await expect(page.locator(`tr:has-text("${georgeKey}")`)).toBeVisible({ timeout: 10_000 });
   });
 
   test.afterEach(async ({ page }) => {
     await stopImpersonation(page);
-    await deleteAPIKey('george', 'george-apikey');
-    await deleteAPIKey('helen', 'helen-apikey');
-    await deleteNamespace('george');
-    await deleteNamespace('helen');
+    await deleteAPIKey(georgeNs, georgeKey);
+    await deleteAPIKey(helenNs, helenKey);
+    await deleteNamespace(georgeNs);
+    await deleteNamespace(helenNs);
   });
 
   test('should display pending API key requests', async ({ page }) => {
     // Verify george request is visible
-    await expect(page.locator('tr:has-text("george-apikey")')).toBeVisible();
-    const georgeRow = page.locator('tr:has-text("george-apikey")');
+    await expect(page.locator(`tr:has-text("${georgeKey}")`)).toBeVisible();
+    const georgeRow = page.locator(`tr:has-text("${georgeKey}")`);
     await expect(georgeRow.locator('text=Pending')).toBeVisible();
 
     // Search for helen
     const searchInput = page.locator('input[placeholder*="Search by name"]');
     await searchInput.clear();
-    await searchInput.fill('helen');
+    await searchInput.fill(helenKey);
 
     // Verify helen request is visible
-    await expect(page.locator('tr:has-text("helen-apikey")')).toBeVisible({ timeout: 5_000 });
-    const helenRow = page.locator('tr:has-text("helen-apikey")');
+    await expect(page.locator(`tr:has-text("${helenKey}")`)).toBeVisible({ timeout: 5_000 });
+    const helenRow = page.locator(`tr:has-text("${helenKey}")`);
     await expect(helenRow.locator('text=Pending')).toBeVisible();
   });
 
   test('should show actionable items for pending requests', async ({ page }) => {
     // George row should already be visible from beforeEach filter
-    const georgeRow = page.locator('tr:has-text("george-apikey")');
+    const georgeRow = page.locator(`tr:has-text("${georgeKey}")`);
     await expect(georgeRow).toBeVisible();
 
     // Verify the kebab menu (actions) is available
@@ -249,7 +262,7 @@ test.describe('APIProduct API Keys Tab - View and Actions', () => {
 
   test('should show use case info icon when use case exists', async ({ page }) => {
     // George row should already be visible from beforeEach filter
-    const georgeRow = page.locator('tr:has-text("george-apikey")');
+    const georgeRow = page.locator(`tr:has-text("${georgeKey}")`);
     await expect(georgeRow).toBeVisible();
 
     // Check that the use case column has the info icon (InfoCircleIcon)
