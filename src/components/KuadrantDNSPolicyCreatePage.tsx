@@ -164,19 +164,16 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   }
 
   //Checking if the policy already exists and is to be edited or if its new and is being created
-  let dnsResource = null;
-  if (nameEdit) {
-    dnsResource = {
-      groupVersionKind: dnsPolicyGVK,
-      isList: false,
-      name: nameEdit,
-      namespace: namespaceEdit,
-    };
-  }
+  const dnsResource = nameEdit
+    ? {
+        groupVersionKind: dnsPolicyGVK,
+        isList: false,
+        name: nameEdit,
+        namespace: namespaceEdit,
+      }
+    : null;
 
-  const [dnsData, dnsLoaded, dnsError] = dnsResource
-    ? useK8sWatchResource(dnsResource)
-    : [null, false, null]; //Syntax allows for dnsResource to be null in the case of a create
+  const [dnsData, dnsLoaded, dnsError] = useK8sWatchResource(dnsResource);
 
   React.useEffect(() => {
     if (dnsLoaded && !dnsError) {
