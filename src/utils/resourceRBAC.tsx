@@ -14,30 +14,54 @@ function useAccessReviews(resource: Resource[]) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+
     const checkRBAC = async () => {
-      const results = await Promise.all(
-        resource.flatMap(({ group, kind, namespace }) =>
-          verbs.map(async (verb) => {
-            const result = await checkAccess({
-              group,
-              resource: kind,
-              verb,
-              ...(namespace ? { namespace } : {}),
-            });
-            return { key: `${kind}-${verb}`, isAllowed: result.status?.allowed };
-          }),
-        ),
-      );
-      const RBACMap = results.reduce((acc, { key, isAllowed }) => {
-        acc[key] = isAllowed;
-        return acc;
-      }, {} as Record<string, boolean>);
-      setUserRBAC(RBACMap);
-      setLoading(false);
+      setLoading(true);
+
+      try {
+        const results = await Promise.all(
+          resource.flatMap(({ group, kind, namespace }) =>
+            verbs.map(async (verb) => {
+              const result = await checkAccess({
+                group,
+                resource: kind,
+                verb,
+                ...(namespace ? { namespace } : {}),
+              });
+
+              return {
+                key: `${kind}-${verb}`,
+                isAllowed: result.status?.allowed,
+              };
+            }),
+          ),
+        );
+
+        const RBACMap = results.reduce((acc, { key, isAllowed }) => {
+          acc[key] = isAllowed;
+          return acc;
+        }, {} as Record<string, boolean>);
+
+        if (!cancelled) {
+          setUserRBAC(RBACMap);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error('Failed to fetch RBAC access reviews:', error);
+
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
     };
 
     checkRBAC();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [JSON.stringify(resource)]);
 
   return { userRBAC, loading };
 }
