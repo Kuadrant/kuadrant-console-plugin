@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import { execSync } from 'child_process';
-import { TEST_NAMESPACE, dismissConsoleTour, ensureDeleteProductFixture } from './helpers';
+import { TEST_NAMESPACE, dismissConsoleTour } from './helpers';
 
 // SPA navigation using pushState - preserves redux state
 async function spaNavigate(page: Page, path: string): Promise<void> {
@@ -38,7 +38,7 @@ test.describe('APIProduct CRUD Operations', () => {
 
   test.beforeEach(async ({ page }) => {
     // Create a unique APIProduct for the edit test to avoid conflicts with other parallel tests
-    editProductName = `test-edit-${Date.now()}`;
+    editProductName = `test-edit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     execSync(`kubectl apply -f - <<'EOF'
 apiVersion: devportal.kuadrant.io/v1alpha1
 kind: APIProduct
@@ -474,11 +474,7 @@ EOF`, { stdio: 'inherit' });
   });
 
   test('should delete APIProduct with confirmation', async ({ page }) => {
-    const testProductName = 'test-delete-product';
-
-    // Ensure fixture exists before running test (applies e2e/manifests/test-apiproduct-fixtures.yaml)
-    // This makes the test repeatable - it recreates the product if it was deleted in a previous run
-    await ensureDeleteProductFixture();
+    const testProductName = editProductName;
 
     // Navigate to APIProducts list
     await navigateToAPIProducts(page, TEST_NAMESPACE);
