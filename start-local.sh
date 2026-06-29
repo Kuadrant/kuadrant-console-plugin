@@ -8,8 +8,8 @@ set -euo pipefail
 # prerequisites: oinc, kubectl, node
 #
 # usage:
-#   yarn oinc          # setup cluster + start plugin with hot reload
-#   yarn oinc:teardown # tear it all down
+#   make oinc          # setup cluster + start plugin with hot reload
+#   make oinc-teardown # tear it all down
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
@@ -26,7 +26,7 @@ cleanup() {
   log "shutting down plugin dev server..."
   kill "$PLUGIN_PID" 2>/dev/null || true
   wait "$PLUGIN_PID" 2>/dev/null || true
-  log "cluster is still running. tear down with: yarn oinc:teardown"
+  log "cluster is still running. tear down with: make oinc-teardown"
 }
 
 if kubectl get nodes &>/dev/null 2>&1; then
