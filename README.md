@@ -45,11 +45,11 @@ Navigate to <http://localhost:9000> and click "Kuadrant" in the left sidebar men
 Prerequisites: [oinc](https://github.com/jasonmadigan/oinc), [kubectl](https://kubernetes.io/docs/tasks/tools/), Docker or podman, Node.js.
 
 ```bash
-yarn oinc          # create cluster + start plugin dev server with hot reload
-yarn oinc:teardown # tear it all down
+make oinc          # create cluster + start plugin dev server with hot reload
+make oinc-teardown # tear it all down
 ```
 
-Console runs at http://localhost:9000, plugin at http://localhost:9001. If the cluster already exists, `yarn oinc` skips setup and just starts the plugin server.
+Console runs at http://localhost:9000, plugin at http://localhost:9001. If the cluster already exists, `make oinc` skips setup and just starts the plugin server.
 
 ### Option 3: Docker + VSCode Remote Container
 
