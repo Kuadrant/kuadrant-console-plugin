@@ -186,6 +186,46 @@ Update `settings.json` (File > Preferences > Settings):
 
 Openshift console is configured to share modules with its dynamic plugins (console plugins). For more information on versions and changes to the shared modules, please see the shared modules [documentation](https://www.npmjs.com/package/@openshift-console/dynamic-plugin-sdk?activeTab=readme)
 
+## Maintenance
+
+### Cleaning up Quay tags
+
+`scripts/delete-quay-tags.sh` deletes transient tags from a Quay repository (default: `quay.io/kuadrant/console-plugin`), keeping only `latest`, `main`, and semantic version tags prefixed with `v` (e.g. `v0.5.0`).
+
+**Tag listing** uses skopeo with the Docker/Podman auth file (`docker login quay.io`).
+**Tag deletion** uses the Quay.io REST API (OAuth2), which requires a separate access token.
+
+To generate the OAuth token:
+
+1. Log in to quay.io → (Account or Org) Settings → Applications
+2. Create an application, click **Generate Token**, tick **Administer Repositories**
+3. Copy the token
+
+```bash
+docker login quay.io   # for tag listing via skopeo
+QUAY_TOKEN=<oauth-token> ./scripts/delete-quay-tags.sh
+```
+
+Set `DRY_RUN=true` to preview what would be deleted without removing anything:
+
+```bash
+DRY_RUN=true QUAY_TOKEN=<oauth-token> ./scripts/delete-quay-tags.sh
+```
+
+To target a different repository:
+
+```bash
+REPO=quay.io/myorg/myrepo QUAY_TOKEN=<oauth-token> ./scripts/delete-quay-tags.sh
+```
+
+To use a non-default auth file:
+
+```bash
+AUTHFILE=~/.config/containers/auth.json QUAY_TOKEN=<oauth-token> ./scripts/delete-quay-tags.sh
+```
+
+Deletions are confirmed interactively in batches of 25.
+
 ## References
 
 - [Console Plugin SDK README](https://github.com/openshift/console/tree/master/frontend/packages/console-dynamic-plugin-sdk)
