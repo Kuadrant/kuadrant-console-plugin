@@ -333,7 +333,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
     <>
       {combinedLoadError && (
         <AlertGroup>
-          <Alert title="Error loading resources" variant="danger" isInline>
+          <Alert title={t('Error loading resources')} variant="danger" isInline>
             {combinedLoadError.message}
           </Alert>
         </AlertGroup>
@@ -382,13 +382,15 @@ const ResourceList: React.FC<ResourceListProps> = ({
             <EmptyState
               titleText={
                 <Title headingLevel="h4" size="lg">
-                  {t('No')} {emptyResourceName} {t('found')}
+                  {t('No {{resourceName}} found', { resourceName: emptyResourceName })}
                 </Title>
               }
               icon={SearchIcon}
             >
               <EmptyStateBody>
-                {t('There are no')} {emptyResourceName} {t('to display - please create some.')}
+                {t('There are no {{resourceName}} to display - please create some.', {
+                  resourceName: emptyResourceName,
+                })}
               </EmptyStateBody>
             </EmptyState>
           ) : (

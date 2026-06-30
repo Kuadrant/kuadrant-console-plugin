@@ -76,10 +76,10 @@ const GatewaySelect: React.FC<GatewaySelectProps> = ({ selectedGateway, onChange
               )}{' '}
               <ResourceLink
                 groupVersionKind={gvk}
-                title="Create a Gateway"
+                title={t('Create a Gateway')}
                 hideIcon={true}
                 inline={true}
-                displayName="here"
+                displayName={t('here')}
               />
             </HelperTextItem>
           </HelperText>

@@ -40,9 +40,9 @@ const GatewayPoliciesPage: React.FC = () => {
       <PageSection hasBodyWrapper={false}>
         <Title headingLevel="h2">{t('Kuadrant Policies')}</Title>
         {!loaded ? (
-          <div>Loading...</div>
+          <div>{t('Loading...')}</div>
         ) : loadError ? (
-          <div>Error loading Gateway: {loadError.message}</div>
+          <div>{t('Error loading Gateway: {{message}}', { message: loadError.message })}</div>
         ) : (
           <AssociatedResourceList resource={httpRoute} />
         )}

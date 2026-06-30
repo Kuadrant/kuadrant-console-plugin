@@ -82,10 +82,10 @@ const ClusterIssuerSelect: React.FC<ClusterIssuerSelectProps> = ({
               )}{' '}
               <ResourceLink
                 groupVersionKind={gvk}
-                title="Create an ClusterIssuer"
+                title={t('Create a ClusterIssuer')}
                 hideIcon={true}
                 inline={true}
-                displayName="here"
+                displayName={t('here')}
               />
             </HelperTextItem>
           </HelperText>
