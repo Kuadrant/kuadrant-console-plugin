@@ -70,7 +70,9 @@ const RejectionModal: React.FC<RejectionModalProps> = ({
 
     try {
       await onReject(requests, reason || undefined);
-      onClose();
+      // Reset transient state on success so the denial reason doesn't
+      // carry over and pre-fill the next rejection in the same session.
+      handleClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : t('Failed to deny API keys'));
     } finally {
