@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       # kubectl (with `kubectl kustomize`) and yq are pre-installed on the
       # ubuntu-latest runner image; the script fails fast if either is missing.
@@ -35,7 +35,7 @@ jobs:
 
       - name: Open pull request on drift
         if: steps.gvk.outputs.drift == 'true'
-        uses: peter-evans/create-pull-request@v6
+        uses: peter-evans/create-pull-request@c5a7806660adbe173f04e3e038b0ccdcd758773c # v6.1.0
         with:
           add-paths: src/utils/resources.ts
           branch: chore/sync-gvks
