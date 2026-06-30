@@ -633,7 +633,7 @@ const KuadrantOverviewPage: React.FC = () => {
                           <FlexItem align={{ default: 'alignRight' }}>
                             {dist.total.toFixed(0) === '1'
                               ? t('1 request')
-                              : t('{{count}} requests', { count: dist.total.toFixed(0) })}
+                              : t('{{value}} requests', { value: dist.total.toFixed(0) })}
                           </FlexItem>
                         </Flex>
                       }
