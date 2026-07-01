@@ -120,11 +120,11 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
     : [null, false, null];
 
   React.useEffect(() => {
-    if (oidcLoaded && !oidcError) {
+    if (oidcLoaded && !oidcError && oidcData) {
       if (!Array.isArray(oidcData)) {
         const oidcPolicyUpdate = oidcData as OIDCPolicyEdit;
-        setCreationTimestamp(oidcPolicyUpdate.metadata.creationTimestamp);
-        setResourceVersion(oidcPolicyUpdate.metadata.resourceVersion);
+        setCreationTimestamp(oidcPolicyUpdate.metadata?.creationTimestamp || '');
+        setResourceVersion(oidcPolicyUpdate.metadata?.resourceVersion || '');
         setFormDisabled(true);
         setCreate(false);
         setPolicyName(oidcPolicyUpdate.metadata?.name || '');

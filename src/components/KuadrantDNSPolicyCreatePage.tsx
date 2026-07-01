@@ -178,11 +178,11 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const [dnsData, dnsLoaded, dnsError] = useK8sWatchResource(dnsResource);
 
   React.useEffect(() => {
-    if (dnsLoaded && !dnsError) {
+    if (dnsLoaded && !dnsError && dnsData) {
       if (!Array.isArray(dnsData)) {
         const dnsPolicyUpdate = dnsData as dnsPolicyEdit;
-        setCreationTimestamp(dnsPolicyUpdate.metadata.creationTimestamp);
-        setResourceVersion(dnsPolicyUpdate.metadata.resourceVersion);
+        setCreationTimestamp(dnsPolicyUpdate.metadata?.creationTimestamp || '');
+        setResourceVersion(dnsPolicyUpdate.metadata?.resourceVersion || '');
         setFormDisabled(true);
         setCreate(false);
         setPolicyName(dnsPolicyUpdate.metadata?.name || '');
