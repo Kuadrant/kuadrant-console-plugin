@@ -297,6 +297,14 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
+      "path": "/k8s/ns/:ns/tokenratelimitpolicy/name/:name/edit",
+      "component": { "$codeRef": "KuadrantTokenRateLimitPolicyCreatePage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
       "path": "/k8s/ns/:ns/dnspolicy/name/:name/edit",
       "component": { "$codeRef": "KuadrantDNSPolicyCreatePage" }
     }
@@ -409,6 +417,17 @@
         "kind": "OIDCPolicy"
       },
       "provider": { "$codeRef": "useOIDCPolicyActions" }
+    }
+  },
+  {
+    "type": "console.action/resource-provider",
+    "properties": {
+      "model": {
+        "group": "kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "TokenRateLimitPolicy"
+      },
+      "provider": { "$codeRef": "useTokenRateLimitPolicyActions" }
     }
   },
   {
