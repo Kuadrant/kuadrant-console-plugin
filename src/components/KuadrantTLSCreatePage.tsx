@@ -136,11 +136,11 @@ const KuadrantTLSCreatePage: React.FC = () => {
 
   // When a resource is being updated setting the form from the yaml it gets from useK8sWatchResource
   React.useEffect(() => {
-    if (tlsLoaded && !tlsError) {
+    if (tlsLoaded && !tlsError && tlsData) {
       if (!Array.isArray(tlsData)) {
         const tlsPolicyUpdate = tlsData as TLSPolicyEdit;
-        setCreationTimestamp(tlsPolicyUpdate.metadata.creationTimestamp);
-        setResourceVersion(tlsPolicyUpdate.metadata.resourceVersion);
+        setCreationTimestamp(tlsPolicyUpdate.metadata?.creationTimestamp || '');
+        setResourceVersion(tlsPolicyUpdate.metadata?.resourceVersion || '');
         setFormDisabled(true);
         setCreate(false);
         setPolicyName(tlsPolicyUpdate.metadata?.name || '');
