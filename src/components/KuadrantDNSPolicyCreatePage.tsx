@@ -181,11 +181,11 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
     : [null, false, null]; //Syntax allows for dnsResource to be null in the case of a create
 
   React.useEffect(() => {
-    if (dnsLoaded && !dnsError) {
+    if (dnsLoaded && !dnsError && dnsData) {
       if (!Array.isArray(dnsData)) {
         const dnsPolicyUpdate = dnsData as dnsPolicyEdit;
-        setCreationTimestamp(dnsPolicyUpdate.metadata.creationTimestamp);
-        setResourceVersion(dnsPolicyUpdate.metadata.resourceVersion);
+        setCreationTimestamp(dnsPolicyUpdate.metadata?.creationTimestamp || '');
+        setResourceVersion(dnsPolicyUpdate.metadata?.resourceVersion || '');
         setFormDisabled(true);
         setCreate(false);
         setPolicyName(dnsPolicyUpdate.metadata?.name || '');
