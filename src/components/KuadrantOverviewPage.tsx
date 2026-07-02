@@ -893,7 +893,7 @@ const KuadrantOverviewPage: React.FC = () => {
                           alignItems={{ default: 'alignItemsCenter' }}
                         >
                           <strong style={{ fontSize: '1.3rem' }}>{gateways.length}</strong>
-                          <span>Total Gateways</span>
+                          <span>{t('Total Gateways')}</span>
                         </Flex>
                       </FlexItem>
 
@@ -916,7 +916,7 @@ const KuadrantOverviewPage: React.FC = () => {
                               </div>
                             }
                           >
-                            <span>Healthy Gateways</span>
+                            <span>{t('Healthy Gateways')}</span>
                           </Tooltip>
                         </Flex>
                       </FlexItem>
@@ -940,7 +940,7 @@ const KuadrantOverviewPage: React.FC = () => {
                               </div>
                             }
                           >
-                            <span>Unhealthy Gateways</span>
+                            <span>{t('Unhealthy Gateways')}</span>
                           </Tooltip>
                         </Flex>
                       </FlexItem>
@@ -956,7 +956,7 @@ const KuadrantOverviewPage: React.FC = () => {
                   <CardTitle className="kuadrant-resource-create-container">
                     <Title headingLevel="h2">{t('Gateways - Traffic Analysis')}</Title>
                     {!resourceRBAC['Gateway']?.create ? (
-                      <Tooltip content="You do not have permission to create a Gateway">
+                      <Tooltip content={t('You do not have permission to create a Gateway')}>
                         <Button className="kuadrant-overview-create-button" isAriaDisabled>
                           {t(`Create Gateway`)}
                         </Button>
