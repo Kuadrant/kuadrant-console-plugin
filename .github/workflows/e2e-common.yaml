@@ -1,0 +1,86 @@
+name: E2E Tests (Common)
+
+on:
+  workflow_call:
+    inputs:
+      suite:
+        description: 'Test suite to run: smoke or full'
+        required: true
+        type: string
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install oinc
+        run: |
+          OINC_VERSION="${OINC_VERSION:-v0.1.2}"
+          curl -L -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
+          chmod +x oinc
+          sudo mv oinc /usr/local/bin/
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Install Playwright browsers
+        run: yarn playwright install --with-deps chromium
+
+      - name: Start plugin dev server
+        run: yarn clean && yarn start &
+        env:
+          NODE_ENV: development
+
+      - name: Setup cluster
+        run: ./e2e/setup.sh
+
+      - name: Wait for plugin dev server
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:9001 >/dev/null 2>&1; then
+              echo "plugin dev server ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "plugin dev server not ready after 60s"
+          exit 1
+
+      - name: Run E2E tests (smoke)
+        if: inputs.suite == 'smoke'
+        run: npx playwright test --config=e2e/playwright.config.ts
+          e2e/tests/apiproduct-crud.spec.ts
+          e2e/tests/apikey-lifecycle.spec.ts
+          e2e/tests/apikey-approvals.spec.ts
+          e2e/tests/apiproduct-rbac.spec.ts
+          e2e/tests/apiproduct-apikeys-tab.spec.ts
+          e2e/tests/rbac.spec.ts
+
+      - name: Run E2E tests (full)
+        if: inputs.suite == 'full'
+        run: npx playwright test --config=e2e/playwright.config.ts
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ inputs.suite }}
+          path: playwright-report/
+          retention-days: 7
+
+      - name: Teardown
+        if: always()
+        run: ./e2e/teardown.sh
