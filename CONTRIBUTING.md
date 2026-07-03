@@ -99,11 +99,7 @@ If you want to submit code changes to the project, here are some guidelines:
 
    Commit any updated locale files with your changes.
 
-6. **CSS Scoping**
-
-   Prefix all CSS classes with `kuadrant-` to avoid conflicts with console styles. Do not use bare `.pf-*` or `.co-*` selectors or hex colors.
-
-7. **Sign Your Commits**
+6. **Sign Your Commits**
 
    All commits must include a `Signed-off-by` line:
 
@@ -111,17 +107,17 @@ If you want to submit code changes to the project, here are some guidelines:
    git commit -s -m "feat: add new feature"
    ```
 
-8. **Ensure CI Passes**
+7. **Ensure CI Passes**
 
    Your contributions will need to pass the Continuous Integration (CI) tests for pull requests.
 
-9. **Push to Your Fork**
+8. **Push to Your Fork**
 
    ```bash
    git push origin your-feature-branch
    ```
 
-10. **Open a Pull Request**
+9. **Open a Pull Request**
 
     Go to the original repository and click on **New Pull Request**. Fill in the PR template with a clear description, the issue it fixes, and your test plan.
 
