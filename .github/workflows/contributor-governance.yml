@@ -1,12 +1,433 @@
+# Centralized contributor governance workflow for the Kuadrant org.
+# Called by thin caller workflows in each target repo.
+#
+# Jobs:
+#   1. label-new-issues     — auto-labels new issues with triage/needs-triage
+#   2. protect-triage-labels — reverts triage label changes by non-org-members
+#   3. check-pr              — closes PRs without a linked, triaged, assigned issue
+#
+# Org members (Kuadrant) are exempt from all enforcement.
+# Requires org-level secret ORG_MEMBER_TOKEN with read:org scope.
+#
 name: Contributor Governance
 
 on:
-  issues:
-    types: [opened, labeled, unlabeled]
-  pull_request_target:
-    types: [opened, reopened]
+  workflow_call:
+    secrets:
+      ORG_MEMBER_TOKEN:
+        required: true
+        description: PAT with read:org scope for org membership checks
 
 jobs:
-  governance:
-    uses: Kuadrant/.github/.github/workflows/contributor-governance.yml@main
-    secrets: inherit
+  # ──────────────────────────────────────────────────────────────
+  # Job 1: Auto-label new issues with triage/needs-triage
+  # ──────────────────────────────────────────────────────────────
+  label-new-issues:
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Add triage label to new issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              labels: ['triage/needs-triage']
+            });
+
+  # ──────────────────────────────────────────────────────────────
+  # Job 2: Protect triage labels from non-org-members
+  #
+  # If a non-org-member adds or removes a triage/* label,
+  # revert the change and ensure triage/needs-triage is present.
+  # ──────────────────────────────────────────────────────────────
+  protect-triage-labels:
+    if: github.event_name == 'issues' && (github.event.action == 'labeled' || github.event.action == 'unlabeled')
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Protect triage labels from non-org-members
+        uses: actions/github-script@v7
+        env:
+          ORG_TOKEN: ${{ secrets.ORG_MEMBER_TOKEN }}
+        with:
+          script: |
+            const label = context.payload.label.name;
+
+            // Ignore non-triage labels entirely
+            if (!label.startsWith('triage/')) {
+              console.log(`Label ${label} is not a triage label, skipping`);
+              return;
+            }
+
+            const actor = context.actor;
+            const org = context.repo.owner;
+
+            // Org members can change labels freely — check membership via org token
+            // NOTE: TEST_MODE is intentionally NOT applied here so maintainers
+            // can still manage labels during testing.
+            // Uses fetch instead of github.request because Octokit overrides
+            // custom auth headers with its own GITHUB_TOKEN.
+            const labelRes = await fetch(
+              `https://api.github.com/orgs/${org}/members/${actor}`,
+              { headers: { authorization: `token ${process.env.ORG_TOKEN}` } }
+            );
+
+            if (labelRes.status === 204) {
+              console.log(`${actor} is an org member, allowing triage label change`);
+              return;
+            }
+
+            if (labelRes.status !== 404) {
+              throw new Error(`Org membership check failed with status ${labelRes.status}`);
+            }
+
+            // --- Non-org-member tried to modify a triage label ---
+
+            // If they added a label, remove it first
+            if (context.payload.action === 'labeled') {
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                name: label
+              });
+            }
+
+            // Re-fetch to see what triage labels remain
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+
+            const hasTriageLabel = issue.data.labels.some(l => l.name.startsWith('triage/'));
+
+            // An issue should never have zero triage labels
+            if (!hasTriageLabel) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                labels: ['triage/needs-triage']
+              });
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: 'Hey! Triage labels are managed by the Kuadrant maintainers. The label has been reverted. If you think this issue should be re-prioritised, leave a comment and a maintainer will take a look.'
+            });
+
+  # ──────────────────────────────────────────────────────────────
+  # Job 3: Validate PRs have a linked, triaged issue
+  #
+  # Sequential checks (stops at first failure):
+  #   a) PR must reference at least one issue (via GitHub link or #N in body)
+  #   b) At least one linked issue must be open
+  #   c) At least one open linked issue must have triage/accepted
+  #   d) No linked accepted issue has the maintainers-only label
+  #   e) No other non-org-member PR already targets the same issue
+  #   f) PR author must be assigned to the linked issue
+  # ──────────────────────────────────────────────────────────────
+  check-pr:
+    if: (github.event_name == 'pull_request' || github.event_name == 'pull_request_target') && (github.event.action == 'opened' || github.event.action == 'reopened')
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: read
+    steps:
+      - name: Check PR requirements
+        uses: actions/github-script@v7
+        env:
+          ORG_TOKEN: ${{ secrets.ORG_MEMBER_TOKEN }}
+        with:
+          script: |
+            const actor = context.payload.pull_request.user.login;
+            const org = context.repo.owner;
+
+            // --- Org membership check: org members skip all PR rules ---
+            const res = await fetch(
+              `https://api.github.com/orgs/${org}/members/${actor}`,
+              { headers: { authorization: `token ${process.env.ORG_TOKEN}` } }
+            );
+            if (res.status === 204) {
+              console.log(`${actor} is an org member, skipping PR checks`);
+              return;
+            }
+            if (res.status !== 404) throw new Error(`Org membership check failed: ${res.status}`);
+
+            // ── Rule 2: Find linked issues ──
+            // Two methods: GraphQL closingIssuesReferences + regex scan of PR text
+
+            const prNumber = context.payload.pull_request.number;
+            const prTitle = context.payload.pull_request.title;
+            const prBody = context.payload.pull_request.body || '';
+
+            // Method 1: GraphQL — gets formally linked issues
+            const query = `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    closingIssuesReferences(first: 100) {
+                      nodes {
+                        number
+                        state
+                        labels(first: 100) {
+                          nodes {
+                            name
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+
+            const graphqlResult = await github.graphql(query, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              number: prNumber
+            });
+
+            const closingIssues = graphqlResult.repository.pullRequest.closingIssuesReferences.nodes || [];
+            const linkedIssues = new Map();
+
+            for (const issue of closingIssues) {
+              linkedIssues.set(issue.number, {
+                number: issue.number,
+                state: issue.state,
+                labels: issue.labels.nodes.map(l => l.name)
+              });
+            }
+
+            // Method 2: Regex — catches #N references, Kuadrant/repo#N, and full GitHub URLs
+            const patterns = [
+              /(?:(?:closes?|fixe?s?|resolves?)\s+)?(?:Kuadrant\/[\w-]+)?#(\d+)/gi,
+              /https?:\/\/github\.com\/Kuadrant\/[\w-]+\/issues\/(\d+)/gi
+            ];
+            const text = `${prTitle}\n${prBody}`;
+            let match;
+
+            for (const issueRegex of patterns) {
+            while ((match = issueRegex.exec(text)) !== null) {
+              const issueNumber = parseInt(match[1]);
+              if (!linkedIssues.has(issueNumber)) {
+                try {
+                  const issue = await github.rest.issues.get({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issueNumber
+                  });
+
+                  // GitHub's issues API returns PRs too — skip those
+                  if (!issue.data.pull_request) {
+                    linkedIssues.set(issueNumber, {
+                      number: issueNumber,
+                      state: issue.data.state,
+                      labels: issue.data.labels.map(l => l.name)
+                    });
+                  }
+                } catch (error) {
+                  console.log(`Could not fetch issue #${issueNumber}: ${error.message}`);
+                }
+              }
+            }
+            }
+
+            // Check A: PR must have at least one linked issue
+            if (linkedIssues.size === 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: "Thanks for the contribution! PRs need to be linked to a triaged issue. If you've spotted something you'd like to work on, open an issue first and a maintainer will review it. Once it has `triage/accepted`, feel free to reopen this PR and link it."
+              });
+
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                state: 'closed'
+              });
+
+              return;
+            }
+
+            // ── Rule 3: Check issue is triaged ──
+
+            // Check B: At least one linked issue must be open
+            const openIssues = Array.from(linkedIssues.values()).filter(i => i.state === 'OPEN' || i.state === 'open');
+
+            if (openIssues.length === 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: "Thanks for the contribution! The linked issue(s) are closed. Please link an open, triaged issue and reopen this PR."
+              });
+
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                state: 'closed'
+              });
+
+              return;
+            }
+
+            // Check C: At least one open issue must have triage/accepted
+            const acceptedIssues = openIssues.filter(i => i.labels.includes('triage/accepted'));
+
+            if (acceptedIssues.length === 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: "Thanks for the contribution! The linked issue hasn't been triaged yet (needs `triage/accepted`). Once a maintainer has reviewed and accepted the issue, feel free to reopen this PR."
+              });
+
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                state: 'closed'
+              });
+
+              return;
+            }
+
+            // ── Check D: Maintainers-only issues are reserved for org members ──
+
+            const maintainersOnlyIssue = acceptedIssues.find(i => i.labels.includes('maintainers-only'));
+            if (maintainersOnlyIssue) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: `Thanks for the contribution! The linked issue (#${maintainersOnlyIssue.number}) is marked as \`maintainers-only\` and is reserved for the maintainer team.`
+              });
+
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                state: 'closed'
+              });
+
+              return;
+            }
+
+            // ── Check E: No other non-org-member PR already targets the same issue ──
+
+            for (const issue of acceptedIssues) {
+              const prsInRepo = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                state: 'open',
+                per_page: 100
+              });
+
+              for (const otherPr of prsInRepo.data) {
+                if (otherPr.number === prNumber) continue;
+                if (otherPr.user.login === actor) continue;
+
+                // Skip if the other PR author is an org member
+                const otherRes = await fetch(
+                  `https://api.github.com/orgs/${org}/members/${otherPr.user.login}`,
+                  { headers: { authorization: `token ${process.env.ORG_TOKEN}` } }
+                );
+                if (otherRes.status === 204) continue;
+                if (otherRes.status !== 404) throw new Error(`Org membership check failed for ${otherPr.user.login}: ${otherRes.status}`);
+
+                // Check if the other PR references the same issue
+                const otherPrQuery = `
+                  query($owner: String!, $repo: String!, $number: Int!) {
+                    repository(owner: $owner, name: $repo) {
+                      pullRequest(number: $number) {
+                        closingIssuesReferences(first: 100) {
+                          nodes {
+                            number
+                          }
+                        }
+                      }
+                    }
+                  }
+                `;
+
+                const otherPrResult = await github.graphql(otherPrQuery, {
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  number: otherPr.number
+                });
+
+                const otherPrIssues = otherPrResult.repository.pullRequest.closingIssuesReferences.nodes || [];
+                const otherPrIssueNumbers = otherPrIssues.map(i => i.number);
+
+                if (otherPrIssueNumbers.includes(issue.number)) {
+                  await github.rest.issues.createComment({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: prNumber,
+                    body: `Thanks for the contribution! The linked issue already has an open PR (#${otherPr.number}) from another contributor. If you think this is a different approach worth considering, leave a comment and a maintainer can reopen this.`
+                  });
+
+                  await github.rest.pulls.update({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    pull_number: prNumber,
+                    state: 'closed'
+                  });
+
+                  return;
+                }
+              }
+            }
+
+            // ── Check F: PR author must be assigned to the linked issue ──
+
+            let assignedToAny = false;
+            const unassignedIssueNumbers = [];
+
+            for (const issue of acceptedIssues) {
+              const issueDetail = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number
+              });
+
+              const assignees = issueDetail.data.assignees.map(a => a.login);
+              if (assignees.includes(actor)) {
+                assignedToAny = true;
+                break;
+              }
+              unassignedIssueNumbers.push(issue.number);
+            }
+
+            if (!assignedToAny) {
+              const issueRefs = unassignedIssueNumbers.map(n => `#${n}`).join(', ');
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: `Thanks for the contribution! The linked issue (${issueRefs}) isn't assigned to you. Please request assignment on the issue first, and if assigned, feel free to reopen this PR.`
+              });
+
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                state: 'closed'
+              });
+
+              return;
+            }
+
