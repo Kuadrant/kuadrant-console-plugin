@@ -12,6 +12,8 @@ Issues go through a triage and planning process before they are ready for contri
 
 If you're interested in contributing to an issue, leave a comment and wait for a maintainer to assign it to you before starting any work.
 
+Issues labelled `maintainers-only` are reserved for the maintainer team and are not available for external contribution.
+
 ## Contributions
 
 We welcome code and non-code contributions to our project. Non-code contributions can come in the form of documentation updates, bug reports, enhancement requests, and feature requests.
