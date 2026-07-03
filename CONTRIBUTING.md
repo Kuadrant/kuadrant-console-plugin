@@ -20,7 +20,7 @@ We welcome code and non-code contributions to our project. Non-code contribution
 
 ### Finding Issues to Work On
 
-The best place to start is to look through our issues for [bugs](https://github.com/Kuadrant/kuadrant-console-plugin/issues?q=is%3Aopen+is%3Aissue+label%3Akind%2Fbug), [good first issues](https://github.com/Kuadrant/kuadrant-console-plugin/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22), and [help wanted](https://github.com/Kuadrant/kuadrant-console-plugin/issues?q=is%3Aopen+is%3Aissue+label%3A%22help+wanted%22). These are a great starting point for new contributors.
+The best place to start is to look through our issues for [bugs](https://github.com/Kuadrant/kuadrant-console-plugin/issues?q=is%3Aopen+is%3Aissue+label%3Akind%2Fbug) and [good first issues](https://github.com/Kuadrant/kuadrant-console-plugin/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22). These are a great starting point for new contributors.
 
 Remember: only work on issues that are `triage/accepted` and assigned to you.
 
