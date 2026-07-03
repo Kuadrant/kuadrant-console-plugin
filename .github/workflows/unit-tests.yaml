@@ -6,6 +6,10 @@ on:
   merge_group:
     types: [checks_requested]
 
+concurrency:
+  group: unit-tests-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   unit:
     runs-on: ubuntu-latest

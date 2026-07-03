@@ -14,13 +14,8 @@ const config: Config = {
   moduleNameMapper: {
     // CSS and static file imports
     '\\.(css|svg|png|jpg|jpeg|gif)$': '<rootDir>/__mocks__/fileMock.ts',
-    // @console alias used in the project
-    '^@console/(.*)$': '<rootDir>/src/$1',
   },
-  testMatch: [
-    '**/__tests__/**/*.test.{ts,tsx}',
-    '**/*.test.{ts,tsx}',
-  ],
+  testMatch: ['**/*.test.{ts,tsx}'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
 };
 
