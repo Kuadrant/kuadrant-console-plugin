@@ -49,6 +49,8 @@ interface TokenLimitMap {
   [name: string]: TokenLimitConfig;
 }
 
+const windowPattern = /^([0-9]{1,5}(h|m|s|ms)){1,4}$/;
+
 const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
@@ -67,6 +69,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
   // Local modal state for adding limits
   const [isAddLimitOpen, setIsAddLimitOpen] = React.useState(false);
   const [newLimitName, setNewLimitName] = React.useState('');
+  const [modalRates, setModalRates] = React.useState<TokenRate[]>([]);
   const [newLimitValue, setNewLimitValue] = React.useState<number | ''>('');
   const [newLimitWindow, setNewLimitWindow] = React.useState('');
 
@@ -198,22 +201,35 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
 
   const handleOpenAddLimit = () => {
     setNewLimitName('');
+    setModalRates([]);
     setNewLimitValue('');
     setNewLimitWindow('');
+    setIsAddLimitOpen(false);
     setIsAddLimitOpen(true);
   };
 
+  const handleAddRate = () => {
+    if (newLimitValue !== '' && newLimitWindow && windowPattern.test(newLimitWindow)) {
+      setModalRates((prev) => [...prev, { limit: Number(newLimitValue), window: newLimitWindow }]);
+      setNewLimitValue('');
+      setNewLimitWindow('');
+    }
+  };
+
   const handleSaveLimit = () => {
-    if (newLimitName && newLimitValue !== '' && newLimitWindow) {
+    if (newLimitName && modalRates.length > 0 && !isDuplicateName) {
       setLimits((prevLimits) => ({
         ...prevLimits,
-        [newLimitName]: { rates: [{ limit: Number(newLimitValue), window: newLimitWindow }] },
+        [newLimitName]: { rates: modalRates },
       }));
       setIsAddLimitOpen(false);
     }
   };
 
-  const isAddLimitSaveDisabled = !newLimitName || newLimitValue === '' || !newLimitWindow;
+  const isDuplicateName = newLimitName !== '' && !!limits[newLimitName];
+  const isValidWindow = newLimitWindow === '' || windowPattern.test(newLimitWindow);
+
+  const isAddLimitSaveDisabled = !newLimitName || modalRates.length === 0 || isDuplicateName;
 
   const isFormValid = !!(policyName && selectedGateway.name);
 
@@ -285,8 +301,13 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
                 {Object.keys(limits).length > 0 ? (
                   Object.entries(limits).map(([name, limitConfig], index) => (
                     <Label key={index} color="blue" onClose={() => handleRemoveLimit(name)}>
-                      <strong>{name}</strong>: {limitConfig.rates?.[0]?.limit} per{' '}
-                      {limitConfig.rates?.[0]?.window}
+                      <strong>{name}</strong>:{' '}
+                      {limitConfig.rates.map((r, i) => (
+                        <span key={i}>
+                          {i > 0 ? ', ' : ''}
+                          {r.limit} per {r.window}
+                        </span>
+                      ))}
                     </Label>
                   ))
                 ) : (
@@ -342,16 +363,45 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
                 value={newLimitName}
                 onChange={(_event, value) => setNewLimitName(value)}
                 placeholder={t('Limit Name')}
+                validated={isDuplicateName ? 'error' : 'default'}
               />
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem variant={isDuplicateName ? 'error' : 'default'}>
+                    {isDuplicateName
+                      ? t('A limit with this name already exists')
+                      : t('Unique identifier for this rate limit')}
+                  </HelperTextItem>
+                </HelperText>
+              </FormHelperText>
             </FormGroup>
+            <Title headingLevel="h3" size="md">
+              {t('Rates')}
+            </Title>
+            <LabelGroup numLabels={10}>
+              {modalRates.map((rate, i) => (
+                <Label
+                  key={i}
+                  color="blue"
+                  onClose={() => setModalRates((prev) => prev.filter((_, idx) => idx !== i))}
+                >
+                  {rate.limit} per {rate.window}
+                </Label>
+              ))}
+            </LabelGroup>
             <FormGroup label={t('Limit')} isRequired fieldId="new-limit-value">
               <TextInput
                 isRequired
-                type="number"
+                type="text"
                 id="new-limit-value"
-                value={newLimitValue}
-                onChange={(_event, value) => setNewLimitValue(value === '' ? '' : Number(value))}
+                value={newLimitValue === '' ? '' : String(newLimitValue)}
+                onChange={(_event, value) => {
+                  if (value === '' || /^\d+$/.test(value)) {
+                    setNewLimitValue(value === '' ? '' : Number(value));
+                  }
+                }}
                 placeholder={t('Limit value')}
+                validated={newLimitValue !== '' && Number(newLimitValue) <= 0 ? 'error' : 'default'}
               />
               <FormHelperText>
                 <HelperText>
@@ -368,16 +418,26 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
                 id="new-limit-window"
                 value={newLimitWindow}
                 onChange={(_event, value) => setNewLimitWindow(value)}
-                placeholder="e.g. 1h, 60s, 1440m"
+                placeholder="e.g. 1h, 60s, 500ms, 1h30m"
+                validated={isValidWindow ? 'default' : 'error'}
               />
               <FormHelperText>
                 <HelperText>
-                  <HelperTextItem>
-                    {t('Time window for the rate limit (e.g. 1h, 60s, 1440m)')}
+                  <HelperTextItem variant={isValidWindow ? 'default' : 'error'}>
+                    {isValidWindow
+                      ? t('Time window for the rate limit (e.g. 1h, 60s, 1440m)')
+                      : t('Format must be like: 1h, 60s, 500ms, or 1h30m')}
                   </HelperTextItem>
                 </HelperText>
               </FormHelperText>
             </FormGroup>
+            <Button
+              variant="secondary"
+              onClick={handleAddRate}
+              isDisabled={newLimitValue === '' || !newLimitWindow || !isValidWindow}
+            >
+              {t('Add Rate')}
+            </Button>
           </Form>
         </ModalBody>
         <ModalFooter>
@@ -387,7 +447,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
             onClick={handleSaveLimit}
             isDisabled={isAddLimitSaveDisabled}
           >
-            {t('Add Limit')}
+            {t('Save Limit')}
           </Button>
           <Button key="cancel" variant="link" onClick={() => setIsAddLimitOpen(false)}>
             {t('Cancel')}
