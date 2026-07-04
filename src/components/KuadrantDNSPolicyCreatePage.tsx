@@ -208,7 +208,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         setProviderRefs([providerRef]);
         setLoadBalancing({
           geo: dnsPolicyUpdate.spec?.loadBalancing?.geo || '',
-          weight: dnsPolicyUpdate.spec?.loadBalancing?.weight ?? null,
+          weight: dnsPolicyUpdate.spec?.loadBalancing?.weight ?? 120,
           defaultGeo:
             dnsPolicyUpdate.spec?.loadBalancing?.defaultGeo !== undefined
               ? dnsPolicyUpdate.spec.loadBalancing?.defaultGeo
@@ -244,7 +244,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
 
       setLoadBalancing({
         geo: parsedYaml.spec?.loadBalancing?.geo || '',
-        weight: parsedYaml.spec?.loadBalancing?.weight ?? null,
+        weight: parsedYaml.spec?.loadBalancing?.weight ?? 120,
         defaultGeo:
           parsedYaml.spec?.loadBalancing?.defaultGeo !== undefined
             ? parsedYaml.spec.loadBalancing?.defaultGeo
