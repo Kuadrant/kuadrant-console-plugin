@@ -62,7 +62,9 @@ done <<<"${upstream_raw}"
 
 # --- 2. Local GVKs declared in resources.ts ----------------------------------
 # Matches lines like: gvk: { group: 'kuadrant.io', version: 'v1', kind: 'AuthPolicy' },
-local_raw="$(sed -nE "s/.*gvk: \{ group: '([^']*)', version: '([^']*)', kind: '([^']*)' \}.*/\3 \1 \2/p" "${RESOURCES_FILE}")"
+# Tolerant of arbitrary spacing and single or double quotes, so reformatting
+# resources.ts (e.g. via Prettier) does not silently break drift detection.
+local_raw="$(sed -nE 's/.*gvk:[[:space:]]*\{[[:space:]]*group:[[:space:]]*["'\'']([^"'\'']*)["'\''][[:space:]]*,[[:space:]]*version:[[:space:]]*["'\'']([^"'\'']*)["'\''][[:space:]]*,[[:space:]]*kind:[[:space:]]*["'\'']([^"'\'']*)["'\''].*/\3 \1 \2/p' "${RESOURCES_FILE}")"
 
 # --- 3. Diff (keyed by GVK, scoped to kinds the plugin declares) --------------
 drift=false
