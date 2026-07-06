@@ -185,7 +185,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
         </title>
       </Helmet>
       <PageSection
-        hasBodyWrapper={false} //className="pf-m-no-padding"
+        hasBodyWrapper={false}
       >
         <div className="co-m-nav-title">
           <Title headingLevel="h1">
