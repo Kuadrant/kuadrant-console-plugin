@@ -10,7 +10,7 @@
 
 ### Install oinc
 ```bash
-OINC_VERSION="v0.1.1"
+OINC_VERSION="v0.2.2"
 curl -L -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
 chmod +x oinc
 sudo mv oinc /usr/local/bin/
