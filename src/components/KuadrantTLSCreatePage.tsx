@@ -228,7 +228,8 @@ const KuadrantTLSCreatePage: React.FC = () => {
           {create ? t('Create TLS Policy') : t('Edit TLS Policy')}
         </title>
       </Helmet>
-      <PageSection hasBodyWrapper={false} //className="pf-m-no-padding"
+      <PageSection
+        hasBodyWrapper={false} //className="pf-m-no-padding"
       >
         <div className="co-m-nav-title">
           <Title headingLevel="h1">{create ? t('Create TLS Policy') : t('Edit TLS Policy')}</Title>
