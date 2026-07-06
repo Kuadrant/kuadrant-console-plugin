@@ -4,9 +4,9 @@ export default defineConfig({
   testDir: './tests',
   timeout: 60_000,
   expect: { timeout: 10_000 },
-  fullyParallel: false,
+  fullyParallel: true,
   retries: 1,
-  workers: 1,
+  workers: 3,
   reporter: [['html', { open: 'never' }], ['list']],
   use: {
     baseURL: process.env.CONSOLE_URL || 'http://localhost:9000',

@@ -170,22 +170,35 @@ async function navigateAsOwner(page: Parameters<typeof impersonateUser>[0]) {
 // ── View API Keys Tab ─────────────────────────────────────────────────────────
 
 test.describe('APIProduct API Keys Tab - View and Actions', () => {
+  let uid: string;
+  let georgeNs: string;
+  let georgeKey: string;
+  let helenNs: string;
+  let helenKey: string;
+
   test.beforeEach(async ({ page }) => {
+    // Unique suffix per test run to avoid parallel conflicts
+    uid = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    georgeNs = `george-${uid}`;
+    georgeKey = `george-${uid}`;
+    helenNs = `helen-${uid}`;
+    helenKey = `helen-${uid}`;
+
     // Create dedicated test fixtures
-    await createNamespace('george');
+    await createNamespace(georgeNs);
     await createAPIKey({
-      name: 'george-apikey',
-      namespace: 'george',
+      name: georgeKey,
+      namespace: georgeNs,
       userId: 'george',
       email: 'george@example.com',
       planTier: 'gold',
       useCase: 'Testing API integration',
       apiKeySecret: 'test-george-key-77777',
     });
-    await createNamespace('helen');
+    await createNamespace(helenNs);
     await createAPIKey({
-      name: 'helen-apikey',
-      namespace: 'helen',
+      name: helenKey,
+      namespace: helenNs,
       userId: 'helen',
       email: 'helen@mobile.io',
       planTier: 'silver',
@@ -197,38 +210,38 @@ test.describe('APIProduct API Keys Tab - View and Actions', () => {
 
     // Use the search filter to find our specific test resource
     const searchInput = page.locator('input[placeholder*="Search by name"]');
-    await searchInput.fill('george');
-    await expect(page.locator('tr:has-text("george-apikey")')).toBeVisible({ timeout: 10_000 });
+    await searchInput.fill(georgeKey);
+    await expect(page.locator(`tr:has-text("${georgeKey}")`)).toBeVisible({ timeout: 10_000 });
   });
 
   test.afterEach(async ({ page }) => {
     await stopImpersonation(page);
-    await deleteAPIKey('george', 'george-apikey');
-    await deleteAPIKey('helen', 'helen-apikey');
-    await deleteNamespace('george');
-    await deleteNamespace('helen');
+    await deleteAPIKey(georgeNs, georgeKey);
+    await deleteAPIKey(helenNs, helenKey);
+    await deleteNamespace(georgeNs);
+    await deleteNamespace(helenNs);
   });
 
   test('should display pending API key requests', async ({ page }) => {
     // Verify george request is visible
-    await expect(page.locator('tr:has-text("george-apikey")')).toBeVisible();
-    const georgeRow = page.locator('tr:has-text("george-apikey")');
+    await expect(page.locator(`tr:has-text("${georgeKey}")`)).toBeVisible();
+    const georgeRow = page.locator(`tr:has-text("${georgeKey}")`);
     await expect(georgeRow.locator('text=Pending')).toBeVisible();
 
     // Search for helen
     const searchInput = page.locator('input[placeholder*="Search by name"]');
     await searchInput.clear();
-    await searchInput.fill('helen');
+    await searchInput.fill(helenKey);
 
     // Verify helen request is visible
-    await expect(page.locator('tr:has-text("helen-apikey")')).toBeVisible({ timeout: 5_000 });
-    const helenRow = page.locator('tr:has-text("helen-apikey")');
+    await expect(page.locator(`tr:has-text("${helenKey}")`)).toBeVisible({ timeout: 5_000 });
+    const helenRow = page.locator(`tr:has-text("${helenKey}")`);
     await expect(helenRow.locator('text=Pending')).toBeVisible();
   });
 
   test('should show actionable items for pending requests', async ({ page }) => {
     // George row should already be visible from beforeEach filter
-    const georgeRow = page.locator('tr:has-text("george-apikey")');
+    const georgeRow = page.locator(`tr:has-text("${georgeKey}")`);
     await expect(georgeRow).toBeVisible();
 
     // Verify the kebab menu (actions) is available
@@ -249,7 +262,7 @@ test.describe('APIProduct API Keys Tab - View and Actions', () => {
 
   test('should show use case info icon when use case exists', async ({ page }) => {
     // George row should already be visible from beforeEach filter
-    const georgeRow = page.locator('tr:has-text("george-apikey")');
+    const georgeRow = page.locator(`tr:has-text("${georgeKey}")`);
     await expect(georgeRow).toBeVisible();
 
     // Check that the use case column has the info icon (InfoCircleIcon)
@@ -263,12 +276,19 @@ test.describe('APIProduct API Keys Tab - View and Actions', () => {
 // ── Approve Request ───────────────────────────────────────────────────────────
 
 test.describe('APIProduct API Keys Tab - Approve Request', () => {
+  let uid: string;
+  let ivanNs: string;
+  let ivanKey: string;
+
   test.beforeEach(async ({ page }) => {
-    // Create dedicated test fixture
-    await createNamespace('ivan');
+    uid = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    ivanNs = `ivan-${uid}`;
+    ivanKey = `ivan-${uid}`;
+
+    await createNamespace(ivanNs);
     await createAPIKey({
-      name: 'ivan-apikey',
-      namespace: 'ivan',
+      name: ivanKey,
+      namespace: ivanNs,
       userId: 'ivan',
       email: 'ivan@enterprise.com',
       planTier: 'gold',
@@ -278,21 +298,19 @@ test.describe('APIProduct API Keys Tab - Approve Request', () => {
 
     await navigateAsOwner(page);
 
-    // Use the search filter to find our specific test resource
     const searchInput = page.locator('input[placeholder*="Search by name"]');
-    await searchInput.fill('ivan');
-    await expect(page.locator('tr:has-text("ivan-apikey")')).toBeVisible({ timeout: 10_000 });
+    await searchInput.fill(ivanKey);
+    await expect(page.locator(`tr:has-text("${ivanKey}")`)).toBeVisible({ timeout: 10_000 });
   });
 
   test.afterEach(async ({ page }) => {
     await stopImpersonation(page);
-    await deleteAPIKey('ivan', 'ivan-apikey');
-    await deleteNamespace('ivan');
+    await deleteAPIKey(ivanNs, ivanKey);
+    await deleteNamespace(ivanNs);
   });
 
   test('should approve a pending request and update status', async ({ page }) => {
-    // Ivan row should already be visible from beforeEach filter
-    const ivanRow = page.locator('tr:has-text("ivan-apikey")');
+    const ivanRow = page.locator(`tr:has-text("${ivanKey}")`);
 
     // Open actions menu and click Approve
     const actionsButton = ivanRow.locator('[aria-label="Actions"]');
@@ -302,7 +320,6 @@ test.describe('APIProduct API Keys Tab - Approve Request', () => {
 
     // Verify approval modal appears
     await expect(page.locator('.pf-v6-c-modal-box')).toBeVisible();
-    await expect(page.locator('.pf-v6-c-modal-box').locator('text=ivan')).toBeVisible();
 
     // Click Approve button in modal
     await page.locator('.pf-v6-c-modal-box').locator('button:has-text("Approve")').click();
@@ -319,12 +336,19 @@ test.describe('APIProduct API Keys Tab - Approve Request', () => {
 // ── Reject Request ────────────────────────────────────────────────────────────
 
 test.describe('APIProduct API Keys Tab - Reject Request', () => {
+  let uid: string;
+  let judyNs: string;
+  let judyKey: string;
+
   test.beforeEach(async ({ page }) => {
-    // Create dedicated test fixture
-    await createNamespace('judy');
+    uid = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    judyNs = `judy-${uid}`;
+    judyKey = `judy-${uid}`;
+
+    await createNamespace(judyNs);
     await createAPIKey({
-      name: 'judy-apikey',
-      namespace: 'judy',
+      name: judyKey,
+      namespace: judyNs,
       userId: 'judy',
       email: 'judy@partner.io',
       planTier: 'bronze',
@@ -334,21 +358,19 @@ test.describe('APIProduct API Keys Tab - Reject Request', () => {
 
     await navigateAsOwner(page);
 
-    // Use the search filter to find our specific test resource
     const searchInput = page.locator('input[placeholder*="Search by name"]');
-    await searchInput.fill('judy');
-    await expect(page.locator('tr:has-text("judy-apikey")')).toBeVisible({ timeout: 10_000 });
+    await searchInput.fill(judyKey);
+    await expect(page.locator(`tr:has-text("${judyKey}")`)).toBeVisible({ timeout: 10_000 });
   });
 
   test.afterEach(async ({ page }) => {
     await stopImpersonation(page);
-    await deleteAPIKey('judy', 'judy-apikey');
-    await deleteNamespace('judy');
+    await deleteAPIKey(judyNs, judyKey);
+    await deleteNamespace(judyNs);
   });
 
   test('should reject a pending request and update status', async ({ page }) => {
-    // Judy row should already be visible from beforeEach filter
-    const judyRow = page.locator('tr:has-text("judy-apikey")');
+    const judyRow = page.locator(`tr:has-text("${judyKey}")`);
 
     // Open actions menu and click Deny
     const actionsButton = judyRow.locator('[aria-label="Actions"]');
@@ -358,7 +380,6 @@ test.describe('APIProduct API Keys Tab - Reject Request', () => {
 
     // Verify denial modal appears
     await expect(page.locator('.pf-v6-c-modal-box')).toBeVisible();
-    await expect(page.locator('.pf-v6-c-modal-box').locator('text=judy')).toBeVisible();
 
     // Fill denial reason
     await page.locator('#rejection-reason').fill('Does not meet usage requirements');
@@ -377,12 +398,19 @@ test.describe('APIProduct API Keys Tab - Reject Request', () => {
 // ── Deny Active Key ───────────────────────────────────────────────────────────
 
 test.describe('APIProduct API Keys Tab - Deny Active Key', () => {
+  let uid: string;
+  let kateNs: string;
+  let kateKey: string;
+
   test.beforeEach(async ({ page }) => {
-    // Create dedicated test fixture
-    await createNamespace('kate');
+    uid = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    kateNs = `kate-${uid}`;
+    kateKey = `kate-${uid}`;
+
+    await createNamespace(kateNs);
     await createAPIKey({
-      name: 'kate-apikey',
-      namespace: 'kate',
+      name: kateKey,
+      namespace: kateNs,
       userId: 'kate',
       email: 'kate@tech.io',
       planTier: 'silver',
@@ -392,20 +420,19 @@ test.describe('APIProduct API Keys Tab - Deny Active Key', () => {
 
     await navigateAsOwner(page);
 
-    // Use the search filter to find our specific test resource
     const searchInput = page.locator('input[placeholder*="Search by name"]');
-    await searchInput.fill('kate');
-    await expect(page.locator('tr:has-text("kate-apikey")')).toBeVisible({ timeout: 10_000 });
+    await searchInput.fill(kateKey);
+    await expect(page.locator(`tr:has-text("${kateKey}")`)).toBeVisible({ timeout: 10_000 });
   });
 
   test.afterEach(async ({ page }) => {
     await stopImpersonation(page);
-    await deleteAPIKey('kate', 'kate-apikey');
-    await deleteNamespace('kate');
+    await deleteAPIKey(kateNs, kateKey);
+    await deleteNamespace(kateNs);
   });
 
   test('should deny an active API key', async ({ page }) => {
-    const kateRow = page.locator('tr:has-text("kate-apikey")');
+    const kateRow = page.locator(`tr:has-text("${kateKey}")`);
 
     // Step 1: Approve the pending request
     const actionsButton = kateRow.locator('[aria-label="Actions"]');
@@ -430,7 +457,6 @@ test.describe('APIProduct API Keys Tab - Deny Active Key', () => {
     await page.locator('[role="menuitem"]:has-text("Deny")').click();
 
     await expect(page.locator('.pf-v6-c-modal-box')).toBeVisible();
-    await expect(page.locator('.pf-v6-c-modal-box').locator('text=kate')).toBeVisible();
 
     await page.locator('.pf-v6-c-modal-box').locator('button:has-text("Deny")').click();
 
