@@ -5,7 +5,7 @@ export interface LoadBalancing {
 }
 
 export interface HealthCheck {
-  endpoint: string;
+  path: string;
   failureThreshold: number;
   port: number;
   protocol: 'HTTP' | 'HTTPS' | '';

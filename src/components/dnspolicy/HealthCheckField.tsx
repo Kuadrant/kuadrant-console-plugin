@@ -14,16 +14,11 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
 
   return (
     <>
-      <FormGroup
-        label={t('Endpoint')}
-        isRequired
-        fieldId="health-check-endpoint"
-        className="pf-u-mb-md"
-      >
+      <FormGroup label={t('Path')} isRequired fieldId="health-check-path" className="pf-u-mb-md">
         <TextInput
-          id="health-check-endpoint"
-          value={healthCheck.endpoint}
-          onChange={(event) => onChange({ ...healthCheck, endpoint: event.currentTarget.value })}
+          id="health-check-path"
+          value={healthCheck.path}
+          onChange={(event) => onChange({ ...healthCheck, path: event.currentTarget.value })}
           isRequired
           placeholder="/"
         />
