@@ -50,7 +50,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
     defaultGeo: '',
   });
   const [healthCheck, setHealthCheck] = React.useState<HealthCheck>({
-    path: '',
+    endpoint: '',
     failureThreshold: null,
     port: null,
     protocol: '',
@@ -71,7 +71,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
 
   const createDNSPolicy = () => {
     const hasHealthCheck =
-      healthCheck.path ||
+      healthCheck.endpoint ||
       healthCheck.failureThreshold ||
       healthCheck.port ||
       healthCheck.protocol !== '';
@@ -94,6 +94,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
           group: 'gateway.networking.k8s.io',
           kind: 'Gateway',
           name: selectedGateway.name,
+          namespace: selectedGateway.namespace,
         },
         providerRefs: providerRefs.length > 0 ? [providerRefs[0]] : [],
         ...(hasLoadBalancing
@@ -110,7 +111,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         ...(hasHealthCheck
           ? {
               healthCheck: {
-                ...(healthCheck?.path ? { path: healthCheck.path } : {}),
+                ...(healthCheck?.endpoint ? { endpoint: healthCheck.endpoint } : {}),
                 ...(healthCheck?.failureThreshold
                   ? { failureThreshold: healthCheck.failureThreshold }
                   : {}),
@@ -143,6 +144,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         group?: string;
         kind?: string;
         name?: string;
+        namespace?: string;
       };
 
       loadBalancing: {
@@ -155,7 +157,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       }[];
 
       healthCheck?: {
-        path?: string;
+        endpoint?: string;
         failureThreshold?: number;
         port?: number;
         protocol?: 'HTTP' | 'HTTPS';
@@ -186,10 +188,11 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         setPolicyName(dnsPolicyUpdate.metadata?.name || '');
         setSelectedGateway({
           name: dnsPolicyUpdate.spec?.targetRef?.name || '',
-          namespace: dnsPolicyUpdate.metadata?.namespace ?? '',
+          namespace:
+            dnsPolicyUpdate.spec?.targetRef?.namespace ?? dnsPolicyUpdate.metadata?.namespace ?? '',
         });
         setHealthCheck({
-          path: dnsPolicyUpdate.spec?.healthCheck?.path || '',
+          endpoint: dnsPolicyUpdate.spec?.healthCheck?.endpoint || '',
           failureThreshold: dnsPolicyUpdate.spec?.healthCheck?.failureThreshold,
           port: dnsPolicyUpdate.spec?.healthCheck?.port || null,
           protocol: dnsPolicyUpdate.spec?.healthCheck?.protocol || 'HTTP',
@@ -222,10 +225,10 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
         name: parsedYaml.spec?.targetRef?.name || '',
-        namespace: parsedYaml.metadata?.namespace ?? '',
+        namespace: parsedYaml.spec?.targetRef?.namespace ?? parsedYaml.metadata?.namespace ?? '',
       });
       setHealthCheck({
-        path: parsedYaml.spec?.healthCheck?.path || '',
+        endpoint: parsedYaml.spec?.healthCheck?.endpoint || '',
         failureThreshold: parsedYaml.spec?.healthCheck?.failureThreshold,
         port: parsedYaml.spec?.healthCheck?.port || '',
         protocol: parsedYaml.spec?.healthCheck?.protocol || '',
@@ -272,7 +275,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       (!loadBalancingExpanded ||
         (loadBalancing.geo && loadBalancing.weight != null && loadBalancing.defaultGeo !== '')) &&
       (!healthExpanded ||
-        (healthCheck.path &&
+        (healthCheck.endpoint &&
           healthCheck.failureThreshold > 0 &&
           healthCheck.port > 0 &&
           healthCheck.protocol !== ''))
@@ -289,7 +292,9 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
           {create ? t('Create DNS Policy') : t('Edit DNS Policy')}
         </title>
       </Helmet>
-      <PageSection hasBodyWrapper={false} className="pf-m-no-padding">
+      <PageSection
+        hasBodyWrapper={false} 
+        >
         <div className="co-m-nav-title">
           <Title headingLevel="h1">{create ? t('Create DNS Policy') : t('Edit DNS Policy')}</Title>
           <p className="help-block">
