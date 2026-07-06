@@ -77,6 +77,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
         group: 'gateway.networking.k8s.io',
         kind: 'Gateway',
         name: selectedGateway.name,
+        namespace: selectedGateway.namespace,
       },
       issuerRef:
         certIssuerType === 'clusterissuer'
@@ -109,6 +110,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
         group?: string;
         kind?: string;
         name?: string;
+        namespace?: string;
       };
       issuerRef?: {
         kind?: 'ClusterIssuer' | 'Issuer';
@@ -141,7 +143,8 @@ const KuadrantTLSCreatePage: React.FC = () => {
         setPolicyName(tlsPolicyUpdate.metadata?.name || '');
         setSelectedGateway({
           name: tlsPolicyUpdate.spec?.targetRef?.name || '',
-          namespace: tlsPolicyUpdate.metadata?.namespace ?? '',
+          namespace:
+            tlsPolicyUpdate.spec?.targetRef?.namespace ?? tlsPolicyUpdate.metadata?.namespace ?? '',
         });
         if (tlsPolicyUpdate.spec?.issuerRef?.kind === 'ClusterIssuer') {
           setCertIssuerType('clusterissuer');
@@ -169,7 +172,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
         name: parsedYaml.spec?.targetRef?.name || '',
-        namespace: parsedYaml.metadata?.namespace ?? '',
+        namespace: parsedYaml.spec?.targetRef?.namespace ?? parsedYaml.metadata?.namespace ?? '',
       });
       if (parsedYaml.spec?.issuerRef?.kind === 'ClusterIssuer') {
         setCertIssuerType('clusterissuer');
@@ -225,7 +228,9 @@ const KuadrantTLSCreatePage: React.FC = () => {
           {create ? t('Create TLS Policy') : t('Edit TLS Policy')}
         </title>
       </Helmet>
-      <PageSection hasBodyWrapper={false} className="pf-m-no-padding">
+      <PageSection
+        hasBodyWrapper={false} //className="pf-m-no-padding"
+      >
         <div className="co-m-nav-title">
           <Title headingLevel="h1">{create ? t('Create TLS Policy') : t('Edit TLS Policy')}</Title>
           <p className="help-block">
