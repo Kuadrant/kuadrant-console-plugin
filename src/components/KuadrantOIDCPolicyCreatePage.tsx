@@ -184,7 +184,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
           {create ? t('Create OIDC Policy') : t('Edit OIDC Policy')}
         </title>
       </Helmet>
-      <PageSection hasBodyWrapper={false} className="pf-m-no-padding">
+      <PageSection hasBodyWrapper={false}>
         <div className="co-m-nav-title">
           <Title headingLevel="h1">
             {create ? t('Create OIDC Policy') : t('Edit OIDC Policy')}
