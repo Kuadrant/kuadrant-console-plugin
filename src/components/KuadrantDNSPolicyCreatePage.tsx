@@ -46,11 +46,11 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   });
   const [loadBalancing, setLoadBalancing] = React.useState<LoadBalancing>({
     geo: '',
-    weight: null,
+    weight: 120,
     defaultGeo: '',
   });
   const [healthCheck, setHealthCheck] = React.useState<HealthCheck>({
-    endpoint: '',
+    path: '',
     failureThreshold: null,
     port: null,
     protocol: '',
@@ -71,13 +71,13 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
 
   const createDNSPolicy = () => {
     const hasHealthCheck =
-      healthCheck.endpoint ||
+      healthCheck.path ||
       healthCheck.failureThreshold ||
       healthCheck.port ||
       healthCheck.protocol !== '';
 
     const hasLoadBalancing =
-      loadBalancing.geo || loadBalancing.defaultGeo !== '' || loadBalancing.weight;
+      loadBalancing.geo || loadBalancing.defaultGeo !== '' || loadBalancing.weight != null;
 
     return {
       apiVersion:
@@ -94,13 +94,12 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
           group: 'gateway.networking.k8s.io',
           kind: 'Gateway',
           name: selectedGateway.name,
-          namespace: selectedGateway.namespace,
         },
         providerRefs: providerRefs.length > 0 ? [providerRefs[0]] : [],
         ...(hasLoadBalancing
           ? {
               loadBalancing: {
-                ...(loadBalancing?.weight ? { weight: loadBalancing.weight } : {}),
+                ...(loadBalancing?.weight != null ? { weight: loadBalancing.weight } : {}),
                 ...(loadBalancing?.geo ? { geo: loadBalancing.geo } : {}),
                 ...(loadBalancing.defaultGeo !== ''
                   ? { defaultGeo: loadBalancing.defaultGeo }
@@ -111,7 +110,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         ...(hasHealthCheck
           ? {
               healthCheck: {
-                ...(healthCheck?.endpoint ? { endpoint: healthCheck.endpoint } : {}),
+                ...(healthCheck?.path ? { path: healthCheck.path } : {}),
                 ...(healthCheck?.failureThreshold
                   ? { failureThreshold: healthCheck.failureThreshold }
                   : {}),
@@ -144,7 +143,6 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         group?: string;
         kind?: string;
         name?: string;
-        namespace?: string;
       };
 
       loadBalancing: {
@@ -157,7 +155,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       }[];
 
       healthCheck?: {
-        endpoint?: string;
+        path?: string;
         failureThreshold?: number;
         port?: number;
         protocol?: 'HTTP' | 'HTTPS';
@@ -166,19 +164,16 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   }
 
   //Checking if the policy already exists and is to be edited or if its new and is being created
-  let dnsResource = null;
-  if (nameEdit) {
-    dnsResource = {
-      groupVersionKind: dnsPolicyGVK,
-      isList: false,
-      name: nameEdit,
-      namespace: namespaceEdit,
-    };
-  }
+  const dnsResource = nameEdit
+    ? {
+        groupVersionKind: dnsPolicyGVK,
+        isList: false,
+        name: nameEdit,
+        namespace: namespaceEdit,
+      }
+    : null;
 
-  const [dnsData, dnsLoaded, dnsError] = dnsResource
-    ? useK8sWatchResource(dnsResource)
-    : [null, false, null]; //Syntax allows for dnsResource to be null in the case of a create
+  const [dnsData, dnsLoaded, dnsError] = useK8sWatchResource(dnsResource);
 
   React.useEffect(() => {
     if (dnsLoaded && !dnsError && dnsData) {
@@ -191,13 +186,10 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         setPolicyName(dnsPolicyUpdate.metadata?.name || '');
         setSelectedGateway({
           name: dnsPolicyUpdate.spec?.targetRef?.name || '',
-          namespace:
-            dnsPolicyUpdate.spec?.targetRef?.namespace ??
-            dnsPolicyUpdate.metadata?.namespace ??
-            '',
+          namespace: dnsPolicyUpdate.metadata?.namespace ?? '',
         });
         setHealthCheck({
-          endpoint: dnsPolicyUpdate.spec?.healthCheck?.endpoint || '',
+          path: dnsPolicyUpdate.spec?.healthCheck?.path || '',
           failureThreshold: dnsPolicyUpdate.spec?.healthCheck?.failureThreshold,
           port: dnsPolicyUpdate.spec?.healthCheck?.port || null,
           protocol: dnsPolicyUpdate.spec?.healthCheck?.protocol || 'HTTP',
@@ -211,7 +203,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         setProviderRefs([providerRef]);
         setLoadBalancing({
           geo: dnsPolicyUpdate.spec?.loadBalancing?.geo || '',
-          weight: dnsPolicyUpdate.spec?.loadBalancing?.weight || 0,
+          weight: dnsPolicyUpdate.spec?.loadBalancing?.weight ?? null,
           defaultGeo:
             dnsPolicyUpdate.spec?.loadBalancing?.defaultGeo !== undefined
               ? dnsPolicyUpdate.spec.loadBalancing?.defaultGeo
@@ -230,13 +222,10 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
         name: parsedYaml.spec?.targetRef?.name || '',
-        namespace:
-          parsedYaml.spec?.targetRef?.namespace ??
-          parsedYaml.metadata?.namespace ??
-          '',
+        namespace: parsedYaml.metadata?.namespace ?? '',
       });
       setHealthCheck({
-        endpoint: parsedYaml.spec?.healthCheck?.endpoint || '',
+        path: parsedYaml.spec?.healthCheck?.path || '',
         failureThreshold: parsedYaml.spec?.healthCheck?.failureThreshold,
         port: parsedYaml.spec?.healthCheck?.port || '',
         protocol: parsedYaml.spec?.healthCheck?.protocol || '',
@@ -250,7 +239,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
 
       setLoadBalancing({
         geo: parsedYaml.spec?.loadBalancing?.geo || '',
-        weight: parsedYaml.spec?.loadBalancing?.weight || '',
+        weight: parsedYaml.spec?.loadBalancing?.weight ?? null,
         defaultGeo:
           parsedYaml.spec?.loadBalancing?.defaultGeo !== undefined
             ? parsedYaml.spec.loadBalancing?.defaultGeo
@@ -281,9 +270,9 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       selectedGateway.name &&
       providerRefs.length > 0 &&
       (!loadBalancingExpanded ||
-        (loadBalancing.geo && loadBalancing.weight && loadBalancing.defaultGeo !== '')) &&
+        (loadBalancing.geo && loadBalancing.weight != null && loadBalancing.defaultGeo !== '')) &&
       (!healthExpanded ||
-        (healthCheck.endpoint &&
+        (healthCheck.path &&
           healthCheck.failureThreshold > 0 &&
           healthCheck.port > 0 &&
           healthCheck.protocol !== ''))
@@ -300,9 +289,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
           {create ? t('Create DNS Policy') : t('Edit DNS Policy')}
         </title>
       </Helmet>
-      <PageSection
-        hasBodyWrapper={false} //className="pf-m-no-padding"
-      >
+      <PageSection hasBodyWrapper={false} className="pf-m-no-padding">
         <div className="co-m-nav-title">
           <Title headingLevel="h1">{create ? t('Create DNS Policy') : t('Edit DNS Policy')}</Title>
           <p className="help-block">
