@@ -292,7 +292,9 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
           {create ? t('Create DNS Policy') : t('Edit DNS Policy')}
         </title>
       </Helmet>
-      <PageSection hasBodyWrapper={false} className="pf-m-no-padding">
+      <PageSection
+        hasBodyWrapper={false} //className="pf-m-no-padding"
+      >
         <div className="co-m-nav-title">
           <Title headingLevel="h1">{create ? t('Create DNS Policy') : t('Edit DNS Policy')}</Title>
           <p className="help-block">
