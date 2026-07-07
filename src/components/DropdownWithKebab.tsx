@@ -21,12 +21,12 @@ import { useNavigate } from 'react-router-dom-v5-compat';
 import { RESOURCES, ResourceKind } from '../utils/resources';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getModelFromResource, getResourceNameFromKind } from '../utils/getModelFromResource';
-import APIProductDeleteModal from './apiproduct/APIProductDeleteModal';
 type DropdownWithKebabProps = {
   obj: K8sResourceCommon;
+  onDeleteClick?: (obj: K8sResourceCommon) => void;
 };
 
-const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
+const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj, onDeleteClick }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [isOpen, setIsOpen] = React.useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = React.useState(false);
@@ -50,13 +50,16 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   const policyType = obj.kind.toLowerCase();
   const resourceName = getResourceNameFromKind(obj.kind);
 
-  const resourceGVK: { group: string; kind: string; namespace?: string }[] = [
-    {
-      group: RESOURCES[obj.kind as ResourceKind].gvk.group,
-      kind: resourceName,
-      namespace: obj.metadata?.namespace,
-    },
-  ];
+  const resourceGVK = React.useMemo(
+    () => [
+      {
+        group: RESOURCES[obj.kind as ResourceKind].gvk.group,
+        kind: resourceName,
+        namespace: obj.metadata?.namespace,
+      },
+    ],
+    [obj.kind, resourceName, obj.metadata?.namespace],
+  );
   const { userRBAC, loading: rbacLoading } = useAccessReviews(resourceGVK);
 
   // keys from useAccessReviews use the plural resource name (e.g. authpolicies-delete)
@@ -92,8 +95,12 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
     }
   };
 
-  const onDeleteClick = () => {
-    setIsDeleteModalOpen(true);
+  const handleDeleteClick = () => {
+    if (onDeleteClick) {
+      onDeleteClick(obj);
+    } else {
+      setIsDeleteModalOpen(true);
+    }
   };
 
   const onSelect = (
@@ -102,7 +109,7 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
   ) => {
     setIsOpen(false);
     if (value === 'delete') {
-      onDeleteClick();
+      handleDeleteClick();
     }
   };
 
@@ -163,13 +170,7 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj }) => {
           )}
         </DropdownList>
       </Dropdown>
-      {obj.kind === 'APIProduct' ? (
-        <APIProductDeleteModal
-          isOpen={isDeleteModalOpen}
-          onClose={() => setIsDeleteModalOpen(false)}
-          resource={obj}
-        />
-      ) : (
+      {obj.kind !== 'APIProduct' && (
         <Modal
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
