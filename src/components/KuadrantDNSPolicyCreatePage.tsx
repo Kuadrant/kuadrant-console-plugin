@@ -35,6 +35,9 @@ import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
 import { resourceGVKMapping } from '../utils/resources';
 
+// Default weight applied to weighted load-balancing endpoints (matches the CRD default).
+const DEFAULT_LOAD_BALANCING_WEIGHT = 120;
+
 const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
@@ -46,7 +49,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   });
   const [loadBalancing, setLoadBalancing] = React.useState<LoadBalancing>({
     geo: '',
-    weight: 120,
+    weight: DEFAULT_LOAD_BALANCING_WEIGHT,
     defaultGeo: '',
   });
   const [healthCheck, setHealthCheck] = React.useState<HealthCheck>({
@@ -208,7 +211,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         setProviderRefs([providerRef]);
         setLoadBalancing({
           geo: dnsPolicyUpdate.spec?.loadBalancing?.geo || '',
-          weight: dnsPolicyUpdate.spec?.loadBalancing?.weight ?? 120,
+          weight: dnsPolicyUpdate.spec?.loadBalancing?.weight ?? DEFAULT_LOAD_BALANCING_WEIGHT,
           defaultGeo:
             dnsPolicyUpdate.spec?.loadBalancing?.defaultGeo !== undefined
               ? dnsPolicyUpdate.spec.loadBalancing?.defaultGeo
@@ -244,7 +247,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
 
       setLoadBalancing({
         geo: parsedYaml.spec?.loadBalancing?.geo || '',
-        weight: parsedYaml.spec?.loadBalancing?.weight ?? 120,
+        weight: parsedYaml.spec?.loadBalancing?.weight ?? DEFAULT_LOAD_BALANCING_WEIGHT,
         defaultGeo:
           parsedYaml.spec?.loadBalancing?.defaultGeo !== undefined
             ? parsedYaml.spec.loadBalancing?.defaultGeo
