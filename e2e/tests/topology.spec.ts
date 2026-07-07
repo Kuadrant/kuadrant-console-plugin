@@ -46,7 +46,7 @@ test.describe('Policy Topology', () => {
 
     // fixture gateway and route nodes are rendered by default
     await expect(nodeByLabel(page, ROUTE_NODE_LABEL)).toBeVisible({ timeout: 20_000 });
-    expect(await page.locator(NODE_SELECTOR).count()).toBeGreaterThan(1);
+    await expect.poll(() => page.locator(NODE_SELECTOR).count()).toBeGreaterThan(1);
   });
 
   test('filters nodes by resource type', async ({ page }) => {
@@ -71,10 +71,7 @@ test.describe('Policy Topology', () => {
 
   test('clearing all resource filters empties the graph', async ({ page }) => {
     // remove the whole Resource filter group via its close button
-    await page
-      .getByRole('button', { name: /close label group/i })
-      .first()
-      .click();
+    await page.getByRole('button', { name: /close label group resource/i }).click();
 
     await expect(page.locator(NODE_SELECTOR)).toHaveCount(0, { timeout: 15_000 });
 

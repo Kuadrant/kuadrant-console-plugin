@@ -22,7 +22,12 @@ function resourceExists(kind: string, name: string, namespace: string): boolean 
 
 function deleteNamespace(namespace: string): void {
   if (namespace) {
-    kubectl(['delete', 'namespace', namespace, '--ignore-not-found', '--wait=false']);
+    try {
+      kubectl(['delete', 'namespace', namespace, '--ignore-not-found', '--wait=false']);
+    } catch (error) {
+      // cleanup failure must not fail the test from afterEach
+      console.error(`Failed to delete namespace ${namespace}:`, error);
+    }
   }
 }
 
