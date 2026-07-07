@@ -1,18 +1,20 @@
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 import {
-  Button,
-  ButtonVariant,
   Modal,
+  ModalVariant,
+  ModalHeader,
   ModalBody,
   ModalFooter,
-  ModalHeader,
+  Button,
+  ButtonVariant,
   FormGroup,
   TextInput,
   Alert,
 } from '@patternfly/react-core';
 import { k8sDelete, K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
-import { useTranslation } from 'react-i18next';
 import { getModelFromResource } from '../../utils/getModelFromResource';
+import '../kuadrant.css';
 
 interface APIProductDeleteModalProps {
   isOpen: boolean;
@@ -57,48 +59,50 @@ const APIProductDeleteModal: React.FC<APIProductDeleteModalProps> = ({
     onClose();
   };
 
+  // Reset confirmation name when modal opens/closes
+  React.useEffect(() => {
+    if (!isOpen) {
+      setConfirmName('');
+    }
+  }, [isOpen]);
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      variant="medium"
-      aria-labelledby="delete-apiproduct-modal-title"
-      aria-describedby="delete-apiproduct-modal-body"
-    >
-      <ModalHeader title={t('Delete API Product')} />
-      <ModalBody id="delete-apiproduct-modal-body">
+    <Modal isOpen={isOpen} onClose={handleClose} variant={ModalVariant.small}>
+      <ModalHeader title={t('Delete API Product?')} titleIconVariant="warning" />
+      <ModalBody>
         {error && (
-          <Alert variant="danger" isInline title={t('Error deleting APIProduct')}>
+          <Alert
+            variant="danger"
+            isInline
+            title={t('Delete failed')}
+            style={{ marginBottom: '16px' }}
+          >
             {error}
           </Alert>
         )}
-        <p>{t('Warning: This action cannot be undone')}</p>
         <p>
-          {t('This will permanently delete the APIProduct')} <strong>{resourceName}</strong>.
+          {t('This action cannot be undone. Type')} <strong>{resourceName}</strong>{' '}
+          {t('to confirm deletion.')}
         </p>
-        <FormGroup
-          label={t('Type the APIProduct name to confirm deletion')}
-          isRequired
-          fieldId="confirm-delete"
-        >
+        <FormGroup style={{ marginTop: '16px' }}>
           <TextInput
+            type="text"
             id="confirm-delete"
             value={confirmName}
             onChange={(_event, value) => setConfirmName(value)}
+            placeholder={t('Enter API Product name')}
             aria-label={t('Confirm resource name')}
-            placeholder={resourceName}
           />
         </FormGroup>
       </ModalBody>
       <ModalFooter>
         <Button
-          key="delete"
+          key="confirm"
           variant={ButtonVariant.danger}
           onClick={handleDelete}
           isDisabled={!isConfirmValid || isDeleting}
-          isLoading={isDeleting}
         >
-          {t('Delete API Product')}
+          {t('Delete')}
         </Button>
         <Button key="cancel" variant={ButtonVariant.link} onClick={handleClose}>
           {t('Cancel')}
