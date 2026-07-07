@@ -41,7 +41,7 @@ const APIKeyDeleteModal: React.FC<APIKeyDeleteModalProps> = ({
 
   return (
     <Modal isOpen={isOpen} onClose={onCancel} variant={ModalVariant.small}>
-      <ModalHeader title={t('Delete API Key?')} />
+      <ModalHeader title={t('Delete API Key?')} titleIconVariant="warning" />
       <ModalBody>
         {error && (
           <Alert
