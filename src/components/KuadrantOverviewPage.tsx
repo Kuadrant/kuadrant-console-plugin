@@ -703,6 +703,9 @@ const KuadrantOverviewPage: React.FC = () => {
                 <Alert
                   variant="info"
                   isInline
+                  style={{
+                    borderWidth: '1px',
+                  }}
                   title={
                     <span style={{ fontWeight: 'normal' }}>
                       {t('Getting started with Kuadrant')}:{' '}
