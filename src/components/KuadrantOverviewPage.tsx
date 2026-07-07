@@ -8,14 +8,10 @@ import {
   Card,
   CardTitle,
   CardBody,
-  CardExpandableContent,
-  CardHeader,
   Flex,
   FlexItem,
   Content,
   ContentVariants,
-  Stack,
-  StackItem,
   Divider,
   Dropdown,
   DropdownItem,
@@ -32,11 +28,9 @@ import {
   Tooltip,
   Grid,
   GridItem,
+  Alert,
 } from '@patternfly/react-core';
 import {
-  GlobeIcon,
-  ReplicatorIcon,
-  OptimizeIcon,
   ExternalLinkAltIcon,
   EllipsisVIcon,
   LockIcon,
@@ -60,7 +54,7 @@ import {
 import './kuadrant.css';
 import ResourceList from './ResourceList';
 import { sortable } from '@patternfly/react-table';
-import { INTERNAL_LINKS, EXTERNAL_LINKS } from '../constants/links';
+import { EXTERNAL_LINKS } from '../constants/links';
 import { RESOURCES, resourceGVKMapping } from '../utils/resources';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
@@ -115,23 +109,14 @@ interface Gateway extends K8sResourceCommon {
   };
 }
 
-interface ClusterVersion extends K8sResourceCommon {
-  status?: {
-    desired?: {
-      version?: string;
-    };
-  };
-}
-
 const KuadrantOverviewPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const { ns } = useParams<{ ns: string }>();
   const { handleNamespaceChange, activeNamespace } = useKuadrantNamespaceChange('/overview');
-  const [isExpanded, setIsExpanded] = React.useState(true);
-  const [isOpen, setIsOpen] = React.useState(false);
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
+  const [isGettingStartedMenuOpen, setIsGettingStartedMenuOpen] = React.useState(false);
   const [hideCard, setHideCard] = React.useState(
     sessionStorage.getItem('hideGettingStarted') === 'true',
   );
@@ -240,43 +225,8 @@ const KuadrantOverviewPage: React.FC = () => {
   const handleHideCard = () => {
     setHideCard(true);
     sessionStorage.setItem('hideGettingStarted', 'true');
+    setIsGettingStartedMenuOpen(false);
   };
-
-  const onSelect = () => {
-    setIsOpen(!isOpen);
-  };
-
-  const dropdownItems = (
-    <>
-      <DropdownItem key="hideForSession" onClick={handleHideCard}>
-        {t('Hide for session')}
-      </DropdownItem>
-    </>
-  );
-
-  const headerActions = (
-    <>
-      <Dropdown
-        onSelect={onSelect}
-        popperProps={{ position: 'right' }}
-        toggle={(toggleRef) => (
-          <MenuToggle
-            ref={toggleRef}
-            isExpanded={isOpen}
-            onClick={() => setIsOpen(!isOpen)}
-            variant="plain"
-            aria-label="Card actions"
-          >
-            <EllipsisVIcon aria-hidden="true" />
-          </MenuToggle>
-        )}
-        isOpen={isOpen}
-        onOpenChange={(isOpen: boolean) => setIsOpen(isOpen)}
-      >
-        <DropdownList>{dropdownItems}</DropdownList>
-      </Dropdown>
-    </>
-  );
 
   const StatusLegend: React.FC = () => {
     return (
@@ -718,18 +668,6 @@ const KuadrantOverviewPage: React.FC = () => {
     namespace: watchNamespace === '#ALL_NS#' ? undefined : watchNamespace,
   });
 
-  const clusterVersionResource = {
-    groupVersionKind: { group: 'config.openshift.io', version: 'v1', kind: 'ClusterVersion' },
-    name: 'version', // ClusterVersion is always named 'version'
-    isList: false, // Single resource, not a list
-  };
-  const [clusterVersionObj, loaded] = useK8sWatchResource<ClusterVersion>(clusterVersionResource);
-
-  const clusterVersion =
-    loaded && clusterVersionObj?.status?.desired?.version
-      ? clusterVersionObj.status.desired.version
-      : null;
-
   const healthyCount = React.useMemo(() => {
     return gateways.filter((gw) => {
       const conditions = gw.status?.conditions ?? [];
@@ -762,117 +700,47 @@ const KuadrantOverviewPage: React.FC = () => {
 
             {!hideCard && (
               <GridItem>
-                <Card id="expandable-card" isExpanded={isExpanded}>
-                  <CardHeader
-                    actions={{ actions: headerActions }}
-                    onExpand={() => setIsExpanded(!isExpanded)}
-                    toggleButtonProps={{
-                      'aria-label': isExpanded
-                        ? t('Collapse Getting Started')
-                        : t('Expand Getting Started'),
-                    }}
-                  >
-                    <CardTitle>{t('Getting started resources')}</CardTitle>
-                  </CardHeader>
-                  <CardExpandableContent>
-                    <CardBody>
-                      <Flex className="kuadrant-overview-getting-started">
-                        <FlexItem flex={{ default: 'flex_1' }}>
-                          <Title headingLevel="h4" className="kuadrant-dashboard-learning">
-                            <GlobeIcon /> {t('Learning Resources')}
-                          </Title>
-                          <Content component={ContentVariants.small}>
-                            {t(
-                              'Learn how to create, import and use Kuadrant policies on OpenShift with step-by-step instructions and tasks.',
-                            )}
-                          </Content>
-                          <Stack hasGutter className="pf-u-mt-sm">
-                            <StackItem>
-                              <Content
-                                component="a"
-                                href={EXTERNAL_LINKS.documentation}
-                                className="kuadrant-dashboard-resource-link"
-                                target="_blank"
-                              >
-                                {t('View Documentation')} <ExternalLinkAltIcon />
-                              </Content>
-                            </StackItem>
-                            <StackItem>
-                              <Content
-                                component="a"
-                                href={EXTERNAL_LINKS.secureConnectProtect}
-                                className="kuadrant-dashboard-resource-link"
-                                target="_blank"
-                              >
-                                {t('Configuring and deploying Gateway policies with Kuadrant')}{' '}
-                                <ExternalLinkAltIcon />
-                              </Content>
-                            </StackItem>
-                          </Stack>
-                        </FlexItem>
-                        <Divider orientation={{ default: 'vertical' }} />
-                        <FlexItem flex={{ default: 'flex_1' }}>
-                          <Title
-                            headingLevel="h4"
-                            className="kuadrant-dashboard-feature-highlights"
-                          >
-                            <OptimizeIcon /> {t('Feature Highlights')}
-                          </Title>
-                          <Content component={ContentVariants.small}>
-                            {t(
-                              'Read about the latest information and key features in the Kuadrant highlights.',
-                            )}
-                          </Content>
-                          <Stack hasGutter className="pf-u-mt-md">
-                            <StackItem>
-                              <Content
-                                target="_blank"
-                                component="a"
-                                href={EXTERNAL_LINKS.releaseNotes}
-                                className="kuadrant-dashboard-resource-link"
-                              >
-                                {t('Kuadrant')} {t('Release Notes')} <ExternalLinkAltIcon />
-                              </Content>
-                            </StackItem>
-                          </Stack>
-                        </FlexItem>
-                        <Divider orientation={{ default: 'vertical' }} />
-                        <FlexItem flex={{ default: 'flex_1' }}>
-                          <Title headingLevel="h4" className="kuadrant-dashboard-enhance">
-                            <ReplicatorIcon /> {t('Operations & Tools')}
-                          </Title>
-                          <Content component={ContentVariants.small}>
-                            {t('Additional operators and tools to support Kuadrant.')}
-                          </Content>
-                          <Stack hasGutter className="pf-u-mt-md">
-                            <StackItem>
-                              <Content
-                                component="a"
-                                href={INTERNAL_LINKS.observabilitySetup}
-                                className="kuadrant-dashboard-resource-link"
-                                target="_blank"
-                              >
-                                {t('Observability for Kuadrant')} <ExternalLinkAltIcon />
-                              </Content>
-                            </StackItem>
-                            <StackItem>
-                              <Content
-                                component="a"
-                                href={INTERNAL_LINKS.certManagerOperator(
-                                  activeNamespace,
-                                  clusterVersion,
-                                )}
-                                className="kuadrant-dashboard-resource-link"
-                              >
-                                {t('cert-manager Operator')} <ExternalLinkAltIcon />
-                              </Content>
-                            </StackItem>
-                          </Stack>
-                        </FlexItem>
-                      </Flex>
-                    </CardBody>
-                  </CardExpandableContent>
-                </Card>
+                <Alert
+                  variant="info"
+                  isInline
+                  title={
+                    <span style={{ fontWeight: 'normal' }}>
+                      {t('Getting started with Kuadrant')}:{' '}
+                      <a
+                        href={EXTERNAL_LINKS.documentation}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {t('View Documentation')} <ExternalLinkAltIcon />
+                      </a>
+                    </span>
+                  }
+                  actionClose={
+                    <Dropdown
+                      onSelect={() => setIsGettingStartedMenuOpen(false)}
+                      popperProps={{ position: 'right' }}
+                      toggle={(toggleRef) => (
+                        <MenuToggle
+                          ref={toggleRef}
+                          isExpanded={isGettingStartedMenuOpen}
+                          onClick={() => setIsGettingStartedMenuOpen(!isGettingStartedMenuOpen)}
+                          variant="plain"
+                          aria-label="Getting started actions"
+                        >
+                          <EllipsisVIcon aria-hidden="true" />
+                        </MenuToggle>
+                      )}
+                      isOpen={isGettingStartedMenuOpen}
+                      onOpenChange={(isOpen: boolean) => setIsGettingStartedMenuOpen(isOpen)}
+                    >
+                      <DropdownList>
+                        <DropdownItem key="hideForSession" onClick={handleHideCard}>
+                          {t('Hide for session')}
+                        </DropdownItem>
+                      </DropdownList>
+                    </Dropdown>
+                  }
+                />
               </GridItem>
             )}
 
