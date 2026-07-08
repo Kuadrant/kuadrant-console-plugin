@@ -49,6 +49,7 @@ import {
 import { RESOURCES } from '../../utils/resources';
 import { APIProduct, PlanPolicy } from './types';
 import DropdownWithKebab from '../DropdownWithKebab';
+import APIProductDeleteModal from './APIProductDeleteModal';
 import '../kuadrant.css';
 import { getResourceNameFromKind } from '../../utils/getModelFromResource';
 import { useKuadrantNamespaceChange } from '../../hooks/useKuadrantNamespaceChange';
@@ -59,6 +60,7 @@ const APIProductsListPage: React.FC = () => {
   const { handleNamespaceChange, activeNamespace } = useKuadrantNamespaceChange('/apiproducts');
   const allNamespacesSubPath = '#ALL_NS#';
   const isAllNamespaces = activeNamespace === allNamespacesSubPath;
+  const [deleteModalProduct, setDeleteModalProduct] = React.useState<APIProduct | null>(null);
 
   // Watch APIProduct resources
   const [apiProducts, productsLoaded, productsLoadError] = useK8sWatchResource<APIProduct[]>({
@@ -639,7 +641,10 @@ const APIProductsListPage: React.FC = () => {
                   activeColumnIDs={activeColumnIDs}
                   className="pf-v6-c-table__action"
                 >
-                  <DropdownWithKebab obj={obj} />
+                  <DropdownWithKebab
+                    obj={obj}
+                    onDeleteClick={(resource) => setDeleteModalProduct(resource as APIProduct)}
+                  />
                 </TableData>
               );
             default:
@@ -952,6 +957,13 @@ const APIProductsListPage: React.FC = () => {
           </div>
         </div>
       </PageSection>
+      {deleteModalProduct && (
+        <APIProductDeleteModal
+          isOpen={!!deleteModalProduct}
+          onClose={() => setDeleteModalProduct(null)}
+          resource={deleteModalProduct}
+        />
+      )}
     </>
   );
 };
