@@ -170,7 +170,7 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj, onDeleteClic
           )}
         </DropdownList>
       </Dropdown>
-      {obj.kind !== 'APIProduct' && (
+      {!onDeleteClick && (
         <Modal
           isOpen={isDeleteModalOpen}
           onClose={() => setIsDeleteModalOpen(false)}
