@@ -41,6 +41,17 @@ test.describe('APIProduct CRUD Operations', () => {
     await dismissConsoleTour(page);
   });
 
+  test.afterEach(async () => {
+    // Clean up any APIProduct created during tests
+    if (generatedResourceName) {
+      execSync(
+        `kubectl delete apiproduct ${generatedResourceName} -n ${TEST_NAMESPACE} --ignore-not-found=true`,
+        { stdio: 'inherit' },
+      );
+      generatedResourceName = ''; // Reset for next test
+    }
+  });
+
   test('should navigate from list page to create page via Create button', async ({ page }) => {
     // Navigate to API Products list page
     await navigateToAPIProducts(page, TEST_NAMESPACE);
@@ -65,7 +76,12 @@ test.describe('APIProduct CRUD Operations', () => {
     await expect(page.locator('#resource-name')).toBeVisible();
   });
 
-  test('should create APIProduct via form', async ({ page }) => {
+  test('should create APIProduct via form and verify in list', async ({ page }) => {
+    // Full page load to a namespace-scoped URL so the console sets activeNamespace to
+    // TEST_NAMESPACE before we SPA-navigate to the create page. Without this,
+    // useActiveNamespace() returns '#ALL_NS#' and k8sCreate posts to an invalid namespace.
+    await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
+    await page.waitForLoadState('networkidle');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
 
@@ -93,13 +109,25 @@ test.describe('APIProduct CRUD Operations', () => {
     // Fill description
     await page.locator('#description').fill('Test API product for e2e testing');
 
-    // Add tags (assuming we need to open dropdown and add tags)
-    // Open tags dropdown
+    // Verify Create button is disabled until HTTPRoute is selected
+    await expect(page.locator('button:has-text("Create")')).toBeDisabled();
+
+    // Select the HTTPRoute that this APIProduct will be associated with
+    const httpRouteSelect = page.locator('#httproute-select');
+    await httpRouteSelect.click();
+    const httpRouteOption = page.getByRole('menuitem', {
+      name: 'kuadrant-test/test-httproute',
+      exact: true,
+    });
+    await httpRouteOption.waitFor({ state: 'visible', timeout: 10000 });
+    await httpRouteOption.click();
+
+    // Add tags
     const tagsToggle = page.locator('button:has-text("Select tags")');
     await tagsToggle.click();
+    const tagsSearch = page.locator('input[placeholder*="Search or create tag"]');
 
     // Type a custom tag and press Enter
-    const tagsSearch = page.locator('input[placeholder*="Search or create tag"]');
     await tagsSearch.fill('test-tag');
     await tagsSearch.press('Enter');
 
@@ -115,17 +143,44 @@ test.describe('APIProduct CRUD Operations', () => {
     // Fill Documentation URL
     await page.locator('#api-docs-url').fill('https://docs.example.com');
 
-    // Select HTTPRoute (this assumes there's at least one HTTPRoute available)
-    // For a real test, you'd need to ensure an HTTPRoute exists first
-    // For now, we'll skip HTTPRoute selection and test form validation instead
-
-    // Verify save button is disabled without HTTPRoute
+    // Verify Create button is now enabled with all required fields filled
     const saveButton = page.locator('button:has-text("Create")');
-    await expect(saveButton).toBeDisabled();
+    await expect(saveButton).toBeEnabled();
 
-    // Note: In a real test, you would select an HTTPRoute here
-    // Since we don't have a fixture HTTPRoute, we'll stop here
-    // and test validation instead
+    await saveButton.click();
+
+    // Verify redirect to list page
+    await expect(page.getByRole('heading', { name: 'API Products', exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+
+    // The new product may land on any pagination page; iterate until found or exhausted.
+    await page.waitForSelector('table', { timeout: 15000 });
+    const row = page.locator(`tr:has-text("${generatedResourceName}")`);
+
+    let found = false;
+    for (let attempt = 0; attempt < 10 && !found; attempt++) {
+      if (await row.isVisible()) {
+        found = true;
+        break;
+      }
+      const nextBtn = page.locator('button[aria-label="Go to next page"]');
+      if ((await nextBtn.count()) > 0 && !(await nextBtn.isDisabled())) {
+        await nextBtn.click();
+        await page.waitForTimeout(500);
+      } else {
+        // No further pages — wait for watch stream then retry from page 1
+        await page.waitForTimeout(1000);
+        const firstBtn = page.locator('button[aria-label="Go to first page"]');
+        if ((await firstBtn.count()) > 0) {
+          await firstBtn.click();
+          await page.waitForTimeout(500);
+        }
+      }
+    }
+    expect(found, `"${generatedResourceName}" not found in any page of the API Products list`).toBe(
+      true,
+    );
   });
 
   test('should validate resource name format', async ({ page }) => {
