@@ -17,7 +17,7 @@ PLUGIN_PORT="${PLUGIN_PORT:-9001}"
 # if a latest release breaks plugin development or CI.
 KUADRANT_VERSION="${KUADRANT_VERSION:-latest}"
 
-# pin to a published, soaked image; oinc v0.2.2 defaults to 4.22
+# pin to a published, soaked image; oinc v0.2.3 defaults to 4.22
 OCP_VERSION="${OCP_VERSION:-4.21}"
 
 check_command oinc "Install from https://github.com/jasonmadigan/oinc"
@@ -32,8 +32,9 @@ PLUGIN_NAME=$(node -p "require('${REPO_DIR}/package.json').consolePlugin.name")
 
 # on a failed cluster create, dump kuadrant addon state so failures are
 # debuggable from CI logs instead of opaque. the GH-361 "kuadrant not ready
-# after 5m0s" race is fixed in oinc v0.2.2 (Kuadrant CR creation gated on the
-# admission RESTMapper being warm); keep the dump for whatever fails next.
+# after 5m0s" races are addressed in oinc v0.2.3 (admission RESTMapper warm-up
+# gate plus a pod-delete restart when the CR wedges on a late dependency);
+# keep the dump for whatever fails next.
 # oinc waits on more than the operator deployment, so capture the Kuadrant CR
 # conditions, namespace events, and the operator logs.
 dump_kuadrant_diagnostics() {
