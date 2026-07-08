@@ -641,7 +641,10 @@ const APIProductsListPage: React.FC = () => {
                   activeColumnIDs={activeColumnIDs}
                   className="pf-v6-c-table__action"
                 >
-                  <DropdownWithKebab obj={obj} onDeleteClick={setDeleteModalProduct} />
+                  <DropdownWithKebab
+                    obj={obj}
+                    onDeleteClick={(resource) => setDeleteModalProduct(resource as APIProduct)}
+                  />
                 </TableData>
               );
             default:
