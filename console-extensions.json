@@ -404,6 +404,17 @@
     "type": "console.action/resource-provider",
     "properties": {
       "model": {
+        "group": "devportal.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "APIProduct"
+      },
+      "provider": { "$codeRef": "useAPIProductActions" }
+    }
+  },
+  {
+    "type": "console.action/resource-provider",
+    "properties": {
+      "model": {
         "group": "extensions.kuadrant.io",
         "version": "v1alpha1",
         "kind": "OIDCPolicy"
