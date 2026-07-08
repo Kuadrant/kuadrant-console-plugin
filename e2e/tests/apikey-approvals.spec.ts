@@ -43,7 +43,7 @@ async function navigateAsOwner(page: Parameters<typeof navigateToAPIKeyApprovals
 // ── RBAC ──────────────────────────────────────────────────────────────────────
 
 test.describe('APIKey Approvals - RBAC', () => {
-  test('user without apikeyrequests access cannot see the approval table', async ({ page }) => {
+  test('user without apikeyrequests access cannot see the approval table', { tag: '@smoke' }, async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await dismissConsoleTour(page);
@@ -75,7 +75,7 @@ test.describe('APIKey Approvals - Approve flow', () => {
     await stopImpersonation(page);
   });
 
-  test('cancel approval modal leaves row unchanged', async ({ page }) => {
+  test('cancel approval modal leaves row unchanged', { tag: '@smoke' }, async ({ page }) => {
     const aliceRow = page.locator('tr:has-text("alice@example.com")');
     await expect(aliceRow.locator('[aria-label="Actions"]')).toBeEnabled({ timeout: 30_000 });
     await aliceRow.locator('[aria-label="Actions"]').click();
@@ -141,7 +141,7 @@ EOF
       execSync(`kubectl delete namespace ${aliceNs} --ignore-not-found=true`, { stdio: 'inherit' });
     });
 
-    test('approve single request shows success toast', async ({ page }) => {
+    test('approve single request shows success toast', { tag: '@smoke' }, async ({ page }) => {
       const aliceApproveRow = page.locator(`tr:has-text("${aliceEmail}")`);
       await expect(aliceApproveRow.locator('[aria-label="Actions"]')).toBeEnabled({ timeout: 30_000 });
       await aliceApproveRow.locator('[aria-label="Actions"]').click();
@@ -214,7 +214,7 @@ EOF
     execSync(`kubectl delete namespace ${bobNs} --ignore-not-found=true`, { stdio: 'inherit' });
   });
 
-  test('reject request with reason shows success toast', async ({ page }) => {
+  test('reject request with reason shows success toast', { tag: '@smoke' }, async ({ page }) => {
     const bobRow = page.locator(`tr:has-text("${bobEmail}")`);
     await expect(bobRow.locator('[aria-label="Actions"]')).toBeEnabled({ timeout: 30_000 });
     await bobRow.locator('[aria-label="Actions"]').click();
@@ -287,7 +287,7 @@ EOF
     execSync(`kubectl delete namespace ${bob2Ns} --ignore-not-found=true`, { stdio: 'inherit' });
   });
 
-  test('reject request without reason is allowed', async ({ page }) => {
+  test('reject request without reason is allowed', { tag: '@nightly' }, async ({ page }) => {
     const bob2Row = page.locator(`tr:has-text("${bob2Email}")`);
     await expect(bob2Row.locator('[aria-label="Actions"]')).toBeEnabled({ timeout: 30_000 });
     await bob2Row.locator('[aria-label="Actions"]').click();
@@ -395,7 +395,7 @@ EOF
     execSync(`kubectl delete namespace ${carolNs} ${daveNs} --ignore-not-found=true`, { stdio: 'inherit' });
   });
 
-  test('bulk approve selected requests shows success toast', async ({ page }) => {
+  test('bulk approve selected requests shows success toast', { tag: '@smoke' }, async ({ page }) => {
     await page.locator(`tr:has-text("${carolEmail}") input[type="checkbox"]`).click();
     await page.locator(`tr:has-text("${daveEmail}") input[type="checkbox"]`).click();
 
@@ -502,7 +502,7 @@ EOF
     execSync(`kubectl delete namespace ${ellenNs} ${frankNs} --ignore-not-found=true`, { stdio: 'inherit' });
   });
 
-  test('bulk reject selected requests shows success toast', async ({ page }) => {
+  test('bulk reject selected requests shows success toast', { tag: '@smoke' }, async ({ page }) => {
     await page.locator(`tr:has-text("${ellenEmail}") input[type="checkbox"]`).click();
     await page.locator(`tr:has-text("${frankEmail}") input[type="checkbox"]`).click();
 
@@ -574,7 +574,7 @@ EOF
     execSync(`kubectl delete namespace ${georgeNs} --ignore-not-found=true`, { stdio: 'inherit' });
   });
 
-  test('should deny an active API key', async ({ page }) => {
+  test('should deny an active API key', { tag: '@smoke' }, async ({ page }) => {
     let georgeRow = page.locator(`tr:has-text("${georgeEmail}")`);
     await expect(georgeRow.locator('[aria-label="Actions"]')).toBeEnabled({ timeout: 30_000 });
     await georgeRow.locator('[aria-label="Actions"]').click();

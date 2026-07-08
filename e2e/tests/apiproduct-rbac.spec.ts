@@ -30,7 +30,7 @@ test.describe('APIProduct RBAC - no permission user', () => {
     await stopImpersonation(page);
   });
 
-  test('list page shows no-permission view', async ({ page }) => {
+  test('list page shows no-permission view', { tag: '@smoke' }, async ({ page }) => {
     const url = `/kuadrant/apiproducts/ns/${TEST_NAMESPACE}`;
     await impersonateAndNavigate(page, url, url);
 
@@ -42,7 +42,7 @@ test.describe('APIProduct RBAC - no permission user', () => {
     await expect(page.locator('text=Error loading API Products')).not.toBeVisible();
   });
 
-  test('definition tab shows access denied', async ({ page }) => {
+  test('definition tab shows access denied', { tag: '@smoke' }, async ({ page }) => {
     // Start at the list page to pre-load the Kuadrant plugin into React memory,
     // then impersonate and SPA navigate to the tab URL.
     await impersonateAndNavigate(
@@ -64,7 +64,7 @@ test.describe('APIProduct RBAC - no permission user', () => {
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test('policies tab shows access denied', async ({ page }) => {
+  test('policies tab shows access denied', { tag: '@smoke' }, async ({ page }) => {
     await impersonateAndNavigate(
       page,
       `/kuadrant/apiproducts/ns/${TEST_NAMESPACE}`,

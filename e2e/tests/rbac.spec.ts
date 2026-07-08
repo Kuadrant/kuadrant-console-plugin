@@ -21,7 +21,7 @@ test.describe('RBAC - test-dev persona', () => {
     await stopImpersonation(page);
   });
 
-  test('policies page shows no-permission view', async ({ page }) => {
+  test('policies page shows no-permission view', { tag: '@smoke' }, async ({ page }) => {
     await navigateToPolicies(page);
     await waitForPermissionsLoaded(page);
 
@@ -30,7 +30,7 @@ test.describe('RBAC - test-dev persona', () => {
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test('create policy button is hidden', async ({ page }) => {
+  test('create policy button is hidden', { tag: '@smoke' }, async ({ page }) => {
     await navigateToPolicies(page);
     await waitForPermissionsLoaded(page);
 
@@ -40,7 +40,7 @@ test.describe('RBAC - test-dev persona', () => {
 
   // namespace-scoped users get redirected from /kuadrant/overview to
   // /kuadrant/overview/ns/default/ (fallback namespace when activeNamespace is #ALL_NS#).
-  test('overview redirects to namespace-scoped view (namespace-scoped user)', async ({ page }) => {
+  test('overview redirects to namespace-scoped view (namespace-scoped user)', { tag: '@smoke' }, async ({ page }) => {
     await navigateToOverview(page);
     await page.waitForLoadState('networkidle');
 
@@ -53,7 +53,7 @@ test.describe('RBAC - test-dev persona', () => {
     // user can then switch to kuadrant-test namespace using the console namespace dropdown
   });
 
-  test('overview shows resources when accessed via kuadrant-test namespace', async ({ page }) => {
+  test('overview shows resources when accessed via kuadrant-test namespace', { tag: '@smoke' }, async ({ page }) => {
     // navigate directly to their accessible namespace
     await page.evaluate(() => {
       window.history.pushState({}, '', '/kuadrant/overview/ns/kuadrant-test');
@@ -77,7 +77,7 @@ test.describe('RBAC - test-dev persona', () => {
     ).not.toBeVisible();
   });
 
-  test('topology page shows no-permission view', async ({ page }) => {
+  test('topology page shows no-permission view', { tag: '@smoke' }, async ({ page }) => {
     await navigateToTopology(page);
     await expect(
       page.locator('text=You do not have permission to view Policy Topology'),
@@ -108,7 +108,7 @@ test.describe('RBAC - kebab menu (edit/delete)', () => {
     await kebab.click();
   };
 
-  test('read-only user sees disabled edit and delete', async ({ page }) => {
+  test('read-only user sees disabled edit and delete', { tag: '@smoke' }, async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await impersonateUser(page, 'test-viewer');
@@ -126,7 +126,7 @@ test.describe('RBAC - kebab menu (edit/delete)', () => {
     await stopImpersonation(page);
   });
 
-  test('CRUD user sees enabled edit and delete', async ({ page }) => {
+  test('CRUD user sees enabled edit and delete', { tag: '@smoke' }, async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await impersonateUser(page, 'test-devops');
@@ -144,7 +144,7 @@ test.describe('RBAC - kebab menu (edit/delete)', () => {
     await stopImpersonation(page);
   });
 
-  test('admin user sees enabled edit and delete', async ({ page }) => {
+  test('admin user sees enabled edit and delete', { tag: '@smoke' }, async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('networkidle');
     await impersonateUser(page, 'test-admin');
@@ -176,7 +176,7 @@ test.describe('RBAC - test-viewer persona', () => {
     await stopImpersonation(page);
   });
 
-  test('policies page shows Auth and RateLimit tabs', async ({ page }) => {
+  test('policies page shows Auth and RateLimit tabs', { tag: '@smoke' }, async ({ page }) => {
     await navigateToPolicies(page);
     await waitForPermissionsLoaded(page);
 
@@ -188,7 +188,7 @@ test.describe('RBAC - test-viewer persona', () => {
   // DNS/TLS tabs are visible in admin perspective regardless of RBAC.
   // only the tab content is gated (shows no-permission message).
   // the "All Policies" view correctly filters by RBAC, but individual tabs don't.
-  test('DNS and TLS tabs are visible but content is permission-gated', async ({ page }) => {
+  test('DNS and TLS tabs are visible but content is permission-gated', { tag: '@smoke' }, async ({ page }) => {
     await navigateToPolicies(page);
     await waitForPermissionsLoaded(page);
 
@@ -199,7 +199,7 @@ test.describe('RBAC - test-viewer persona', () => {
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test('create policy button is disabled (read-only)', async ({ page }) => {
+  test('create policy button is disabled (read-only)', { tag: '@smoke' }, async ({ page }) => {
     await navigateToPolicies(page);
     await waitForPermissionsLoaded(page);
 
@@ -208,7 +208,7 @@ test.describe('RBAC - test-viewer persona', () => {
     await expect(createButton).toBeDisabled();
   });
 
-  test('overview redirects to namespace-scoped view (namespace-scoped user)', async ({ page }) => {
+  test('overview redirects to namespace-scoped view (namespace-scoped user)', { tag: '@smoke' }, async ({ page }) => {
     await navigateToOverview(page);
     await page.waitForLoadState('networkidle');
 
@@ -221,7 +221,7 @@ test.describe('RBAC - test-viewer persona', () => {
     // user can then switch to kuadrant-test namespace using the console namespace dropdown
   });
 
-  test('overview shows resources when accessed via kuadrant-test namespace', async ({ page }) => {
+  test('overview shows resources when accessed via kuadrant-test namespace', { tag: '@smoke' }, async ({ page }) => {
     // navigate directly to their accessible namespace
     await page.evaluate(() => {
       window.history.pushState({}, '', '/kuadrant/overview/ns/kuadrant-test');
@@ -259,7 +259,7 @@ test.describe('RBAC - test-devops persona', () => {
     await stopImpersonation(page);
   });
 
-  test('policies page shows AuthPolicy and RateLimitPolicy tabs', async ({ page }) => {
+  test('policies page shows AuthPolicy and RateLimitPolicy tabs', { tag: '@smoke' }, async ({ page }) => {
     await navigateToPolicies(page);
     await waitForPermissionsLoaded(page);
 
@@ -268,7 +268,7 @@ test.describe('RBAC - test-devops persona', () => {
     await expect(page.locator('[data-test-id="horizontal-link-RateLimit"]')).toBeVisible();
   });
 
-  test('DNS and TLS tabs are visible but content is permission-gated', async ({ page }) => {
+  test('DNS and TLS tabs are visible but content is permission-gated', { tag: '@smoke' }, async ({ page }) => {
     await navigateToPolicies(page);
     await waitForPermissionsLoaded(page);
 
@@ -279,7 +279,7 @@ test.describe('RBAC - test-devops persona', () => {
     ).toBeVisible({ timeout: 15_000 });
   });
 
-  test('create policy dropdown shows AuthPolicy enabled, DNSPolicy disabled', async ({ page }) => {
+  test('create policy dropdown shows AuthPolicy enabled, DNSPolicy disabled', { tag: '@smoke' }, async ({ page }) => {
     await navigateToPolicies(page);
     await waitForPermissionsLoaded(page);
 
@@ -303,7 +303,7 @@ test.describe('RBAC - test-devops persona', () => {
     }
   });
 
-  test('overview redirects to namespace-scoped view (namespace-scoped user)', async ({ page }) => {
+  test('overview redirects to namespace-scoped view (namespace-scoped user)', { tag: '@smoke' }, async ({ page }) => {
     await navigateToOverview(page);
     await page.waitForLoadState('networkidle');
 
@@ -316,7 +316,7 @@ test.describe('RBAC - test-devops persona', () => {
     // user can then switch to kuadrant-test namespace using the console namespace dropdown
   });
 
-  test('overview shows resources when accessed via kuadrant-test namespace', async ({ page }) => {
+  test('overview shows resources when accessed via kuadrant-test namespace', { tag: '@smoke' }, async ({ page }) => {
     // navigate directly to their accessible namespace
     await page.evaluate(() => {
       window.history.pushState({}, '', '/kuadrant/overview/ns/kuadrant-test');
@@ -354,7 +354,7 @@ test.describe('RBAC - test-admin persona', () => {
     await stopImpersonation(page);
   });
 
-  test('policies page shows all policy tabs', async ({ page }) => {
+  test('policies page shows all policy tabs', { tag: '@smoke' }, async ({ page }) => {
     await navigateToPolicies(page);
     await waitForPermissionsLoaded(page);
 
@@ -365,7 +365,7 @@ test.describe('RBAC - test-admin persona', () => {
     await expect(page.locator('[data-test-id="horizontal-link-TLS"]')).toBeVisible();
   });
 
-  test('create policy dropdown has all policies enabled', async ({ page }) => {
+  test('create policy dropdown has all policies enabled', { tag: '@smoke' }, async ({ page }) => {
     await navigateToPolicies(page);
     await waitForPermissionsLoaded(page);
 
@@ -381,7 +381,7 @@ test.describe('RBAC - test-admin persona', () => {
     }
   });
 
-  test('overview stays on cluster-wide view (no redirect for cluster-admin)', async ({ page }) => {
+  test('overview stays on cluster-wide view (no redirect for cluster-admin)', { tag: '@smoke' }, async ({ page }) => {
     await navigateToOverview(page);
     await page.waitForLoadState('networkidle');
 
@@ -397,7 +397,7 @@ test.describe('RBAC - test-admin persona', () => {
     ).not.toBeVisible();
   });
 
-  test('overview shows all cards with create buttons enabled', async ({ page }) => {
+  test('overview shows all cards with create buttons enabled', { tag: '@smoke' }, async ({ page }) => {
     await navigateToOverview(page);
     await waitForPermissionsLoaded(page);
 
@@ -418,7 +418,7 @@ test.describe('RBAC - test-admin persona', () => {
     ).not.toBeVisible();
   });
 
-  test('overview create policy dropdown items are all enabled', async ({ page }) => {
+  test('overview create policy dropdown items are all enabled', { tag: '@smoke' }, async ({ page }) => {
     await navigateToOverview(page);
     await waitForPermissionsLoaded(page);
 
@@ -433,7 +433,7 @@ test.describe('RBAC - test-admin persona', () => {
     }
   });
 
-  test('topology page is accessible', async ({ page }) => {
+  test('topology page is accessible', { tag: '@smoke' }, async ({ page }) => {
     await navigateToTopology(page);
     await expect(
       page.locator('text=You do not have permission to view Policy Topology'),
