@@ -257,7 +257,7 @@ test.describe('API Key Lifecycle', () => {
     });
   });
 
-  test('should validate API key name format in request form', { tag: '@smoke' }, async ({ page }) => {
+  test('should validate API key name format in request form', { tag: '@nightly' }, async ({ page }) => {
     await navigateToMyAPIKeys(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
     await dismissConsoleTour(page);

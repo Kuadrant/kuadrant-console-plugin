@@ -208,7 +208,7 @@ test.describe('RBAC - test-viewer persona', () => {
     await expect(createButton).toBeDisabled();
   });
 
-  test('overview redirects to namespace-scoped view (namespace-scoped user)', { tag: '@smoke' }, async ({ page }) => {
+  test('overview redirects to namespace-scoped view (namespace-scoped user)', { tag: '@nightly' }, async ({ page }) => {
     await navigateToOverview(page);
     await page.waitForLoadState('networkidle');
 
@@ -221,7 +221,7 @@ test.describe('RBAC - test-viewer persona', () => {
     // user can then switch to kuadrant-test namespace using the console namespace dropdown
   });
 
-  test('overview shows resources when accessed via kuadrant-test namespace', { tag: '@smoke' }, async ({ page }) => {
+  test('overview shows resources when accessed via kuadrant-test namespace', { tag: '@nightly' }, async ({ page }) => {
     // navigate directly to their accessible namespace
     await page.evaluate(() => {
       window.history.pushState({}, '', '/kuadrant/overview/ns/kuadrant-test');
@@ -268,7 +268,7 @@ test.describe('RBAC - test-devops persona', () => {
     await expect(page.locator('[data-test-id="horizontal-link-RateLimit"]')).toBeVisible();
   });
 
-  test('DNS and TLS tabs are visible but content is permission-gated', { tag: '@smoke' }, async ({ page }) => {
+  test('DNS and TLS tabs are visible but content is permission-gated', { tag: '@nightly' }, async ({ page }) => {
     await navigateToPolicies(page);
     await waitForPermissionsLoaded(page);
 
@@ -303,7 +303,7 @@ test.describe('RBAC - test-devops persona', () => {
     }
   });
 
-  test('overview redirects to namespace-scoped view (namespace-scoped user)', { tag: '@smoke' }, async ({ page }) => {
+  test('overview redirects to namespace-scoped view (namespace-scoped user)', { tag: '@nightly' }, async ({ page }) => {
     await navigateToOverview(page);
     await page.waitForLoadState('networkidle');
 
@@ -316,7 +316,7 @@ test.describe('RBAC - test-devops persona', () => {
     // user can then switch to kuadrant-test namespace using the console namespace dropdown
   });
 
-  test('overview shows resources when accessed via kuadrant-test namespace', { tag: '@smoke' }, async ({ page }) => {
+  test('overview shows resources when accessed via kuadrant-test namespace', { tag: '@nightly' }, async ({ page }) => {
     // navigate directly to their accessible namespace
     await page.evaluate(() => {
       window.history.pushState({}, '', '/kuadrant/overview/ns/kuadrant-test');
@@ -418,7 +418,7 @@ test.describe('RBAC - test-admin persona', () => {
     ).not.toBeVisible();
   });
 
-  test('overview create policy dropdown items are all enabled', { tag: '@smoke' }, async ({ page }) => {
+  test('overview create policy dropdown items are all enabled', { tag: '@nightly' }, async ({ page }) => {
     await navigateToOverview(page);
     await waitForPermissionsLoaded(page);
 

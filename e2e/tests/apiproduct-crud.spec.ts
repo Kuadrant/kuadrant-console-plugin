@@ -632,7 +632,7 @@ EOF`, { stdio: 'inherit' });
     await expect(automaticRadio).not.toBeChecked();
   });
 
-  test('should auto-generate resource name with unique suffix', { tag: '@smoke' }, async ({ page }) => {
+  test('should auto-generate resource name with unique suffix', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
 
@@ -658,7 +658,7 @@ EOF`, { stdio: 'inherit' });
     expect(secondGenerated).toBe(firstGenerated);
   });
 
-  test('should handle special characters in display name conversion', { tag: '@smoke' }, async ({ page }) => {
+  test('should handle special characters in display name conversion', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
 
