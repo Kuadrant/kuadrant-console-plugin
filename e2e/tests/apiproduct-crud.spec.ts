@@ -241,12 +241,12 @@ test.describe('APIProduct CRUD Operations', () => {
     }
   });
 
-  test('should sync between Form and YAML views', async ({ page }) => {
+  test('should sync between Form and YAML views', { tag: '@smoke' }, async ({ page }) => {
     // Full page load first so activeNamespace is set correctly before SPA navigation
     await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
     await page.waitForLoadState('networkidle');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('#display-name', { state: 'visible', timeout: 20000 });
 
     // Fill form fields
     await page.locator('#display-name').fill('YAML Sync Test');
@@ -579,7 +579,7 @@ EOF`, { stdio: 'inherit' });
 
   test('should display validation messages for required fields', { tag: '@smoke' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('#display-name', { state: 'visible', timeout: 20000 });
 
     // Leave display name empty and try to proceed
     const saveButton = page.locator('button:has-text("Create")');
@@ -597,10 +597,10 @@ EOF`, { stdio: 'inherit' });
 
   test('should handle approval mode selection', { tag: '@smoke' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('#display-name', { state: 'visible', timeout: 20000 });
 
     // Scroll to approval mode section
-    await page.locator('text=API key approval').scrollIntoViewIfNeeded();
+    await page.getByRole('heading', { name: 'API Key approval' }).scrollIntoViewIfNeeded();
 
     // Default should be manual
     const manualRadio = page.locator('#approval-manual');
