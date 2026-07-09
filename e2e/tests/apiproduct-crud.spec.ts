@@ -84,7 +84,7 @@ test.describe('APIProduct CRUD Operations', () => {
     await page.waitForLoadState('networkidle');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     // Wait for form to render — confirms routing and component mount, not just URL change
-    await page.waitForSelector('#display-name', { state: 'visible', timeout: 20000 });
+    await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
 
     // Fill display name
     const displayNameInput = page.locator('#display-name');
@@ -153,7 +153,7 @@ test.describe('APIProduct CRUD Operations', () => {
     });
 
     // The new product may land on any pagination page; iterate until found or exhausted.
-    await page.waitForSelector('table', { timeout: 15000 });
+    await expect(page.locator('table').first()).toBeVisible({ timeout: 15000 });
     const row = page.locator(`tr:has-text("${generatedResourceName}")`);
 
     let found = false;
@@ -246,7 +246,7 @@ test.describe('APIProduct CRUD Operations', () => {
     await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
     await page.waitForLoadState('networkidle');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForSelector('#display-name', { state: 'visible', timeout: 20000 });
+    await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
 
     // Fill form fields
     await page.locator('#display-name').fill('YAML Sync Test');
@@ -516,7 +516,7 @@ EOF`, { stdio: 'inherit' });
     await dismissConsoleTour(page);
 
     // Wait for table to load
-    await page.waitForSelector('table', { timeout: 10000 });
+    await expect(page.locator('table').first()).toBeVisible({ timeout: 10000 });
 
     // Find the product row
     const row = page.locator(`tr:has-text("${testProductName}")`);
@@ -579,7 +579,7 @@ EOF`, { stdio: 'inherit' });
 
   test('should display validation messages for required fields', { tag: '@smoke' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForSelector('#display-name', { state: 'visible', timeout: 20000 });
+    await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
 
     // Leave display name empty and try to proceed
     const saveButton = page.locator('button:has-text("Create")');
@@ -597,7 +597,7 @@ EOF`, { stdio: 'inherit' });
 
   test('should handle approval mode selection', { tag: '@smoke' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForSelector('#display-name', { state: 'visible', timeout: 20000 });
+    await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
 
     // Scroll to approval mode section
     await page.getByRole('heading', { name: 'API Key approval' }).scrollIntoViewIfNeeded();
