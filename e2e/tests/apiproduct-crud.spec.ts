@@ -243,14 +243,18 @@ test.describe('APIProduct CRUD Operations', () => {
     }
   });
 
-  test.skip('should sync form to YAML correctly', async ({ page }) => {
+  test('should sync between Form and YAML views', async ({ page }) => {
+    // Full page load first so activeNamespace is set correctly before SPA navigation
+    await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
+    await page.waitForLoadState('networkidle');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
 
     // Fill form fields
     await page.locator('#display-name').fill('YAML Sync Test');
-    await page.waitForTimeout(500);
 
+    // Wait for resource name auto-generation
+    await expect(page.locator('#resource-name')).not.toHaveValue('', { timeout: 3000 });
     const resourceName = await page.locator('#resource-name').inputValue();
 
     await page.locator('#version').fill('v2.0.0');
@@ -262,9 +266,11 @@ test.describe('APIProduct CRUD Operations', () => {
     const tagsSearch = page.locator('input[placeholder*="Search or create tag"]');
     await tagsSearch.fill('yaml-test');
     await tagsSearch.press('Enter');
-    // Close tags menu by clicking outside
+    // Close tags menu by clicking outside and wait for tag label to confirm close
     await page.locator('#display-name').click();
-    await page.waitForTimeout(300);
+    await expect(page.locator('.pf-v6-c-label__text:has-text("yaml-test")')).toBeVisible({
+      timeout: 3000,
+    });
 
     // Fill URLs
     await page.locator('#openapi-spec-url').fill('https://yaml-test.com/spec.yaml');
@@ -278,8 +284,8 @@ test.describe('APIProduct CRUD Operations', () => {
     let menuOpened = false;
     for (let i = 0; i < 3; i++) {
       await httpRouteSelect.click();
-      await page.waitForTimeout(300);
       const menu = page.locator('[role="menu"]');
+      await menu.waitFor({ state: 'visible', timeout: 1000 }).catch(() => {});
       if (await menu.isVisible()) {
         menuOpened = true;
         break;
@@ -299,38 +305,31 @@ test.describe('APIProduct CRUD Operations', () => {
     await httpRouteOption.waitFor({ state: 'visible', timeout: 5000 });
     await httpRouteOption.click();
 
-    // Wait for form state to update before switching tabs
-    await page.waitForTimeout(1000);
+    // Wait for form state to update (Create button enables once HTTPRoute is selected)
+    await expect(page.locator('button:has-text("Create")')).toBeEnabled({ timeout: 5000 });
 
-    // Switch to YAML tab
+    // Form -> YAML: verify YAML reflects form values
     await page.locator('button:has-text("YAML View")').click();
     await page.waitForLoadState('networkidle');
 
-    // Wait for Monaco editor to fully render
-    await page.waitForSelector('.monaco-editor .view-lines', { state: 'visible', timeout: 10000 });
-
-    // Wait for YAML to be populated - check that we have more than just apiVersion
-    await page.waitForFunction(
+    // Poll Monaco API directly until YAML is populated
+    const yamlHandle = await page.waitForFunction(
       () => {
-        const lines = document.querySelector('.monaco-editor .view-lines');
-        const text = lines?.textContent || '';
-        // Check for displayName or spec to ensure YAML is populated
-        return text.includes('spec') && text.length > 50;
+        const monaco = (
+          window as unknown as {
+            monaco?: { editor?: { getModels?: () => { getValue(): string }[] } };
+          }
+        ).monaco;
+        const models = monaco?.editor?.getModels?.();
+        if (!models || models.length === 0) return null;
+        const value = models[0].getValue();
+        return value.includes('spec') && value.length > 50 ? value : null;
       },
       { timeout: 15000 },
     );
+    const yamlContent = (await yamlHandle.jsonValue()) as string;
 
-    await page.waitForTimeout(500);
-
-    // Get YAML content from Monaco editor
-    let yamlContent = await page.locator('.monaco-editor .view-lines').innerText();
-
-    // Normalize whitespace - Monaco might use non-breaking spaces or other Unicode spaces
-    yamlContent = yamlContent.replace(/\u00A0/g, ' '); // non-breaking space
-    yamlContent = yamlContent.replace(/\u2007/g, ' '); // figure space
-    yamlContent = yamlContent.replace(/\u202F/g, ' '); // narrow no-break space
-
-    // Verify YAML contains our form values
+    expect(yamlContent, 'Monaco model was empty - YAML did not populate').toBeTruthy();
     expect(yamlContent).toContain('displayName: YAML Sync Test');
     expect(yamlContent).toContain(`name: ${resourceName}`);
     expect(yamlContent).toContain('description: Testing YAML synchronization');
@@ -338,27 +337,16 @@ test.describe('APIProduct CRUD Operations', () => {
     expect(yamlContent).toContain('publishStatus: Draft');
     expect(yamlContent).toContain('targetRef');
     expect(yamlContent).toContain('test-httproute');
-  });
 
-  test('should sync YAML to form correctly', { tag: '@smoke' }, async ({ page }) => {
-    await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
-
-    // Switch to YAML tab first
-    await page.locator('button:has-text("YAML View")').click();
-    await page.waitForLoadState('networkidle');
-    await page.waitForTimeout(1000);
-
-    // Paste valid YAML (this is tricky with Monaco editor)
-    // For now, we'll test switching back to form and verifying empty state
-    // A full implementation would require Monaco-specific interactions
-
-    // Switch back to Form tab
+    // State retention: verify form values survive a tab switch to YAML and back
     await page.locator('button:has-text("Form View")').click();
     await page.waitForLoadState('networkidle');
 
-    // Verify form is still functional
-    await expect(page.locator('#display-name')).toBeVisible();
+    await expect(page.locator('#display-name')).toHaveValue('YAML Sync Test');
+    await expect(page.locator('#resource-name')).toHaveValue(resourceName);
+    await expect(page.locator('#version')).toHaveValue('v2.0.0');
+    await expect(page.locator('#description')).toHaveValue('Testing YAML synchronization');
+    await expect(page.locator('#httproute-select')).toContainText('test-httproute');
   });
 
   test('should disable Deprecated and Retired statuses', { tag: '@nightly' }, async ({ page }) => {
