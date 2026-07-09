@@ -83,10 +83,8 @@ test.describe('APIProduct CRUD Operations', () => {
     await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
     await page.waitForLoadState('networkidle');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
-
-    // Verify we're on the create page
-    await expect(page.locator('text=Create API Product')).toBeVisible({ timeout: 15000 });
+    // Wait for form to render — confirms routing and component mount, not just URL change
+    await page.waitForSelector('#display-name', { state: 'visible', timeout: 20000 });
 
     // Fill display name
     const displayNameInput = page.locator('#display-name');
