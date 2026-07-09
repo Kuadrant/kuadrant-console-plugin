@@ -525,6 +525,9 @@ EOF`, { stdio: 'inherit' });
 
     // Navigate to APIProducts list
     await navigateToAPIProducts(page, TEST_NAMESPACE);
+    // Dismiss the console tour if it appears after SPA navigation — the tour can
+    // retrigger on the list page and block subsequent clicks if not dismissed.
+    await dismissConsoleTour(page);
 
     // Wait for table to load
     await page.waitForSelector('table', { timeout: 10000 });
