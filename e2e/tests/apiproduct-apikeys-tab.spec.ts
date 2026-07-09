@@ -222,7 +222,7 @@ test.describe('APIProduct API Keys Tab - View and Actions', () => {
     await deleteNamespace(helenNs);
   });
 
-  test('should display pending API key requests', async ({ page }) => {
+  test('should display pending API key requests', { tag: '@smoke' }, async ({ page }) => {
     // Verify george request is visible
     await expect(page.locator(`tr:has-text("${georgeKey}")`)).toBeVisible();
     const georgeRow = page.locator(`tr:has-text("${georgeKey}")`);
@@ -239,7 +239,7 @@ test.describe('APIProduct API Keys Tab - View and Actions', () => {
     await expect(helenRow.locator('text=Pending')).toBeVisible();
   });
 
-  test('should show actionable items for pending requests', async ({ page }) => {
+  test('should show actionable items for pending requests', { tag: '@smoke' }, async ({ page }) => {
     // George row should already be visible from beforeEach filter
     const georgeRow = page.locator(`tr:has-text("${georgeKey}")`);
     await expect(georgeRow).toBeVisible();
@@ -260,7 +260,7 @@ test.describe('APIProduct API Keys Tab - View and Actions', () => {
     await page.locator('body').click();
   });
 
-  test('should show use case info icon when use case exists', async ({ page }) => {
+  test('should show use case info icon when use case exists', { tag: '@nightly' }, async ({ page }) => {
     // George row should already be visible from beforeEach filter
     const georgeRow = page.locator(`tr:has-text("${georgeKey}")`);
     await expect(georgeRow).toBeVisible();
@@ -309,7 +309,7 @@ test.describe('APIProduct API Keys Tab - Approve Request', () => {
     await deleteNamespace(ivanNs);
   });
 
-  test('should approve a pending request and update status', async ({ page }) => {
+  test('should approve a pending request and update status', { tag: '@smoke' }, async ({ page }) => {
     const ivanRow = page.locator(`tr:has-text("${ivanKey}")`);
 
     // Open actions menu and click Approve
@@ -369,7 +369,7 @@ test.describe('APIProduct API Keys Tab - Reject Request', () => {
     await deleteNamespace(judyNs);
   });
 
-  test('should reject a pending request and update status', async ({ page }) => {
+  test('should reject a pending request and update status', { tag: '@smoke' }, async ({ page }) => {
     const judyRow = page.locator(`tr:has-text("${judyKey}")`);
 
     // Open actions menu and click Deny
@@ -431,7 +431,7 @@ test.describe('APIProduct API Keys Tab - Deny Active Key', () => {
     await deleteNamespace(kateNs);
   });
 
-  test('should deny an active API key', async ({ page }) => {
+  test('should deny an active API key', { tag: '@smoke' }, async ({ page }) => {
     const kateRow = page.locator(`tr:has-text("${kateKey}")`);
 
     // Step 1: Approve the pending request

@@ -69,13 +69,7 @@ jobs:
 
       - name: Run E2E tests (smoke)
         if: inputs.suite == 'smoke'
-        run: npx playwright test --config=e2e/playwright.config.ts
-          e2e/tests/apiproduct-crud.spec.ts
-          e2e/tests/apikey-lifecycle.spec.ts
-          e2e/tests/apikey-approvals.spec.ts
-          e2e/tests/apiproduct-rbac.spec.ts
-          e2e/tests/apiproduct-apikeys-tab.spec.ts
-          e2e/tests/rbac.spec.ts
+        run: npx playwright test --config=e2e/playwright.config.ts --grep @smoke
 
       - name: Run E2E tests (full)
         if: inputs.suite == 'full'

@@ -21,7 +21,7 @@ test.describe('APIProduct List Page - Display and Filters', () => {
     await stopImpersonation(page);
   });
 
-  test('displays API Products list with correct columns', async ({ page }) => {
+  test('displays API Products list with correct columns', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Verify page title
@@ -42,7 +42,7 @@ test.describe('APIProduct List Page - Display and Filters', () => {
     await expect(page.locator('th button div span:has-text("Created")')).toBeVisible();
   });
 
-  test('displays API Products from test fixtures', async ({ page }) => {
+  test('displays API Products from test fixtures', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for table rows to load
@@ -65,7 +65,7 @@ test.describe('APIProduct List Page - Display and Filters', () => {
     expect(rows.length).toBeGreaterThan(4);
   });
 
-  test('displays correct status labels', async ({ page }) => {
+  test('displays correct status labels', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for table to load
@@ -82,7 +82,7 @@ test.describe('APIProduct List Page - Display and Filters', () => {
     expect(draftCount).toBeGreaterThanOrEqual(1);
   });
 
-  test('displays PlanPolicy links correctly', async ({ page }) => {
+  test('displays PlanPolicy links correctly', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for table to load
@@ -97,7 +97,7 @@ test.describe('APIProduct List Page - Display and Filters', () => {
     await expect(planPolicyLink).toBeVisible({ timeout: 10_000 });
   });
 
-  test('displays tags with correct styling', async ({ page }) => {
+  test('displays tags with correct styling', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Find the row for gamestore-api (has a PlanPolicy)
@@ -124,7 +124,7 @@ test.describe('APIProduct List Page - Status Filter', () => {
     await stopImpersonation(page);
   });
 
-  test('filters by Published status', async ({ page }) => {
+  test('filters by Published status', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -157,7 +157,7 @@ test.describe('APIProduct List Page - Status Filter', () => {
     await expect(page.locator('a:has-text("draft-api")')).not.toBeVisible();
   });
 
-  test('filters by Draft status', async ({ page }) => {
+  test('filters by Draft status', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -188,7 +188,7 @@ test.describe('APIProduct List Page - Status Filter', () => {
     await expect(page.locator('a:has-text("gamestore-api")')).not.toBeVisible();
   });
 
-  test('clears status filter when clicking X on filter label', async ({ page }) => {
+  test('clears status filter when clicking X on filter label', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Apply Published filter
@@ -240,7 +240,7 @@ test.describe('APIProduct List Page - Name Filter', () => {
     await stopImpersonation(page);
   });
 
-  test('filters by name (partial match)', async ({ page }) => {
+  test('filters by name (partial match)', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -265,7 +265,7 @@ test.describe('APIProduct List Page - Name Filter', () => {
     await expect(page.locator('a:has-text("payment-api")')).not.toBeVisible();
   });
 
-  test('filters by name (case insensitive)', async ({ page }) => {
+  test('filters by name (case insensitive)', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -282,7 +282,7 @@ test.describe('APIProduct List Page - Name Filter', () => {
     await expect(page.locator('a:has-text("payment-api")')).toBeVisible();
   });
 
-  test('shows empty state when no results match name filter', async ({ page }) => {
+  test('shows empty state when no results match name filter', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -300,7 +300,7 @@ test.describe('APIProduct List Page - Name Filter', () => {
     await expect(page.locator('text=No API Products match the filter criteria.')).toBeVisible();
   });
 
-  test('clears name filter when input is cleared', async ({ page }) => {
+  test('clears name filter when input is cleared', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -339,7 +339,7 @@ test.describe('APIProduct List Page - Namespace Filter', () => {
     await stopImpersonation(page);
   });
 
-  test('switches to namespace filter type', async ({ page }) => {
+  test('switches to namespace filter type', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -366,7 +366,7 @@ test.describe('APIProduct List Page - Namespace Filter', () => {
     ).toBeVisible();
   });
 
-  test('filters by namespace (partial match)', async ({ page }) => {
+  test('filters by namespace (partial match)', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -395,7 +395,7 @@ test.describe('APIProduct List Page - Namespace Filter', () => {
     await expect(filterLabel).toBeVisible();
   });
 
-  test('clears namespace filter when input is cleared', async ({ page }) => {
+  test('clears namespace filter when input is cleared', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -438,7 +438,7 @@ test.describe('APIProduct List Page - HTTPRoute Filter', () => {
     await stopImpersonation(page);
   });
 
-  test('switches to HTTPRoute filter type', async ({ page }) => {
+  test('switches to HTTPRoute filter type', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -465,7 +465,7 @@ test.describe('APIProduct List Page - HTTPRoute Filter', () => {
     await expect(selectToggle).toBeVisible();
   });
 
-  test('filters by HTTPRoute', async ({ page }) => {
+  test('filters by HTTPRoute', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -498,7 +498,7 @@ test.describe('APIProduct List Page - HTTPRoute Filter', () => {
     await expect(badge).toBeVisible();
   });
 
-  test('clears HTTPRoute filter when clicking X on filter label', async ({ page }) => {
+  test('clears HTTPRoute filter when clicking X on filter label', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -542,7 +542,7 @@ test.describe('APIProduct List Page - HTTPRoute Filter', () => {
     await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible();
   });
 
-  test('selects multiple HTTPRoutes', async ({ page }) => {
+  test('selects multiple HTTPRoutes', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -594,7 +594,7 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await stopImpersonation(page);
   });
 
-  test('applies both status and name filters together', async ({ page }) => {
+  test('applies both status and name filters together', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -630,7 +630,7 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await expect(page.locator('a:has-text("draft-api")')).not.toBeVisible();
   });
 
-  test('applies status and namespace filters together', async ({ page }) => {
+  test('applies status and namespace filters together', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -670,7 +670,7 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible();
   });
 
-  test('applies status and HTTPRoute filters together', async ({ page }) => {
+  test('applies status and HTTPRoute filters together', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load
@@ -713,7 +713,7 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await expect(badge).toBeVisible();
   });
 
-  test('shows empty state when combined filters match nothing', async ({ page }) => {
+  test('shows empty state when combined filters match nothing', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
     // Wait for initial data to load

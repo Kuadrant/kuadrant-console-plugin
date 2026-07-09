@@ -52,7 +52,7 @@ test.describe('APIProduct CRUD Operations', () => {
     }
   });
 
-  test('should navigate from list page to create page via Create button', async ({ page }) => {
+  test('should navigate from list page to create page via Create button', { tag: '@smoke' }, async ({ page }) => {
     // Navigate to API Products list page
     await navigateToAPIProducts(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
@@ -76,7 +76,7 @@ test.describe('APIProduct CRUD Operations', () => {
     await expect(page.locator('#resource-name')).toBeVisible();
   });
 
-  test('should create APIProduct via form and verify in list', async ({ page }) => {
+  test('should create APIProduct via form and verify in list', { tag: '@smoke' }, async ({ page }) => {
     // Full page load to a namespace-scoped URL so the console sets activeNamespace to
     // TEST_NAMESPACE before we SPA-navigate to the create page. Without this,
     // useActiveNamespace() returns '#ALL_NS#' and k8sCreate posts to an invalid namespace.
@@ -183,7 +183,7 @@ test.describe('APIProduct CRUD Operations', () => {
     );
   });
 
-  test('should validate resource name format', async ({ page }) => {
+  test('should validate resource name format', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
 
@@ -340,7 +340,7 @@ test.describe('APIProduct CRUD Operations', () => {
     expect(yamlContent).toContain('test-httproute');
   });
 
-  test('should sync YAML to form correctly', async ({ page }) => {
+  test('should sync YAML to form correctly', { tag: '@smoke' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
 
@@ -361,7 +361,7 @@ test.describe('APIProduct CRUD Operations', () => {
     await expect(page.locator('#display-name')).toBeVisible();
   });
 
-  test('should disable Deprecated and Retired statuses', async ({ page }) => {
+  test('should disable Deprecated and Retired statuses', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
 
@@ -387,7 +387,7 @@ test.describe('APIProduct CRUD Operations', () => {
     expect(await retiredOption.isDisabled()).toBe(true);
   });
 
-  test('should prevent form submission on Enter in tags', async ({ page }) => {
+  test('should prevent form submission on Enter in tags', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
 
@@ -468,7 +468,7 @@ EOF`, { stdio: 'inherit' });
       }
     });
 
-  test('should edit existing APIProduct (resource name immutable)', async ({ page }) => {
+  test('should edit existing APIProduct (resource name immutable)', { tag: '@smoke' }, async ({ page }) => {
     const testProductName = editProductName;
     await spaNavigate(page, `/kuadrant/apiproducts/ns/${TEST_NAMESPACE}/${testProductName}/edit`);
 
@@ -520,7 +520,7 @@ EOF`, { stdio: 'inherit' });
     await expect(descriptionInput).toHaveValue('Updated description for testing');
   });
 
-  test('should delete APIProduct with confirmation', async ({ page }) => {
+  test('should delete APIProduct with confirmation', { tag: '@smoke' }, async ({ page }) => {
     const testProductName = editProductName;
 
     // Navigate to APIProducts list
@@ -591,7 +591,7 @@ EOF`, { stdio: 'inherit' });
 
   }); // end of 'edit and delete' describe
 
-  test('should display validation messages for required fields', async ({ page }) => {
+  test('should display validation messages for required fields', { tag: '@smoke' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
 
@@ -609,7 +609,7 @@ EOF`, { stdio: 'inherit' });
     await expect(saveButton).toBeDisabled();
   });
 
-  test('should handle approval mode selection', async ({ page }) => {
+  test('should handle approval mode selection', { tag: '@smoke' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
 
@@ -632,7 +632,7 @@ EOF`, { stdio: 'inherit' });
     await expect(automaticRadio).not.toBeChecked();
   });
 
-  test('should auto-generate resource name with unique suffix', async ({ page }) => {
+  test('should auto-generate resource name with unique suffix', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
 
@@ -658,7 +658,7 @@ EOF`, { stdio: 'inherit' });
     expect(secondGenerated).toBe(firstGenerated);
   });
 
-  test('should handle special characters in display name conversion', async ({ page }) => {
+  test('should handle special characters in display name conversion', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForLoadState('networkidle');
 

@@ -25,7 +25,7 @@ test.describe('APIProduct Overview Tab', () => {
     await dismissConsoleTour(page);
   });
 
-  test('should display About section with all fields and correct styling', async ({ page }) => {
+  test('should display About section with all fields and correct styling', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductOverview(page);
     await expect(page.locator('text=About').first()).toBeVisible({ timeout: 10_000 });
 
@@ -68,7 +68,7 @@ test.describe('APIProduct Overview Tab', () => {
     await expect(page.locator('dd').filter({ has: page.locator('text=manual') })).toBeVisible();
   });
 
-  test('should display authentication methods with "Not set" and configured states', async ({
+  test('should display authentication methods with "Not set" and configured states', { tag: '@nightly' }, async ({
     page,
   }) => {
     // Test "Not set" state
@@ -101,7 +101,7 @@ test.describe('APIProduct Overview Tab', () => {
     expect(apiKeyClass).toContain('pf-m-green');
   });
 
-  test('should display plan tiers with "Not set" and configured states', async ({ page }) => {
+  test('should display plan tiers with "Not set" and configured states', { tag: '@nightly' }, async ({ page }) => {
     // Test "Not set" state
     await navigateToAPIProductOverview(page);
     await expect(page.locator('text=About').first()).toBeVisible({ timeout: 10_000 });
@@ -128,7 +128,7 @@ test.describe('APIProduct Overview Tab', () => {
     await expect(planTiersSection.locator('text=50 requests per day')).toBeVisible();
   });
 
-  test('should display Documentation section with links, "Not set" states, and edit buttons', async ({
+  test('should display Documentation section with links, "Not set" states, and edit buttons', { tag: '@nightly' }, async ({
     page,
   }) => {
     // Test with documentation links present
@@ -177,7 +177,7 @@ test.describe('APIProduct Overview Tab', () => {
     await expect(apiDocsValue.locator('text=Not set')).toBeVisible();
   });
 
-  test('should display Contact section with links, "Not set" states, and edit buttons', async ({
+  test('should display Contact section with links, "Not set" states, and edit buttons', { tag: '@nightly' }, async ({
     page,
   }) => {
     // Test "Not set" states
@@ -222,7 +222,7 @@ test.describe('APIProduct Overview Tab', () => {
     expect(count).toBeGreaterThanOrEqual(4);
   });
 
-  test('should open and close edit modals', async ({ page }) => {
+  test('should open and close edit modals', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductOverview(page);
     await expect(page.locator('text=About').first()).toBeVisible({ timeout: 10_000 });
 
@@ -278,7 +278,7 @@ test.describe('APIProduct Overview Tab', () => {
     await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible();
   });
 
-  test('should navigate to Overview tab from detail page', async ({ page }) => {
+  test('should navigate to Overview tab from detail page', { tag: '@nightly' }, async ({ page }) => {
     // Navigate to APIProduct details (default tab)
     await page.evaluate(
       ({ ns, name }) => {
@@ -311,7 +311,7 @@ test.describe('APIProduct Overview Tab', () => {
     await expect(page.locator('h2:has-text("About")')).toBeVisible({ timeout: 10_000 });
   });
 
-  test('should display all sections in correct order', async ({ page }) => {
+  test('should display all sections in correct order', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductOverview(page);
     await expect(page.locator('text=About').first()).toBeVisible({ timeout: 10_000 });
 
