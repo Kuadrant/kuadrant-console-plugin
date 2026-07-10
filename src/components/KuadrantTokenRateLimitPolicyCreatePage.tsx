@@ -91,7 +91,6 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
           group: 'gateway.networking.k8s.io',
           kind: 'Gateway',
           name: selectedGateway.name,
-          namespace: selectedGateway.namespace,
         },
         limits,
       },
@@ -154,8 +153,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
         setPolicyName(trlPolicyUpdate.metadata?.name || '');
         setSelectedGateway({
           name: trlPolicyUpdate.spec?.targetRef?.name || '',
-          namespace:
-            trlPolicyUpdate.spec?.targetRef?.namespace ?? trlPolicyUpdate.metadata?.namespace ?? '',
+          namespace: trlPolicyUpdate.metadata?.namespace || '',
         });
         setLimits(trlPolicyUpdate.spec?.limits || {});
       }
@@ -171,7 +169,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
         name: parsedYaml.spec?.targetRef?.name || '',
-        namespace: parsedYaml.spec?.targetRef?.namespace || parsedYaml.metadata?.namespace || '',
+        namespace: parsedYaml.metadata?.namespace || '',
       });
       setLimits(parsedYaml.spec?.limits || {});
     } catch (e) {
@@ -240,7 +238,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
           {create ? t('Create TokenRateLimit Policy') : t('Edit TokenRateLimit Policy')}
         </title>
       </Helmet>
-      <PageSection hasBodyWrapper={false} className="pf-m-no-padding">
+      <PageSection hasBodyWrapper={false}>
         <div className="co-m-nav-title">
           <Title headingLevel="h1">
             {create ? t('Create TokenRateLimit Policy') : t('Edit TokenRateLimit Policy')}
