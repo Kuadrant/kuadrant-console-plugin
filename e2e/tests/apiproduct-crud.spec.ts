@@ -1,31 +1,11 @@
 import { test, expect, Page } from '@playwright/test';
 import { execSync } from 'child_process';
-import { TEST_NAMESPACE, dismissConsoleTour } from './helpers';
-
-// SPA navigation using pushState - preserves redux state
-async function spaNavigate(page: Page, path: string): Promise<void> {
-  await page.evaluate((p) => {
-    window.history.pushState({}, '', p);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }, path);
-  await page.waitForLoadState('networkidle');
-}
+import { TEST_NAMESPACE, dismissConsoleTour, spaNavigate, navigateToAPIProducts } from './helpers';
 
 async function navigateToAPIProductCreate(page: Page, namespace = 'kuadrant-test'): Promise<void> {
-  await page.evaluate((ns) => {
-    window.history.pushState({}, '', `/kuadrant/apiproducts/ns/${ns}/~new`);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }, namespace);
-  await page.waitForLoadState('networkidle');
+  await spaNavigate(page, `/kuadrant/apiproducts/ns/${namespace}/~new`);
+  await dismissConsoleTour(page);
 }
-
-const navigateToAPIProducts = async (page: Page, namespace = 'kuadrant-test') => {
-  await page.evaluate((ns) => {
-    window.history.pushState({}, '', `/kuadrant/apiproducts/ns/${ns}`);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }, namespace);
-  await page.waitForLoadState('networkidle');
-};
 
 // Note: Tests rely on test-httproute HTTPRoute existing in the test namespace
 // This is created by applying e2e/manifests/test-apiproduct-fixtures.yaml before running tests
@@ -84,7 +64,7 @@ test.describe('APIProduct CRUD Operations', () => {
     await page.waitForLoadState('networkidle');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     // Wait for form to render — confirms routing and component mount, not just URL change
-    await page.waitForSelector('#display-name', { state: 'visible', timeout: 20000 });
+    await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
 
     // Fill display name
     const displayNameInput = page.locator('#display-name');
@@ -153,7 +133,7 @@ test.describe('APIProduct CRUD Operations', () => {
     });
 
     // The new product may land on any pagination page; iterate until found or exhausted.
-    await page.waitForSelector('table', { timeout: 15000 });
+    await expect(page.locator('table').first()).toBeVisible({ timeout: 15000 });
     const row = page.locator(`tr:has-text("${generatedResourceName}")`);
 
     let found = false;
@@ -241,12 +221,12 @@ test.describe('APIProduct CRUD Operations', () => {
     }
   });
 
-  test('should sync between Form and YAML views', async ({ page }) => {
+  test('should sync between Form and YAML views', { tag: '@smoke' }, async ({ page }) => {
     // Full page load first so activeNamespace is set correctly before SPA navigation
     await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
     await page.waitForLoadState('networkidle');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
 
     // Fill form fields
     await page.locator('#display-name').fill('YAML Sync Test');
@@ -516,7 +496,7 @@ EOF`, { stdio: 'inherit' });
     await dismissConsoleTour(page);
 
     // Wait for table to load
-    await page.waitForSelector('table', { timeout: 10000 });
+    await expect(page.locator('table').first()).toBeVisible({ timeout: 10000 });
 
     // Find the product row
     const row = page.locator(`tr:has-text("${testProductName}")`);
@@ -579,7 +559,7 @@ EOF`, { stdio: 'inherit' });
 
   test('should display validation messages for required fields', { tag: '@smoke' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
 
     // Leave display name empty and try to proceed
     const saveButton = page.locator('button:has-text("Create")');
@@ -597,10 +577,10 @@ EOF`, { stdio: 'inherit' });
 
   test('should handle approval mode selection', { tag: '@smoke' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
 
     // Scroll to approval mode section
-    await page.locator('text=API key approval').scrollIntoViewIfNeeded();
+    await page.getByRole('heading', { name: 'API Key approval' }).scrollIntoViewIfNeeded();
 
     // Default should be manual
     const manualRadio = page.locator('#approval-manual');
