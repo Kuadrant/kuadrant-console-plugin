@@ -1,30 +1,13 @@
 import { test, expect, Page } from '@playwright/test';
 import { execSync } from 'child_process';
-import { TEST_NAMESPACE, dismissConsoleTour } from './helpers';
-
-// SPA navigation using pushState - preserves redux state
-async function spaNavigate(page: Page, path: string): Promise<void> {
-  await page.evaluate((p) => {
-    window.history.pushState({}, '', p);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }, path);
-  await page.waitForLoadState('networkidle');
-}
+import { TEST_NAMESPACE, dismissConsoleTour, spaNavigate } from './helpers';
 
 async function navigateToAPIProductCreate(page: Page, namespace = 'kuadrant-test'): Promise<void> {
-  await page.evaluate((ns) => {
-    window.history.pushState({}, '', `/kuadrant/apiproducts/ns/${ns}/~new`);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }, namespace);
-  await page.waitForLoadState('networkidle');
+  await spaNavigate(page, `/kuadrant/apiproducts/ns/${namespace}/~new`);
 }
 
 const navigateToAPIProducts = async (page: Page, namespace = 'kuadrant-test') => {
-  await page.evaluate((ns) => {
-    window.history.pushState({}, '', `/kuadrant/apiproducts/ns/${ns}`);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }, namespace);
-  await page.waitForLoadState('networkidle');
+  await spaNavigate(page, `/kuadrant/apiproducts/ns/${namespace}`);
 };
 
 // Note: Tests rely on test-httproute HTTPRoute existing in the test namespace
@@ -246,6 +229,7 @@ test.describe('APIProduct CRUD Operations', () => {
     await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
     await page.waitForLoadState('networkidle');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
+    await dismissConsoleTour(page);
     await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
 
     // Fill form fields
