@@ -1,14 +1,11 @@
 import { test, expect, Page } from '@playwright/test';
 import { execSync } from 'child_process';
-import { TEST_NAMESPACE, dismissConsoleTour, spaNavigate } from './helpers';
+import { TEST_NAMESPACE, dismissConsoleTour, spaNavigate, navigateToAPIProducts } from './helpers';
 
 async function navigateToAPIProductCreate(page: Page, namespace = 'kuadrant-test'): Promise<void> {
   await spaNavigate(page, `/kuadrant/apiproducts/ns/${namespace}/~new`);
+  await dismissConsoleTour(page);
 }
-
-const navigateToAPIProducts = async (page: Page, namespace = 'kuadrant-test') => {
-  await spaNavigate(page, `/kuadrant/apiproducts/ns/${namespace}`);
-};
 
 // Note: Tests rely on test-httproute HTTPRoute existing in the test namespace
 // This is created by applying e2e/manifests/test-apiproduct-fixtures.yaml before running tests
@@ -229,7 +226,6 @@ test.describe('APIProduct CRUD Operations', () => {
     await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
     await page.waitForLoadState('networkidle');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await dismissConsoleTour(page);
     await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
 
     // Fill form fields
