@@ -131,7 +131,7 @@
     "graphlib-dot": "^0.6.4",
     "i18next": "^25.8.0",
     "i18next-parser": "^9.0.1",
-    "js-yaml": "^4.2.0",
+    "js-yaml": "^4.3.0",
     "pluralize": "^8.0.0",
     "swagger-ui-react": "5.10.5"
   },
