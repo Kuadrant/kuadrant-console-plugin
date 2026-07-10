@@ -7,6 +7,11 @@ on:
         description: 'Test suite to run: smoke or full'
         required: true
         type: string
+      specs:
+        description: 'Space-separated spec file paths to run (empty = all)'
+        required: false
+        type: string
+        default: ''
 
 jobs:
   e2e-rbac:
@@ -69,7 +74,13 @@ jobs:
 
       - name: Run E2E tests (smoke)
         if: inputs.suite == 'smoke'
-        run: npx playwright test --config=e2e/playwright.config.ts --grep @smoke
+        run: |
+          SPEC_FILTER="${{ inputs.specs }}"
+          if [ -n "$SPEC_FILTER" ]; then
+            npx playwright test --config=e2e/playwright.config.ts --grep @smoke $SPEC_FILTER
+          else
+            npx playwright test --config=e2e/playwright.config.ts --grep @smoke
+          fi
 
       - name: Run E2E tests (full)
         if: inputs.suite == 'full'
