@@ -12,7 +12,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  route:
+    runs-on: ubuntu-latest
+    outputs:
+      specs: ${{ steps.router.outputs.specs }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run suite router
+        id: router
+        run: |
+          chmod +x build/suite-router.sh
+          SPECS=$(bash build/suite-router.sh)
+          echo "specs=${SPECS}" >> $GITHUB_OUTPUT
+
   e2e-smoke:
+    needs: route
     uses: ./.github/workflows/e2e-common.yaml
     with:
       suite: smoke
+      specs: ${{ needs.route.outputs.specs }}
