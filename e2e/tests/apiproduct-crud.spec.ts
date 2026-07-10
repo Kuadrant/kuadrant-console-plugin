@@ -7,6 +7,27 @@ async function navigateToAPIProductCreate(page: Page, namespace = 'kuadrant-test
   await dismissConsoleTour(page);
 }
 
+// Scroll through all pagination pages looking for a row matching `text`.
+// Retries up to `maxAttempts` times, waiting for the watch stream between pages.
+async function findRowWithPagination(page: Page, text: string, maxAttempts = 10): Promise<boolean> {
+  const row = page.locator(`tr:has-text("${text}")`);
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (await row.isVisible()) return true;
+    const nextBtn = page.locator('button[aria-label="Go to next page"]');
+    if ((await nextBtn.count()) > 0 && !(await nextBtn.isDisabled())) {
+      await nextBtn.click();
+      await page.waitForTimeout(500);
+    } else {
+      await page.waitForTimeout(1000);
+      const firstBtn = page.locator('button[aria-label="Go to first page"]');
+      if ((await firstBtn.count()) > 0) {
+        await firstBtn.click();
+        await page.waitForTimeout(500);
+      }
+    }
+  }
+  return false;
+}
 // Note: Tests rely on test-httproute HTTPRoute existing in the test namespace
 // This is created by applying e2e/manifests/test-apiproduct-fixtures.yaml before running tests
 
@@ -133,32 +154,9 @@ test.describe('APIProduct CRUD Operations', () => {
     });
 
     // The new product may land on any pagination page; iterate until found or exhausted.
-    await expect(page.locator('table').first()).toBeVisible({ timeout: 15000 });
-    const row = page.locator(`tr:has-text("${generatedResourceName}")`);
-
-    let found = false;
-    for (let attempt = 0; attempt < 10 && !found; attempt++) {
-      if (await row.isVisible()) {
-        found = true;
-        break;
-      }
-      const nextBtn = page.locator('button[aria-label="Go to next page"]');
-      if ((await nextBtn.count()) > 0 && !(await nextBtn.isDisabled())) {
-        await nextBtn.click();
-        await page.waitForTimeout(500);
-      } else {
-        // No further pages — wait for watch stream then retry from page 1
-        await page.waitForTimeout(1000);
-        const firstBtn = page.locator('button[aria-label="Go to first page"]');
-        if ((await firstBtn.count()) > 0) {
-          await firstBtn.click();
-          await page.waitForTimeout(500);
-        }
-      }
-    }
-    expect(found, `"${generatedResourceName}" not found in any page of the API Products list`).toBe(
-      true,
-    );
+    await expect(page.locator('table').first()).toBeVisible({ timeout: 10000 });
+    const found = await findRowWithPagination(page, generatedResourceName);
+    expect(found, `"${generatedResourceName}" not found in any page of the API Products list`).toBe(true);
   });
 
   test('should validate resource name format', { tag: '@nightly' }, async ({ page }) => {
@@ -498,11 +496,10 @@ EOF`, { stdio: 'inherit' });
     // Wait for table to load
     await expect(page.locator('table').first()).toBeVisible({ timeout: 10000 });
 
-    // Find the product row
+    // The new product may land on any pagination page; iterate until found or exhausted.
+    const found = await findRowWithPagination(page, testProductName);
+    expect(found, `"${testProductName}" not found in any page of the API Products list`).toBe(true);
     const row = page.locator(`tr:has-text("${testProductName}")`);
-
-    // Verify product exists
-    await expect(row).toBeVisible({ timeout: 10000 });
 
     // Navigate to K8s resource details page via product name link
     // (kebab menu column exists on list page but may be off-screen at test viewport width)
