@@ -155,6 +155,9 @@ EOF
       await expect(page.locator('.pf-v6-c-alert:has-text("approved successfully")')).toBeVisible({
         timeout: 30_000,
       });
+
+      const updatedAliceApproveRow = page.locator(`tr:has-text("${aliceEmail}")`);
+      await expect(updatedAliceApproveRow.locator('text=Active')).toBeVisible({ timeout: 10_000 });
     });
   });
 });
@@ -229,6 +232,9 @@ EOF
     await expect(page.locator('.pf-v6-c-alert:has-text("denied")')).toBeVisible({
       timeout: 30_000,
     });
+
+    const updatedBobRow = page.locator(`tr:has-text("${bobEmail}")`);
+    await expect(updatedBobRow.locator('text=Denied')).toBeVisible({ timeout: 10_000 });
   });
 });
 
@@ -302,6 +308,9 @@ EOF
     await expect(page.locator('.pf-v6-c-alert:has-text("denied")')).toBeVisible({
       timeout: 30_000,
     });
+
+    const updatedBob2Row = page.locator(`tr:has-text("${bob2Email}")`);
+    await expect(updatedBob2Row.locator('text=Denied')).toBeVisible({ timeout: 10_000 });
   });
 });
 
@@ -409,6 +418,9 @@ EOF
     await expect(page.locator('.pf-v6-c-alert:has-text("approved successfully")')).toBeVisible({
       timeout: 30_000,
     });
+
+    await expect(page.locator(`tr:has-text("${carolEmail}")`).locator('text=Active')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator(`tr:has-text("${daveEmail}")`).locator('text=Active')).toBeVisible({ timeout: 10_000 });
   });
 });
 
@@ -516,6 +528,9 @@ EOF
     await expect(page.locator('.pf-v6-c-alert:has-text("denied")')).toBeVisible({
       timeout: 30_000,
     });
+
+    await expect(page.locator(`tr:has-text("${ellenEmail}")`).locator('text=Denied')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator(`tr:has-text("${frankEmail}")`).locator('text=Denied')).toBeVisible({ timeout: 10_000 });
   });
 });
 
