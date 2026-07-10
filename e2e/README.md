@@ -70,10 +70,21 @@ npx playwright test --config=e2e/playwright.config.ts
 
 ## Test Files
 
+- `e2e/tests/apikey-approvals.spec.ts` - API key request approval and rejection
 - `e2e/tests/apikey-lifecycle.spec.ts` - Full API key lifecycle (request, reveal, delete)
+- `e2e/tests/apiproduct-apikeys-tab.spec.ts` - API product API keys tab
 - `e2e/tests/apiproduct-crud.spec.ts` - API product CRUD operations
+- `e2e/tests/apiproduct-details-tabs.spec.ts` - API product details tabs
+- `e2e/tests/apiproduct-overview-tab.spec.ts` - API product overview tab
+- `e2e/tests/apiproduct-rbac.spec.ts` - API product RBAC
 - `e2e/tests/api-product-list.spec.ts` - API product list page
+- `e2e/tests/overview.spec.ts` - Overview dashboard cards, stats, and navigation
+- `e2e/tests/policy-forms.spec.ts` - Policy creation forms (DNS, TLS, Auth, RateLimit, etc.)
 - `e2e/tests/rbac.spec.ts` - RBAC permission tests
+- `e2e/tests/topology.spec.ts` - Policy topology rendering, filtering, and navigation
+
+PR CI runs the smoke subset listed in `.github/workflows/e2e-common.yaml`; the nightly
+run executes every spec in `e2e/tests/`.
 
 ## Test Environment
 
