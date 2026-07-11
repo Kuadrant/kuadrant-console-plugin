@@ -74,7 +74,6 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj, onDeleteClic
     if (
       obj.kind === 'AuthPolicy' ||
       obj.kind === 'RateLimitPolicy' ||
-      obj.kind === 'TokenRateLimitPolicy' ||
       obj.kind === 'PlanPolicy' ||
       obj.kind === 'Gateway' ||
       obj.kind === 'HTTPRoute'
