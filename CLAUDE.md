@@ -255,9 +255,11 @@ The suite router maps changed source files to relevant e2e spec files so PRs onl
 | `src/utils/` (shared) | all @smoke |
 | Unrecognised path | all @smoke |
 
-**When adding a new spec file**, update `COMPONENT_MAP` in `build/suite-router.sh`:
+**When adding a new spec file**, add an `if` block in `build/suite-router.sh`:
 ```bash
-COMPONENT_MAP["^src/components/myfeature/"]="myfeature.spec.ts"
+if echo "$CHANGED" | grep -qE "^src/components/myfeature/"; then
+  SPECS="$SPECS myfeature.spec.ts"
+fi
 ```
 
 If you forget, the suite router falls back to running all smoke tests — no tests will be skipped incorrectly, but the optimisation won't apply.

@@ -14,12 +14,15 @@ concurrency:
 jobs:
   route:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     outputs:
       specs: ${{ steps.router.outputs.specs }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Run suite router
         id: router

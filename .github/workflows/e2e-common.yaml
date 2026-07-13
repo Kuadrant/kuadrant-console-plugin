@@ -74,8 +74,9 @@ jobs:
 
       - name: Run E2E tests (smoke)
         if: inputs.suite == 'smoke'
+        env:
+          SPEC_FILTER: ${{ inputs.specs }}
         run: |
-          SPEC_FILTER="${{ inputs.specs }}"
           if [ -n "$SPEC_FILTER" ]; then
             npx playwright test --config=e2e/playwright.config.ts --grep @smoke $SPEC_FILTER
           else
