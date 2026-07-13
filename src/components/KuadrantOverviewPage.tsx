@@ -109,6 +109,156 @@ interface Gateway extends K8sResourceCommon {
   };
 }
 
+// module scope: components defined inside a render function get a new identity
+// on every re-render, remounting and flickering open popovers (#631)
+export const StatusLegend: React.FC = () => {
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
+  return (
+    <Popover
+      headerContent={t('Status')}
+      bodyContent={
+        <>
+          <Content component={ContentVariants.p}>
+            {t(
+              'It indicates the current operational state of the Gateway and reflects whether its configuration is applied and functioning correctly.',
+            )}
+          </Content>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'auto 1fr',
+              columnGap: 8,
+              rowGap: 8,
+              alignItems: 'center',
+              justifyItems: 'start',
+            }}
+          >
+            <Label isCompact color="green" icon={<CheckCircleIcon />}>
+              {' '}
+              {t('Enforced')}{' '}
+            </Label>
+            <span style={{ fontSize: 12 }}>
+              {t('Resource is accepted, configured, and all policies are enforced.')}
+            </span>
+
+            <Label isCompact color="purple" icon={<UploadIcon />}>
+              {' '}
+              {t('Accepted ')}{' '}
+            </Label>
+            <span style={{ fontSize: 12 }}>
+              {t('Resource is accepted, but not all policies are enforced.')}
+            </span>
+
+            <Label isCompact color="blue" icon={<BuildIcon />}>
+              {' '}
+              {t('Programmed')}{' '}
+            </Label>
+            <span style={{ fontSize: 12 }}>
+              {t('Resource is being configured but not yet enforced.')}
+            </span>
+
+            <Label isCompact color="red" icon={<ExclamationCircleIcon />}>
+              {' '}
+              {t('Conflicted')}{' '}
+            </Label>
+            <span style={{ fontSize: 12 }}>
+              {t('Resource has conflicts, possibly due to policies or configuration issues.')}
+            </span>
+
+            <Label isCompact color="red" icon={<ExclamationCircleIcon />}>
+              {' '}
+              {t('Resolved')}{' '}
+            </Label>
+            <span style={{ fontSize: 12 }}>
+              {t('All dependencies for the policy are successfully resolved.')}
+            </span>
+          </div>
+        </>
+      }
+      triggerAction="hover"
+      position="top"
+    >
+      <QuestionCircleIcon style={{ marginLeft: 6, cursor: 'help' }} aria-label="Status help" />
+    </Popover>
+  );
+};
+
+export interface Distribution {
+  total: number;
+  percent: number;
+}
+
+export const ErrorCodeLabel: React.FC<{
+  codeGroup: string;
+  distribution: Array<[string, Distribution]>;
+}> = ({ codeGroup, distribution }) => {
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
+  const [isOpen, setIsOpen] = React.useState(false);
+  let lastCode = '';
+  return (
+    <Popover
+      className="kuadrant-custom-rounded-popover"
+      headerContent={t('Error Code')}
+      bodyContent={
+        <>
+          <Content component={ContentVariants.p}>
+            {t('Displays the distribution of error codes for request failures.')}
+          </Content>
+          <div className="kuadrant-popover-codes">
+            {distribution.map(([code, dist]) => {
+              lastCode = code;
+              return (
+                <div key={code} style={{ marginBottom: '8px' }}>
+                  <Progress
+                    value={dist.percent}
+                    title={
+                      <Flex
+                        justifyContent={{ default: 'justifyContentSpaceBetween' }}
+                        alignItems={{ default: 'alignItemsCenter' }}
+                      >
+                        <FlexItem>
+                          <strong>{t('Code: {{code}}', { code })}</strong>
+                        </FlexItem>
+                        <FlexItem align={{ default: 'alignRight' }}>
+                          {dist.total.toFixed(0) === '1'
+                            ? t('1 request')
+                            : t('{{value}} requests', { value: dist.total.toFixed(0) })}
+                        </FlexItem>
+                      </Flex>
+                    }
+                    measureLocation={ProgressMeasureLocation.outside}
+                  />
+                  <Divider style={{ margin: '12px 0' }} />
+                </div>
+              );
+            })}
+          </div>
+        </>
+      }
+      footerContent={
+        <>
+          <span>{t('Last 24h overview')}</span>
+        </>
+      }
+      isVisible={isOpen}
+      shouldClose={() => setIsOpen(false)}
+      position="top"
+    >
+      <Label
+        variant="outline"
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          marginRight: '0.5em',
+          textDecoration: 'underline',
+          textDecorationStyle: 'dotted',
+        }}
+      >
+        &nbsp;{distribution.length === 1 ? lastCode : codeGroup}&nbsp;
+      </Label>
+    </Popover>
+  );
+};
+
 const KuadrantOverviewPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -226,77 +376,6 @@ const KuadrantOverviewPage: React.FC = () => {
     setHideCard(true);
     sessionStorage.setItem('hideGettingStarted', 'true');
     setIsGettingStartedMenuOpen(false);
-  };
-
-  const StatusLegend: React.FC = () => {
-    return (
-      <Popover
-        headerContent={t('Status')}
-        bodyContent={
-          <>
-            <Content component={ContentVariants.p}>
-              {t(
-                'It indicates the current operational state of the Gateway and reflects whether its configuration is applied and functioning correctly.',
-              )}
-            </Content>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'auto 1fr',
-                columnGap: 8,
-                rowGap: 8,
-                alignItems: 'center',
-                justifyItems: 'start',
-              }}
-            >
-              <Label isCompact color="green" icon={<CheckCircleIcon />}>
-                {' '}
-                {t('Enforced')}{' '}
-              </Label>
-              <span style={{ fontSize: 12 }}>
-                {t('Resource is accepted, configured, and all policies are enforced.')}
-              </span>
-
-              <Label isCompact color="purple" icon={<UploadIcon />}>
-                {' '}
-                {t('Accepted ')}{' '}
-              </Label>
-              <span style={{ fontSize: 12 }}>
-                {t('Resource is accepted, but not all policies are enforced.')}
-              </span>
-
-              <Label isCompact color="blue" icon={<BuildIcon />}>
-                {' '}
-                {t('Programmed')}{' '}
-              </Label>
-              <span style={{ fontSize: 12 }}>
-                {t('Resource is being configured but not yet enforced.')}
-              </span>
-
-              <Label isCompact color="red" icon={<ExclamationCircleIcon />}>
-                {' '}
-                {t('Conflicted')}{' '}
-              </Label>
-              <span style={{ fontSize: 12 }}>
-                {t('Resource has conflicts, possibly due to policies or configuration issues.')}
-              </span>
-
-              <Label isCompact color="red" icon={<ExclamationCircleIcon />}>
-                {' '}
-                {t('Resolved')}{' '}
-              </Label>
-              <span style={{ fontSize: 12 }}>
-                {t('All dependencies for the policy are successfully resolved.')}
-              </span>
-            </div>
-          </>
-        }
-        triggerAction="hover"
-        position="top"
-      >
-        <QuestionCircleIcon style={{ marginLeft: 6, cursor: 'help' }} aria-label="Status help" />
-      </Popover>
-    );
   };
 
   const columns = [
@@ -516,10 +595,6 @@ const KuadrantOverviewPage: React.FC = () => {
   };
 
   // Metrics columns rendering
-  interface Distribution {
-    total: number;
-    percent: number;
-  }
   const getErrorCodeDistribution = (
     obj: { metadata: { namespace: string; name: string } },
     prefix: string,
@@ -549,77 +624,6 @@ const KuadrantOverviewPage: React.FC = () => {
 
     return sortedDistribution;
   };
-  const ErrorCodeLabel: React.FC<{
-    obj: { metadata: { namespace: string; name: string } };
-    codeGroup: string;
-  }> = ({ obj, codeGroup }) => {
-    const [isOpen, setIsOpen] = React.useState(false);
-    const distribution = getErrorCodeDistribution(obj, codeGroup[0]);
-    let lastCode = '';
-    return (
-      <Popover
-        className="kuadrant-custom-rounded-popover"
-        headerContent={t('Error Code')}
-        bodyContent={
-          <>
-            <Content component={ContentVariants.p}>
-              {t('Displays the distribution of error codes for request failures.')}
-            </Content>
-            <div className="kuadrant-popover-codes">
-              {distribution.map(([code, dist]) => {
-                lastCode = code;
-                return (
-                  <div key={code} style={{ marginBottom: '8px' }}>
-                    <Progress
-                      value={dist.percent}
-                      title={
-                        <Flex
-                          justifyContent={{ default: 'justifyContentSpaceBetween' }}
-                          alignItems={{ default: 'alignItemsCenter' }}
-                        >
-                          <FlexItem>
-                            <strong>{t('Code: {{code}}', { code })}</strong>
-                          </FlexItem>
-                          <FlexItem align={{ default: 'alignRight' }}>
-                            {dist.total.toFixed(0) === '1'
-                              ? t('1 request')
-                              : t('{{value}} requests', { value: dist.total.toFixed(0) })}
-                          </FlexItem>
-                        </Flex>
-                      }
-                      measureLocation={ProgressMeasureLocation.outside}
-                    />
-                    <Divider style={{ margin: '12px 0' }} />
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        }
-        footerContent={
-          <>
-            <span>{t('Last 24h overview')}</span>
-          </>
-        }
-        isVisible={isOpen}
-        shouldClose={() => setIsOpen(false)}
-        position="top"
-      >
-        <Label
-          variant="outline"
-          onClick={() => setIsOpen(!isOpen)}
-          style={{
-            marginRight: '0.5em',
-            textDecoration: 'underline',
-            textDecorationStyle: 'dotted',
-          }}
-        >
-          &nbsp;{distribution.length === 1 ? lastCode : codeGroup}&nbsp;
-        </Label>
-      </Popover>
-    );
-  };
-
   const gatewayTrafficRenders = {
     totalRequests: (column, obj, activeColumnIDs) => {
       return (
@@ -652,7 +656,13 @@ const KuadrantOverviewPage: React.FC = () => {
             </Label>
           ) : (
             errorCodes.map((code) => {
-              return <ErrorCodeLabel key={code} obj={obj} codeGroup={code} />;
+              return (
+                <ErrorCodeLabel
+                  key={code}
+                  codeGroup={code}
+                  distribution={getErrorCodeDistribution(obj, code[0])}
+                />
+              );
             })
           )}
         </TableData>
