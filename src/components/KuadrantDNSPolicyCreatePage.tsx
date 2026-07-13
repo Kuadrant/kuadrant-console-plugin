@@ -50,7 +50,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
     defaultGeo: '',
   });
   const [healthCheck, setHealthCheck] = React.useState<HealthCheck>({
-    endpoint: '',
+    path: '',
     failureThreshold: null,
     port: null,
     protocol: '',
@@ -71,7 +71,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
 
   const createDNSPolicy = () => {
     const hasHealthCheck =
-      healthCheck.endpoint ||
+      healthCheck.path ||
       healthCheck.failureThreshold ||
       healthCheck.port ||
       healthCheck.protocol !== '';
@@ -111,7 +111,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         ...(hasHealthCheck
           ? {
               healthCheck: {
-                ...(healthCheck?.endpoint ? { endpoint: healthCheck.endpoint } : {}),
+                ...(healthCheck?.path ? { path: healthCheck.path } : {}),
                 ...(healthCheck?.failureThreshold
                   ? { failureThreshold: healthCheck.failureThreshold }
                   : {}),
@@ -157,7 +157,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       }[];
 
       healthCheck?: {
-        endpoint?: string;
+        path?: string;
         failureThreshold?: number;
         port?: number;
         protocol?: 'HTTP' | 'HTTPS';
@@ -192,7 +192,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
             dnsPolicyUpdate.spec?.targetRef?.namespace ?? dnsPolicyUpdate.metadata?.namespace ?? '',
         });
         setHealthCheck({
-          endpoint: dnsPolicyUpdate.spec?.healthCheck?.endpoint || '',
+          path: dnsPolicyUpdate.spec?.healthCheck?.path || '',
           failureThreshold: dnsPolicyUpdate.spec?.healthCheck?.failureThreshold,
           port: dnsPolicyUpdate.spec?.healthCheck?.port || null,
           protocol: dnsPolicyUpdate.spec?.healthCheck?.protocol || 'HTTP',
@@ -228,7 +228,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         namespace: parsedYaml.spec?.targetRef?.namespace ?? parsedYaml.metadata?.namespace ?? '',
       });
       setHealthCheck({
-        endpoint: parsedYaml.spec?.healthCheck?.endpoint || '',
+        path: parsedYaml.spec?.healthCheck?.path || '',
         failureThreshold: parsedYaml.spec?.healthCheck?.failureThreshold,
         port: parsedYaml.spec?.healthCheck?.port || '',
         protocol: parsedYaml.spec?.healthCheck?.protocol || '',
@@ -275,7 +275,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       (!loadBalancingExpanded ||
         (loadBalancing.geo && loadBalancing.weight != null && loadBalancing.defaultGeo !== '')) &&
       (!healthExpanded ||
-        (healthCheck.endpoint &&
+        (healthCheck.path &&
           healthCheck.failureThreshold > 0 &&
           healthCheck.port > 0 &&
           healthCheck.protocol !== ''))
