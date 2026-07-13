@@ -60,7 +60,7 @@ if echo "$CHANGED" | grep -qE "^src/components/apiproduct/(APIProductOverviewTab
 fi
 
 if echo "$CHANGED" | grep -qE "^src/components/apiproduct/"; then
-  SPECS="$SPECS apiproduct-crud.spec.ts apiproduct-overview-tab.spec.ts api-product-list.spec.ts"
+  SPECS="$SPECS apiproduct-crud.spec.ts apiproduct-overview-tab.spec.ts api-product-list.spec.ts apiproduct-rbac.spec.ts"
 fi
 
 if echo "$CHANGED" | grep -qE "^src/components/NoPermissionsView"; then

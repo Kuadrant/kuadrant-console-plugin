@@ -233,7 +233,7 @@ test('validate empty title shows error', { tag: '@nightly' }, async ({ page }) =
 ```
 
 **Rules:**
-- Every test must have exactly one tag (`@smoke` or `@nightly`) — untagged tests are skipped in both runs
+- Every test must have exactly one tag (`@smoke` or `@nightly`) — untagged tests are skipped in smoke runs but do run in nightly (full suite has no `--grep` filter)
 - When adding a new test, default to `@nightly`; only use `@smoke` for critical, reliable flows
 - When adding a new spec file, add it to the mapping in `build/suite-router.sh` (see below)
 
