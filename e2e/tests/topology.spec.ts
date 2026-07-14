@@ -45,12 +45,12 @@ test.describe('Policy Topology', () => {
     await expect(page.getByRole('button', { name: 'Fit to Screen' })).toBeVisible();
 
     // fixture gateway and route nodes are rendered by default
-    await expect(nodeByLabel(page, ROUTE_NODE_LABEL)).toBeVisible({ timeout: 20_000 });
+    await expect(nodeByLabel(page, ROUTE_NODE_LABEL).first()).toBeVisible({ timeout: 20_000 });
     await expect.poll(() => page.locator(NODE_SELECTOR).count()).toBeGreaterThan(1);
   });
 
   test('filters nodes by resource type', { tag: '@smoke' }, async ({ page }) => {
-    await expect(nodeByLabel(page, ROUTE_NODE_LABEL)).toBeVisible({ timeout: 20_000 });
+    await expect(nodeByLabel(page, ROUTE_NODE_LABEL).first()).toBeVisible({ timeout: 20_000 });
 
     // deselect Gateway (selected by default)
     await openResourceFilter(page);
@@ -59,7 +59,7 @@ test.describe('Policy Topology', () => {
 
     await expect(nodeByLabel(page, GATEWAY_NODE_LABEL)).toBeHidden({ timeout: 15_000 });
     // other resource types remain visible
-    await expect(nodeByLabel(page, ROUTE_NODE_LABEL)).toBeVisible();
+    await expect(nodeByLabel(page, ROUTE_NODE_LABEL).first()).toBeVisible();
 
     // reselect Gateway restores the nodes
     await openResourceFilter(page);
@@ -93,7 +93,7 @@ test.describe('Policy Topology', () => {
     // only kuadrant-test resources and their connected infrastructure remain
     await expect(nodeByLabel(page, SECOND_GATEWAY_NODE_LABEL)).toBeHidden({ timeout: 15_000 });
     await expect(nodeByLabel(page, GATEWAY_NODE_LABEL)).toBeVisible();
-    await expect(nodeByLabel(page, ROUTE_NODE_LABEL)).toBeVisible();
+    await expect(nodeByLabel(page, ROUTE_NODE_LABEL).first()).toBeVisible();
   });
 
   test('node context menu navigates to the resource details page', { tag: '@smoke' }, async ({ page }) => {

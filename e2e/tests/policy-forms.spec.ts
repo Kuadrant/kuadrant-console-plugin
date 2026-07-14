@@ -490,6 +490,7 @@ test.describe('other policy create pages render', () => {
     await expect(page.locator('text=Create TokenRateLimit Policy').first()).toBeVisible({
       timeout: 15_000,
     });
+    await page.locator('#create-type-radio-yaml').click();
     await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 15_000 });
   });
 });

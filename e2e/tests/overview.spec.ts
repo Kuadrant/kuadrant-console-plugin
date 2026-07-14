@@ -23,7 +23,7 @@ test.describe('Overview dashboard', () => {
       timeout: 15_000,
     });
 
-    await expect(page.locator('text=Getting started resources')).toBeVisible();
+    await expect(page.locator('text=Getting started with')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Gateways', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Gateways - Traffic Analysis' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Policies', exact: true })).toBeVisible();
