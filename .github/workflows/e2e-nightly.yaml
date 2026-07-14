@@ -5,8 +5,123 @@ on:
     - cron: '0 2 * * *'  # Every night at 2:00 UTC
   workflow_dispatch:
 
+permissions:
+  issues: write
+  actions: read
+
 jobs:
-  e2e-full:
+  e2e:
     uses: ./.github/workflows/e2e-common.yaml
     with:
       suite: full
+
+  create-issue:
+    needs: e2e
+    if: failure()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for label in nightly-failure nightly-infrastructure e2e; do
+            gh label create "$label" --force 2>/dev/null || true
+          done
+
+      - name: Determine failure type
+        id: failure
+        run: |
+          echo "type=${{ needs.e2e.outputs.failure-type }}" >> "$GITHUB_OUTPUT"
+
+      - name: Download test results
+        if: steps.failure.outputs.type == 'test'
+        uses: actions/download-artifact@v4
+        with:
+          name: playwright-results-json
+          path: ./results
+        continue-on-error: true
+
+      - name: Extract failed tests
+        if: steps.failure.outputs.type == 'test'
+        run: |
+          if [[ -f ./results/playwright-results.json ]]; then
+            node -e "
+              const r = require('./results/playwright-results.json');
+              function collectSpecs(suites) {
+                return suites.flatMap(s => [...(s.specs || []), ...collectSpecs(s.suites || [])]);
+              }
+              const failed = collectSpecs(r.suites)
+                .filter(spec => spec.tests?.some(t => t.status === 'unexpected' || t.status === 'flaky'))
+                .map(spec => '- ' + spec.title);
+              require('fs').writeFileSync('/tmp/failed-tests.txt',
+                failed.join('\n') || 'Could not determine individual test names');
+            " 2>/dev/null || echo "Could not parse test results" > /tmp/failed-tests.txt
+          else
+            echo "Test results JSON not available" > /tmp/failed-tests.txt
+          fi
+
+      - name: Determine label
+        id: label
+        run: |
+          if [[ "${{ steps.failure.outputs.type }}" == "infrastructure" ]]; then
+            echo "name=nightly-infrastructure" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=nightly-failure" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check for existing issue
+        id: existing
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          EXISTING=$(gh issue list --label "${{ steps.label.outputs.name }}" --state open --json number --limit 1 -q '.[0].number // empty')
+          echo "number=$EXISTING" >> "$GITHUB_OUTPUT"
+
+      - name: Build issue body
+        if: steps.existing.outputs.number == ''
+        run: |
+          FAILURE_TYPE="${{ steps.failure.outputs.type }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          cat > /tmp/issue-body.md <<EOF
+          ## Nightly E2E Failure
+
+          **Date:** $(date -u +%Y-%m-%d)
+          **Run:** ${RUN_URL}
+          **Failure type:** ${FAILURE_TYPE}
+          EOF
+
+          if [[ "$FAILURE_TYPE" == "test" ]]; then
+            FAILED_TESTS=$(cat /tmp/failed-tests.txt 2>/dev/null || echo "Unknown")
+            cat >> /tmp/issue-body.md <<EOF
+
+          ### Failed Tests
+
+          ${FAILED_TESTS}
+          EOF
+          elif [[ "$FAILURE_TYPE" == "infrastructure" ]]; then
+            cat >> /tmp/issue-body.md <<EOF
+
+          The e2e test environment failed to set up.
+          This may indicate a problem with the cluster, kuadrant operator, or test fixtures.
+          EOF
+          fi
+
+          cat >> /tmp/issue-body.md <<EOF
+
+          ---
+          *This issue was automatically created by the nightly e2e workflow.*
+          EOF
+
+      - name: Create issue
+        if: steps.existing.outputs.number == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "Nightly E2E failure — $(date -u +%Y-%m-%d)" \
+            --label "${{ steps.label.outputs.name }}" \
+            --label "e2e" \
+            --body-file /tmp/issue-body.md
