@@ -385,6 +385,86 @@ test.describe('APIProduct CRUD Operations', () => {
     await expect(page.locator('text=Create API Product')).toBeVisible();
   });
 
+  test('should create APIProduct via YAML view and verify in list', { tag: '@smoke' }, async ({ page }) => {
+    await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
+    await page.waitForLoadState('networkidle');
+    await navigateToAPIProductCreate(page, TEST_NAMESPACE);
+    await page.waitForSelector('#display-name', { state: 'visible', timeout: 20000 });
+
+    // Switch to YAML view
+    await page.locator('button:has-text("YAML View")').click();
+    await page.waitForLoadState('networkidle');
+
+    const yamlProductName = `yaml-product-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    generatedResourceName = yamlProductName;
+
+    const yamlContent = `apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: ${yamlProductName}
+  namespace: ${TEST_NAMESPACE}
+spec:
+  displayName: YAML Created Product
+  description: Created via YAML view in e2e test
+  version: v1.0.0
+  approvalMode: manual
+  publishStatus: Draft
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test-httproute`;
+
+    // Wait for Monaco to initialise
+    await page.waitForFunction(
+      () => {
+        const monaco = (window as unknown as { monaco?: { editor?: { getModels?: () => unknown[] } } }).monaco;
+        return (monaco?.editor?.getModels?.()?.length ?? 0) > 0;
+      },
+      { timeout: 20000 },
+    );
+
+    // Set YAML content via Monaco API (triggers onDidChangeModelContent → onChange)
+    await page.evaluate((yaml) => {
+      const monaco = (window as unknown as { monaco?: { editor?: { getModels?: () => { setValue(v: string): void }[] } } }).monaco;
+      monaco?.editor?.getModels?.()[0]?.setValue(yaml);
+    }, yamlContent);
+
+    await page.waitForTimeout(500);
+
+    // Click the Create button rendered by ResourceYAMLEditor
+    const createButton = page.locator('button:has-text("Create")').last();
+    await expect(createButton).toBeEnabled({ timeout: 10000 });
+    await createButton.click();
+
+    // ResourceYAMLEditor navigates to the k8s details page after creation (not our custom page).
+    // Use a full page.goto() so the console properly loads our custom list route.
+    await page.goto(`/kuadrant/apiproducts/ns/${TEST_NAMESPACE}`);
+    await page.waitForLoadState('networkidle');
+    await page.waitForSelector('table', { timeout: 15000 });
+
+    const row = page.locator(`tr:has-text("${yamlProductName}")`);
+    let found = false;
+    for (let attempt = 0; attempt < 10 && !found; attempt++) {
+      if (await row.isVisible()) {
+        found = true;
+        break;
+      }
+      const nextBtn = page.locator('button[aria-label="Go to next page"]');
+      if ((await nextBtn.count()) > 0 && !(await nextBtn.isDisabled())) {
+        await nextBtn.click();
+        await page.waitForTimeout(500);
+      } else {
+        await page.waitForTimeout(1000);
+        const firstBtn = page.locator('button[aria-label="Go to first page"]');
+        if ((await firstBtn.count()) > 0) {
+          await firstBtn.click();
+          await page.waitForTimeout(500);
+        }
+      }
+    }
+    expect(found, `"${yamlProductName}" not found in any page of the API Products list`).toBe(true);
+  });
+
   // ── Edit and Delete ──────────────────────────────────────────────────────────
   // Nested describe so the APIProduct fixture is only created for these two tests
   // rather than for every test in the outer describe.
@@ -550,6 +630,106 @@ EOF`, { stdio: 'inherit' });
 
     // Verify row no longer exists
     await expect(row).not.toBeVisible({ timeout: 5000 });
+  });
+
+  test('should edit existing APIProduct via YAML view and verify changes persist', { tag: '@smoke' }, async ({ page }) => {
+    const testProductName = editProductName;
+    await spaNavigate(page, `/kuadrant/apiproducts/ns/${TEST_NAMESPACE}/${testProductName}/edit`);
+
+    await expect(page.locator('text=Edit API Product')).toBeVisible({ timeout: 15000 });
+
+    // Switch to YAML view
+    await page.locator('button:has-text("YAML View")').click();
+    await page.waitForLoadState('networkidle');
+
+    // Wait for Monaco to initialise with existing resource YAML
+    const yamlHandle = await page.waitForFunction(
+      () => {
+        const monaco = (window as unknown as { monaco?: { editor?: { getModels?: () => { getValue(): string }[] } } }).monaco;
+        const models = monaco?.editor?.getModels?.();
+        if (!models || models.length === 0) return null;
+        const value = models[0].getValue();
+        return value.includes('spec') && value.length > 50 ? value : null;
+      },
+      { timeout: 15000 },
+    );
+    const currentYaml = (await yamlHandle.jsonValue()) as string;
+    expect(currentYaml).toBeTruthy();
+
+    // Modify the displayName in the YAML
+    const updatedYaml = currentYaml.replace(/displayName:.*/, 'displayName: YAML Edited Product');
+
+    await page.evaluate((yaml) => {
+      const monaco = (window as unknown as { monaco?: { editor?: { getModels?: () => { setValue(v: string): void }[] } } }).monaco;
+      monaco?.editor?.getModels?.()[0]?.setValue(yaml);
+    }, updatedYaml);
+
+    await page.waitForTimeout(500);
+
+    // Click Save rendered by ResourceYAMLEditor
+    const saveButton = page.locator('button:has-text("Save")').last();
+    await expect(saveButton).toBeEnabled({ timeout: 10000 });
+    await saveButton.click();
+
+    // ResourceYAMLEditor stays on the same URL and shows a success alert — detect it
+    await expect(page.locator('h4:has-text("has been updated")')).toBeVisible({ timeout: 15000 });
+
+    // Switch to Form View (still on the same page, same component) to verify the change persisted
+    await page.locator('[role="tab"]:has-text("Form View")').click();
+    await page.waitForTimeout(500);
+    await expect(page.locator('#display-name')).toHaveValue('YAML Edited Product', { timeout: 10000 });
+  });
+
+  test('should change publish status via edit form and verify status updates in list', { tag: '@nightly' }, async ({ page }) => {
+    const testProductName = editProductName;
+    await spaNavigate(page, `/kuadrant/apiproducts/ns/${TEST_NAMESPACE}/${testProductName}/edit`);
+
+    await expect(page.locator('text=Edit API Product')).toBeVisible({ timeout: 15000 });
+
+    // Change publish status from Draft to Published
+    const publishStatusSelect = page.locator('#lifecycle-status');
+    await publishStatusSelect.scrollIntoViewIfNeeded();
+    await expect(publishStatusSelect).toBeVisible();
+    await publishStatusSelect.selectOption('Published');
+    await page.waitForTimeout(300);
+
+    // Save changes
+    const saveButton = page.locator('button:has-text("Save")');
+    await expect(saveButton).toBeEnabled({ timeout: 5000 });
+    await saveButton.click();
+
+    // Verify redirect to list
+    await expect(page.getByRole('heading', { name: 'API Products', exact: true })).toBeVisible({
+      timeout: 10000,
+    });
+
+    // Find the product row and verify Published label
+    await page.waitForSelector('table', { timeout: 15000 });
+    const row = page.locator(`tr:has-text("${testProductName}")`);
+
+    let found = false;
+    for (let attempt = 0; attempt < 10 && !found; attempt++) {
+      if (await row.isVisible()) {
+        found = true;
+        break;
+      }
+      const nextBtn = page.locator('button[aria-label="Go to next page"]');
+      if ((await nextBtn.count()) > 0 && !(await nextBtn.isDisabled())) {
+        await nextBtn.click();
+        await page.waitForTimeout(500);
+      } else {
+        await page.waitForTimeout(1000);
+        const firstBtn = page.locator('button[aria-label="Go to first page"]');
+        if ((await firstBtn.count()) > 0) {
+          await firstBtn.click();
+          await page.waitForTimeout(500);
+        }
+      }
+    }
+    expect(found, `"${testProductName}" not found in any page of the API Products list`).toBe(true);
+
+    // Verify the Published status label is shown in the row
+    await expect(row.locator('.pf-v6-c-label:has-text("Published")')).toBeVisible({ timeout: 5000 });
   });
 
   }); // end of 'edit and delete' describe
