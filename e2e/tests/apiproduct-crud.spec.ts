@@ -442,26 +442,7 @@ spec:
     await page.waitForLoadState('networkidle');
     await page.waitForSelector('table', { timeout: 15000 });
 
-    const row = page.locator(`tr:has-text("${yamlProductName}")`);
-    let found = false;
-    for (let attempt = 0; attempt < 10 && !found; attempt++) {
-      if (await row.isVisible()) {
-        found = true;
-        break;
-      }
-      const nextBtn = page.locator('button[aria-label="Go to next page"]');
-      if ((await nextBtn.count()) > 0 && !(await nextBtn.isDisabled())) {
-        await nextBtn.click();
-        await page.waitForTimeout(500);
-      } else {
-        await page.waitForTimeout(1000);
-        const firstBtn = page.locator('button[aria-label="Go to first page"]');
-        if ((await firstBtn.count()) > 0) {
-          await firstBtn.click();
-          await page.waitForTimeout(500);
-        }
-      }
-    }
+    const found = await findRowWithPagination(page, yamlProductName);
     expect(found, `"${yamlProductName}" not found in any page of the API Products list`).toBe(true);
   });
 
@@ -705,30 +686,11 @@ EOF`, { stdio: 'inherit' });
 
     // Find the product row and verify Published label
     await page.waitForSelector('table', { timeout: 15000 });
-    const row = page.locator(`tr:has-text("${testProductName}")`);
-
-    let found = false;
-    for (let attempt = 0; attempt < 10 && !found; attempt++) {
-      if (await row.isVisible()) {
-        found = true;
-        break;
-      }
-      const nextBtn = page.locator('button[aria-label="Go to next page"]');
-      if ((await nextBtn.count()) > 0 && !(await nextBtn.isDisabled())) {
-        await nextBtn.click();
-        await page.waitForTimeout(500);
-      } else {
-        await page.waitForTimeout(1000);
-        const firstBtn = page.locator('button[aria-label="Go to first page"]');
-        if ((await firstBtn.count()) > 0) {
-          await firstBtn.click();
-          await page.waitForTimeout(500);
-        }
-      }
-    }
+    const found = await findRowWithPagination(page, testProductName);
     expect(found, `"${testProductName}" not found in any page of the API Products list`).toBe(true);
 
     // Verify the Published status label is shown in the row
+    const row = page.locator(`tr:has-text("${testProductName}")`);
     await expect(row.locator('.pf-v6-c-label:has-text("Published")')).toBeVisible({ timeout: 5000 });
   });
 
