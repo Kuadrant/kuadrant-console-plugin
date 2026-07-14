@@ -35,7 +35,7 @@ test.describe('Policy Topology', () => {
     await expect(nodeByLabel(page, GATEWAY_NODE_LABEL)).toBeVisible({ timeout: 20_000 });
   });
 
-  test('renders the topology graph with fixture resources', async ({ page }) => {
+  test('renders the topology graph with fixture resources', { tag: '@smoke' }, async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Policy Topology' })).toBeVisible();
 
     // filter toolbar and control bar are present
@@ -49,7 +49,7 @@ test.describe('Policy Topology', () => {
     await expect.poll(() => page.locator(NODE_SELECTOR).count()).toBeGreaterThan(1);
   });
 
-  test('filters nodes by resource type', async ({ page }) => {
+  test('filters nodes by resource type', { tag: '@smoke' }, async ({ page }) => {
     await expect(nodeByLabel(page, ROUTE_NODE_LABEL)).toBeVisible({ timeout: 20_000 });
 
     // deselect Gateway (selected by default)
@@ -69,7 +69,7 @@ test.describe('Policy Topology', () => {
     await expect(nodeByLabel(page, GATEWAY_NODE_LABEL)).toBeVisible({ timeout: 15_000 });
   });
 
-  test('clearing all resource filters empties the graph', async ({ page }) => {
+  test('clearing all resource filters empties the graph', { tag: '@nightly' }, async ({ page }) => {
     // remove the whole Resource filter group via its close button
     await page.getByRole('button', { name: /close label group resource/i }).click();
 
@@ -83,7 +83,7 @@ test.describe('Policy Topology', () => {
     await expect(nodeByLabel(page, GATEWAY_NODE_LABEL)).toBeVisible({ timeout: 15_000 });
   });
 
-  test('filters nodes by namespace', async ({ page }) => {
+  test('filters nodes by namespace', { tag: '@smoke' }, async ({ page }) => {
     // both fixture gateways visible before filtering
     await expect(nodeByLabel(page, SECOND_GATEWAY_NODE_LABEL)).toBeVisible({ timeout: 20_000 });
 
@@ -96,7 +96,7 @@ test.describe('Policy Topology', () => {
     await expect(nodeByLabel(page, ROUTE_NODE_LABEL)).toBeVisible();
   });
 
-  test('node context menu navigates to the resource details page', async ({ page }) => {
+  test('node context menu navigates to the resource details page', { tag: '@smoke' }, async ({ page }) => {
     const gatewayNode = nodeByLabel(page, GATEWAY_NODE_LABEL);
     await gatewayNode.click({ button: 'right' });
 

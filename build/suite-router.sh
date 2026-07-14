@@ -67,11 +67,23 @@ if echo "$CHANGED" | grep -qE "^src/components/NoPermissionsView"; then
   SPECS="$SPECS apiproduct-rbac.spec.ts rbac.spec.ts"
 fi
 
-if echo "$CHANGED" | grep -qE "^src/components/(topology|gateway|KuadrantOverview|KuadrantPolicies|ResourceList|DropdownWithKebab)"; then
-  SPECS="$SPECS rbac.spec.ts"
+if echo "$CHANGED" | grep -qE "^src/components/topology/"; then
+  SPECS="$SPECS topology.spec.ts rbac.spec.ts"
 fi
 
-if echo "$CHANGED" | grep -qE "^src/components/(dnspolicy|tlspolicy|ratelimitpolicy|authpolicy|httproute|issuer)/"; then
+if echo "$CHANGED" | grep -qE "^src/components/(gateway|KuadrantOverview|KuadrantPolicies|ResourceList|DropdownWithKebab)"; then
+  SPECS="$SPECS overview.spec.ts rbac.spec.ts"
+fi
+
+if echo "$CHANGED" | grep -qE "^src/components/(dnspolicy|tlspolicy)/"; then
+  SPECS="$SPECS policy-forms.spec.ts rbac.spec.ts"
+fi
+
+if echo "$CHANGED" | grep -qE "^src/components/(ratelimitpolicy|authpolicy)/"; then
+  SPECS="$SPECS policy-forms.spec.ts rbac.spec.ts"
+fi
+
+if echo "$CHANGED" | grep -qE "^src/components/(httproute|issuer)/"; then
   SPECS="$SPECS rbac.spec.ts"
 fi
 
