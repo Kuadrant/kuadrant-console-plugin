@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "@openshift-console/dynamic-plugin-sdk": "^1.6.0",
-    "@openshift-console/dynamic-plugin-sdk-webpack": "^1.2.0",
+    "@openshift-console/dynamic-plugin-sdk-webpack": "1.2.0",
     "@patternfly/react-core": "^6.2.2",
     "@patternfly/react-icons": "^6.2.2",
     "@playwright/test": "^1.50.0",
