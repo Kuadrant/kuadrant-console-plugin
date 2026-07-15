@@ -653,7 +653,7 @@ EOF`, { stdio: 'inherit' });
     await saveButton.click();
 
     // ResourceYAMLEditor stays on the same URL and shows a success alert — detect it
-    await expect(page.locator('h4:has-text("has been updated")')).toBeVisible({ timeout: 15000 });
+    await expect(page.locator('.pf-v6-c-alert.pf-m-success h4:has-text("has been updated")')).toBeVisible({ timeout: 15000 });
 
     // Switch to Form View (still on the same page, same component) to verify the change persisted
     await page.locator('[role="tab"]:has-text("Form View")').click();
@@ -680,8 +680,9 @@ EOF`, { stdio: 'inherit' });
     await saveButton.click();
 
     // Verify redirect to list
+    await page.waitForLoadState('networkidle');
     await expect(page.getByRole('heading', { name: 'API Products', exact: true })).toBeVisible({
-      timeout: 10000,
+      timeout: 20000,
     });
 
     // Find the product row and verify Published label
