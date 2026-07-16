@@ -18,6 +18,7 @@
     "lint": "yarn eslint src --fix && stylelint 'src/**/*.css' --allow-empty-input --fix",
     "test": "jest",
     "test:e2e": "npx playwright test --config=e2e/playwright.config.ts",
+    "check:spec-map": "bash build/check-spec-map.sh",
     "test:e2e:setup": "./e2e/setup.sh",
     "test:e2e:teardown": "./e2e/teardown.sh",
     "webpack": "node -r ts-node/register ./node_modules/.bin/webpack",

@@ -18,6 +18,7 @@ jobs:
       contents: read
     outputs:
       specs: ${{ steps.router.outputs.specs }}
+      test_specs: ${{ steps.router.outputs.test_specs }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,8 +29,18 @@ jobs:
         id: router
         run: |
           chmod +x build/suite-router.sh
-          SPECS=$(bash build/suite-router.sh)
-          echo "specs=${SPECS}" >> $GITHUB_OUTPUT
+          bash build/suite-router.sh >> $GITHUB_OUTPUT
+
+  check-spec-map:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate spec map coverage
+        run: bash build/check-spec-map.sh
 
   e2e-smoke:
     needs: route
@@ -37,3 +48,4 @@ jobs:
     with:
       suite: smoke
       specs: ${{ needs.route.outputs.specs }}
+      test_specs: ${{ needs.route.outputs.test_specs }}
