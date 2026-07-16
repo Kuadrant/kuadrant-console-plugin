@@ -31,6 +31,17 @@ jobs:
           SPECS=$(bash build/suite-router.sh)
           echo "specs=${SPECS}" >> $GITHUB_OUTPUT
 
+  check-spec-map:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate spec map coverage
+        run: bash build/check-spec-map.sh
+
   e2e-smoke:
     needs: route
     uses: ./.github/workflows/e2e-common.yaml

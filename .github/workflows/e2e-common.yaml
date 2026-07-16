@@ -87,7 +87,7 @@ jobs:
           SPEC_FILTER: ${{ inputs.specs }}
         run: |
           if [ -n "$SPEC_FILTER" ]; then
-            npx playwright test --config=e2e/playwright.config.ts --grep @smoke $SPEC_FILTER
+            npx playwright test --config=e2e/playwright.config.ts $SPEC_FILTER
           else
             npx playwright test --config=e2e/playwright.config.ts --grep @smoke
           fi
