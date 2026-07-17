@@ -1,33 +1,12 @@
 import { test, expect, Page } from '@playwright/test';
 import { execSync } from 'child_process';
-import { TEST_NAMESPACE, dismissConsoleTour, spaNavigate, navigateToAPIProducts } from './helpers';
+import { TEST_NAMESPACE, dismissConsoleTour, spaNavigate, navigateToAPIProducts, findRowWithPagination } from './helpers';
 
 async function navigateToAPIProductCreate(page: Page, namespace = 'kuadrant-test'): Promise<void> {
   await spaNavigate(page, `/kuadrant/apiproducts/ns/${namespace}/~new`);
   await dismissConsoleTour(page);
 }
 
-// Scroll through all pagination pages looking for a row matching `text`.
-// Retries up to `maxAttempts` times, waiting for the watch stream between pages.
-async function findRowWithPagination(page: Page, text: string, maxAttempts = 10): Promise<boolean> {
-  const row = page.locator(`tr:has-text("${text}")`);
-  for (let attempt = 0; attempt < maxAttempts; attempt++) {
-    if (await row.isVisible()) return true;
-    const nextBtn = page.locator('button[aria-label="Go to next page"]');
-    if ((await nextBtn.count()) > 0 && !(await nextBtn.isDisabled())) {
-      await nextBtn.click();
-      await page.waitForTimeout(500);
-    } else {
-      await page.waitForTimeout(1000);
-      const firstBtn = page.locator('button[aria-label="Go to first page"]');
-      if ((await firstBtn.count()) > 0) {
-        await firstBtn.click();
-        await page.waitForTimeout(500);
-      }
-    }
-  }
-  return false;
-}
 // Note: Tests rely on test-httproute HTTPRoute existing in the test namespace
 // This is created by applying e2e/manifests/test-apiproduct-fixtures.yaml before running tests
 

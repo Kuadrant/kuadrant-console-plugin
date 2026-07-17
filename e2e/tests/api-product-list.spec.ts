@@ -5,6 +5,7 @@ import {
   waitForPermissionsLoaded,
   navigateToAPIProducts,
   dismissConsoleTour,
+  findRowWithPagination,
 } from './helpers';
 
 test.describe('APIProduct List Page - Display and Filters', () => {
@@ -49,20 +50,16 @@ test.describe('APIProduct List Page - Display and Filters', () => {
     for (const row of await page.locator('[data-test-rows="resource-row"]').all())
       await expect(row).toBeVisible({ timeout: 15_000 });
 
-    // Verify our test API Products are displayed
-    await expect(
-      page.locator('div.kuadrant-resource-table a:has-text("gamestore-api")'),
-    ).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('div.kuadrant-resource-table a:has-text("payment-api")')).toBeVisible(
-      { timeout: 10_000 },
-    );
-    await expect(page.locator('div.kuadrant-resource-table a:has-text("draft-api")')).toBeVisible({
-      timeout: 10_000,
-    });
+    // Verify our test API Products are displayed (paginating if needed)
+    expect(await findRowWithPagination(page, 'gamestore-api')).toBe(true);
+    expect(await findRowWithPagination(page, 'payment-api')).toBe(true);
+    expect(await findRowWithPagination(page, 'draft-api')).toBe(true);
 
-    // Verify we have at least 4 API Products
-    const rows = await page.locator('tbody tr[data-key]').all();
-    expect(rows.length).toBeGreaterThan(4);
+    // Verify we have more than 4 API Products total (check pagination text)
+    await expect(page.locator('.pf-v6-c-pagination')).toBeVisible();
+    const paginationText = await page.locator('.pf-v6-c-pagination__nav-page-select').textContent();
+    const totalPages = parseInt(paginationText?.match(/of\s+(\d+)/)?.[1] ?? '1');
+    expect(totalPages).toBeGreaterThan(1);
   });
 
   test('displays correct status labels', { tag: '@nightly' }, async ({ page }) => {
@@ -127,8 +124,8 @@ test.describe('APIProduct List Page - Status Filter', () => {
   test('filters by Published status', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
-    // Wait for initial data to load
-    await expect(page.locator('a:has-text("draft-api")')).toBeVisible({ timeout: 15_000 });
+    // Wait for initial data to load (paginating if needed)
+    expect(await findRowWithPagination(page, 'draft-api')).toBe(true);
 
     // Open status filter dropdown
     const statusToggle = page
@@ -218,8 +215,8 @@ test.describe('APIProduct List Page - Status Filter', () => {
     // Wait for filter to clear
     await page.waitForTimeout(1000);
 
-    // Verify all products are shown again
-    await expect(page.locator('a:has-text("draft-api")')).toBeVisible();
+    // Verify all products are shown again (paginating if needed)
+    expect(await findRowWithPagination(page, 'draft-api')).toBe(true);
 
     // Verify filter label is gone
     await expect(filterLabel).not.toBeVisible();
@@ -268,8 +265,8 @@ test.describe('APIProduct List Page - Name Filter', () => {
   test('filters by name (case insensitive)', { tag: '@nightly' }, async ({ page }) => {
     await waitForPermissionsLoaded(page);
 
-    // Wait for initial data to load
-    await expect(page.locator('a:has-text("payment-api")')).toBeVisible({ timeout: 15_000 });
+    // Wait for initial data to load (paginating if needed)
+    expect(await findRowWithPagination(page, 'payment-api')).toBe(true);
 
     // Type uppercase into search input
     const searchInput = page.locator('input[aria-label="Resource search"]');
@@ -318,10 +315,10 @@ test.describe('APIProduct List Page - Name Filter', () => {
     await searchInput.clear();
     await page.waitForTimeout(1000);
 
-    // Verify all products are shown again
-    await expect(page.locator('a:has-text("draft-api")')).toBeVisible();
-    await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible();
-    await expect(page.locator('a:has-text("payment-api")')).toBeVisible();
+    // Verify all products are shown again (paginating if needed)
+    expect(await findRowWithPagination(page, 'draft-api')).toBe(true);
+    expect(await findRowWithPagination(page, 'gamestore-api')).toBe(true);
+    expect(await findRowWithPagination(page, 'payment-api')).toBe(true);
   });
 });
 
@@ -383,7 +380,7 @@ test.describe('APIProduct List Page - Namespace Filter', () => {
     await namespaceOption.click();
 
     // Type into search input
-    const searchInput = page.locator('input#composite-filter-search-by-input');
+    const searchInput = page.locator('input[aria-label="Resource search"]');
     await searchInput.fill('kuadrant-test');
     await page.waitForTimeout(1000);
 
@@ -411,7 +408,7 @@ test.describe('APIProduct List Page - Namespace Filter', () => {
     );
     await namespaceOption.click();
 
-    const searchInput = page.locator('input#composite-filter-search-by-input');
+    const searchInput = page.locator('input[aria-label="Resource search"]');
     await searchInput.fill('somenamespace');
     await page.waitForTimeout(1000);
 
@@ -612,7 +609,7 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await page.waitForTimeout(1000);
 
     // Apply name filter (partial match "store")
-    const searchInput = page.locator('input#composite-filter-search-by-input');
+    const searchInput = page.locator('input[aria-label="Resource search"]');
     await searchInput.fill('store');
     await page.waitForTimeout(1000);
 
@@ -658,7 +655,7 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await namespaceOption.click();
 
     // Apply namespace filter
-    const searchInput = page.locator('input#composite-filter-search-by-input');
+    const searchInput = page.locator('input[aria-label="Resource search"]');
     await searchInput.fill('kuadrant-test');
     await page.waitForTimeout(1000);
 
@@ -731,12 +728,50 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await page.waitForTimeout(1000);
 
     // Apply name filter that won't match the draft product
-    const searchInput = page.locator('input#composite-filter-search-by-input');
+    const searchInput = page.locator('input[aria-label="Resource search"]');
     await searchInput.fill('nonexistent');
     await page.waitForTimeout(1000);
 
     // Verify empty state is shown
     await expect(page.locator('text=No API Products found')).toBeVisible();
     await expect(page.locator('text=No API Products match the filter criteria.')).toBeVisible();
+  });
+
+  test('clear all filters restores full list', { tag: '@nightly' }, async ({ page }) => {
+    await waitForPermissionsLoaded(page);
+
+    // Wait for initial data to load
+    await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible({ timeout: 15_000 });
+
+    // Apply status filter (Published)
+    const statusToggle = page
+      .locator('button#status-filter-menu-toggle:has-text("Status")')
+      .first();
+    await statusToggle.click();
+    const publishedOption = page.locator(
+      'ul#status-filter-select-list [role="menuitem"]:has-text("Published")',
+    );
+    await publishedOption.click();
+    await page.waitForTimeout(500);
+
+    // Apply name filter
+    const searchInput = page.locator('input[aria-label="Resource search"]');
+    await searchInput.fill('game');
+    await page.waitForTimeout(500);
+
+    // Verify both filter chips are shown
+    await expect(page.locator('.pf-m-outline:has-text("Published")')).toBeVisible();
+    await expect(page.locator('.pf-m-outline:has-text("game")')).toBeVisible();
+
+    // Click "Clear all filters"
+    await page.locator('button:has-text("Clear all filters")').click();
+    await page.waitForTimeout(1000);
+
+    // Verify filter chips are gone
+    await expect(page.locator('.pf-m-outline:has-text("Published")')).not.toBeVisible();
+    await expect(page.locator('.pf-m-outline:has-text("game")')).not.toBeVisible();
+
+    // Verify full list restored (draft-api visible, paginating if needed)
+    expect(await findRowWithPagination(page, 'draft-api')).toBe(true);
   });
 });
