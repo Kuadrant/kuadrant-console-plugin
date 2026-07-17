@@ -148,6 +148,28 @@ export async function spaNavigate(page: Page, path: string): Promise<void> {
   await page.waitForLoadState('networkidle');
 }
 
+// Scroll through all pagination pages looking for a row matching `text`.
+// Retries up to `maxAttempts` times, waiting for the watch stream between pages.
+export async function findRowWithPagination(page: Page, text: string, maxAttempts = 10): Promise<boolean> {
+  const row = page.locator(`tr:has-text("${text}")`);
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    if (await row.isVisible()) return true;
+    const nextBtn = page.locator('button[aria-label="Go to next page"]');
+    if ((await nextBtn.count()) > 0 && !(await nextBtn.isDisabled())) {
+      await nextBtn.click();
+      await page.waitForTimeout(500);
+    } else {
+      await page.waitForTimeout(1000);
+      const firstBtn = page.locator('button[aria-label="Go to first page"]');
+      if ((await firstBtn.count()) > 0 && !(await firstBtn.isDisabled())) {
+        await firstBtn.click();
+        await page.waitForTimeout(500);
+      }
+    }
+  }
+  return false;
+}
+
 export async function navigateToPolicies(page: Page): Promise<void> {
   await spaNavigate(page, `/kuadrant/policies/ns/${TEST_NAMESPACE}`);
 }
