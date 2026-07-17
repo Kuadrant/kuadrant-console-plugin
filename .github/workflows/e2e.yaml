@@ -18,6 +18,7 @@ jobs:
       contents: read
     outputs:
       specs: ${{ steps.router.outputs.specs }}
+      run_all_tags: ${{ steps.router.outputs.run_all_tags }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -28,8 +29,7 @@ jobs:
         id: router
         run: |
           chmod +x build/suite-router.sh
-          SPECS=$(bash build/suite-router.sh)
-          echo "specs=${SPECS}" >> $GITHUB_OUTPUT
+          bash build/suite-router.sh >> $GITHUB_OUTPUT
 
   check-spec-map:
     runs-on: ubuntu-latest
@@ -48,3 +48,4 @@ jobs:
     with:
       suite: smoke
       specs: ${{ needs.route.outputs.specs }}
+      run_all_tags: ${{ needs.route.outputs.run_all_tags == 'true' }}

@@ -12,6 +12,11 @@ on:
         required: false
         type: string
         default: ''
+      run_all_tags:
+        description: 'When true, run all test tags (smoke + nightly) in the selected specs'
+        required: false
+        type: boolean
+        default: false
     outputs:
       failure-type:
         description: 'Type of failure: none, infrastructure, or test'
@@ -85,9 +90,12 @@ jobs:
         if: inputs.suite == 'smoke'
         env:
           SPEC_FILTER: ${{ inputs.specs }}
+          RUN_ALL_TAGS: ${{ inputs.run_all_tags }}
         run: |
-          if [ -n "$SPEC_FILTER" ]; then
+          if [ -n "$SPEC_FILTER" ] && [ "$RUN_ALL_TAGS" = "true" ]; then
             npx playwright test --config=e2e/playwright.config.ts $SPEC_FILTER
+          elif [ -n "$SPEC_FILTER" ]; then
+            npx playwright test --config=e2e/playwright.config.ts --grep @smoke $SPEC_FILTER
           else
             npx playwright test --config=e2e/playwright.config.ts --grep @smoke
           fi

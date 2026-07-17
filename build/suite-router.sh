@@ -12,7 +12,8 @@ BASE="${GITHUB_BASE_REF:-main}"
 CHANGED=$(git diff --name-only "origin/${BASE}...HEAD" 2>/dev/null || git diff --name-only HEAD~1 2>/dev/null || echo "")
 
 if [ -z "$CHANGED" ]; then
-  echo ""
+  echo "specs="
+  echo "run_all_tags=false"
   exit 0
 fi
 
@@ -31,7 +32,8 @@ for pattern in \
   "^\.github/workflows/"
 do
   if echo "$CHANGED" | grep -qE "$pattern"; then
-    echo ""
+    echo "specs="
+    echo "run_all_tags=false"
     exit 0
   fi
 done
@@ -87,12 +89,25 @@ if echo "$CHANGED" | grep -qE "^src/components/(httproute|issuer)/"; then
   SPECS="$SPECS rbac.spec.ts"
 fi
 
+# If test files themselves changed → add them to SPECS and signal run_all_tags
+CHANGED_SPECS=$(echo "$CHANGED" | grep -E "^e2e/tests/[a-z0-9-]+\.spec\.ts$" || true)
+if [ -n "$CHANGED_SPECS" ]; then
+  for spec_path in $CHANGED_SPECS; do
+    SPECS="$SPECS $(basename "$spec_path")"
+  done
+  RUN_ALL_TAGS=true
+else
+  RUN_ALL_TAGS=false
+fi
+
 # No mapping matched → fall back to full smoke
 if [ -z "$SPECS" ]; then
-  echo ""
+  echo "specs="
+  echo "run_all_tags=false"
   exit 0
 fi
 
 # Deduplicate and prefix with SPEC_DIR
 RESULT=$(echo "$SPECS" | tr ' ' '\n' | grep -v '^$' | sort -u | sed "s|^|${SPEC_DIR}/|" | tr '\n' ' ')
-echo "${RESULT% }"
+echo "specs=${RESULT% }"
+echo "run_all_tags=${RUN_ALL_TAGS}"
