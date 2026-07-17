@@ -242,24 +242,43 @@ test('validate empty title shows error', { tag: '@nightly' }, async ({ page }) =
 The suite router maps changed source files to relevant e2e spec files so PRs only run tests for the components they touch.
 
 **How it works:**
+
+The router emits two separate lists and CI runs them with different filters:
+
+1. **`specs`** — spec files mapped from changed source components → always run with `--grep @smoke`
+2. **`test_specs`** — spec files that were directly edited → run without `--grep @smoke` (all tags: `@smoke` + `@nightly`)
+
+Steps:
 1. Runs `git diff origin/main...HEAD` to get the list of changed files
 2. If any **shared file** changed (`src/utils/`, `src/hooks/`, `src/constants/`, `e2e/tests/helpers.ts`, workflow files, etc.) → runs all `@smoke` tests (safe fallback)
-3. Otherwise, matches changed paths against `COMPONENT_MAP` → runs only the relevant spec files with `--grep @smoke`
-4. If no mapping matches → runs all `@smoke` tests (safe fallback)
+3. Matches changed component paths against the mapping → populates `specs`
+4. Detects any directly edited `e2e/tests/*.spec.ts` files → populates `test_specs`
+5. Files in both lists are removed from `specs` (to avoid running the same file twice)
+6. If both lists are empty → runs all `@smoke` tests (safe fallback)
 
-**Fallback behaviour:**
+**Behaviour by scenario:**
 
-| Changed files | Tests run |
-|---|---|
-| `src/components/apikey/` | 3 apikey spec files × @smoke |
-| `src/utils/` (shared) | all @smoke |
-| Unrecognised path | all @smoke |
+| Changed files | `specs` | `test_specs` | Tests run |
+|---|---|---|---|
+| `src/components/apikey/` | 3 apikey files | — | 3 files × @smoke only |
+| `e2e/tests/apikey-lifecycle.spec.ts` | — | 1 file | all tags in that file |
+| both above | 2 apikey files | 1 file | 2 files × @smoke + 1 file × all tags |
+| `src/utils/` (shared) | — | — | all @smoke (fallback) |
+| Unrecognised path | — | — | all @smoke (fallback) |
 
-**When adding a new spec file**, add an `if` block in `build/suite-router.sh`:
+**When adding a new spec file** you must do two things:
+
+1. Add an `if` block in `build/suite-router.sh` to map the relevant component:
 ```bash
 if echo "$CHANGED" | grep -qE "^src/components/myfeature/"; then
   SPECS="$SPECS myfeature.spec.ts"
 fi
+```
+
+2. Run `yarn check:spec-map` locally to verify the mapping is complete — CI will also block the PR if any spec file is missing from the mapping:
+```bash
+yarn check:spec-map
+# all specs mapped ✓
 ```
 
 If you forget, the suite router falls back to running all smoke tests — no tests will be skipped incorrectly, but the optimisation won't apply.
