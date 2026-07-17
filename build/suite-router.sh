@@ -12,7 +12,8 @@ BASE="${GITHUB_BASE_REF:-main}"
 CHANGED=$(git diff --name-only "origin/${BASE}...HEAD" 2>/dev/null || git diff --name-only HEAD~1 2>/dev/null || echo "")
 
 if [ -z "$CHANGED" ]; then
-  echo ""
+  echo "specs="
+  echo "test_specs="
   exit 0
 fi
 
@@ -31,7 +32,8 @@ for pattern in \
   "^\.github/workflows/"
 do
   if echo "$CHANGED" | grep -qE "$pattern"; then
-    echo ""
+    echo "specs="
+    echo "test_specs="
     exit 0
   fi
 done
@@ -87,12 +89,41 @@ if echo "$CHANGED" | grep -qE "^src/components/(httproute|issuer)/"; then
   SPECS="$SPECS rbac.spec.ts"
 fi
 
-# No mapping matched → fall back to full smoke
-if [ -z "$SPECS" ]; then
-  echo ""
+# Detect test files that changed → run all tags (smoke + nightly) for those files only
+TEST_SPECS=""
+CHANGED_SPECS=$(echo "$CHANGED" | grep -E "^e2e/tests/[a-z0-9-]+\.spec\.ts$" || true)
+if [ -n "$CHANGED_SPECS" ]; then
+  for spec_path in $CHANGED_SPECS; do
+    TEST_SPECS="$TEST_SPECS $(basename "$spec_path")"
+  done
+fi
+
+# No component mapping matched and no test files changed → fall back to full smoke
+if [ -z "$SPECS" ] && [ -z "$TEST_SPECS" ]; then
+  echo "specs="
+  echo "test_specs="
   exit 0
 fi
 
-# Deduplicate and prefix with SPEC_DIR
-RESULT=$(echo "$SPECS" | tr ' ' '\n' | grep -v '^$' | sort -u | sed "s|^|${SPEC_DIR}/|" | tr '\n' ' ')
-echo "${RESULT% }"
+# Remove from SPECS any files already in TEST_SPECS (they will run unfiltered in step 2)
+if [ -n "$TEST_SPECS" ]; then
+  for test_spec in $TEST_SPECS; do
+    SPECS=$(echo "$SPECS" | tr ' ' '\n' | grep -v "^${test_spec}$" | tr '\n' ' ')
+  done
+fi
+
+# Deduplicate component specs and prefix with SPEC_DIR
+if [ -n "$(echo "$SPECS" | tr -d ' ')" ]; then
+  RESULT=$(echo "$SPECS" | tr ' ' '\n' | grep -v '^$' | sort -u | sed "s|^|${SPEC_DIR}/|" | tr '\n' ' ')
+  echo "specs=${RESULT% }"
+else
+  echo "specs="
+fi
+
+# Deduplicate test specs and prefix with SPEC_DIR
+if [ -n "$TEST_SPECS" ]; then
+  TEST_RESULT=$(echo "$TEST_SPECS" | tr ' ' '\n' | grep -v '^$' | sort -u | sed "s|^|${SPEC_DIR}/|" | tr '\n' ' ')
+  echo "test_specs=${TEST_RESULT% }"
+else
+  echo "test_specs="
+fi

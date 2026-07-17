@@ -12,6 +12,11 @@ on:
         required: false
         type: string
         default: ''
+      test_specs:
+        description: 'Space-separated spec file paths that changed directly (run all tags)'
+        required: false
+        type: string
+        default: ''
     outputs:
       failure-type:
         description: 'Type of failure: none, infrastructure, or test'
@@ -82,7 +87,7 @@ jobs:
 
       - name: Run E2E tests (smoke)
         id: tests
-        if: inputs.suite == 'smoke'
+        if: inputs.suite == 'smoke' && (inputs.specs != '' || inputs.test_specs == '')
         env:
           SPEC_FILTER: ${{ inputs.specs }}
         run: |
@@ -91,6 +96,13 @@ jobs:
           else
             npx playwright test --config=e2e/playwright.config.ts --grep @smoke
           fi
+
+      - name: Run E2E tests (changed test files, all tags)
+        id: tests-changed
+        if: inputs.suite == 'smoke' && inputs.test_specs != ''
+        env:
+          TEST_SPEC_FILTER: ${{ inputs.test_specs }}
+        run: npx playwright test --config=e2e/playwright.config.ts $TEST_SPEC_FILTER
 
       - name: Run E2E tests (full)
         id: tests-full
@@ -103,7 +115,7 @@ jobs:
         run: |
           if [[ "${{ steps.setup.outcome }}" == "failure" || "${{ steps.wait-server.outcome }}" == "failure" ]]; then
             echo "type=infrastructure" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ steps.tests.outcome }}" == "failure" || "${{ steps.tests-full.outcome }}" == "failure" ]]; then
+          elif [[ "${{ steps.tests.outcome }}" == "failure" || "${{ steps.tests-full.outcome }}" == "failure" || "${{ steps.tests-changed.outcome }}" == "failure" ]]; then
             echo "type=test" >> "$GITHUB_OUTPUT"
           else
             echo "type=none" >> "$GITHUB_OUTPUT"
