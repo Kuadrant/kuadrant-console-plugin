@@ -87,7 +87,7 @@ jobs:
 
       - name: Run E2E tests (smoke)
         id: tests
-        if: inputs.suite == 'smoke'
+        if: inputs.suite == 'smoke' && (inputs.specs != '' || inputs.test_specs == '')
         env:
           SPEC_FILTER: ${{ inputs.specs }}
         run: |
