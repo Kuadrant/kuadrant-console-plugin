@@ -18,7 +18,7 @@ jobs:
       contents: read
     outputs:
       specs: ${{ steps.router.outputs.specs }}
-      run_all_tags: ${{ steps.router.outputs.run_all_tags }}
+      test_specs: ${{ steps.router.outputs.test_specs }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -48,4 +48,4 @@ jobs:
     with:
       suite: smoke
       specs: ${{ needs.route.outputs.specs }}
-      run_all_tags: ${{ needs.route.outputs.run_all_tags == 'true' }}
+      test_specs: ${{ needs.route.outputs.test_specs }}

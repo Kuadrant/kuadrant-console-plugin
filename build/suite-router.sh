@@ -89,25 +89,34 @@ if echo "$CHANGED" | grep -qE "^src/components/(httproute|issuer)/"; then
   SPECS="$SPECS rbac.spec.ts"
 fi
 
-# If test files themselves changed → add them to SPECS and signal run_all_tags
+# Detect test files that changed → run all tags (smoke + nightly) for those files only
+TEST_SPECS=""
 CHANGED_SPECS=$(echo "$CHANGED" | grep -E "^e2e/tests/[a-z0-9-]+\.spec\.ts$" || true)
 if [ -n "$CHANGED_SPECS" ]; then
   for spec_path in $CHANGED_SPECS; do
-    SPECS="$SPECS $(basename "$spec_path")"
+    TEST_SPECS="$TEST_SPECS $(basename "$spec_path")"
   done
-  RUN_ALL_TAGS=true
-else
-  RUN_ALL_TAGS=false
 fi
 
-# No mapping matched → fall back to full smoke
-if [ -z "$SPECS" ]; then
+# No component mapping matched and no test files changed → fall back to full smoke
+if [ -z "$SPECS" ] && [ -z "$TEST_SPECS" ]; then
   echo "specs="
-  echo "run_all_tags=false"
+  echo "test_specs="
   exit 0
 fi
 
-# Deduplicate and prefix with SPEC_DIR
-RESULT=$(echo "$SPECS" | tr ' ' '\n' | grep -v '^$' | sort -u | sed "s|^|${SPEC_DIR}/|" | tr '\n' ' ')
-echo "specs=${RESULT% }"
-echo "run_all_tags=${RUN_ALL_TAGS}"
+# Deduplicate component specs and prefix with SPEC_DIR
+if [ -n "$SPECS" ]; then
+  RESULT=$(echo "$SPECS" | tr ' ' '\n' | grep -v '^$' | sort -u | sed "s|^|${SPEC_DIR}/|" | tr '\n' ' ')
+  echo "specs=${RESULT% }"
+else
+  echo "specs="
+fi
+
+# Deduplicate test specs and prefix with SPEC_DIR
+if [ -n "$TEST_SPECS" ]; then
+  TEST_RESULT=$(echo "$TEST_SPECS" | tr ' ' '\n' | grep -v '^$' | sort -u | sed "s|^|${SPEC_DIR}/|" | tr '\n' ' ')
+  echo "test_specs=${TEST_RESULT% }"
+else
+  echo "test_specs="
+fi
