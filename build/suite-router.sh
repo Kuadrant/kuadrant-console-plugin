@@ -105,8 +105,15 @@ if [ -z "$SPECS" ] && [ -z "$TEST_SPECS" ]; then
   exit 0
 fi
 
+# Remove from SPECS any files already in TEST_SPECS (they will run unfiltered in step 2)
+if [ -n "$TEST_SPECS" ]; then
+  for test_spec in $TEST_SPECS; do
+    SPECS=$(echo "$SPECS" | tr ' ' '\n' | grep -v "^${test_spec}$" | tr '\n' ' ')
+  done
+fi
+
 # Deduplicate component specs and prefix with SPEC_DIR
-if [ -n "$SPECS" ]; then
+if [ -n "$(echo "$SPECS" | tr -d ' ')" ]; then
   RESULT=$(echo "$SPECS" | tr ' ' '\n' | grep -v '^$' | sort -u | sed "s|^|${SPEC_DIR}/|" | tr '\n' ' ')
   echo "specs=${RESULT% }"
 else
