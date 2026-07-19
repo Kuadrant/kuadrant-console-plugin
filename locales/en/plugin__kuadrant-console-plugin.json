@@ -66,7 +66,7 @@
   "Automatic": "Automatic",
   "Automatic approval": "Automatic approval",
   "Cancel": "Cancel",
-  "CEL expression to match this plan subscribers": "CEL expression to match this plan subscribers",
+  "CEL expression to match this plan's subscribers": "CEL expression to match this plan's subscribers",
   "Cert manager issuer type": "Cert manager issuer type",
   "Checking Kuadrant Status...": "Checking Kuadrant Status...",
   "Clear all filters": "Clear all filters",

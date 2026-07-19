@@ -76,7 +76,13 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
           kind: 'HTTPRoute',
           name: selectedRoute.name,
         },
-        plans: plans.filter((p) => p.tier !== ''),
+        plans: plans
+          .filter((p) => p.tier !== '')
+          .map((p) => ({
+            tier: p.tier,
+            predicate: p.predicate,
+            ...(p.limits.daily !== null ? { limits: { daily: p.limits.daily } } : {}),
+          })),
       },
     };
   };
@@ -119,9 +125,7 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
       }
     : null;
 
-  const [planData, planLoaded, planError] = planResource
-    ? useK8sWatchResource(planResource)
-    : [null, false, null];
+  const [planData, planLoaded, planError] = useK8sWatchResource(planResource);
 
   React.useEffect(() => {
     if (planLoaded && !planError && planData) {
@@ -180,7 +184,11 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
     setPlans(updated);
   };
 
-  const isFormValid = !!(policyName && selectedRoute.name && plans.some((p) => p.tier !== ''));
+  const isFormValid = !!(
+    policyName &&
+    selectedRoute.name &&
+    plans.some((p) => p.tier !== '' && p.predicate !== '')
+  );
 
   const handleCancelResource = () => {
     handleCancel(navigate);
@@ -258,6 +266,9 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
               {plans.map((plan, i) => (
                 <Card key={i} className="pf-u-mb-sm pf-u-p-md" isPlain>
                   <CardBody>
+                    <Title headingLevel="h3" size="md" className="pf-u-mb-md">
+                      {t('Plan')} {i + 1}
+                    </Title>
                     <FormGroup label={t('Tier')} isRequired fieldId={`plan-tier-${i}`}>
                       <TextInput
                         isRequired
@@ -285,7 +296,7 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
                       <FormHelperText>
                         <HelperText>
                           <HelperTextItem>
-                            {t('CEL expression to match this plan subscribers')}
+                            {t("CEL expression to match this plan's subscribers")}
                           </HelperTextItem>
                         </HelperText>
                       </FormHelperText>
