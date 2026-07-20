@@ -2,7 +2,7 @@ name: E2E Tests
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, 'release-*']
   merge_group:
     types: [checks_requested]
   workflow_dispatch:
@@ -12,7 +12,40 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  route:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      specs: ${{ steps.router.outputs.specs }}
+      test_specs: ${{ steps.router.outputs.test_specs }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run suite router
+        id: router
+        run: |
+          chmod +x build/suite-router.sh
+          bash build/suite-router.sh >> $GITHUB_OUTPUT
+
+  check-spec-map:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Validate spec map coverage
+        run: bash build/check-spec-map.sh
+
   e2e-smoke:
+    needs: route
     uses: ./.github/workflows/e2e-common.yaml
     with:
       suite: smoke
+      specs: ${{ needs.route.outputs.specs }}
+      test_specs: ${{ needs.route.outputs.test_specs }}

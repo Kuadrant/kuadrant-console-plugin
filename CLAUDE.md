@@ -217,6 +217,72 @@ E2E tests cover key workflows including:
 - Gateway and policy management
 - Topology visualization
 
+### E2E Test Tags
+
+Every test must be tagged with exactly one of:
+
+- **`@smoke`** — fast, critical path tests; run on every PR (~11 min total). Tag tests that cover the most important user flows and are reliable.
+- **`@nightly`** — slower or edge-case tests; run on a nightly schedule. Tag validation edge cases, duplicate coverage, and slower flows.
+
+```typescript
+// smoke — runs on every PR
+test('approve request', { tag: '@smoke' }, async ({ page }) => { ... })
+
+// nightly — runs on schedule only
+test('validate empty title shows error', { tag: '@nightly' }, async ({ page }) => { ... })
+```
+
+**Rules:**
+- Every test must have exactly one tag (`@smoke` or `@nightly`) — untagged tests are skipped in smoke runs but do run in nightly (full suite has no `--grep` filter)
+- When adding a new test, default to `@nightly`; only use `@smoke` for critical, reliable flows
+- When adding a new spec file, add it to the mapping in `build/suite-router.sh` (see below)
+
+### Suite Router (`build/suite-router.sh`)
+
+The suite router maps changed source files to relevant e2e spec files so PRs only run tests for the components they touch.
+
+**How it works:**
+
+The router emits two separate lists and CI runs them with different filters:
+
+1. **`specs`** — spec files mapped from changed source components → always run with `--grep @smoke`
+2. **`test_specs`** — spec files that were directly edited → run without `--grep @smoke` (all tags: `@smoke` + `@nightly`)
+
+Steps:
+1. Runs `git diff origin/main...HEAD` to get the list of changed files
+2. If any **shared file** changed (`src/utils/`, `src/hooks/`, `src/constants/`, `e2e/tests/helpers.ts`, workflow files, etc.) → runs all `@smoke` tests (safe fallback)
+3. Matches changed component paths against the mapping → populates `specs`
+4. Detects any directly edited `e2e/tests/*.spec.ts` files → populates `test_specs`
+5. Files in both lists are removed from `specs` (to avoid running the same file twice)
+6. If both lists are empty → runs all `@smoke` tests (safe fallback)
+
+**Behaviour by scenario:**
+
+| Changed files | `specs` | `test_specs` | Tests run |
+|---|---|---|---|
+| `src/components/apikey/` | 3 apikey files | — | 3 files × @smoke only |
+| `e2e/tests/apikey-lifecycle.spec.ts` | — | 1 file | all tags in that file |
+| both above | 2 apikey files | 1 file | 2 files × @smoke + 1 file × all tags |
+| `src/utils/` (shared) | — | — | all @smoke (fallback) |
+| Unrecognised path | — | — | all @smoke (fallback) |
+
+**When adding a new spec file** you must do two things:
+
+1. Add an `if` block in `build/suite-router.sh` to map the relevant component:
+```bash
+if echo "$CHANGED" | grep -qE "^src/components/myfeature/"; then
+  SPECS="$SPECS myfeature.spec.ts"
+fi
+```
+
+2. Run `yarn check:spec-map` locally to verify the mapping is complete — CI will also block the PR if any spec file is missing from the mapping:
+```bash
+yarn check:spec-map
+# all specs mapped ✓
+```
+
+If you forget, the suite router falls back to running all smoke tests — no tests will be skipped incorrectly, but the optimisation won't apply.
+
 ## Important Notes
 
 1. **Real-time Updates**: Always use `useK8sWatchResource` instead of `k8sList` for resources that need to update automatically
