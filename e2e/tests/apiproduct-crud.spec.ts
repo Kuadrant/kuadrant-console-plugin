@@ -496,31 +496,19 @@ EOF`, { stdio: 'inherit' });
     await expect(deleteItem).toBeVisible({ timeout: 5000 });
     await deleteItem.click();
 
-    // K8s delete modal should appear - look for visible delete button in modal
-    // Use >> to pierce shadow DOM if needed
+    // Type-to-confirm delete modal should appear
+    const confirmInput = page.locator('#confirm-delete');
+    await expect(confirmInput).toBeVisible({ timeout: 10000 });
+
+    // Type the resource name to enable the Delete button
+    await confirmInput.fill(testProductName);
+
     const deleteButton = page
-      .locator('button')
+      .locator('[role="dialog"] button')
       .filter({ hasText: 'Delete' })
-      .and(
-        page.locator('[role="dialog"] button, .pf-v6-c-modal-box button, .pf-c-modal-box button'),
-      );
-
-    // If that doesn't work, just find any visible Delete button
-    const fallbackButton = page.locator('button:has-text("Delete")').first();
-
-    // Try primary selector first
-    const buttonToClick = (await deleteButton.count()) > 0 ? deleteButton.first() : fallbackButton;
-
-    await expect(buttonToClick).toBeVisible({ timeout: 10000 });
-
-    // May need to check a confirmation checkbox first
-    const checkbox = page.locator('[role="dialog"] input[type="checkbox"]').first();
-    if ((await checkbox.count()) > 0 && (await checkbox.isVisible())) {
-      await checkbox.check();
-    }
-
-    await expect(buttonToClick).toBeEnabled({ timeout: 5000 });
-    await buttonToClick.click();
+      .first();
+    await expect(deleteButton).toBeEnabled({ timeout: 5000 });
+    await deleteButton.click();
 
     // Verify product removed from list (navigate to list if not there already)
     if (!page.url().includes('/apiproducts/ns/')) {
