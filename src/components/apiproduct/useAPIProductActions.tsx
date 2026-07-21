@@ -10,9 +10,30 @@ import {
 import { AccessReviewResourceAttributes } from '@openshift-console/dynamic-plugin-sdk/lib/extensions/console-types';
 import {
   useAnnotationsModal,
-  useDeleteModal,
   useLabelsModal,
+  useModal,
 } from '@openshift-console/dynamic-plugin-sdk';
+import APIProductDeleteModal from './APIProductDeleteModal';
+
+const APIProductDeleteModalWrapper: React.FC<{
+  closeModal: () => void;
+  resource: K8sResourceCommon;
+}> = ({ closeModal, resource }) => {
+  const navigate = useNavigate();
+
+  return (
+    <APIProductDeleteModal
+      isOpen={true}
+      onClose={closeModal}
+      onDeleteSuccess={() => {
+        const namespace = resource.metadata?.namespace || 'default';
+        closeModal();
+        navigate(`/kuadrant/apiproducts/ns/${namespace}`);
+      }}
+      resource={resource}
+    />
+  );
+};
 
 const useAPIProductActions = (obj: K8sResourceCommon): ExtensionHookResult<Action[]> => {
   const navigate = useNavigate();
@@ -22,7 +43,7 @@ const useAPIProductActions = (obj: K8sResourceCommon): ExtensionHookResult<Actio
       ? { group: gvk.group, version: gvk.version, kind: gvk.kind }
       : { group: '', version: '', kind: '' },
   );
-  const launchDeleteModal = useDeleteModal(obj);
+  const launchModal = useModal();
   const launchLabelsModal = useLabelsModal(obj);
   const launchAnnotationsModal = useAnnotationsModal(obj);
 
@@ -77,20 +98,13 @@ const useAPIProductActions = (obj: K8sResourceCommon): ExtensionHookResult<Actio
       {
         id: 'delete-apiproduct',
         label: 'Delete APIProduct',
-        cta: launchDeleteModal,
+        cta: () => launchModal(APIProductDeleteModalWrapper, { resource: obj }),
         accessReview: deleteAccess,
       },
     ];
 
     return actionsList;
-  }, [
-    navigate,
-    obj,
-    apiProductModel,
-    launchAnnotationsModal,
-    launchDeleteModal,
-    launchLabelsModal,
-  ]);
+  }, [navigate, obj, apiProductModel, launchAnnotationsModal, launchModal, launchLabelsModal]);
 
   return [actions, true, undefined];
 };
