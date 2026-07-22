@@ -5,18 +5,24 @@ export interface AuthCodeSnippets {
   go: string;
 }
 
-export const generateAuthCodeSnippets = (apiKey: string, hostname: string): AuthCodeSnippets => {
+export const generateAuthCodeSnippets = (
+  apiKey: string,
+  hostname: string,
+  authPrefix = 'Bearer',
+): AuthCodeSnippets => {
   const url = `https://${hostname}/api/v1/example`;
+  // Some auth schemes use an empty prefix; only prepend one (with a space) when present.
+  const credential = authPrefix ? `${authPrefix} ${apiKey}` : apiKey;
 
   return {
     curl: `curl -X GET "${url}" \\
-  -H "Authorization: Bearer ${apiKey}"`,
+  -H "Authorization: ${credential}"`,
 
     nodejs: `const axios = require('axios');
 
 axios.get('${url}', {
   headers: {
-    'Authorization': 'Bearer ${apiKey}'
+    'Authorization': '${credential}'
   }
 })
 .then(response => {
@@ -30,7 +36,7 @@ axios.get('${url}', {
 
 url = "${url}"
 headers = {
-    "Authorization": f"Bearer ${apiKey}"
+    "Authorization": "${credential}"
 }
 
 response = requests.get(url, headers=headers)
@@ -48,7 +54,7 @@ func main() {
     url := "${url}"
 
     req, _ := http.NewRequest("GET", url, nil)
-    req.Header.Add("Authorization", "Bearer ${apiKey}")
+    req.Header.Add("Authorization", "${credential}")
 
     client := &http.Client{}
     resp, err := client.Do(req)
