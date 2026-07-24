@@ -117,7 +117,8 @@
       "useDNSPolicyActions": "./components/dnspolicy/useDNSPolicyActions",
       "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions",
       "useOIDCPolicyActions": "./components/oidcpolicy/useOIDCPolicyActions",
-      "useTokenRateLimitPolicyActions": "./components/tokenratelimitpolicy/useTokenRateLimitPolicyActions"
+      "useTokenRateLimitPolicyActions": "./components/tokenratelimitpolicy/useTokenRateLimitPolicyActions",
+      "usePlanPolicyActions": "./components/planpolicy/usePlanPolicyActions"
     },
     "dependencies": {
       "@console/pluginAPI": "*"
