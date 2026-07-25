@@ -496,38 +496,42 @@ test.describe('other policy create pages render', () => {
     await expect(page.locator('text=Create TokenRateLimit Policy').first()).toBeVisible({
       timeout: 15_000,
     });
-    
+
     await page.locator('#create-type-radio-yaml').click();
     await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 15_000 });
   });
 });
 
 test.describe('PlanPolicy form', () => {
-  test('create button enables only when required fields are set', { tag: '@smoke' }, async ({ page }) => {
-    await gotoPage(
-      page,
-      createPagePath(TEST_NAMESPACE, 'extensions.kuadrant.io~v1alpha1~PlanPolicy'),
-    );
+  test(
+    'create button enables only when required fields are set',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      await gotoPage(
+        page,
+        createPagePath(TEST_NAMESPACE, 'extensions.kuadrant.io~v1alpha1~PlanPolicy'),
+      );
 
-    const createButton = page.getByRole('button', { name: 'Create', exact: true });
-    await expect(createButton).toBeDisabled();
+      const createButton = page.getByRole('button', { name: 'Create', exact: true });
+      await expect(createButton).toBeDisabled();
 
-    await page.locator('#policy-name').fill(`e2e-plan-${uid()}`);
-    await expect(createButton).toBeDisabled();
+      await page.locator('#policy-name').fill(`e2e-plan-${uid()}`);
+      await expect(createButton).toBeDisabled();
 
-    await page.locator('#plan-tier-0').fill('gold');
-    await expect(createButton).toBeDisabled();
+      await page.locator('#plan-tier-0').fill('gold');
+      await expect(createButton).toBeDisabled();
 
-    await page.locator('#plan-predicate-0').fill('auth.identity.tier == "gold"');
-    await expect(createButton).toBeDisabled();
+      await page.locator('#plan-predicate-0').fill('auth.identity.tier == "gold"');
+      await expect(createButton).toBeDisabled();
 
-    await page.locator('#httproute-select').click();
-    await page.getByRole('menuitem', { name: `${TEST_NAMESPACE}/test-route` }).click();
-    await expect(createButton).toBeEnabled();
+      await page.locator('#httproute-select').click();
+      await page.getByRole('menuitem', { name: `${TEST_NAMESPACE}/test-route` }).click();
+      await expect(createButton).toBeEnabled();
 
-    await page.locator('#plan-tier-0').fill('');
-    await expect(createButton).toBeDisabled();
-  });
+      await page.locator('#plan-tier-0').fill('');
+      await expect(createButton).toBeDisabled();
+    },
+  );
 
   test.describe('with seeded namespace', () => {
     let namespace = '';
