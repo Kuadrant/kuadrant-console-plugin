@@ -55,6 +55,7 @@ import {
   getAPIKeyPhase,
 } from '../../utils/resources';
 import { getModelFromResource, getResourceNameFromKind } from '../../utils/getModelFromResource';
+import { formatExpiry } from './utils';
 import APIKeyRevealModal from './APIKeyRevealModal';
 import APIKeyDeleteModal from './APIKeyDeleteModal';
 import RequestAPIKeyModal from './RequestAPIKeyModal';
@@ -173,6 +174,12 @@ const APIKeyRow: React.FC<
       </TableData>
       <TableData id="requestedTime" activeColumnIDs={activeColumnIDs}>
         <Timestamp timestamp={obj.metadata.creationTimestamp} />
+      </TableData>
+      <TableData id="expires" activeColumnIDs={activeColumnIDs}>
+        {(() => {
+          const { text, isExpired } = formatExpiry(obj.spec?.expiresAt, t);
+          return <span style={isExpired ? { color: '#6a6e73' } : undefined}>{text}</span>;
+        })()}
       </TableData>
       <TableData id="actions" activeColumnIDs={activeColumnIDs}>
         <Dropdown
@@ -603,6 +610,10 @@ const MyAPIKeysPage: React.FC = () => {
         id: 'requestedTime',
         sort: 'metadata.creationTimestamp',
         transforms: [sortable],
+      },
+      {
+        title: t('Expires'),
+        id: 'expires',
       },
       {
         title: '',

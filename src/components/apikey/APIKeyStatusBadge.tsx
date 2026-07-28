@@ -5,6 +5,7 @@ import {
   HourglassStartIcon,
   ExclamationCircleIcon,
   ExclamationTriangleIcon,
+  BanIcon,
 } from '@patternfly/react-icons';
 import { APIKeyPhase } from '../../utils/resources';
 
@@ -42,6 +43,13 @@ export const APIKeyStatusBadge: React.FC<APIKeyStatusBadgeProps> = ({ phase }) =
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <ExclamationTriangleIcon style={{ color: '#f0ab00' }} />
           {t('Failed')}
+        </span>
+      );
+    case 'Expired':
+      return (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <BanIcon style={{ color: '#6a6e73' }} />
+          {t('Expired')}
         </span>
       );
     default:
