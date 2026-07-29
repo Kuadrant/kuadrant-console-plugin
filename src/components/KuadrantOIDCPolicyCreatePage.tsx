@@ -36,7 +36,9 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>({} as GatewayResource);
+  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>(
+    {} as GatewayResource,
+  );
   const [clientID, setClientID] = React.useState('');
   const [issuerURL, setIssuerURL] = React.useState('');
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
@@ -171,7 +173,12 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
     handleCancel(navigate);
   };
 
-  const isFormValid = !!(policyName && (selectedGateway.metadata?.name ?? '') && clientID && issuerURL);
+  const isFormValid = !!(
+    policyName &&
+    (selectedGateway.metadata?.name ?? '') &&
+    clientID &&
+    issuerURL
+  );
 
   return (
     <>

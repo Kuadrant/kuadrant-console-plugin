@@ -414,7 +414,9 @@ const KuadrantOverviewPage: React.FC = () => {
     sortDirection: 'asc' | 'desc',
   ): K8sResourceCommon[] => {
     const sorted = [...data].sort(
-      (a, b) => getGatewayResourceStatusRank(a as GatewayResource) - getGatewayResourceStatusRank(b as GatewayResource),
+      (a, b) =>
+        getGatewayResourceStatusRank(a as GatewayResource) -
+        getGatewayResourceStatusRank(b as GatewayResource),
     );
     return sortDirection === 'desc' ? sorted.reverse() : sorted;
   };
@@ -564,12 +566,15 @@ const KuadrantOverviewPage: React.FC = () => {
     metadata: { namespace: string; name: string };
   }): number => {
     const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
-    const success = totalRequestsByGatewayResource[key]?.total - totalRequestsByGatewayResource[key]?.errors;
+    const success =
+      totalRequestsByGatewayResource[key]?.total - totalRequestsByGatewayResource[key]?.errors;
     return Number.isFinite(success) ? Math.round(success) : 0;
   };
   const getErrorRate = (obj: { metadata: { namespace: string; name: string } }): string => {
     const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
-    const rate = (totalRequestsByGatewayResource[key]?.errors / totalRequestsByGatewayResource[key]?.total) * 100;
+    const rate =
+      (totalRequestsByGatewayResource[key]?.errors / totalRequestsByGatewayResource[key]?.total) *
+      100;
     return Number.isFinite(rate) ? rate.toFixed(1) : '-';
   };
   const getErrorCodes = (obj: { metadata: { namespace: string; name: string } }): Set<string> => {

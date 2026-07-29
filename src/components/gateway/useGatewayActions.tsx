@@ -70,8 +70,7 @@ const useGatewayActions = (obj: K8sResourceCommon): ExtensionHookResult<Action[]
         id: 'kuadrant-gateway-edit-form',
         label: t('Edit'),
         description: t('Edit via form'),
-        cta: () =>
-          navigate(`/k8s/ns/${namespace}/${api}~Gateway/${name}/edit`),
+        cta: () => navigate(`/k8s/ns/${namespace}/${api}~Gateway/${name}/edit`),
         insertBefore: 'edit-yaml',
         accessReview: updateAccess,
       },
@@ -84,7 +83,15 @@ const useGatewayActions = (obj: K8sResourceCommon): ExtensionHookResult<Action[]
     ];
 
     return actionsList;
-  }, [navigate, obj, gatewayModel, launchAnnotationsModal, launchDeleteModal, launchLabelsModal, t]);
+  }, [
+    navigate,
+    obj,
+    gatewayModel,
+    launchAnnotationsModal,
+    launchDeleteModal,
+    launchLabelsModal,
+    t,
+  ]);
 
   return [actions, true, undefined];
 };

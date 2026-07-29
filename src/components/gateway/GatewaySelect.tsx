@@ -26,7 +26,8 @@ const GatewaySelect: React.FC<GatewaySelectProps> = ({ selectedGateway, onChange
     isList: true,
   };
 
-  const [gatewayData, gatewayLoaded, gatewayError] = useK8sWatchResource<GatewayResource[]>(gatewayResource);
+  const [gatewayData, gatewayLoaded, gatewayError] =
+    useK8sWatchResource<GatewayResource[]>(gatewayResource);
 
   const gateways = React.useMemo(() => {
     if (gatewayLoaded && !gatewayError && Array.isArray(gatewayData)) {
@@ -50,7 +51,9 @@ const GatewaySelect: React.FC<GatewaySelectProps> = ({ selectedGateway, onChange
       <FormGroup label={t('Gateway API Target Reference')} isRequired fieldId="gateway-select">
         <FormSelect
           id="gateway-select"
-          value={`${selectedGateway.metadata?.namespace ?? ''}/${selectedGateway.metadata?.name ?? ''}`}
+          value={`${selectedGateway.metadata?.namespace ?? ''}/${
+            selectedGateway.metadata?.name ?? ''
+          }`}
           onChange={handleGatewayChange}
           aria-label={t('Select Gateway')}
         >

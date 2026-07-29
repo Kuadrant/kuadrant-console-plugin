@@ -39,7 +39,9 @@ const KuadrantTLSCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>({} as GatewayResource);
+  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>(
+    {} as GatewayResource,
+  );
   const [selectedClusterIssuers, setSelectedClusterIssuers] = React.useState<ClusterIssuer>({
     name: '',
   });

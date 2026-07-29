@@ -56,7 +56,9 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>({} as GatewayResource);
+  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>(
+    {} as GatewayResource,
+  );
   const [limits, setLimits] = React.useState<TokenLimitMap>({});
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
   const [resourceVersion, setResourceVersion] = React.useState('');

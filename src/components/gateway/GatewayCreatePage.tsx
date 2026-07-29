@@ -137,8 +137,7 @@ const GatewayCreatePage: React.FC = () => {
     [nameEdit, namespaceEdit],
   );
 
-  const [gatewayData, gatewayLoaded, gatewayError] =
-    useK8sWatchResource(gatewayWatchResource);
+  const [gatewayData, gatewayLoaded, gatewayError] = useK8sWatchResource(gatewayWatchResource);
 
   const handleGatewayClassChange = (event: React.FormEvent<HTMLSelectElement>) => {
     setGatewayClassName(event.currentTarget.value);

@@ -43,7 +43,9 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>({} as GatewayResource);
+  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>(
+    {} as GatewayResource,
+  );
   const [loadBalancing, setLoadBalancing] = React.useState<LoadBalancing>({
     geo: '',
     weight: DEFAULT_LOAD_BALANCING_WEIGHT,
