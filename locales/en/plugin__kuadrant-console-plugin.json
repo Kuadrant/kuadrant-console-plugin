@@ -253,6 +253,7 @@
   "Error loading attached resources": "Error loading attached resources",
   "Error loading Gateway: {{message}}": "Error loading Gateway: {{message}}",
   "Error loading GRPCRoute": "Error loading GRPCRoute",
+  "Error loading GRPCRoute: {{message}}": "Error loading GRPCRoute: {{message}}",
   "Error loading HTTPRoute": "Error loading HTTPRoute",
   "Error loading HTTPRoute: {{message}}": "Error loading HTTPRoute: {{message}}",
   "Error loading PlanPolicies": "Error loading PlanPolicies",
