@@ -119,7 +119,8 @@
       "GRPCRoutePoliciesPage": "./components/GRPCRoutePoliciesPage",
       "GatewayPoliciesPage": "./components/GatewayPoliciesPage",
       "GatewayCreatePage": "./components/gateway/GatewayCreatePage",
-      "useGatewayActions": "./components/gateway/useGatewayActions"
+      "useGatewayActions": "./components/gateway/useGatewayActions",
+      "gatewayActionFilter": "./components/gateway/gatewayActionFilter"
     },
     "dependencies": {
       "@console/pluginAPI": "*"

@@ -50,6 +50,36 @@ async function expectEditorContains(page: Page, text: string): Promise<void> {
   );
 }
 
+async function addListenerViaWizard(
+  page: Page,
+  opts: { name: string; port: string; protocol: string; isEdit?: boolean },
+): Promise<void> {
+  const { name, port, protocol, isEdit = false } = opts;
+
+  // Step 1: Configuration — fill name, port
+  await page.locator('#listener-name').fill(name);
+  await page.locator('#listener-port').clear();
+  await page.locator('#listener-port').fill(port);
+
+  // Next → Protocol
+  await page.getByRole('button', { name: 'Next' }).click();
+
+  // Step 2: Protocol
+  await page.locator('#listener-protocol').selectOption(protocol);
+
+  // Next → Allowed Routes
+  await page.getByRole('button', { name: 'Next' }).click();
+
+  // Step 3: Allowed Routes — accept defaults, click Add/Update
+  const wizardButton = page
+    .locator('.pf-v6-c-modal-box')
+    .getByRole('button', { name: isEdit ? 'Update' : 'Add' });
+  await wizardButton.click();
+
+  // Wait for wizard modal to close
+  await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 5_000 });
+}
+
 test.describe('Gateway CRUD', () => {
   let namespace = '';
 
@@ -73,14 +103,14 @@ test.describe('Gateway CRUD', () => {
     await expect(page.locator('#create-type-radio-form')).toBeChecked();
 
     await page.locator('#gateway-name').fill(gatewayName);
-    await page.locator('#gateway-class').selectOption('istio');
+    await expect(page.locator('#gateway-class')).toHaveValue('istio');
 
-    const addListenerButton = page.getByRole('button', { name: 'Add Listener' });
-    await addListenerButton.click();
+    // Add listener via wizard
+    await page.getByRole('button', { name: 'Add listener' }).click();
+    await addListenerViaWizard(page, { name: 'http', port: '80', protocol: 'HTTP' });
 
-    await page.locator('#listener-name-0').fill('http');
-    await page.locator('#listener-port-0').fill('80');
-    await page.locator('#listener-protocol-0').selectOption('HTTP');
+    // Verify listener appears in the table
+    await expect(page.getByText('http')).toBeVisible();
 
     const createButton = page.getByRole('button', { name: 'Create', exact: true });
     await expect(createButton).toBeEnabled();
@@ -134,16 +164,35 @@ spec:
       timeout: 15_000,
     });
 
+    // Verify form is populated
     const nameInput = page.locator('#gateway-name');
     await expect(nameInput).toHaveValue(gatewayName, { timeout: 15_000 });
     await expect(nameInput).toBeDisabled();
     await expect(page.locator('#gateway-class')).toHaveValue('istio');
 
-    await expect(page.locator('#listener-name-0')).toHaveValue('http');
-    await expect(page.locator('#listener-port-0')).toHaveValue('80');
+    // Verify listener is shown in the table
+    await expect(page.getByText('http')).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText('80')).toBeVisible();
 
-    await page.locator('#listener-port-0').fill('8080');
+    // Edit the listener via wizard
+    await page.getByRole('button', { name: 'Edit listener' }).click();
 
+    // Change port in the wizard
+    await expect(page.locator('#listener-name')).toHaveValue('http', { timeout: 15_000 });
+    await page.locator('#listener-port').clear();
+    await page.locator('#listener-port').fill('8080');
+
+    // Navigate through wizard to save
+    await page.getByRole('button', { name: 'Next' }).click(); // Protocol
+    await page.getByRole('button', { name: 'Next' }).click(); // Allowed Routes
+
+    const wizardUpdateButton = page
+      .locator('.pf-v6-c-modal-box')
+      .getByRole('button', { name: 'Update' });
+    await wizardUpdateButton.click();
+    await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 5_000 });
+
+    // Save the form
     const saveButton = page.getByRole('button', { name: 'Save', exact: true });
     await expect(saveButton).toBeEnabled();
     await saveButton.click();
@@ -175,15 +224,13 @@ spec:
     });
 
     await page.locator('#gateway-name').fill(gatewayName);
-    await page.locator('#gateway-class').selectOption('istio');
+    await expect(page.locator('#gateway-class')).toHaveValue('istio');
 
-    const addListenerButton = page.getByRole('button', { name: 'Add Listener' });
-    await addListenerButton.click();
+    // Add listener via wizard
+    await page.getByRole('button', { name: 'Add listener' }).click();
+    await addListenerViaWizard(page, { name: 'https', port: '443', protocol: 'HTTPS' });
 
-    await page.locator('#listener-name-0').fill('https');
-    await page.locator('#listener-port-0').fill('443');
-    await page.locator('#listener-protocol-0').selectOption('HTTPS');
-
+    // Switch to YAML
     await page.locator('#create-type-radio-yaml').click();
 
     await expectEditorContains(page, gatewayName);
@@ -192,12 +239,13 @@ spec:
     await expectEditorContains(page, '443');
     await expectEditorContains(page, 'HTTPS');
 
+    // Switch back to form
     await page.locator('#create-type-radio-form').click();
 
     await expect(page.locator('#gateway-name')).toHaveValue(gatewayName);
     await expect(page.locator('#gateway-class')).toHaveValue('istio');
-    await expect(page.locator('#listener-name-0')).toHaveValue('https');
-    await expect(page.locator('#listener-port-0')).toHaveValue('443');
-    await expect(page.locator('#listener-protocol-0')).toHaveValue('HTTPS');
+    // Listener data is shown in the table, not as inputs
+    await expect(page.getByText('https')).toBeVisible();
+    await expect(page.getByText('443')).toBeVisible();
   });
 });

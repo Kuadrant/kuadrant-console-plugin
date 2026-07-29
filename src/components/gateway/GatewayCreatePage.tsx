@@ -1,6 +1,7 @@
 import * as React from 'react';
 import Helmet from 'react-helmet';
 import {
+  ActionGroup,
   PageSection,
   Title,
   Form,
@@ -52,7 +53,9 @@ import '../css/gateway-api-plugin.css';
 const GatewayCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
-  const [selectedNamespace] = useActiveNamespace();
+  const [activeNamespace] = useActiveNamespace();
+  const selectedNamespace =
+    !activeNamespace || activeNamespace === '#ALL_NS#' ? 'default' : activeNamespace;
   const [create, setCreate] = React.useState(true);
   const [originalMetadata, setOriginalMetadata] = React.useState<
     K8sResourceCommon['metadata'] | null
@@ -81,8 +84,9 @@ const GatewayCreatePage: React.FC = () => {
     kind: 'Secret' | 'ConfigMap';
   };
   type AllowedRouteKindRow = { id: string; kind: string; group: string };
+  type SelectorLabelRow = { id: string; key: string; value: string };
   type AllowedRoutesUI = {
-    namespaces: { from: 'All' | 'Same' | 'Selector' };
+    namespaces: { from: 'All' | 'Same' | 'Selector'; selectorLabels: SelectorLabelRow[] };
     kinds: AllowedRouteKindRow[];
   };
   type ListenerUI = {
@@ -119,6 +123,7 @@ const GatewayCreatePage: React.FC = () => {
     allowedRoutes: {
       namespaces: {
         from: 'Same',
+        selectorLabels: [],
       },
       kinds: [],
     },
@@ -139,10 +144,6 @@ const GatewayCreatePage: React.FC = () => {
 
   const [gatewayData, gatewayLoaded, gatewayError] = useK8sWatchResource(gatewayWatchResource);
 
-  const handleGatewayClassChange = (event: React.FormEvent<HTMLSelectElement>) => {
-    setGatewayClassName(event.currentTarget.value);
-  };
-
   const handleAddListener = () => {
     setEditingListenerIndex(null);
     setIsModalOpen(true);
@@ -162,6 +163,7 @@ const GatewayCreatePage: React.FC = () => {
       allowedRoutes: {
         namespaces: {
           from: 'Same',
+          selectorLabels: [],
         },
         kinds: [],
       },
@@ -207,6 +209,7 @@ const GatewayCreatePage: React.FC = () => {
       allowedRoutes: {
         namespaces: {
           from: listener.allowedRoutes?.namespaces?.from || 'Same',
+          selectorLabels: listener.allowedRoutes?.namespaces?.selectorLabels || [],
         },
         kinds: listener.allowedRoutes?.kinds || [],
       },
@@ -289,6 +292,50 @@ const GatewayCreatePage: React.FC = () => {
     });
   };
 
+  const handleAddSelectorLabel = () => {
+    const newLabel: SelectorLabelRow = { id: generateUniqueId('label'), key: '', value: '' };
+    setCurrentListener({
+      ...currentListener,
+      allowedRoutes: {
+        ...currentListener.allowedRoutes,
+        namespaces: {
+          ...currentListener.allowedRoutes.namespaces,
+          selectorLabels: [...currentListener.allowedRoutes.namespaces.selectorLabels, newLabel],
+        },
+      },
+    });
+  };
+
+  const handleSelectorLabelChange = (id: string, field: 'key' | 'value', val: string) => {
+    setCurrentListener({
+      ...currentListener,
+      allowedRoutes: {
+        ...currentListener.allowedRoutes,
+        namespaces: {
+          ...currentListener.allowedRoutes.namespaces,
+          selectorLabels: currentListener.allowedRoutes.namespaces.selectorLabels.map((label) =>
+            label.id === id ? { ...label, [field]: val } : label,
+          ),
+        },
+      },
+    });
+  };
+
+  const handleRemoveSelectorLabel = (id: string) => {
+    setCurrentListener({
+      ...currentListener,
+      allowedRoutes: {
+        ...currentListener.allowedRoutes,
+        namespaces: {
+          ...currentListener.allowedRoutes.namespaces,
+          selectorLabels: currentListener.allowedRoutes.namespaces.selectorLabels.filter(
+            (label) => label.id !== id,
+          ),
+        },
+      },
+    });
+  };
+
   const handleAddTlsOption = () => {
     const newOption = {
       id: generateUniqueId('tls'),
@@ -359,7 +406,10 @@ const GatewayCreatePage: React.FC = () => {
             options?: Record<string, string>;
           };
           allowedRoutes?: {
-            namespaces?: { from?: 'All' | 'Same' | 'Selector' };
+            namespaces?: {
+              from?: 'All' | 'Same' | 'Selector';
+              selector?: { matchLabels?: Record<string, string> };
+            };
             kinds?: { group?: string; kind: string }[];
           };
         } = {
@@ -402,6 +452,22 @@ const GatewayCreatePage: React.FC = () => {
               from: listener.allowedRoutes.namespaces.from,
             },
           };
+
+          if (
+            listener.allowedRoutes.namespaces.from === 'Selector' &&
+            listener.allowedRoutes.namespaces.selectorLabels.length > 0
+          ) {
+            formattedListener.allowedRoutes.namespaces.selector = {
+              matchLabels: listener.allowedRoutes.namespaces.selectorLabels.reduce<
+                Record<string, string>
+              >((acc, label) => {
+                if (label.key) {
+                  acc[label.key] = label.value;
+                }
+                return acc;
+              }, {}),
+            };
+          }
 
           if (listener.allowedRoutes.kinds && listener.allowedRoutes.kinds.length > 0) {
             formattedListener.allowedRoutes.kinds = listener.allowedRoutes.kinds.map((kind) => ({
@@ -486,6 +552,15 @@ const GatewayCreatePage: React.FC = () => {
                 from:
                   (listener.allowedRoutes?.namespaces
                     ?.from as AllowedRoutesUI['namespaces']['from']) || 'Same',
+                selectorLabels: listener.allowedRoutes?.namespaces?.selector?.matchLabels
+                  ? Object.entries(listener.allowedRoutes.namespaces.selector.matchLabels).map(
+                      ([key, value], idx) => ({
+                        id: generateUniqueId(`label_${index}_${idx}`),
+                        key,
+                        value: value as string,
+                      }),
+                    )
+                  : [],
               },
               kinds: listener.allowedRoutes?.kinds
                 ? listener.allowedRoutes.kinds.map((kind, idx: number) => ({
@@ -516,26 +591,28 @@ const GatewayCreatePage: React.FC = () => {
   };
 
   React.useEffect(() => {
-    if (nameEdit) {
+    if (nameEdit && nameEdit !== '~new') {
       setIsLoading(true);
     }
     if (gatewayLoaded && !gatewayError) {
-      if (Array.isArray(gatewayData)) {
+      if (Array.isArray(gatewayData) || !gatewayData) {
         setIsLoading(false);
-      } else if (!hasInitializedFromResource.current) {
-        const gatewayUpdate = gatewayData as GatewayResource;
-        setCreate(false);
-        setOriginalMetadata(gatewayUpdate.metadata);
-        populateFormFromGateway(gatewayUpdate);
-        setYamlContent(gatewayUpdate);
+      } else {
+        if (!hasInitializedFromResource.current) {
+          const gatewayUpdate = gatewayData as GatewayResource;
+          setCreate(false);
+          setOriginalMetadata(gatewayUpdate.metadata);
+          populateFormFromGateway(gatewayUpdate);
+          setYamlContent(gatewayUpdate);
+          hasInitializedFromResource.current = true;
+        }
         setIsLoading(false);
-        hasInitializedFromResource.current = true;
       }
     } else if (gatewayError) {
       console.error('Failed to fetch the resource:', gatewayError);
       setIsLoading(false);
     }
-  }, [gatewayData, gatewayLoaded, gatewayError]);
+  }, [gatewayData, gatewayLoaded, gatewayError, nameEdit]);
 
   React.useEffect(() => {
     try {
@@ -621,6 +698,7 @@ const GatewayCreatePage: React.FC = () => {
           <FormGroup label={t('Port')} isRequired fieldId="listener-port">
             <TextInput
               type="number"
+              id="listener-port"
               value={currentListener.port}
               onChange={(_event, value) =>
                 setCurrentListener({ ...currentListener, port: parseInt(value, 10) })
@@ -665,6 +743,7 @@ const GatewayCreatePage: React.FC = () => {
         <Form>
           <FormGroup label={t('Protocol')} isRequired fieldId="listener-protocol">
             <FormSelect
+              id="listener-protocol"
               value={currentListener.protocol}
               onChange={(_event, value) =>
                 setCurrentListener({
@@ -943,6 +1022,45 @@ const GatewayCreatePage: React.FC = () => {
             </FormHelperText>
           </FormGroup>
 
+          {currentListener.allowedRoutes.namespaces.from === 'Selector' && (
+            <FormGroup label={t('Namespace selector labels')} fieldId="selector-labels">
+              {currentListener.allowedRoutes.namespaces.selectorLabels.map((label) => (
+                <div
+                  key={label.id}
+                  style={{
+                    display: 'flex',
+                    gap: '8px',
+                    alignItems: 'flex-start',
+                    marginBottom: '8px',
+                  }}
+                >
+                  <TextInput
+                    value={label.key}
+                    onChange={(_event, val) => handleSelectorLabelChange(label.id, 'key', val)}
+                    aria-label={t('Label key')}
+                    placeholder={t('Key')}
+                  />
+                  <TextInput
+                    value={label.value}
+                    onChange={(_event, val) => handleSelectorLabelChange(label.id, 'value', val)}
+                    aria-label={t('Label value')}
+                    placeholder={t('Value')}
+                  />
+                  <Button
+                    variant="plain"
+                    aria-label={t('Remove label')}
+                    onClick={() => handleRemoveSelectorLabel(label.id)}
+                  >
+                    <TrashIcon />
+                  </Button>
+                </div>
+              ))}
+              <Button variant="link" icon={<PlusCircleIcon />} onClick={handleAddSelectorLabel}>
+                {t('Add label')}
+              </Button>
+            </FormGroup>
+          )}
+
           <FormGroup label={t('Allowed Route Kinds')} fieldId="allowed-route-kinds">
             {currentListener.allowedRoutes.kinds.map((routeKind, index) => (
               <div
@@ -950,7 +1068,7 @@ const GatewayCreatePage: React.FC = () => {
                 style={{
                   marginBottom: '16px',
                   padding: '16px',
-                  border: '1px solid #d2d2d2',
+                  border: '1px solid var(--pf-t--global--border--color--default)',
                   borderRadius: '4px',
                 }}
               >
@@ -1158,24 +1276,17 @@ const GatewayCreatePage: React.FC = () => {
                   </FormHelperText>
                 </FormGroup>
 
-                <FormGroup label={t('Gateway Class Name')} isRequired fieldId="gateway-class-name">
-                  <FormSelect
+                <FormGroup label={t('Gateway Class Name')} isRequired fieldId="gateway-class">
+                  <TextInput
+                    id="gateway-class"
                     value={gatewayClassName}
-                    onChange={handleGatewayClassChange}
-                    aria-label={t('Select Gateway Class')}
-                    isDisabled={!create} // Disable during edit as gateway class shouldn't be changed
-                  >
-                    <FormSelectOption value="istio" label={t('Istio')} />
-                    <FormSelectOption value="envoy-gateway" label={t('Envoy Gateway')} />
-                  </FormSelect>
+                    isDisabled
+                    aria-label={t('Gateway Class Name')}
+                  />
                   <FormHelperText>
                     <HelperText>
                       <HelperTextItem>
-                        {!create
-                          ? t('Gateway class cannot be changed after creation.')
-                          : t(
-                              'The gateway class name must be unique within the namespace and conform to DNS-1123 label standards (lowercase alphanumeric characters or "-").',
-                            )}
+                        {t('The gateway class used for this Gateway.')}
                       </HelperTextItem>
                     </HelperText>
                   </FormHelperText>
@@ -1406,14 +1517,19 @@ const GatewayCreatePage: React.FC = () => {
             </>
           )}
           {!isLoading && createView === 'form' && (
-            <KuadrantCreateUpdate
-              validation={formValidation()}
-              model={gatewayModel}
-              resource={gatewayObject}
-              policyType="Gateway"
-              navigate={navigate}
-              redirectPath={`/k8s/ns/${selectedNamespace}/${gatewayModel?.apiGroup}~${gatewayModel?.apiVersion}~${gatewayModel?.kind}`}
-            />
+            <ActionGroup className="pf-u-mt-0">
+              <KuadrantCreateUpdate
+                validation={formValidation()}
+                model={gatewayModel}
+                resource={gatewayObject}
+                policyType="Gateway"
+                navigate={navigate}
+                redirectPath={`/k8s/ns/${selectedNamespace}/${gatewayModel?.apiGroup}~${gatewayModel?.apiVersion}~${gatewayModel?.kind}/${gatewayName}`}
+              />
+              <Button variant="link" onClick={() => navigate(-1)}>
+                {t('Cancel')}
+              </Button>
+            </ActionGroup>
           )}
         </>
       )}

@@ -34,5 +34,14 @@
         "$codeRef": "useGatewayActions"
       }
     }
+  },
+  {
+    "type": "console.action/filter",
+    "properties": {
+      "contextId": "resource",
+      "filter": {
+        "$codeRef": "gatewayActionFilter"
+      }
+    }
   }
 ]
