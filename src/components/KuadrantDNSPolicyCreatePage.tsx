@@ -28,7 +28,7 @@ import { useNavigate, useLocation } from 'react-router-dom-v5-compat';
 import { LoadBalancing, HealthCheck } from './dnspolicy/types';
 import LoadBalancingField from './dnspolicy/LoadBalancingField';
 import HealthCheckField from './dnspolicy/HealthCheckField';
-import { Gateway } from './gateway/types';
+import { GatewayResource } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
 import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
@@ -43,10 +43,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<Gateway>({
-    name: '',
-    namespace: '',
-  });
+  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>({} as GatewayResource);
   const [loadBalancing, setLoadBalancing] = React.useState<LoadBalancing>({
     geo: '',
     weight: DEFAULT_LOAD_BALANCING_WEIGHT,
@@ -98,7 +95,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         targetRef: {
           group: 'gateway.networking.k8s.io',
           kind: 'Gateway',
-          name: selectedGateway.name,
+          name: selectedGateway.metadata?.name ?? '',
         },
         providerRefs: providerRefs.length > 0 ? [providerRefs[0]] : [],
         ...(hasLoadBalancing
@@ -190,9 +187,11 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
         setCreate(false);
         setPolicyName(dnsPolicyUpdate.metadata?.name || '');
         setSelectedGateway({
-          name: dnsPolicyUpdate.spec?.targetRef?.name || '',
-          namespace: dnsPolicyUpdate.metadata?.namespace ?? '',
-        });
+          metadata: {
+            name: dnsPolicyUpdate.spec?.targetRef?.name || '',
+            namespace: dnsPolicyUpdate.metadata?.namespace ?? '',
+          },
+        } as GatewayResource);
         setHealthCheck({
           path: dnsPolicyUpdate.spec?.healthCheck?.path || '',
           failureThreshold: dnsPolicyUpdate.spec?.healthCheck?.failureThreshold,
@@ -226,9 +225,11 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
-        name: parsedYaml.spec?.targetRef?.name || '',
-        namespace: parsedYaml.metadata?.namespace ?? '',
-      });
+        metadata: {
+          name: parsedYaml.spec?.targetRef?.name || '',
+          namespace: parsedYaml.metadata?.namespace ?? '',
+        },
+      } as GatewayResource);
       setHealthCheck({
         path: parsedYaml.spec?.healthCheck?.path || '',
         failureThreshold: parsedYaml.spec?.healthCheck?.failureThreshold,
@@ -272,7 +273,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const formValidation = () => {
     if (
       policyName &&
-      selectedGateway.name &&
+      (selectedGateway.metadata?.name ?? '') &&
       providerRefs.length > 0 &&
       (!loadBalancingExpanded ||
         (loadBalancing.geo && loadBalancing.weight != null && loadBalancing.defaultGeo !== '')) &&
@@ -329,7 +330,7 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
       {createView === 'form' ? (
         <PageSection hasBodyWrapper={false}>
           <Form className="co-m-pane__form">
-            <FormGroup label={t('Policy Name')} isRequired fieldId="policy-name">
+            <FormGroup label={t('Policy name')} isRequired fieldId="policy-name">
               <TextInput
                 isRequired
                 type="text"

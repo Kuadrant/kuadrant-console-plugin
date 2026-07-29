@@ -29,7 +29,7 @@ import ClusterIssuerSelect from './issuer/clusterIssuerSelect';
 import IssuerSelect from './issuer/issuerSelect';
 import { ClusterIssuer } from './issuer/types';
 import { Issuer } from './issuer/types';
-import { Gateway } from './gateway/types';
+import { GatewayResource } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
@@ -39,10 +39,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<Gateway>({
-    name: '',
-    namespace: '',
-  });
+  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>({} as GatewayResource);
   const [selectedClusterIssuers, setSelectedClusterIssuers] = React.useState<ClusterIssuer>({
     name: '',
   });
@@ -76,7 +73,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
       targetRef: {
         group: 'gateway.networking.k8s.io',
         kind: 'Gateway',
-        name: selectedGateway.name,
+        name: selectedGateway.metadata?.name ?? '',
       },
       issuerRef:
         certIssuerType === 'clusterissuer'
@@ -140,9 +137,11 @@ const KuadrantTLSCreatePage: React.FC = () => {
         setCreate(false);
         setPolicyName(tlsPolicyUpdate.metadata?.name || '');
         setSelectedGateway({
-          name: tlsPolicyUpdate.spec?.targetRef?.name || '',
-          namespace: tlsPolicyUpdate.metadata?.namespace ?? '',
-        });
+          metadata: {
+            name: tlsPolicyUpdate.spec?.targetRef?.name || '',
+            namespace: tlsPolicyUpdate.metadata?.namespace ?? '',
+          },
+        } as GatewayResource);
         if (tlsPolicyUpdate.spec?.issuerRef?.kind === 'ClusterIssuer') {
           setCertIssuerType('clusterissuer');
           setSelectedClusterIssuers({ name: tlsPolicyUpdate.spec?.issuerRef?.name || '' });
@@ -168,9 +167,11 @@ const KuadrantTLSCreatePage: React.FC = () => {
       const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
-        name: parsedYaml.spec?.targetRef?.name || '',
-        namespace: parsedYaml.metadata?.namespace ?? '',
-      });
+        metadata: {
+          name: parsedYaml.spec?.targetRef?.name || '',
+          namespace: parsedYaml.metadata?.namespace ?? '',
+        },
+      } as GatewayResource);
       if (parsedYaml.spec?.issuerRef?.kind === 'ClusterIssuer') {
         setCertIssuerType('clusterissuer');
         setSelectedClusterIssuers({ name: parsedYaml.spec?.issuerRef?.name || '' });
@@ -212,7 +213,7 @@ const KuadrantTLSCreatePage: React.FC = () => {
   if (
     policyName &&
     selectedNamespace &&
-    selectedGateway.name &&
+    (selectedGateway.metadata?.name ?? '') &&
     (certIssuerType === 'clusterissuer' ? !!selectedClusterIssuers.name : !!selectedIssuer.name)
   ) {
     isFormValid = true;
