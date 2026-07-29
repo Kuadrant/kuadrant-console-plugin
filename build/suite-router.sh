@@ -132,3 +132,7 @@ if [ -n "$TEST_SPECS" ]; then
 else
   echo "test_specs="
 fi
+
+if echo "$CHANGED" | grep -qE "^src/components/(AttachedResources|grpcroute/)"; then
+  SPECS="$SPECS attached-tab.spec.ts"
+fi
