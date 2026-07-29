@@ -65,7 +65,12 @@ const FilterActions: React.FC<FilterActionsProps> = ({ filters, onChange }) => {
       hm.set.forEach(({ name, value }) => initRows.push({ action: 'Set', name, value }));
     }
     if (hm.remove) {
-      hm.remove.forEach((name: string) => initRows.push({ action: 'Delete', name }));
+      hm.remove.forEach((entry) =>
+        initRows.push({
+          action: 'Delete',
+          name: typeof entry === 'string' ? entry : entry?.name || '',
+        }),
+      );
     }
     setHeaderRowsByTab((prev) => ({
       ...prev,
@@ -91,6 +96,15 @@ const FilterActions: React.FC<FilterActionsProps> = ({ filters, onChange }) => {
     const idx = activeFilterTab;
     const updated = (filters || []).filter((_, i) => i !== idx);
     onChange(updated);
+    setHeaderRowsByTab((prev) => {
+      const next: typeof prev = {};
+      Object.keys(prev).forEach((key) => {
+        const i = Number(key);
+        if (i < idx) next[i] = prev[i];
+        else if (i > idx) next[i - 1] = prev[i];
+      });
+      return next;
+    });
     if (activeFilterTab >= updated.length && updated.length > 0) {
       setActiveFilterTab(updated.length - 1);
     } else if (updated.length === 0) {
@@ -371,10 +385,10 @@ const FilterActions: React.FC<FilterActionsProps> = ({ filters, onChange }) => {
                             );
                           }
                           if (hm.remove) {
-                            (hm.remove as string[]).forEach((name) =>
+                            hm.remove.forEach((entry) =>
                               initRows.push({
                                 action: 'Delete',
-                                name,
+                                name: typeof entry === 'string' ? entry : entry?.name || '',
                               }),
                             );
                           }
@@ -742,6 +756,7 @@ const FilterActions: React.FC<FilterActionsProps> = ({ filters, onChange }) => {
                                 const portNum = value ? Number(value) : undefined;
                                 handleFilterChangeAt(activeFilterTab, {
                                   backendRef: {
+                                    ...(f.requestMirror?.backendRef || {}),
                                     name: f.requestMirror?.backendRef?.name || '',
                                     port: portNum,
                                   },

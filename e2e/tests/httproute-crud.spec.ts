@@ -50,6 +50,40 @@ async function expectEditorContains(page: Page, text: string): Promise<void> {
   );
 }
 
+async function addRuleViaWizard(
+  page: Page,
+  opts: { pathValue: string; serviceName: string; servicePort?: string; isEdit?: boolean },
+): Promise<void> {
+  const { pathValue, serviceName, servicePort = '8080', isEdit = false } = opts;
+
+  // Step 1: Matches — add a match
+  await page.getByRole('button', { name: 'Add match' }).click();
+  await page.locator('#path-type-0').selectOption('PathPrefix');
+  await page.locator('#path-value-0').fill(pathValue);
+  await page.locator('#http-method-0').selectOption('GET');
+
+  // Next → Filters (skip)
+  await page.getByRole('button', { name: 'Next' }).click();
+  // Next → Backend Services
+  await page.getByRole('button', { name: 'Next' }).click();
+
+  await page.locator('#service-name').fill(serviceName);
+  await page.locator('#service-port').clear();
+  await page.locator('#service-port').fill(servicePort);
+
+  // Next → Review
+  await page.getByRole('button', { name: 'Next' }).click();
+
+  // Save/Create the rule inside the wizard
+  const wizardButton = page
+    .locator('.pf-v6-c-modal-box')
+    .getByRole('button', { name: isEdit ? 'Save' : 'Create' });
+  await wizardButton.click();
+
+  // Wait for wizard modal to close
+  await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 5_000 });
+}
+
 test.describe('HTTPRoute CRUD', () => {
   let namespace = '';
   let gateway = '';
@@ -90,24 +124,25 @@ spec:
 
     await expect(page.locator('#create-type-radio-form')).toBeChecked();
 
+    // Fill route name
     await page.locator('#httproute-name').fill(routeName);
 
-    const addParentButton = page.getByRole('button', { name: 'Add Parent Reference' });
-    await addParentButton.click();
+    // Add parent reference
+    await page.getByRole('button', { name: 'Add parent reference' }).click();
 
-    const gatewayOption = page.locator(`#parent-gateway-0 option[value="${namespace}/${gateway}"]`);
+    const gatewayOption = page.locator(`#parent-gateway-0 option[value="${gateway}"]`);
     await expect(gatewayOption).toBeAttached({ timeout: 15_000 });
-    await page.locator('#parent-gateway-0').selectOption(`${namespace}/${gateway}`);
+    await page.locator('#parent-gateway-0').selectOption(gateway);
 
     const sectionOption = page.locator('#parent-section-0 option[value="http"]');
     await expect(sectionOption).toBeAttached({ timeout: 15_000 });
     await page.locator('#parent-section-0').selectOption('http');
 
-    const addRuleButton = page.getByRole('button', { name: 'Add Rule' });
-    await addRuleButton.click();
+    // Add rule via wizard
+    await page.getByRole('button', { name: 'Add rule' }).click();
+    await addRuleViaWizard(page, { pathValue: '/api', serviceName: 'example-svc' });
 
-    await page.locator('#rule-path-0').fill('/api');
-
+    // Submit the form
     const createButton = page.getByRole('button', { name: 'Create', exact: true });
     await expect(createButton).toBeEnabled();
     await createButton.click();
@@ -163,17 +198,36 @@ spec:
       timeout: 15_000,
     });
 
+    // Verify form is populated
     const nameInput = page.locator('#httproute-name');
     await expect(nameInput).toHaveValue(routeName, { timeout: 15_000 });
     await expect(nameInput).toBeDisabled();
 
-    await expect(page.locator('#parent-gateway-0')).toHaveValue(`${namespace}/${gateway}`);
+    await expect(page.locator('#parent-gateway-0')).toHaveValue(gateway);
     await expect(page.locator('#parent-section-0')).toHaveValue('http');
 
-    await expect(page.locator('#rule-path-0')).toHaveValue('/api');
+    // Verify rule is shown in the table
+    await expect(page.getByText('/api')).toBeVisible({ timeout: 15_000 });
 
-    await page.locator('#rule-path-0').fill('/v2/api');
+    // Edit the rule via wizard
+    await page.getByRole('button', { name: 'Edit rule' }).click();
 
+    // In the wizard, change the path value
+    await expect(page.locator('#path-value-0')).toHaveValue('/api', { timeout: 15_000 });
+    await page.locator('#path-value-0').fill('/v2/api');
+
+    // Navigate through wizard to save
+    await page.getByRole('button', { name: 'Next' }).click(); // Filters
+    await page.getByRole('button', { name: 'Next' }).click(); // Backend
+    await page.getByRole('button', { name: 'Next' }).click(); // Review
+
+    const wizardSaveButton = page
+      .locator('.pf-v6-c-modal-box')
+      .getByRole('button', { name: 'Save' });
+    await wizardSaveButton.click();
+    await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 5_000 });
+
+    // Save the form
     const saveButton = page.getByRole('button', { name: 'Save', exact: true });
     await expect(saveButton).toBeEnabled();
     await saveButton.click();
@@ -206,28 +260,30 @@ spec:
 
     await page.locator('#httproute-name').fill(routeName);
 
-    const addParentButton = page.getByRole('button', { name: 'Add Parent Reference' });
-    await addParentButton.click();
+    // Add parent reference
+    await page.getByRole('button', { name: 'Add parent reference' }).click();
 
-    const gatewayOption = page.locator(`#parent-gateway-0 option[value="${namespace}/${gateway}"]`);
+    const gatewayOption = page.locator(`#parent-gateway-0 option[value="${gateway}"]`);
     await expect(gatewayOption).toBeAttached({ timeout: 15_000 });
-    await page.locator('#parent-gateway-0').selectOption(`${namespace}/${gateway}`);
+    await page.locator('#parent-gateway-0').selectOption(gateway);
 
-    const addRuleButton = page.getByRole('button', { name: 'Add Rule' });
-    await addRuleButton.click();
+    // Add rule via wizard
+    await page.getByRole('button', { name: 'Add rule' }).click();
+    await addRuleViaWizard(page, { pathValue: '/test', serviceName: 'test-svc' });
 
-    await page.locator('#rule-path-0').fill('/test');
-
+    // Switch to YAML
     await page.locator('#create-type-radio-yaml').click();
 
     await expectEditorContains(page, routeName);
     await expectEditorContains(page, gateway);
     await expectEditorContains(page, '/test');
 
+    // Switch back to form
     await page.locator('#create-type-radio-form').click();
 
     await expect(page.locator('#httproute-name')).toHaveValue(routeName);
-    await expect(page.locator('#parent-gateway-0')).toHaveValue(`${namespace}/${gateway}`);
-    await expect(page.locator('#rule-path-0')).toHaveValue('/test');
+    await expect(page.locator('#parent-gateway-0')).toHaveValue(gateway);
+    // Rule data is shown in the table, not as inputs
+    await expect(page.getByText('/test')).toBeVisible();
   });
 });

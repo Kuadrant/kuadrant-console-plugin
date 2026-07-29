@@ -9,6 +9,18 @@ import type {
   HeaderNameOnly,
 } from './filterTypes';
 
+type HeaderModifierContent = {
+  add?: HeaderKV[];
+  set?: HeaderKV[];
+  remove?: Array<string | HeaderNameOnly>;
+};
+
+type PathReplacement = {
+  type: 'ReplaceFullPath' | 'ReplacePrefixMatch';
+  replaceFullPath?: string;
+  replacePrefixMatch?: string;
+};
+
 export const createDefaultFilter = (type: HTTPRouteFilter['type']): HTTPRouteFilter => {
   switch (type) {
     case 'RequestHeaderModifier':
@@ -36,14 +48,18 @@ const cleanRemove = (items: Array<string | { id?: string; name: string }>) =>
   items.map((e) => (typeof e === 'string' ? e : e.name)).filter((s) => s?.trim());
 
 // Helper: Process header modifier for YAML (shared by Request/Response)
-const processHeaderModifier = (hm: any) => {
+const processHeaderModifier = (hm: HeaderModifierContent) => {
   const add = cleanHeaders(hm.add || []);
   const set = cleanHeaders(hm.set || []);
   const remove = cleanRemove(hm.remove || []);
 
   if (!add.length && !set.length && !remove.length) return undefined;
 
-  const result: any = {};
+  const result: Partial<{
+    add: { name: string; value: string }[];
+    set: { name: string; value: string }[];
+    remove: string[];
+  }> = {};
   if (add.length) result.add = add;
   if (set.length) result.set = set;
   if (remove.length) result.remove = remove;
@@ -51,17 +67,17 @@ const processHeaderModifier = (hm: any) => {
 };
 
 // Helper: Process path replacement for YAML (shared by Redirect/Rewrite)
-const processPath = (path: any) => {
+const processPath = (path: PathReplacement | undefined): PathReplacement | undefined => {
   if (!path || (path.type !== 'ReplaceFullPath' && path.type !== 'ReplacePrefixMatch')) {
     return undefined;
   }
 
   if (path.type === 'ReplaceFullPath' && path.replaceFullPath?.trim()) {
-    return { type: 'ReplaceFullPath', replaceFullPath: path.replaceFullPath };
+    return { type: 'ReplaceFullPath' as const, replaceFullPath: path.replaceFullPath };
   }
 
   if (path.type === 'ReplacePrefixMatch' && path.replacePrefixMatch?.trim()) {
-    return { type: 'ReplacePrefixMatch', replacePrefixMatch: path.replacePrefixMatch };
+    return { type: 'ReplacePrefixMatch' as const, replacePrefixMatch: path.replacePrefixMatch };
   }
 
   return undefined;
@@ -77,19 +93,19 @@ export const generateFiltersForYAML = (filters: HTTPRouteFilter[]): HTTPRouteFil
           const modifier = processHeaderModifier(f.requestHeaderModifier || {});
           return modifier
             ? { type: 'RequestHeaderModifier', requestHeaderModifier: modifier }
-            : { type: 'RequestHeaderModifier' };
+            : null;
         }
 
         case 'ResponseHeaderModifier': {
           const modifier = processHeaderModifier(f.responseHeaderModifier || {});
           return modifier
             ? { type: 'ResponseHeaderModifier', responseHeaderModifier: modifier }
-            : { type: 'ResponseHeaderModifier' };
+            : null;
         }
 
         case 'RequestRedirect': {
           const rr = f.requestRedirect || {};
-          const redirect: any = {};
+          const redirect: Partial<RequestRedirectFilter['requestRedirect']> = {};
 
           if (rr.scheme?.trim()) redirect.scheme = rr.scheme;
           if (rr.hostname?.trim()) redirect.hostname = rr.hostname;
@@ -101,12 +117,12 @@ export const generateFiltersForYAML = (filters: HTTPRouteFilter[]): HTTPRouteFil
 
           return Object.keys(redirect).length > 0
             ? { type: 'RequestRedirect', requestRedirect: redirect }
-            : { type: 'RequestRedirect' };
+            : null;
         }
 
         case 'URLRewrite': {
           const url = f.urlRewrite || {};
-          const rewrite: any = {};
+          const rewrite: Partial<URLRewriteFilter['urlRewrite']> = {};
 
           if (url.hostname?.trim()) rewrite.hostname = url.hostname;
 
@@ -115,12 +131,12 @@ export const generateFiltersForYAML = (filters: HTTPRouteFilter[]): HTTPRouteFil
 
           return Object.keys(rewrite).length > 0
             ? { type: 'URLRewrite', urlRewrite: rewrite }
-            : { type: 'URLRewrite', urlRewrite: {} };
+            : null;
         }
 
         case 'RequestMirror': {
           const rm = f.requestMirror || { backendRef: { name: '' } };
-          const backendRef: any = {};
+          const backendRef: Partial<RequestMirrorFilter['requestMirror']['backendRef']> = {};
 
           if (rm.backendRef?.name?.trim()) {
             backendRef.name = rm.backendRef.name;
@@ -208,23 +224,23 @@ const addRemoveIds = (items: Array<string | HeaderNameOnly> | undefined) =>
     : [];
 
 // Helper: Parse header modifier from YAML (shared by Request/Response)
-const parseHeaderModifier = (hm: any, filterIndex: number) => ({
+const parseHeaderModifier = (hm: HeaderModifierContent, filterIndex: number) => ({
   add: addHeaderIds(hm.add, 'add', filterIndex),
   set: addHeaderIds(hm.set, 'set', filterIndex),
   remove: addRemoveIds(hm.remove),
 });
 
 // Helper: Parse path from YAML (shared by Redirect/Rewrite)
-const parsePath = (path: any) => {
+const parsePath = (path: PathReplacement | undefined): PathReplacement | undefined => {
   if (!path || (path.type !== 'ReplaceFullPath' && path.type !== 'ReplacePrefixMatch')) {
     return undefined;
   }
 
   if (path.type === 'ReplaceFullPath') {
-    return { type: 'ReplaceFullPath', replaceFullPath: path.replaceFullPath || '' };
+    return { type: 'ReplaceFullPath' as const, replaceFullPath: path.replaceFullPath || '' };
   }
 
-  return { type: 'ReplacePrefixMatch', replacePrefixMatch: path.replacePrefixMatch || '' };
+  return { type: 'ReplacePrefixMatch' as const, replacePrefixMatch: path.replacePrefixMatch || '' };
 };
 
 export const parseFiltersFromYAML = (filters: HTTPRouteFilter[] | undefined): HTTPRouteFilter[] => {
@@ -252,7 +268,7 @@ export const parseFiltersFromYAML = (filters: HTTPRouteFilter[] | undefined): HT
 
       case 'RequestRedirect': {
         const rr = (f as RequestRedirectFilter).requestRedirect || {};
-        const obj: any = {};
+        const obj: Partial<RequestRedirectFilter['requestRedirect']> = {};
         if (typeof rr.scheme === 'string') obj.scheme = rr.scheme;
         if (typeof rr.hostname === 'string') obj.hostname = rr.hostname;
         if (typeof rr.port === 'number') obj.port = rr.port;
@@ -266,7 +282,7 @@ export const parseFiltersFromYAML = (filters: HTTPRouteFilter[] | undefined): HT
 
       case 'URLRewrite': {
         const url = (f as URLRewriteFilter).urlRewrite || {};
-        const obj: any = {};
+        const obj: Partial<URLRewriteFilter['urlRewrite']> = {};
         if (typeof url.hostname === 'string') obj.hostname = url.hostname;
 
         const path = parsePath(url.path);

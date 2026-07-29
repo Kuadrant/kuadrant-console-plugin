@@ -12,6 +12,7 @@ import {
   Radio,
   Button,
   ButtonVariant,
+  ActionGroup,
   Alert,
   Modal,
   AlertVariant,
@@ -29,139 +30,22 @@ import { useLocation, useNavigate } from 'react-router-dom-v5-compat';
 import * as yaml from 'js-yaml';
 import ParentReferencesSelect from '../../utils/ParentReferencesSelect';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
-import { HTTPRouteResource, HTTPRouteMatch, HTTPRouteHeader, HTTPRouteQueryParam } from './types';
+import { HTTPRouteResource, HTTPRouteMatch } from './types';
 import {
   generateFiltersForYAML,
   parseFiltersFromYAML,
   getFilterSummary,
 } from './filters/filterUtils';
+import {
+  generateMatchesForYAML,
+  parseMatchesFromYAML,
+  validateMatchesInRule,
+  formatMatchesForDisplay,
+} from './matchUtils';
 import HTTPRouteRuleWizard from './HTTPRouteRuleWizard';
 import KuadrantCreateUpdate from '../KuadrantCreateUpdate';
+import { handleCancel } from '../../utils/cancel';
 import '../css/gateway-api-plugin.css';
-
-export const generateMatchesForYAML = (matches: HTTPRouteMatch[]) => {
-  if (!matches || matches.length === 0) {
-    return [];
-  }
-
-  return matches
-    .map((match) => {
-      const yamlMatch: {
-        path: { type: HTTPRouteMatch['pathType']; value: string };
-        method?: string;
-        headers?: {
-          type: HTTPRouteMatch['headers'][number]['type'];
-          name: string;
-          value: string;
-        }[];
-        queryParams?: {
-          type: HTTPRouteMatch['queryParams'][number]['type'];
-          name: string;
-          value: string;
-        }[];
-      } = {
-        path: {
-          type: match.pathType,
-          value: match.pathValue,
-        },
-      };
-      if (match.method && match.method !== 'GET') {
-        yamlMatch.method = match.method;
-      }
-
-      if (match.headers && match.headers.length > 0) {
-        const validHeaders = match.headers
-          .filter((h) => h.name && h.value && h.name.trim() !== '' && h.value.trim() !== '')
-          .map((h) => ({
-            type: h.type,
-            name: h.name,
-            value: h.value,
-          }));
-
-        if (validHeaders.length > 0) {
-          yamlMatch.headers = validHeaders;
-        }
-      }
-
-      if (match.queryParams && match.queryParams.length > 0) {
-        const validQueryParams = match.queryParams
-          .filter((q) => q.name && q.value && q.name.trim() !== '' && q.value.trim() !== '')
-          .map((q) => ({
-            type: q.type,
-            name: q.name,
-            value: q.value,
-          }));
-
-        if (validQueryParams.length > 0) {
-          yamlMatch.queryParams = validQueryParams;
-        }
-      }
-
-      return yamlMatch;
-    })
-    .filter(Boolean);
-};
-
-export const parseMatchesFromYAML = (
-  yamlMatches: Array<
-    | undefined
-    | null
-    | {
-        path?: { type?: string; value?: string };
-        method?: string;
-        headers?: Array<{ type?: string; name?: string; value?: string }>;
-        queryParams?: Array<{ type?: string; name?: string; value?: string }>;
-      }
-  >,
-): HTTPRouteMatch[] => {
-  if (!yamlMatches || !Array.isArray(yamlMatches)) {
-    return [];
-  }
-
-  return yamlMatches.map((match, matchIndex: number) => ({
-    id: `match-${Date.now()}-${matchIndex}`,
-    pathType: match.path?.type || 'PathPrefix',
-    pathValue: match.path?.value || '/',
-    method: match.method || 'GET',
-    headers: match.headers
-      ? match.headers.map(
-          (header, headerIndex: number): HTTPRouteHeader => ({
-            id: `header-${Date.now()}-${headerIndex}`,
-            type: (header.type as HTTPRouteHeader['type']) || 'Exact',
-            name: header.name || '',
-            value: header.value || '',
-          }),
-        )
-      : [],
-    queryParams: match.queryParams
-      ? match.queryParams.map(
-          (queryParam, queryParamIndex: number): HTTPRouteQueryParam => ({
-            id: `queryparam-${Date.now()}-${queryParamIndex}`,
-            type: (queryParam.type as HTTPRouteQueryParam['type']) || 'Exact',
-            name: queryParam.name || '',
-            value: queryParam.value || '',
-          }),
-        )
-      : [],
-  }));
-};
-
-export const validateMatchesInRule = (matches: HTTPRouteMatch[]): boolean => {
-  return (
-    matches.length === 0 ||
-    matches.every((match) => match.pathType && match.pathValue && match.method)
-  );
-};
-
-export const formatMatchesForDisplay = (matches: HTTPRouteMatch[]): string => {
-  if (!matches || matches.length === 0) {
-    return '—';
-  }
-
-  return matches
-    .map((match) => `${match.pathType} ${match.pathValue} / ${match.method}`)
-    .join(', ');
-};
 
 interface ParentReference {
   id: string;
@@ -216,7 +100,6 @@ const HTTPRouteCreatePage: React.FC = () => {
   const pathSplit = location.pathname.split('/');
   const nameEdit = pathSplit[5];
   const namespaceEdit = pathSplit[3];
-  const [formDisabled] = React.useState(false);
   const selectedNamespace =
     !selectedNamespaceRaw || selectedNamespaceRaw === '#ALL_NS#' ? 'default' : selectedNamespaceRaw;
   // Function to add a new hostname field
@@ -328,10 +211,14 @@ const HTTPRouteCreatePage: React.FC = () => {
     }
   };
 
-  const httpRouteGVK = getGroupVersionKindForResource({
-    apiVersion: 'gateway.networking.k8s.io/v1',
-    kind: 'HTTPRoute',
-  });
+  const httpRouteGVK = React.useMemo(
+    () =>
+      getGroupVersionKindForResource({
+        apiVersion: 'gateway.networking.k8s.io/v1',
+        kind: 'HTTPRoute',
+      }),
+    [],
+  );
 
   const [httpRouteModel] = useK8sModel({
     group: httpRouteGVK.group,
@@ -441,7 +328,8 @@ const HTTPRouteCreatePage: React.FC = () => {
     return !!(routeName && hasValidParentRef && hasValidRules);
   };
 
-  const redirectPath = `/k8s/ns/${selectedNamespace}/${httpRouteModel?.apiGroup}~${httpRouteModel?.apiVersion}~${httpRouteModel?.kind}`;
+  const redirectNamespace = originalMetadata?.namespace ?? namespaceEdit ?? selectedNamespace;
+  const redirectPath = `/k8s/ns/${redirectNamespace}/${httpRouteModel?.apiGroup}~${httpRouteModel?.apiVersion}~${httpRouteModel?.kind}/${routeName}`;
 
   const handleAddRule = () => {
     setEditingRuleIndex(null);
@@ -520,15 +408,15 @@ const HTTPRouteCreatePage: React.FC = () => {
       {createView === 'form' ? (
         <PageSection hasBodyWrapper={false}>
           <Form className="co-m-pane__form">
-            <FormGroup label={t('HTTPRoute Name')} isRequired fieldId="route-name">
+            <FormGroup label={t('HTTPRoute Name')} isRequired fieldId="httproute-name">
               <TextInput
                 isRequired
                 type="text"
-                id="route-name"
-                name="route-name"
+                id="httproute-name"
+                name="httproute-name"
                 value={routeName}
                 onChange={handleRouteNameChange}
-                isDisabled={formDisabled}
+                isDisabled={isEdit}
                 placeholder={t('HTTPRoute Name')}
               />
               <FormHelperText>
@@ -538,11 +426,7 @@ const HTTPRouteCreatePage: React.FC = () => {
               </FormHelperText>
             </FormGroup>
 
-            <ParentReferencesSelect
-              parentRefs={parentRefs}
-              onChange={setParentRefs}
-              isDisabled={formDisabled}
-            />
+            <ParentReferencesSelect parentRefs={parentRefs} onChange={setParentRefs} />
 
             <FormGroup
               label={t('Hostnames')}
@@ -560,9 +444,8 @@ const HTTPRouteCreatePage: React.FC = () => {
                     value={hostname}
                     onChange={(_, value) => updateHostname(value, index)}
                     placeholder={t('example.com')}
-                    isDisabled={formDisabled}
                   />
-                  {hostnames.length > 0 && !formDisabled && (
+                  {hostnames.length > 0 && (
                     <Button
                       variant={ButtonVariant.plain}
                       onClick={() => removeHostnameField(index)}
@@ -573,7 +456,7 @@ const HTTPRouteCreatePage: React.FC = () => {
                   )}
                 </div>
               ))}
-              {!formDisabled && (
+              {
                 <Button
                   variant={ButtonVariant.link}
                   icon={<PlusCircleIcon />}
@@ -582,7 +465,7 @@ const HTTPRouteCreatePage: React.FC = () => {
                 >
                   {t('Add hostname')}
                 </Button>
-              )}
+              }
               <FormHelperText>
                 <HelperText>
                   <HelperTextItem>{t('Hostnames for this HTTPRoute')}</HelperTextItem>
@@ -656,9 +539,13 @@ const HTTPRouteCreatePage: React.FC = () => {
                           )}
                         </Td>
                         <Td dataLabel={t('Backend references')}>
-                          <div>
-                            <strong>{rule.serviceName}:</strong> {rule.servicePort}
-                          </div>
+                          {rule.serviceName ? (
+                            <div>
+                              <strong>{rule.serviceName}:</strong> {rule.servicePort}
+                            </div>
+                          ) : (
+                            <span style={{ color: 'var(--pf-v6-global--Color--200)' }}>—</span>
+                          )}
                         </Td>
                         <Td dataLabel={t('Actions')}>
                           <div style={{ display: 'flex', gap: '4px' }}>
@@ -694,14 +581,20 @@ const HTTPRouteCreatePage: React.FC = () => {
               </FormHelperText>
             </FormGroup>
 
-            <KuadrantCreateUpdate
-              validation={formValidation()}
-              model={httpRouteModel}
-              resource={httpRouteObject}
-              policyType="HTTPRoute"
-              navigate={navigate}
-              redirectPath={redirectPath}
-            />
+            <ActionGroup>
+              <KuadrantCreateUpdate
+                validation={formValidation()}
+                model={httpRouteModel}
+                resource={httpRouteObject}
+                policyType="HTTPRoute"
+                navigate={navigate}
+                redirectPath={redirectPath}
+                update={isEdit}
+              />
+              <Button variant="link" onClick={() => handleCancel(navigate)}>
+                {t('Cancel')}
+              </Button>
+            </ActionGroup>
           </Form>
         </PageSection>
       ) : (

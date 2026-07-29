@@ -75,7 +75,9 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [availableGateways, setAvailableGateways] = React.useState<GatewayForSelect[]>([]);
-  const [selectedNamespace] = useActiveNamespace();
+  const [activeNamespace] = useActiveNamespace();
+  const isAllNamespaces = !activeNamespace || activeNamespace === '#ALL_NS#';
+  const selectedNamespace = isAllNamespaces ? undefined : activeNamespace;
 
   // Load all available Gateways
   const gatewayResource = {
@@ -98,14 +100,21 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 
   // Gateway validation function
   const validateGateway = (gateway: GatewayForSelect): string | null => {
-    // (1) Gateway exists → Gateway is deleting / Terminating
-    if (gateway.metadata.deletionTimestamp) {
+    if (gateway.metadata?.deletionTimestamp) {
       return t('Gateway is terminating.');
     }
 
-    // (2) Gateway exists → Route type is not supported
-    const supportsHTTPRoute = gateway.spec.listeners?.some((listener) => {
-      // Check allowedRoutes at the listener level
+    const acceptedCondition = gateway.status?.conditions?.find((c) => c.type === 'Accepted');
+    if (acceptedCondition && acceptedCondition.status !== 'True') {
+      return t('Gateway is not accepted.');
+    }
+
+    const programmedCondition = gateway.status?.conditions?.find((c) => c.type === 'Programmed');
+    if (programmedCondition && programmedCondition.status !== 'True') {
+      return t('Gateway is not programmed.');
+    }
+
+    const supportsHTTPRoute = gateway.spec?.listeners?.some((listener) => {
       const allowedKinds = listener.allowedRoutes?.kinds;
       if (allowedKinds && allowedKinds.length > 0) {
         return allowedKinds.some(
@@ -114,7 +123,6 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
             (kind.group === 'gateway.networking.k8s.io' || !kind.group),
         );
       }
-      // If allowedKinds are not specified, all types are supported by default for HTTP/HTTPS
       return listener.protocol === 'HTTP' || listener.protocol === 'HTTPS';
     });
 
@@ -122,38 +130,37 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
       return t('Only HTTPRoute is supported by this Gateway.');
     }
 
-    // (3) Gateway exists → gateway allowedRoutes does not allow
-    const allowsFromNamespace = gateway.spec.listeners?.some((listener) => {
+    const allowsFromNamespace = gateway.spec?.listeners?.some((listener) => {
       const namespacePolicy = listener.allowedRoutes?.namespaces?.from || 'Same';
-      return (
-        namespacePolicy === 'All' ||
-        (namespacePolicy === 'Same' && gateway.metadata.namespace === selectedNamespace)
-      );
+      if (namespacePolicy === 'All') return true;
+      if (isAllNamespaces) return true;
+      return namespacePolicy === 'Same' && gateway.metadata?.namespace === selectedNamespace;
     });
 
     if (!allowsFromNamespace) {
       return t('Not allowed by Gateway settings.');
     }
 
-    return null; //  Gateway is available
+    return null;
   };
 
-  // Listener validation function
   const validateListener = (gateway: GatewayForSelect, listenerName: string): string | null => {
-    // First, validate the Gateway itself
     const gatewayValidation = validateGateway(gateway);
     if (gatewayValidation) return gatewayValidation;
 
-    // (4) Listener is unavailable (Ready=False)
     const listenerStatus = gateway.status?.listeners?.find((ls) => ls.name === listenerName);
     if (listenerStatus) {
-      const readyCondition = listenerStatus.conditions?.find((c) => c.type === 'Ready');
-      if (readyCondition && readyCondition.status !== 'True') {
-        return t('Listener is not available for route binding.');
+      const accepted = listenerStatus.conditions?.find((c) => c.type === 'Accepted');
+      if (accepted && accepted.status !== 'True') {
+        return t('Listener is not accepted.');
+      }
+      const programmed = listenerStatus.conditions?.find((c) => c.type === 'Programmed');
+      if (programmed && programmed.status !== 'True') {
+        return t('Listener is not programmed.');
       }
     }
 
-    return null; // Listener is available
+    return null;
   };
 
   // Sort Gateways: available first, then unavailable
@@ -259,7 +266,7 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
           <span style={{ color: 'var(--pf-v6-global--danger-color--100)' }}>*</span>
         </span>
       }
-      fieldId={parentRefs[0] ? `gateway-name-${parentRefs[0].id}` : 'parent-references'}
+      fieldId={parentRefs[0] ? 'parent-gateway-0' : 'parent-references'}
     >
       {!hasValidParentRef && (
         <Alert
@@ -321,13 +328,9 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
                   marginBottom: '16px',
                 }}
               >
-                <FormGroup
-                  label={t('Gateway name')}
-                  isRequired
-                  fieldId={`gateway-name-${parentRef.id}`}
-                >
+                <FormGroup label={t('Gateway name')} isRequired fieldId={`parent-gateway-${index}`}>
                   <FormSelect
-                    id={`gateway-name-${parentRef.id}`}
+                    id={`parent-gateway-${index}`}
                     value={parentRef.gatewayName}
                     onChange={(_, value) =>
                       updateParentReference(parentRef.id, 'gatewayName', value)
@@ -368,9 +371,9 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 
               {/* Section and Port */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <FormGroup label={t('Section name')} fieldId={`section-name-${parentRef.id}`}>
+                <FormGroup label={t('Section name')} fieldId={`parent-section-${index}`}>
                   <FormSelect
-                    id={`section-name-${parentRef.id}`}
+                    id={`parent-section-${index}`}
                     value={parentRef.sectionName}
                     onChange={(_, value) =>
                       updateParentReference(parentRef.id, 'sectionName', value)

@@ -25,7 +25,7 @@ import { HTTPRouteMatch, HTTPRouteHeader, HTTPRouteQueryParam } from './types';
 import FilterActions from './filters/FilterActions';
 import { HTTPRouteFilter } from './filters/filterTypes';
 import { validateFiltersStep, getFilterSummary } from './filters/filterUtils';
-import { formatMatchesForDisplay } from './HTTPRouteCreatePage';
+import { formatMatchesForDisplay } from './matchUtils';
 
 interface HTTPRouteRuleWizardProps {
   isOpen: boolean;
@@ -254,7 +254,7 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
           {currentRule.matches.length === 0 ? (
             <div style={{ textAlign: 'left' }}>
               <h1 style={{ marginBottom: '16px', fontSize: '24px' }}>{t('Matches')}</h1>
-              <p style={{ marginBottom: '16px', color: '#666' }}>
+              <p style={{ marginBottom: '16px', color: 'var(--pf-v6-global--Color--200)' }}>
                 {t(
                   'Defines the criteria for a request to match this rule. If multiple matches are specified, they are OR ed. If omitted, this rule matches all requests. Multiple Matches in one Rule share all BackendRefs.',
                 )}
@@ -268,14 +268,18 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
             <div>
               <div style={{ marginBottom: '10px' }}>
                 <h1 style={{ marginBottom: '16px', fontSize: '24px' }}>{t('Matches')}</h1>
-                <p style={{ marginBottom: '10px', color: '#666' }}>
+                <p style={{ marginBottom: '10px', color: 'var(--pf-v6-global--Color--200)' }}>
                   {t(
                     'Defines the criteria for a request to match this rule. If multiple matches are specified, they are OR ed. If omitted, this rule matches all requests.',
                   )}
                 </p>
               </div>
 
-              <Tabs activeKey={activeMatchTab} onSelect={handleMatchTabSelect}>
+              <Tabs
+                activeKey={activeMatchTab}
+                onSelect={handleMatchTabSelect}
+                onAdd={handleAddMatch}
+              >
                 {currentRule.matches.map((match, index) => (
                   <Tab
                     key={match.id}
@@ -350,7 +354,7 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
                               }}
                               aria-label={t('Select path type')}
                             >
-                              <FormSelectOption value="" label="Select ..." />
+                              <FormSelectOption value="" label={t('Select...')} />
                               <FormSelectOption value="PathPrefix" label="PathPrefix" />
                               <FormSelectOption value="Exact" label="Exact" />
                               <FormSelectOption
@@ -396,7 +400,7 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
                               }}
                               aria-label={t('Select HTTP method')}
                             >
-                              <FormSelectOption value="" label="Select..." />
+                              <FormSelectOption value="" label={t('Select...')} />
                               <FormSelectOption value="GET" label="GET" />
                               <FormSelectOption value="POST" label="POST" />
                               <FormSelectOption value="PUT" label="PUT" />
@@ -618,7 +622,7 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
       form: (
         <Form>
           <h1 style={{ marginBottom: '16px', fontSize: '24px' }}>{t('Review')}</h1>
-          <p style={{ marginBottom: '16px', color: '#666' }}>
+          <p style={{ marginBottom: '16px', color: 'var(--pf-v6-global--Color--200)' }}>
             {t('Review the rule configuration before saving.')}
           </p>
 
@@ -636,7 +640,7 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
                     <strong>{currentRule.matches.length}</strong>{' '}
                     {currentRule.matches.length === 1 ? t('match') : t('matches')}
                   </div>
-                  <div style={{ color: '#666' }}>
+                  <div style={{ color: 'var(--pf-v6-global--Color--200)' }}>
                     {formatMatchesForDisplay(currentRule.matches)}
                   </div>
                 </>
@@ -654,7 +658,7 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
                     <strong>{currentRule.filters.length}</strong>{' '}
                     {currentRule.filters.length === 1 ? t('filter') : t('filters')}
                   </div>
-                  <div style={{ color: '#666' }}>
+                  <div style={{ color: 'var(--pf-v6-global--Color--200)' }}>
                     {currentRule.filters.map((filter, idx) => (
                       <div key={idx}>{getFilterSummary(filter)}</div>
                     ))}
@@ -694,9 +698,9 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
         <WizardHeader
           title={editingRuleIndex !== null ? t('Edit rule') : t('Add rule')}
           titleId="wiz-modal-demo-title"
-          description="Configure routing rule with matches and backend services"
+          description={t('Configure routing rule with matches and backend services')}
           descriptionId="wiz-modal-demo-description"
-          closeButtonAriaLabel="Close wizard"
+          closeButtonAriaLabel={t('Close wizard')}
           onClose={onClose}
         />
       }

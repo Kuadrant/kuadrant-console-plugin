@@ -71,7 +71,7 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj, onDeleteClic
   };
 
   const onEditClick = () => {
-    if (obj.kind === 'Gateway') {
+    if (obj.kind === 'Gateway' || obj.kind === 'HTTPRoute') {
       navigate({
         pathname: `/k8s/ns/${obj.metadata.namespace}/${obj.apiVersion.replace('/', '~')}~${
           obj.kind
@@ -80,8 +80,7 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj, onDeleteClic
     } else if (
       obj.kind === 'AuthPolicy' ||
       obj.kind === 'RateLimitPolicy' ||
-      obj.kind === 'PlanPolicy' ||
-      obj.kind === 'HTTPRoute'
+      obj.kind === 'PlanPolicy'
     ) {
       navigate({
         pathname: `/k8s/ns/${obj.metadata.namespace}/${obj.apiVersion.replace('/', '~')}~${
