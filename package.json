@@ -120,7 +120,9 @@
       "GatewayPoliciesPage": "./components/GatewayPoliciesPage",
       "GatewayCreatePage": "./components/gateway/GatewayCreatePage",
       "useGatewayActions": "./components/gateway/useGatewayActions",
-      "gatewayActionFilter": "./components/gateway/gatewayActionFilter"
+      "gatewayActionFilter": "./components/gateway/gatewayActionFilter",
+      "HTTPRouteCreatePage": "./components/httproute/HTTPRouteCreatePage",
+      "useHTTPRouteActions": "./components/httproute/useHTTPRouteActions"
     },
     "dependencies": {
       "@console/pluginAPI": "*"

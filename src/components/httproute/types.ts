@@ -1,6 +1,6 @@
 import { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
 
-export type HTTPRouteFilter = unknown;
+export type { HTTPRouteFilter } from './filters/filterTypes';
 
 export interface HTTPRouteResource extends K8sResourceCommon {
   spec?: {
@@ -40,7 +40,7 @@ export interface HTTPRouteResource extends K8sResourceCommon {
           | 'TRACE'
           | 'PATCH';
       }[];
-      filters?: HTTPRouteFilter[];
+      filters?: import('./filters/filterTypes').HTTPRouteFilter[];
       backendRefs?: {
         group?: string;
         kind?: string;
