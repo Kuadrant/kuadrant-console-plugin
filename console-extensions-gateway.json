@@ -1,0 +1,38 @@
+[
+  {
+    "type": "console.resource/create",
+    "properties": {
+      "model": {
+        "group": "gateway.networking.k8s.io",
+        "version": "v1",
+        "kind": "Gateway"
+      },
+      "component": {
+        "$codeRef": "GatewayCreatePage"
+      }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/ns/:namespace/gateway.networking.k8s.io~v1~Gateway/:name/edit",
+      "component": {
+        "$codeRef": "GatewayCreatePage"
+      }
+    }
+  },
+  {
+    "type": "console.action/resource-provider",
+    "properties": {
+      "model": {
+        "group": "gateway.networking.k8s.io",
+        "version": "v1",
+        "kind": "Gateway"
+      },
+      "provider": {
+        "$codeRef": "useGatewayActions"
+      }
+    }
+  }
+]

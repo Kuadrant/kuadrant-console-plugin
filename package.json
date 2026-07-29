@@ -100,9 +100,6 @@
       "KuadrantOIDCPolicyCreatePage": "./components/KuadrantOIDCPolicyCreatePage",
       "KuadrantPlanPolicyCreatePage": "./components/KuadrantPlanPolicyCreatePage",
       "KuadrantTLSCreatePage": "./components/KuadrantTLSCreatePage",
-      "HTTPRoutePoliciesPage": "./components/HTTPRoutePoliciesPage",
-      "GRPCRoutePoliciesPage": "./components/GRPCRoutePoliciesPage",
-      "GatewayPoliciesPage": "./components/GatewayPoliciesPage",
       "PolicyTargetRefPage": "./components/PolicyTargetRefPage",
       "APIProductCreatePage": "./components/apiproduct/APIProductCreatePage",
       "APIProductsListPage": "./components/apiproduct/APIProductsListPage",
@@ -117,7 +114,12 @@
       "useDNSPolicyActions": "./components/dnspolicy/useDNSPolicyActions",
       "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions",
       "useOIDCPolicyActions": "./components/oidcpolicy/useOIDCPolicyActions",
-      "useTokenRateLimitPolicyActions": "./components/tokenratelimitpolicy/useTokenRateLimitPolicyActions"
+      "useTokenRateLimitPolicyActions": "./components/tokenratelimitpolicy/useTokenRateLimitPolicyActions",
+      "HTTPRoutePoliciesPage": "./components/HTTPRoutePoliciesPage",
+      "GRPCRoutePoliciesPage": "./components/GRPCRoutePoliciesPage",
+      "GatewayPoliciesPage": "./components/GatewayPoliciesPage",
+      "GatewayCreatePage": "./components/gateway/GatewayCreatePage",
+      "useGatewayActions": "./components/gateway/useGatewayActions"
     },
     "dependencies": {
       "@console/pluginAPI": "*"
