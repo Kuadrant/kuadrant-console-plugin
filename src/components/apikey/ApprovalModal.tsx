@@ -11,6 +11,7 @@ import {
 import { Table, Thead, Tr, Th, Tbody, Td } from '@patternfly/react-table';
 import { useTranslation } from 'react-i18next';
 import { APIKeyRequest } from './types';
+import { formatExpiryDate } from './utils';
 import { TrashIcon } from '@patternfly/react-icons';
 import './ApprovalModal.css';
 
@@ -97,6 +98,7 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
                   <Th>{t('Requester')}</Th>
                   <Th>{t('API Product')}</Th>
                   <Th>{t('Plan')}</Th>
+                  <Th>{t('Expiration')}</Th>
                   <Th width={10} screenReaderText={t('Actions')}></Th>
                 </Tr>
               </Thead>
@@ -106,6 +108,7 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
                     <Td dataLabel={t('Requester')}>{req.spec.requestedBy.email}</Td>
                     <Td dataLabel={t('API Product')}>{req.spec.apiProductRef.name}</Td>
                     <Td dataLabel={t('Plan')}>{req.spec.planTier}</Td>
+                    <Td dataLabel={t('Expiration')}>{formatExpiryDate(req.spec.expiresAt)}</Td>
                     <Td>
                       <Button
                         variant="plain"
@@ -130,6 +133,9 @@ const ApprovalModal: React.FC<ApprovalModalProps> = ({
             </p>
             <p>
               <strong>{t('Plan')}:</strong> {requests[0]?.spec.planTier}
+            </p>
+            <p>
+              <strong>{t('Expiration')}:</strong> {formatExpiryDate(requests[0]?.spec.expiresAt)}
             </p>
             <p>
               <strong>{t('Use Case')}:</strong> {requests[0]?.spec.useCase}

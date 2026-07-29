@@ -70,6 +70,7 @@ export interface APIKey extends K8sResourceCommon {
       email: string;
     };
     useCase?: string;
+    expiresAt?: string; // ISO 8601, optional
   };
   status?: {
     limits?: PlanLimits;
@@ -80,10 +81,16 @@ export interface APIKey extends K8sResourceCommon {
 
 // Utility function to derive APIKey status from conditions
 // Following Kubernetes conditions pattern (similar to CertificateSigningRequest)
-export type APIKeyPhase = 'Pending' | 'Approved' | 'Denied' | 'Failed';
+export type APIKeyPhase = 'Pending' | 'Approved' | 'Denied' | 'Failed' | 'Expired';
 
 export const getAPIKeyPhase = (apiKey: APIKey): APIKeyPhase => {
   const conditions = apiKey.status?.conditions || [];
+
+  // Check for Expired condition first — controller sets this instead of Approved when expiresAt has passed
+  const expiredCondition = conditions.find((c) => c.type === 'Expired' && c.status === 'True');
+  if (expiredCondition) {
+    return 'Expired';
+  }
 
   // Check for Approved condition with status "True"
   const approvedCondition = conditions.find((c) => c.type === 'Approved' && c.status === 'True');
