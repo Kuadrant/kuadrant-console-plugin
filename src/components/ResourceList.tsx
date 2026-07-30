@@ -15,6 +15,7 @@ import {
   InputGroup,
   TextInput,
   MenuToggleElement,
+  SelectList,
   SelectOption,
   Toolbar,
   ToolbarContent,
@@ -37,6 +38,13 @@ import DropdownWithKebab from './DropdownWithKebab';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
 
+type AdditionalFilter = {
+  label: string;
+  allLabel: string;
+  options: string[];
+  filterFn: (item: K8sResourceCommon, selectedValue: string) => boolean;
+};
+
 type ResourceListProps = {
   resources: Array<{
     group: string;
@@ -55,6 +63,7 @@ type ResourceListProps = {
       activeColumnIDs: Set<string>,
     ) => React.ReactNode
   >;
+  additionalFilters?: AdditionalFilter[];
 };
 
 const ResourceList: React.FC<ResourceListProps> = ({
@@ -64,6 +73,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
   columns,
   renderers,
   emptyResourceName = 'Policies',
+  additionalFilters = [],
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
@@ -142,11 +152,22 @@ const ResourceList: React.FC<ResourceListProps> = ({
   ) => {
     setFilterSelected(selection);
     setIsOpen(false);
+    setAdditionalFilterValue('');
+    setFilters('');
   };
+
+  const [additionalFilterValue, setAdditionalFilterValue] = React.useState('');
+  const [isAdditionalFilterOpen, setIsAdditionalFilterOpen] = React.useState(false);
+
+  const activeAdditionalFilter = additionalFilters.find((f) => f.label === filterSelected);
 
   React.useEffect(() => {
     let data = allData;
-    if (filters) {
+    if (activeAdditionalFilter) {
+      if (additionalFilterValue) {
+        data = data.filter((item) => activeAdditionalFilter.filterFn(item, additionalFilterValue));
+      }
+    } else if (filters) {
       const filterValue = filters.toLowerCase();
       data = data.filter((item) => {
         if (filterSelected === 'Name') {
@@ -160,7 +181,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
       });
     }
     setFilteredData(data);
-  }, [allData, filters, filterSelected]);
+  }, [allData, filters, filterSelected, additionalFilterValue, activeAdditionalFilter]);
 
   const defaultColumns: TableColumn<K8sResourceCommon>[] = [
     {
@@ -354,26 +375,58 @@ const ResourceList: React.FC<ResourceListProps> = ({
                     onOpenChange={setIsOpen}
                     isOpen={isOpen}
                   >
-                    {['Name', 'Namespace', 'Type'].map((option, index) => (
-                      <SelectOption key={index} value={option}>
-                        {option}
-                      </SelectOption>
-                    ))}
+                    {['Name', 'Namespace', 'Type', ...additionalFilters.map((f) => f.label)].map(
+                      (option, index) => (
+                        <SelectOption key={index} value={option}>
+                          {option}
+                        </SelectOption>
+                      ),
+                    )}
                   </Select>
                 </ToolbarItem>
 
                 <ToolbarItem>
-                  <InputGroup className="pf-v6-c-input-group co-filter-group">
-                    <TextInput
-                      type="text"
-                      placeholder={t('Search by {{filterValue}}...', {
-                        filterValue: filterSelected.toLowerCase(),
-                      })}
-                      onChange={(_event, value) => handleFilterChange(value)}
-                      className="pf-v6-c-form-control co-text-filter-with-icon"
-                      aria-label="Resource search"
-                    />
-                  </InputGroup>
+                  {activeAdditionalFilter ? (
+                    <Select
+                      isOpen={isAdditionalFilterOpen}
+                      onOpenChange={(open) => setIsAdditionalFilterOpen(open)}
+                      onSelect={(_event, value) => {
+                        setCurrentPage(1);
+                        setAdditionalFilterValue(value as string);
+                        setIsAdditionalFilterOpen(false);
+                      }}
+                      selected={additionalFilterValue}
+                      toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+                        <MenuToggle
+                          ref={toggleRef}
+                          onClick={() => setIsAdditionalFilterOpen(!isAdditionalFilterOpen)}
+                        >
+                          {additionalFilterValue || activeAdditionalFilter.allLabel}
+                        </MenuToggle>
+                      )}
+                    >
+                      <SelectList>
+                        <SelectOption value="">{activeAdditionalFilter.allLabel}</SelectOption>
+                        {activeAdditionalFilter.options.map((opt) => (
+                          <SelectOption key={opt} value={opt}>
+                            {opt}
+                          </SelectOption>
+                        ))}
+                      </SelectList>
+                    </Select>
+                  ) : (
+                    <InputGroup className="pf-v6-c-input-group co-filter-group">
+                      <TextInput
+                        type="text"
+                        placeholder={t('Search by {{filterValue}}...', {
+                          filterValue: filterSelected.toLowerCase(),
+                        })}
+                        onChange={(_event, value) => handleFilterChange(value)}
+                        className="pf-v6-c-form-control co-text-filter-with-icon"
+                        aria-label="Resource search"
+                      />
+                    </InputGroup>
+                  )}
                 </ToolbarItem>
               </ToolbarGroup>
             </ToolbarContent>

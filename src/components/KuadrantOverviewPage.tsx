@@ -45,6 +45,7 @@ import {
   PrometheusEndpoint,
   K8sResourceCommon,
   useK8sWatchResource,
+  useAccessReview,
   GreenCheckCircleIcon,
   YellowExclamationTriangleIcon,
   TableData,
@@ -676,6 +677,26 @@ const KuadrantOverviewPage: React.FC = () => {
     namespace: watchNamespace === '#ALL_NS#' ? undefined : watchNamespace,
   });
 
+  const [canListGatewayClasses] = useAccessReview({
+    group: 'gateway.networking.k8s.io',
+    resource: 'gatewayclasses',
+    verb: 'list',
+  });
+
+  const [gatewayClasses] = useK8sWatchResource<K8sResourceCommon[]>(
+    canListGatewayClasses
+      ? {
+          groupVersionKind: RESOURCES.GatewayClass.gvk,
+          isList: true,
+        }
+      : null,
+  );
+
+  const gatewayClassNames = React.useMemo(
+    () => (gatewayClasses || []).map((gc) => gc.metadata?.name).filter(Boolean) as string[],
+    [gatewayClasses],
+  );
+
   const healthyCount = React.useMemo(() => {
     return gateways.filter((gw) => {
       const conditions = gw.status?.conditions ?? [];
@@ -856,6 +877,19 @@ const KuadrantOverviewPage: React.FC = () => {
                       renderers={gatewayTrafficRenders}
                       namespace={watchNamespace}
                       emptyResourceName={t('Gateways')}
+                      additionalFilters={
+                        canListGatewayClasses
+                          ? [
+                              {
+                                label: t('GatewayClass'),
+                                allLabel: t('All GatewayClasses'),
+                                options: gatewayClassNames,
+                                filterFn: (item, value) =>
+                                  (item as GatewayResource).spec?.gatewayClassName === value,
+                              },
+                            ]
+                          : []
+                      }
                     />
                   </CardBody>
                 </Card>
