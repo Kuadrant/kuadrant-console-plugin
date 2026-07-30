@@ -17,6 +17,7 @@ interface GenericPolicyForm {
   navigate: NavigateFunction;
   validation: boolean;
   update?: boolean;
+  redirectPath?: string;
 }
 
 const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
@@ -26,6 +27,7 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
   navigate,
   validation,
   update: updateProp,
+  redirectPath,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [errorAlertMsg, setErrorAlertMsg] = React.useState('');
@@ -43,23 +45,18 @@ const KuadrantCreateUpdate: React.FC<GenericPolicyForm> = ({
           model: model,
           data: resource,
         });
-        // APIProduct uses different URL pattern
-        if (policyType === 'apiproduct') {
-          navigate(`/kuadrant/apiproducts/ns/${resource.metadata.namespace}`);
-        } else {
-          navigate(`/kuadrant/policies/ns/${resource.metadata.namespace}/${policyType}`);
-        }
       } else {
         await k8sCreate({
           model: model,
           data: resource,
         });
-        // APIProduct uses different URL pattern
-        if (policyType === 'apiproduct') {
-          navigate(`/kuadrant/apiproducts/ns/${resource.metadata.namespace}`);
-        } else {
-          navigate(`/kuadrant/policies/ns/${resource.metadata.namespace}/${policyType}`);
-        }
+      }
+      if (redirectPath) {
+        navigate(redirectPath);
+      } else if (policyType === 'apiproduct') {
+        navigate(`/kuadrant/apiproducts/ns/${resource.metadata.namespace}`);
+      } else {
+        navigate(`/kuadrant/policies/ns/${resource.metadata.namespace}/${policyType}`);
       }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'An error occurred';

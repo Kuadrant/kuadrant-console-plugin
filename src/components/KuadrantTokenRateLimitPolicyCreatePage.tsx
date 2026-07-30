@@ -29,7 +29,7 @@ import {
   useActiveNamespace,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useNavigate, useLocation } from 'react-router-dom-v5-compat';
-import { Gateway } from './gateway/types';
+import { GatewayResource } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
 import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
@@ -56,10 +56,9 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<Gateway>({
-    name: '',
-    namespace: '',
-  });
+  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>(
+    {} as GatewayResource,
+  );
   const [limits, setLimits] = React.useState<TokenLimitMap>({});
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
   const [resourceVersion, setResourceVersion] = React.useState('');
@@ -90,7 +89,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
         targetRef: {
           group: 'gateway.networking.k8s.io',
           kind: 'Gateway',
-          name: selectedGateway.name,
+          name: selectedGateway.metadata?.name ?? '',
         },
         limits,
       },
@@ -152,9 +151,11 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
         setCreate(false);
         setPolicyName(trlPolicyUpdate.metadata?.name || '');
         setSelectedGateway({
-          name: trlPolicyUpdate.spec?.targetRef?.name || '',
-          namespace: trlPolicyUpdate.metadata?.namespace || '',
-        });
+          metadata: {
+            name: trlPolicyUpdate.spec?.targetRef?.name || '',
+            namespace: trlPolicyUpdate.metadata?.namespace || '',
+          },
+        } as GatewayResource);
         setLimits(trlPolicyUpdate.spec?.limits || {});
       }
     } else if (trlError) {
@@ -168,9 +169,11 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
       const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
-        name: parsedYaml.spec?.targetRef?.name || '',
-        namespace: parsedYaml.metadata?.namespace || '',
-      });
+        metadata: {
+          name: parsedYaml.spec?.targetRef?.name || '',
+          namespace: parsedYaml.metadata?.namespace || '',
+        },
+      } as GatewayResource);
       setLimits(parsedYaml.spec?.limits || {});
     } catch (e) {
       console.error(t('Error parsing YAML:'), e);
@@ -229,7 +232,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
 
   const isAddLimitSaveDisabled = !newLimitName || modalRates.length === 0 || isDuplicateName;
 
-  const isFormValid = !!(policyName && selectedGateway.name);
+  const isFormValid = !!(policyName && (selectedGateway.metadata?.name ?? ''));
 
   return (
     <>
@@ -273,7 +276,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
       {createView === 'form' ? (
         <PageSection hasBodyWrapper={false}>
           <Form className="co-m-pane__form">
-            <FormGroup label={t('Policy Name')} isRequired fieldId="policy-name">
+            <FormGroup label={t('Policy name')} isRequired fieldId="policy-name">
               <TextInput
                 isRequired
                 type="text"
