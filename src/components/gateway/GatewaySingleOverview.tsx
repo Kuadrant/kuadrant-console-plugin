@@ -22,7 +22,7 @@ const GatewaySingleOverview: React.FC = () => {
     gateway: {
       groupVersionKind: RESOURCES.Gateway.gvk,
       namespace: activeNamespace,
-      name: routeName,
+      name: routeName ?? undefined,
       isList: false,
     },
   };

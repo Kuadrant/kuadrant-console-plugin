@@ -3,7 +3,7 @@ import {
   parseMatchesFromYAML,
   validateMatchesInRule,
   formatMatchesForDisplay,
-} from './HTTPRouteCreatePage';
+} from './matchUtils';
 import type { HTTPRouteMatch } from './types';
 
 // ── generateMatchesForYAML ───────────────────────────────────────────────────
@@ -13,7 +13,7 @@ describe('generateMatchesForYAML', () => {
     expect(generateMatchesForYAML([])).toEqual([]);
   });
 
-  it('converts a single match with path only', () => {
+  it('converts a single match with path and method', () => {
     const matches: HTTPRouteMatch[] = [
       {
         id: 'match-1',
@@ -33,17 +33,18 @@ describe('generateMatchesForYAML', () => {
           type: 'PathPrefix',
           value: '/api',
         },
+        method: 'GET',
       },
     ]);
   });
 
-  it('includes method when it is not GET', () => {
+  it('omits method when it is empty', () => {
     const matches: HTTPRouteMatch[] = [
       {
         id: 'match-1',
         pathType: 'Exact',
         pathValue: '/users',
-        method: 'POST',
+        method: '',
         headers: [],
         queryParams: [],
       },
@@ -57,7 +58,6 @@ describe('generateMatchesForYAML', () => {
           type: 'Exact',
           value: '/users',
         },
-        method: 'POST',
       },
     ]);
   });
@@ -85,6 +85,7 @@ describe('generateMatchesForYAML', () => {
           type: 'PathPrefix',
           value: '/',
         },
+        method: 'GET',
         headers: [
           { type: 'Exact', name: 'X-Custom', value: 'val1' },
           { type: 'RegularExpression', name: 'X-Regex', value: '.*' },
@@ -117,6 +118,7 @@ describe('generateMatchesForYAML', () => {
           type: 'PathPrefix',
           value: '/',
         },
+        method: 'GET',
         headers: [{ type: 'Exact', name: 'Valid', value: 'val' }],
       },
     ]);
@@ -145,6 +147,7 @@ describe('generateMatchesForYAML', () => {
           type: 'PathPrefix',
           value: '/',
         },
+        method: 'GET',
         queryParams: [
           { type: 'Exact', name: 'user', value: 'alice' },
           { type: 'RegularExpression', name: 'pattern', value: '[a-z]+' },
@@ -177,6 +180,7 @@ describe('generateMatchesForYAML', () => {
           type: 'PathPrefix',
           value: '/',
         },
+        method: 'GET',
         queryParams: [{ type: 'Exact', name: 'valid', value: 'val' }],
       },
     ]);
@@ -210,6 +214,7 @@ describe('generateMatchesForYAML', () => {
           type: 'PathPrefix',
           value: '/api',
         },
+        method: 'GET',
       },
       {
         path: {
@@ -226,10 +231,12 @@ describe('generateMatchesForYAML', () => {
 
 describe('parseMatchesFromYAML', () => {
   it('returns an empty array when yamlMatches is undefined', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(parseMatchesFromYAML(undefined as any)).toEqual([]);
   });
 
   it('returns an empty array when yamlMatches is not an array', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(parseMatchesFromYAML({} as any)).toEqual([]);
   });
 
@@ -245,7 +252,7 @@ describe('parseMatchesFromYAML', () => {
     expect(result).toHaveLength(1);
     expect(result[0].pathType).toBe('PathPrefix');
     expect(result[0].pathValue).toBe('/api');
-    expect(result[0].method).toBe('GET');
+    expect(result[0].method).toBe('');
     expect(result[0].headers).toEqual([]);
     expect(result[0].queryParams).toEqual([]);
   });
@@ -418,7 +425,7 @@ describe('validateMatchesInRule', () => {
     expect(validateMatchesInRule(matches)).toBe(false);
   });
 
-  it('returns false when any match is missing method', () => {
+  it('returns true when method is empty (method is optional)', () => {
     const matches: HTTPRouteMatch[] = [
       {
         id: 'match-1',
@@ -430,7 +437,7 @@ describe('validateMatchesInRule', () => {
       },
     ];
 
-    expect(validateMatchesInRule(matches)).toBe(false);
+    expect(validateMatchesInRule(matches)).toBe(true);
   });
 });
 
@@ -438,6 +445,7 @@ describe('validateMatchesInRule', () => {
 
 describe('formatMatchesForDisplay', () => {
   it('returns "—" when matches is undefined', () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     expect(formatMatchesForDisplay(undefined as any)).toBe('—');
   });
 

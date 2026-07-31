@@ -22,7 +22,7 @@ const HTTPRouteSingleOverview: React.FC = () => {
     httpRoute: {
       groupVersionKind: RESOURCES.HTTPRoute.gvk,
       namespace: activeNamespace,
-      name: httpRouteName,
+      name: httpRouteName ?? undefined,
       isList: false,
     },
   };

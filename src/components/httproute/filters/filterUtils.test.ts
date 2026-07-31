@@ -224,7 +224,7 @@ describe('generateFiltersForYAML', () => {
     ]);
   });
 
-  it('returns type-only object when RequestHeaderModifier has no valid data', () => {
+  it('omits filter when RequestHeaderModifier has no valid data', () => {
     const filters: HTTPRouteFilter[] = [
       {
         type: 'RequestHeaderModifier',
@@ -234,11 +234,7 @@ describe('generateFiltersForYAML', () => {
 
     const result = generateFiltersForYAML(filters);
 
-    expect(result).toEqual([
-      {
-        type: 'RequestHeaderModifier',
-      },
-    ]);
+    expect(result).toEqual([]);
   });
 });
 

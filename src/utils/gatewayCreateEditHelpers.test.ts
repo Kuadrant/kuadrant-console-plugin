@@ -1,4 +1,7 @@
-import { generateUniqueId, removeCertsAndTlsOptionsForPassthrough } from './gatewayCreateEditHelpers';
+import {
+  generateUniqueId,
+  removeCertsAndTlsOptionsForPassthrough,
+} from './gatewayCreateEditHelpers';
 
 describe('generateUniqueId', () => {
   it('returns a string with the default prefix when no prefix is provided', () => {
