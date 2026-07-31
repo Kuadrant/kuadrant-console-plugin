@@ -46,16 +46,19 @@ type ParentStatus = {
 const AttachedResources: React.FC<AttachedResourcesProps> = ({ resource }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
-  const associatedResources: { [key: string]: WatchK8sResource } = {
-    HTTPRoute: {
+  const associatedResources: { [key: string]: WatchK8sResource } = {};
+  if (resource.kind === 'Gateway') {
+    associatedResources.HTTPRoute = {
       groupVersionKind: RESOURCES.HTTPRoute.gvk,
       isList: true,
-    },
-    Gateway: {
+    };
+  }
+  if (resource.kind === 'HTTPRoute' || resource.kind === 'GRPCRoute') {
+    associatedResources.Gateway = {
       groupVersionKind: RESOURCES.Gateway.gvk,
       isList: true,
-    },
-  };
+    };
+  }
 
   const watchedResources = useK8sWatchResources<{ [key: string]: K8sResourceKind[] }>(
     associatedResources,

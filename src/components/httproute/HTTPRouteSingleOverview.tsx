@@ -3,6 +3,7 @@ import Helmet from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom-v5-compat';
 import '../kuadrant.css';
+import { PageSection } from '@patternfly/react-core';
 import {
   useK8sWatchResources,
   K8sResourceCommon,
@@ -36,9 +37,9 @@ const HTTPRouteSingleOverview: React.FC = () => {
         <title data-test="example-page-title">{t('Attached')}</title>
       </Helmet>
       {!loaded ? (
-        <div>{t('Loading...')}</div>
+        <PageSection hasBodyWrapper={false}><div>{t('Loading...')}</div></PageSection>
       ) : loadError ? (
-        <div>{t('Error loading HTTPRoute: {{message}}', { message: loadError.message })}</div>
+        <PageSection hasBodyWrapper={false}><div>{t('Error loading HTTPRoute: {{message}}', { message: loadError.message })}</div></PageSection>
       ) : (
         <AttachedResources resource={httpRoute} />
       )}
