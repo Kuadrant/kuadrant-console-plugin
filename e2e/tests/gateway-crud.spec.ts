@@ -29,14 +29,6 @@ function deleteNamespace(namespace: string): void {
   }
 }
 
-async function collapseSideNav(page: Page): Promise<void> {
-  const navToggle = page.getByRole('button', { name: 'Side navigation toggle' });
-  const isExpanded = await navToggle.getAttribute('aria-expanded');
-  if (isExpanded === 'true') {
-    await navToggle.click();
-  }
-}
-
 async function gotoPage(page: Page, path: string): Promise<void> {
   await page.goto(path);
   await page.waitForLoadState('networkidle');
@@ -50,17 +42,27 @@ async function expectEditorContains(page: Page, text: string): Promise<void> {
   });
   await page.waitForFunction(
     (expected) => {
-      // Try Monaco internal API first (works regardless of virtual scrolling)
+      // Prefer the editor instance bound to the visible DOM node over getModels()
+      // because getModels() may return stale or unrelated models from previous renders
       try {
-        const monaco = (window as unknown as { monaco?: { editor?: { getModels?: () => Array<{ getValue: () => string }> } } }).monaco;
-        if (monaco?.editor?.getModels) {
-          const models = monaco.editor.getModels();
-          if (models.length > 0) {
-            return models[0].getValue().includes(expected);
-          }
+        type MonacoType = {
+          editor?: {
+            getEditors?: () => Array<{ getValue: () => string; getDomNode: () => Element | null }>;
+          };
+        };
+        const monaco = (window as unknown as { monaco?: MonacoType }).monaco;
+        const editorEl = document.querySelector('.monaco-editor');
+        if (monaco?.editor?.getEditors && editorEl) {
+          const editors = monaco.editor.getEditors();
+          const visible = editors.find(
+            (e) => e.getDomNode() === editorEl || editorEl.contains(e.getDomNode()),
+          );
+          if (visible) return visible.getValue().includes(expected);
         }
-      } catch { /* fallthrough */ }
-      // Fallback: check visible lines
+      } catch {
+        // fallthrough
+      }
+      // Fallback: check visible lines (may miss content outside viewport)
       const lines = document.querySelector('.monaco-editor .view-lines');
       return (lines?.textContent || '').includes(expected);
     },
@@ -195,7 +197,9 @@ spec:
     await expect(page.locator('#gateway-class')).toHaveValue('istio');
 
     // Verify listener is shown in the table
-    await expect(page.getByRole('gridcell', { name: 'http', exact: true })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole('gridcell', { name: 'http', exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
     await expect(page.getByRole('gridcell', { name: '80', exact: true })).toBeVisible();
 
     // Edit the listener via wizard
@@ -219,7 +223,9 @@ spec:
     await page.waitForSelector('.pf-v6-c-modal-box', { state: 'detached', timeout: 10_000 });
 
     // Wait for listener table to reflect the updated port before saving
-    await expect(page.getByRole('gridcell', { name: '8080', exact: true })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('gridcell', { name: '8080', exact: true })).toBeVisible({
+      timeout: 5_000,
+    });
 
     // Brief pause to allow React to finish committing all pending state updates
     await page.waitForTimeout(150);
@@ -228,7 +234,7 @@ spec:
     const saveButton = page.getByRole('button', { name: 'Save', exact: true });
     await expect(saveButton).toBeEnabled();
     await saveButton.evaluate((btn) =>
-      btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+      btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })),
     );
 
     await expect(page).toHaveURL(
@@ -264,12 +270,19 @@ spec:
     await page.getByRole('button', { name: 'Add listener' }).click();
     await addListenerViaWizard(page, { name: 'https', port: '443', protocol: 'HTTPS' });
 
-    // Wait for listener to appear in table before switching views
-    await expect(page.getByRole('gridcell', { name: 'https', exact: true })).toBeVisible({ timeout: 5_000 });
+    // Wait for listener to appear in table — confirms React state has the listener
+    await expect(page.getByRole('gridcell', { name: 'https', exact: true })).toBeVisible({
+      timeout: 5_000,
+    });
 
-    // React 17 useEffect runs after browser paint — wait for yamlContent state to sync
-    // before switching to YAML view, otherwise initialResource gets stale content
-    await page.waitForTimeout(300);
+    // Switch to YAML and verify the listener is reflected in the editor before proceeding.
+    // This acts as a deterministic sync point: the editor only contains 'https' once
+    // the yamlContent useEffect has re-run with the updated gatewayObject.
+    await page.locator('#create-type-radio-yaml').click();
+    await expectEditorContains(page, 'https');
+
+    // Switch back to form, then to YAML for the full assertion pass
+    await page.locator('#create-type-radio-form').click();
 
     // Switch to YAML
     await page.locator('#create-type-radio-yaml').click();
