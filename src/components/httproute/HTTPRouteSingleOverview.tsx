@@ -23,7 +23,7 @@ const HTTPRouteSingleOverview: React.FC = () => {
     httpRoute: {
       groupVersionKind: RESOURCES.HTTPRoute.gvk,
       namespace: activeNamespace,
-      name: httpRouteName,
+      name: httpRouteName ?? undefined,
       isList: false,
     },
   };
@@ -37,9 +37,13 @@ const HTTPRouteSingleOverview: React.FC = () => {
         <title data-test="example-page-title">{t('Attached')}</title>
       </Helmet>
       {!loaded ? (
-        <PageSection hasBodyWrapper={false}><div>{t('Loading...')}</div></PageSection>
+        <PageSection hasBodyWrapper={false}>
+          <div>{t('Loading...')}</div>
+        </PageSection>
       ) : loadError ? (
-        <PageSection hasBodyWrapper={false}><div>{t('Error loading HTTPRoute: {{message}}', { message: loadError.message })}</div></PageSection>
+        <PageSection hasBodyWrapper={false}>
+          <div>{t('Error loading HTTPRoute: {{message}}', { message: loadError.message })}</div>
+        </PageSection>
       ) : (
         <AttachedResources resource={httpRoute} />
       )}

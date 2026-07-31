@@ -23,7 +23,7 @@ const GatewaySingleOverview: React.FC = () => {
     gateway: {
       groupVersionKind: RESOURCES.Gateway.gvk,
       namespace: activeNamespace,
-      name: routeName,
+      name: routeName ?? undefined,
       isList: false,
     },
   };
@@ -37,9 +37,13 @@ const GatewaySingleOverview: React.FC = () => {
         <title data-test="example-page-title">{t('Attached')}</title>
       </Helmet>
       {!loaded ? (
-        <PageSection hasBodyWrapper={false}><div>{t('Loading...')}</div></PageSection>
+        <PageSection hasBodyWrapper={false}>
+          <div>{t('Loading...')}</div>
+        </PageSection>
       ) : loadError ? (
-        <PageSection hasBodyWrapper={false}><div>{t('Error loading Gateway: {{message}}', { message: loadError.message })}</div></PageSection>
+        <PageSection hasBodyWrapper={false}>
+          <div>{t('Error loading Gateway: {{message}}', { message: loadError.message })}</div>
+        </PageSection>
       ) : (
         <AttachedResources resource={gateway} />
       )}
