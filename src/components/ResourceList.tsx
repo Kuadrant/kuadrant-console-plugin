@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { sortable } from '@patternfly/react-table';
+import { sortable, SortByDirection } from '@patternfly/react-table';
 import {
   Alert,
   AlertGroup,
@@ -33,7 +33,7 @@ import {
   TableData,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { SearchIcon } from '@patternfly/react-icons';
-import { getStatusLabel } from '../utils/statusLabel';
+import { getStatusLabel, getStatusSortRank } from '../utils/statusLabel';
 import DropdownWithKebab from './DropdownWithKebab';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../utils/getModelFromResource';
@@ -65,6 +65,9 @@ type ResourceListProps = {
   >;
   additionalFilters?: AdditionalFilter[];
 };
+
+const getNestedValue = (obj: unknown, path: string): unknown =>
+  path.split('.').reduce((acc, key) => (acc as Record<string, unknown>)?.[key], obj);
 
 const ResourceList: React.FC<ResourceListProps> = ({
   resources,
@@ -183,54 +186,163 @@ const ResourceList: React.FC<ResourceListProps> = ({
     setFilteredData(data);
   }, [allData, filters, filterSelected, additionalFilterValue, activeAdditionalFilter]);
 
-  const defaultColumns: TableColumn<K8sResourceCommon>[] = [
-    {
-      title: t('plugin__kuadrant-console-plugin~Name'),
-      id: 'name',
-      sort: 'metadata.name',
-      transforms: [sortable],
-    },
-    {
-      title: t('plugin__kuadrant-console-plugin~Type'),
-      id: 'type',
-      sort: 'kind',
-      transforms: [sortable],
-    },
-    {
-      title: t('plugin__kuadrant-console-plugin~Namespace'),
-      id: 'namespace',
-      sort: 'metadata.namespace',
-      transforms: [sortable],
-    },
-    {
-      title: t('plugin__kuadrant-console-plugin~Target'),
-      id: 'target',
-    },
-    {
-      title: t('plugin__kuadrant-console-plugin~Status'),
-      id: 'Status',
-    },
-    {
-      title: t('plugin__kuadrant-console-plugin~Created'),
-      id: 'Created',
-      sort: 'metadata.creationTimestamp',
-      transforms: [sortable],
-    },
-    {
-      title: '', // No title for the kebab column
-      id: 'kebab',
-      props: { className: 'pf-v6-c-table__action' },
-    },
-  ];
+  const defaultColumns = React.useMemo<TableColumn<K8sResourceCommon>[]>(
+    () => [
+      {
+        title: t('plugin__kuadrant-console-plugin~Name'),
+        id: 'name',
+        sort: 'metadata.name',
+        transforms: [sortable],
+      },
+      {
+        title: t('plugin__kuadrant-console-plugin~Type'),
+        id: 'type',
+        sort: 'kind',
+        transforms: [sortable],
+      },
+      {
+        title: t('plugin__kuadrant-console-plugin~Namespace'),
+        id: 'namespace',
+        sort: 'metadata.namespace',
+        transforms: [sortable],
+      },
+      {
+        title: t('plugin__kuadrant-console-plugin~Target'),
+        id: 'target',
+      },
+      {
+        title: t('plugin__kuadrant-console-plugin~Status'),
+        id: 'Status',
+        sort: (data: K8sResourceCommon[], direction: SortByDirection) => {
+          const sorted = [...data].sort((a, b) => getStatusSortRank(b) - getStatusSortRank(a));
+          return direction === SortByDirection.desc ? sorted.reverse() : sorted;
+        },
+        transforms: [sortable],
+      },
+      {
+        title: t('plugin__kuadrant-console-plugin~Created'),
+        id: 'Created',
+        sort: 'metadata.creationTimestamp',
+        transforms: [sortable],
+      },
+      {
+        title: '', // No title for the kebab column
+        id: 'kebab',
+        props: { className: 'pf-v6-c-table__action' },
+      },
+    ],
+    [t],
+  );
 
   const usedColumns = columns || defaultColumns;
 
+  const [activeSortIndex, setActiveSortIndex] = React.useState<number>(-1);
+  const [activeSortDirection, setActiveSortDirection] = React.useState<SortByDirection>(
+    SortByDirection.asc,
+  );
+
+  const activeSortIndexRef = React.useRef(-1);
+  const activeSortDirectionRef = React.useRef<SortByDirection>(SortByDirection.asc);
+  const filteredDataRef = React.useRef(filteredData);
+  filteredDataRef.current = filteredData;
+  const currentPageRef = React.useRef(1);
+  const perPageRef = React.useRef(paginationLimit);
+
+  // Blocks auto-sort calls VirtualizedTable makes on mount (before user interaction)
+  const readyForUserSortRef = React.useRef(false);
+  React.useEffect(() => {
+    readyForUserSortRef.current = true;
+  }, []);
+
+  // Guards against VT's second synchronous sort call after a reset click
+  const justResetRef = React.useRef(false);
+  const [tableKey, setTableKey] = React.useState(0);
+
+  const interceptedColumns = React.useMemo(
+    () =>
+      usedColumns.map((col, idx) => {
+        if (!col.sort) return col;
+        const originalSort = col.sort;
+        return {
+          ...col,
+          sort: (_data: K8sResourceCommon[], direction: SortByDirection): K8sResourceCommon[] => {
+            const full = filteredDataRef.current;
+            const si = (currentPageRef.current - 1) * perPageRef.current;
+
+            if (!readyForUserSortRef.current) return [..._data];
+
+            // VT calls sort twice per click - block the follow-up call after a reset
+            if (justResetRef.current) {
+              justResetRef.current = false;
+              return full.slice(si, si + perPageRef.current);
+            }
+
+            const isUserClick =
+              activeSortIndexRef.current !== idx || activeSortDirectionRef.current !== direction;
+
+            if (isUserClick) {
+              // 3rd click: same column, desc → asc cycle means user wants to reset sort
+              const isReset =
+                activeSortIndexRef.current === idx &&
+                activeSortDirectionRef.current === SortByDirection.desc &&
+                direction === SortByDirection.asc;
+
+              if (isReset) {
+                justResetRef.current = true;
+                activeSortIndexRef.current = -1;
+                activeSortDirectionRef.current = SortByDirection.asc;
+                setActiveSortIndex(-1);
+                setTableKey((k) => k + 1);
+                return full.slice(si, si + perPageRef.current);
+              }
+
+              activeSortIndexRef.current = idx;
+              activeSortDirectionRef.current = direction;
+              setActiveSortIndex(idx);
+              setActiveSortDirection(direction);
+            }
+
+            let sorted: K8sResourceCommon[];
+            if (typeof originalSort === 'function') {
+              sorted = originalSort([...full], direction);
+            } else {
+              const arr = [...full].sort((a, b) => {
+                const aVal = String(getNestedValue(a, originalSort) ?? '');
+                const bVal = String(getNestedValue(b, originalSort) ?? '');
+                return aVal.localeCompare(bVal);
+              });
+              sorted = direction === SortByDirection.desc ? arr.reverse() : arr;
+            }
+            return sorted.slice(si, si + perPageRef.current);
+          },
+        };
+      }),
+    [usedColumns],
+  );
+
+  const sortedFilteredData = React.useMemo(() => {
+    if (activeSortIndex < 0) return filteredData;
+    const col = usedColumns[activeSortIndex];
+    if (!col?.sort) return filteredData;
+    if (typeof col.sort === 'function') {
+      return col.sort([...filteredData], activeSortDirection);
+    }
+    const sorted = [...filteredData].sort((a, b) => {
+      const aVal = String(getNestedValue(a, col.sort as string) ?? '');
+      const bVal = String(getNestedValue(b, col.sort as string) ?? '');
+      return aVal.localeCompare(bVal);
+    });
+    return activeSortDirection === SortByDirection.desc ? sorted.reverse() : sorted;
+  }, [filteredData, activeSortIndex, activeSortDirection, usedColumns]);
+
   const [currentPage, setCurrentPage] = React.useState<number>(1);
+  currentPageRef.current = currentPage;
   const [perPage, setPerPage] = React.useState<number>(paginationLimit);
+  perPageRef.current = perPage;
 
   const startIndex = (currentPage - 1) * perPage;
   const endIndex = startIndex + perPage;
-  const paginatedData = filteredData.slice(startIndex, endIndex);
+  const paginatedData = sortedFilteredData.slice(startIndex, endIndex);
 
   const onSetPage = (
     _event: React.MouseEvent | React.KeyboardEvent | MouseEvent,
@@ -448,19 +560,20 @@ const ResourceList: React.FC<ResourceListProps> = ({
             </EmptyState>
           ) : (
             <VirtualizedTable<K8sResourceCommon>
+              key={tableKey}
               data={paginatedData}
               unfilteredData={filteredData}
               loaded={allLoaded}
               loadError={combinedLoadError}
-              columns={usedColumns}
+              columns={interceptedColumns}
               Row={ResourceRow}
             />
           )}
 
-          {filteredData.length > 0 && (
+          {sortedFilteredData.length > 0 && (
             <div className="kuadrant-pagination-left">
               <Pagination
-                itemCount={filteredData.length}
+                itemCount={sortedFilteredData.length}
                 perPage={perPage}
                 page={currentPage}
                 onSetPage={onSetPage}
