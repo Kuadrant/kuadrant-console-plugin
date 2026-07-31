@@ -43,6 +43,31 @@ type ParentStatus = {
   parentRef: ParentRef;
 };
 
+const ResourceRow: React.FC<RowProps<K8sResourceKind>> = ({ obj, activeColumnIDs }) => {
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
+  const [group, version] = obj.apiVersion?.includes('/')
+    ? obj.apiVersion.split('/')
+    : ['', obj.apiVersion];
+
+  return (
+    <>
+      <TableData id="name" activeColumnIDs={activeColumnIDs}>
+        <ResourceLink
+          groupVersionKind={{ group, version, kind: obj.kind }}
+          name={obj.metadata?.name}
+          namespace={obj.metadata?.namespace}
+        />
+      </TableData>
+      <TableData id="namespace" activeColumnIDs={activeColumnIDs}>
+        {obj.metadata?.namespace || '-'}
+      </TableData>
+      <TableData id="status" activeColumnIDs={activeColumnIDs}>
+        {getStatusLabel(t, obj)}
+      </TableData>
+    </>
+  );
+};
+
 const AttachedResources: React.FC<AttachedResourcesProps> = ({ resource }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
@@ -117,30 +142,6 @@ const AttachedResources: React.FC<AttachedResourcesProps> = ({ resource }) => {
     { title: t('Namespace'), id: 'namespace', sort: 'metadata.namespace' },
     { title: t('Status'), id: 'status' },
   ];
-
-  const ResourceRow: React.FC<RowProps<K8sResourceKind>> = ({ obj, activeColumnIDs }) => {
-    const [group, version] = obj.apiVersion?.includes('/')
-      ? obj.apiVersion.split('/')
-      : ['', obj.apiVersion];
-
-    return (
-      <>
-        <TableData id="name" activeColumnIDs={activeColumnIDs}>
-          <ResourceLink
-            groupVersionKind={{ group, version, kind: obj.kind }}
-            name={obj.metadata?.name}
-            namespace={obj.metadata?.namespace}
-          />
-        </TableData>
-        <TableData id="namespace" activeColumnIDs={activeColumnIDs}>
-          {obj.metadata?.namespace || '-'}
-        </TableData>
-        <TableData id="status" activeColumnIDs={activeColumnIDs}>
-          {getStatusLabel(t, obj)}
-        </TableData>
-      </>
-    );
-  };
 
   const allLoaded = Object.values(watchedResources).every((res) => res.loaded);
   const loadErrors = Object.values(watchedResources)
