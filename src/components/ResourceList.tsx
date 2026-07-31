@@ -45,6 +45,119 @@ type AdditionalFilter = {
   filterFn: (item: K8sResourceCommon, selectedValue: string) => boolean;
 };
 
+type ResourceRenderers = Record<
+  string,
+  (
+    column: TableColumn<K8sResourceCommon>,
+    resource: K8sResourceCommon,
+    activeColumnIDs: Set<string>,
+  ) => React.ReactNode
+>;
+
+type ResourceRowProps = RowProps<K8sResourceCommon> & {
+  columns: TableColumn<K8sResourceCommon>[];
+  renderers?: ResourceRenderers;
+};
+
+const ResourceRow: React.FC<ResourceRowProps> = ({ obj, activeColumnIDs, columns, renderers }) => {
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
+  const { apiVersion, kind } = obj;
+  const [group, version] = apiVersion.includes('/') ? apiVersion.split('/') : ['', apiVersion];
+
+  return (
+    <>
+      {columns.map((column) => {
+        if (renderers && renderers[column.id]) {
+          return renderers[column.id](column, obj, activeColumnIDs);
+        } else {
+          switch (column.id) {
+            case 'name':
+              return (
+                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+                  <ResourceLink
+                    groupVersionKind={{ group, version, kind }}
+                    name={obj.metadata.name}
+                    namespace={obj.metadata.namespace}
+                  />
+                </TableData>
+              );
+            case 'type':
+              return (
+                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+                  {kind}
+                </TableData>
+              );
+            case 'namespace':
+              return (
+                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+                  {obj.metadata.namespace ? (
+                    <ResourceLink
+                      groupVersionKind={{ version: 'v1', kind: 'Namespace' }}
+                      name={obj.metadata.namespace}
+                    />
+                  ) : (
+                    '-'
+                  )}
+                </TableData>
+              );
+            case 'target': {
+              const targetRef = (
+                obj as K8sResourceCommon & {
+                  spec?: {
+                    targetRef?: { group: string; version?: string; kind: string; name: string };
+                  };
+                }
+              ).spec?.targetRef;
+              return (
+                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+                  {targetRef ? (
+                    <ResourceLink
+                      groupVersionKind={{
+                        group: targetRef.group,
+                        version: targetRef.version || 'v1',
+                        kind: targetRef.kind,
+                      }}
+                      name={targetRef.name}
+                      namespace={obj.metadata.namespace}
+                    />
+                  ) : (
+                    '-'
+                  )}
+                </TableData>
+              );
+            }
+            case 'Status':
+              return (
+                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+                  {getStatusLabel(t, obj)}
+                </TableData>
+              );
+            case 'Created':
+              return (
+                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+                  <Timestamp timestamp={obj.metadata.creationTimestamp} />
+                </TableData>
+              );
+            case 'kebab':
+              return (
+                <TableData
+                  key={column.id}
+                  id={column.id}
+                  activeColumnIDs={activeColumnIDs}
+                  className="pf-v6-c-table__action"
+                >
+                  <DropdownWithKebab obj={obj} />
+                </TableData>
+              );
+            default:
+              return null;
+          }
+        }
+      })}
+    </>
+  );
+};
+
 type ResourceListProps = {
   resources: Array<{
     group: string;
@@ -55,14 +168,7 @@ type ResourceListProps = {
   emptyResourceName?: string;
   paginationLimit?: number;
   columns?: TableColumn<K8sResourceCommon>[];
-  renderers?: Record<
-    string,
-    (
-      column: TableColumn<K8sResourceCommon>,
-      resource: K8sResourceCommon,
-      activeColumnIDs: Set<string>,
-    ) => React.ReactNode
-  >;
+  renderers?: ResourceRenderers;
   additionalFilters?: AdditionalFilter[];
 };
 
@@ -241,6 +347,8 @@ const ResourceList: React.FC<ResourceListProps> = ({
     SortByDirection.asc,
   );
 
+  // VT only sorts the current page it receives, so we intercept each column's
+  // sort function to sort the full dataset first, then slice to the current page.
   const activeSortIndexRef = React.useRef(-1);
   const activeSortDirectionRef = React.useRef<SortByDirection>(SortByDirection.asc);
   const filteredDataRef = React.useRef(filteredData);
@@ -371,103 +479,12 @@ const ResourceList: React.FC<ResourceListProps> = ({
     setFilters(value);
   };
 
-  const ResourceRow: React.FC<RowProps<K8sResourceCommon>> = ({ obj, activeColumnIDs }) => {
-    const { apiVersion, kind } = obj;
-    const [group, version] = apiVersion.includes('/') ? apiVersion.split('/') : ['', apiVersion];
-
-    return (
-      <>
-        {usedColumns.map((column) => {
-          if (renderers && renderers[column.id]) {
-            return renderers[column.id](column, obj, activeColumnIDs);
-          } else {
-            switch (column.id) {
-              case 'name':
-                return (
-                  <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                    <ResourceLink
-                      groupVersionKind={{ group, version, kind }}
-                      name={obj.metadata.name}
-                      namespace={obj.metadata.namespace}
-                    />
-                  </TableData>
-                );
-              case 'type':
-                return (
-                  <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                    {kind}
-                  </TableData>
-                );
-              case 'namespace':
-                return (
-                  <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                    {obj.metadata.namespace ? (
-                      <ResourceLink
-                        groupVersionKind={{ version: 'v1', kind: 'Namespace' }}
-                        name={obj.metadata.namespace}
-                      />
-                    ) : (
-                      '-'
-                    )}
-                  </TableData>
-                );
-              case 'target': {
-                const targetRef = (
-                  obj as K8sResourceCommon & {
-                    spec?: {
-                      targetRef?: { group: string; version?: string; kind: string; name: string };
-                    };
-                  }
-                ).spec?.targetRef;
-                return (
-                  <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                    {targetRef ? (
-                      <ResourceLink
-                        groupVersionKind={{
-                          group: targetRef.group,
-                          version: targetRef.version || 'v1',
-                          kind: targetRef.kind,
-                        }}
-                        name={targetRef.name}
-                        namespace={obj.metadata.namespace}
-                      />
-                    ) : (
-                      '-'
-                    )}
-                  </TableData>
-                );
-              }
-              case 'Status':
-                return (
-                  <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                    {getStatusLabel(t, obj)}
-                  </TableData>
-                );
-              case 'Created':
-                return (
-                  <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                    <Timestamp timestamp={obj.metadata.creationTimestamp} />
-                  </TableData>
-                );
-              case 'kebab':
-                return (
-                  <TableData
-                    key={column.id}
-                    id={column.id}
-                    activeColumnIDs={activeColumnIDs}
-                    className="pf-v6-c-table__action"
-                  >
-                    <DropdownWithKebab obj={obj} />
-                  </TableData>
-                );
-              default:
-                return null;
-            }
-          }
-        })}
-      </>
-    );
-  };
+  const RowWithProps = React.useCallback(
+    (props: RowProps<K8sResourceCommon>) => (
+      <ResourceRow {...props} columns={usedColumns} renderers={renderers} />
+    ),
+    [usedColumns, renderers],
+  );
 
   return (
     <>
@@ -573,7 +590,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
               loaded={allLoaded}
               loadError={combinedLoadError}
               columns={interceptedColumns}
-              Row={ResourceRow}
+              Row={RowWithProps}
             />
           )}
 
