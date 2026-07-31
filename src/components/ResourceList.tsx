@@ -244,9 +244,12 @@ const ResourceList: React.FC<ResourceListProps> = ({
   const activeSortIndexRef = React.useRef(-1);
   const activeSortDirectionRef = React.useRef<SortByDirection>(SortByDirection.asc);
   const filteredDataRef = React.useRef(filteredData);
-  filteredDataRef.current = filteredData;
   const currentPageRef = React.useRef(1);
   const perPageRef = React.useRef(paginationLimit);
+
+  React.useEffect(() => {
+    filteredDataRef.current = filteredData;
+  }, [filteredData]);
 
   // Blocks auto-sort calls VirtualizedTable makes on mount (before user interaction)
   const readyForUserSortRef = React.useRef(false);
@@ -300,6 +303,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
               activeSortDirectionRef.current = direction;
               setActiveSortIndex(idx);
               setActiveSortDirection(direction);
+              setCurrentPage(1);
             }
 
             let sorted: K8sResourceCommon[];
@@ -336,9 +340,12 @@ const ResourceList: React.FC<ResourceListProps> = ({
   }, [filteredData, activeSortIndex, activeSortDirection, usedColumns]);
 
   const [currentPage, setCurrentPage] = React.useState<number>(1);
-  currentPageRef.current = currentPage;
   const [perPage, setPerPage] = React.useState<number>(paginationLimit);
-  perPageRef.current = perPage;
+
+  React.useEffect(() => {
+    currentPageRef.current = currentPage;
+    perPageRef.current = perPage;
+  }, [currentPage, perPage]);
 
   const startIndex = (currentPage - 1) * perPage;
   const endIndex = startIndex + perPage;
