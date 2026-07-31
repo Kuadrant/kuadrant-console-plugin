@@ -5,6 +5,7 @@
 integration-tests/videos
 integration-tests/screenshots
 playwright-report/
+playwright-results.json
 test-results/
 
 # Yarn v4
