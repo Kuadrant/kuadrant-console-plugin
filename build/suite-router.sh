@@ -93,6 +93,10 @@ if echo "$CHANGED" | grep -qE "^src/components/gateway/"; then
   SPECS="$SPECS gateway-crud.spec.ts"
 fi
 
+if echo "$CHANGED" | grep -qE "^src/components/(AttachedResources|gateway/GatewaySingleOverview|httproute/HTTPRouteSingleOverview|grpcroute/)"; then
+  SPECS="$SPECS attached-tab.spec.ts"
+fi
+
 # Detect test files that changed → run all tags (smoke + nightly) for those files only
 TEST_SPECS=""
 CHANGED_SPECS=$(echo "$CHANGED" | grep -E "^e2e/tests/[a-z0-9-]+\.spec\.ts$" || true)
