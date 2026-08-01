@@ -80,8 +80,6 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj, onDeleteClic
     } else if (
       obj.kind === 'AuthPolicy' ||
       obj.kind === 'RateLimitPolicy' ||
-      obj.kind === 'Gateway' ||
-      obj.kind === 'HTTPRoute'
       obj.kind === 'PlanPolicy'
     ) {
       navigate({

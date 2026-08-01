@@ -34,6 +34,10 @@ import { resourceGVKMapping } from '../utils/resources';
 
 interface PlanLimit {
   daily?: number | null;
+  weekly?: number | null;
+  monthly?: number | null;
+  yearly?: number | null;
+  custom?: { limit: number; window: string }[];
 }
 
 interface Plan {
@@ -78,11 +82,23 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
         },
         plans: plans
           .filter((p) => p.tier !== '')
-          .map((p) => ({
-            tier: p.tier,
-            predicate: p.predicate,
-            ...(p.limits.daily !== null ? { limits: { daily: p.limits.daily } } : {}),
-          })),
+          .map((p) => {
+            const limits: Record<string, unknown> = {};
+            if (p.limits.daily !== null && p.limits.daily !== undefined)
+              limits.daily = p.limits.daily;
+            if (p.limits.weekly !== null && p.limits.weekly !== undefined)
+              limits.weekly = p.limits.weekly;
+            if (p.limits.monthly !== null && p.limits.monthly !== undefined)
+              limits.monthly = p.limits.monthly;
+            if (p.limits.yearly !== null && p.limits.yearly !== undefined)
+              limits.yearly = p.limits.yearly;
+            if (p.limits.custom && p.limits.custom.length > 0) limits.custom = p.limits.custom;
+            return {
+              tier: p.tier,
+              predicate: p.predicate,
+              ...(Object.keys(limits).length > 0 ? { limits } : {}),
+            };
+          }),
       },
     };
   };
@@ -303,16 +319,19 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
                     </FormGroup>
                     <FormGroup
                       label={t('Daily Limit')}
-                      fieldId={`plan-limit-${i}`}
+                      fieldId={`plan-daily-${i}`}
                       className="pf-u-mt-md"
                     >
                       <TextInput
                         type="text"
-                        id={`plan-limit-${i}`}
+                        id={`plan-daily-${i}`}
                         value={plan.limits.daily ?? ''}
                         onChange={(_event, val) => {
                           if (val === '' || /^\d+$/.test(val)) {
-                            updatePlan(i, 'limits', { daily: val === '' ? null : Number(val) });
+                            updatePlan(i, 'limits', {
+                              ...plan.limits,
+                              daily: val === '' ? null : Number(val),
+                            });
                           }
                         }}
                         placeholder="e.g. 1000"
@@ -321,6 +340,87 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
                         <HelperText>
                           <HelperTextItem>
                             {t('Maximum requests per day (optional)')}
+                          </HelperTextItem>
+                        </HelperText>
+                      </FormHelperText>
+                    </FormGroup>
+                    <FormGroup
+                      label={t('Weekly Limit')}
+                      fieldId={`plan-weekly-${i}`}
+                      className="pf-u-mt-md"
+                    >
+                      <TextInput
+                        type="text"
+                        id={`plan-weekly-${i}`}
+                        value={plan.limits.weekly ?? ''}
+                        onChange={(_event, val) => {
+                          if (val === '' || /^\d+$/.test(val)) {
+                            updatePlan(i, 'limits', {
+                              ...plan.limits,
+                              weekly: val === '' ? null : Number(val),
+                            });
+                          }
+                        }}
+                        placeholder="e.g. 5000"
+                      />
+                      <FormHelperText>
+                        <HelperText>
+                          <HelperTextItem>
+                            {t('Maximum requests per week (optional)')}
+                          </HelperTextItem>
+                        </HelperText>
+                      </FormHelperText>
+                    </FormGroup>
+                    <FormGroup
+                      label={t('Monthly Limit')}
+                      fieldId={`plan-monthly-${i}`}
+                      className="pf-u-mt-md"
+                    >
+                      <TextInput
+                        type="text"
+                        id={`plan-monthly-${i}`}
+                        value={plan.limits.monthly ?? ''}
+                        onChange={(_event, val) => {
+                          if (val === '' || /^\d+$/.test(val)) {
+                            updatePlan(i, 'limits', {
+                              ...plan.limits,
+                              monthly: val === '' ? null : Number(val),
+                            });
+                          }
+                        }}
+                        placeholder="e.g. 20000"
+                      />
+                      <FormHelperText>
+                        <HelperText>
+                          <HelperTextItem>
+                            {t('Maximum requests per month (optional)')}
+                          </HelperTextItem>
+                        </HelperText>
+                      </FormHelperText>
+                    </FormGroup>
+                    <FormGroup
+                      label={t('Yearly Limit')}
+                      fieldId={`plan-yearly-${i}`}
+                      className="pf-u-mt-md"
+                    >
+                      <TextInput
+                        type="text"
+                        id={`plan-yearly-${i}`}
+                        value={plan.limits.yearly ?? ''}
+                        onChange={(_event, val) => {
+                          if (val === '' || /^\d+$/.test(val)) {
+                            updatePlan(i, 'limits', {
+                              ...plan.limits,
+                              yearly: val === '' ? null : Number(val),
+                            });
+                          }
+                        }}
+                        placeholder="e.g. 100000"
+                      />
+                      <FormHelperText>
+                        <HelperText>
+                          <HelperTextItem>
+                            {t('Maximum requests per year (optional)')}
                           </HelperTextItem>
                         </HelperText>
                       </FormHelperText>
