@@ -86,7 +86,15 @@ if echo "$CHANGED" | grep -qE "^src/components/(ratelimitpolicy|authpolicy)/"; t
 fi
 
 if echo "$CHANGED" | grep -qE "^src/components/(httproute|issuer)/"; then
-  SPECS="$SPECS rbac.spec.ts"
+  SPECS="$SPECS rbac.spec.ts httproute-crud.spec.ts"
+fi
+
+if echo "$CHANGED" | grep -qE "^src/components/gateway/"; then
+  SPECS="$SPECS gateway-crud.spec.ts"
+fi
+
+if echo "$CHANGED" | grep -qE "^src/components/(AttachedResources|gateway/GatewaySingleOverview|httproute/HTTPRouteSingleOverview|grpcroute/)"; then
+  SPECS="$SPECS attached-tab.spec.ts"
 fi
 
 # Detect test files that changed → run all tags (smoke + nightly) for those files only

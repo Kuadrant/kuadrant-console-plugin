@@ -19,12 +19,14 @@ import '../kuadrant.css';
 interface APIProductDeleteModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onDeleteSuccess?: () => void;
   resource: K8sResourceCommon;
 }
 
 const APIProductDeleteModal: React.FC<APIProductDeleteModalProps> = ({
   isOpen,
   onClose,
+  onDeleteSuccess,
   resource,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -45,10 +47,13 @@ const APIProductDeleteModal: React.FC<APIProductDeleteModalProps> = ({
         model,
         resource,
       });
-      onClose();
+      if (onDeleteSuccess) {
+        onDeleteSuccess();
+      } else {
+        onClose();
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete APIProduct');
-    } finally {
       setIsDeleting(false);
     }
   };

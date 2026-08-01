@@ -8,18 +8,17 @@ import {
   HelperTextItem,
 } from '@patternfly/react-core';
 import * as React from 'react';
-import { Gateway } from './types';
+import { GatewayResource } from './types';
 import { useTranslation } from 'react-i18next';
 import { RESOURCES } from '../../utils/resources';
 
 interface GatewaySelectProps {
-  selectedGateway: Gateway;
-  onChange: (updated: Gateway) => void;
+  selectedGateway: GatewayResource;
+  onChange: (updated: GatewayResource) => void;
 }
 
 const GatewaySelect: React.FC<GatewaySelectProps> = ({ selectedGateway, onChange }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
-  const [gateways, setGateways] = React.useState([]);
   const gvk = RESOURCES.Gateway.gvk;
 
   const gatewayResource = {
@@ -27,22 +26,24 @@ const GatewaySelect: React.FC<GatewaySelectProps> = ({ selectedGateway, onChange
     isList: true,
   };
 
-  const [gatewayData, gatewayLoaded, gatewayError] = useK8sWatchResource(gatewayResource);
+  const [gatewayData, gatewayLoaded, gatewayError] =
+    useK8sWatchResource<GatewayResource[]>(gatewayResource);
 
-  React.useEffect(() => {
+  const gateways = React.useMemo(() => {
     if (gatewayLoaded && !gatewayError && Array.isArray(gatewayData)) {
-      setGateways(
-        gatewayData.map((gateway) => ({
-          name: gateway.metadata.name,
-          namespace: gateway.metadata.namespace,
-        })),
-      );
+      return gatewayData;
     }
+    return [];
   }, [gatewayData, gatewayLoaded, gatewayError]);
 
   const handleGatewayChange = (event: React.FormEvent<HTMLSelectElement>) => {
     const [namespace, name] = event.currentTarget.value.split('/');
-    onChange({ ...selectedGateway, name, namespace });
+    const found = gateways.find(
+      (gw) => gw.metadata?.name === name && gw.metadata?.namespace === namespace,
+    );
+    if (found) {
+      onChange(found);
+    }
   };
 
   return (
@@ -50,7 +51,9 @@ const GatewaySelect: React.FC<GatewaySelectProps> = ({ selectedGateway, onChange
       <FormGroup label={t('Gateway API Target Reference')} isRequired fieldId="gateway-select">
         <FormSelect
           id="gateway-select"
-          value={`${selectedGateway.namespace}/${selectedGateway.name}`}
+          value={`${selectedGateway.metadata?.namespace ?? ''}/${
+            selectedGateway.metadata?.name ?? ''
+          }`}
           onChange={handleGatewayChange}
           aria-label={t('Select Gateway')}
         >
@@ -63,8 +66,8 @@ const GatewaySelect: React.FC<GatewaySelectProps> = ({ selectedGateway, onChange
           {gateways.map((gateway, index) => (
             <FormSelectOption
               key={index}
-              value={`${gateway.namespace}/${gateway.name}`}
-              label={`${gateway.namespace}/${gateway.name}`}
+              value={`${gateway.metadata?.namespace}/${gateway.metadata?.name}`}
+              label={`${gateway.metadata?.namespace}/${gateway.metadata?.name}`}
             />
           ))}
         </FormSelect>

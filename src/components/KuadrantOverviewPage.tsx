@@ -45,6 +45,7 @@ import {
   PrometheusEndpoint,
   K8sResourceCommon,
   useK8sWatchResource,
+  useAccessReview,
   GreenCheckCircleIcon,
   YellowExclamationTriangleIcon,
   TableData,
@@ -67,6 +68,7 @@ import {
   buildGatewayKey,
 } from '../utils/metricsQueries';
 import { fetchConfig, KuadrantConfig } from '../utils/configLoader';
+import { GatewayResource } from './gateway/types';
 
 export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
@@ -91,21 +93,13 @@ export const resources: Resource[] = [
   { name: 'GRPCRoutes', gvk: resourceGVKMapping['GRPCRoute'] },
 ];
 
-interface TotalRequestsByGateway {
+interface TotalRequestsByGatewayResource {
   [gatewayName: string]: {
     total?: number;
     errors?: number;
     codes?: {
       [responseCode: string]: number;
     };
-  };
-}
-interface Gateway extends K8sResourceCommon {
-  status?: {
-    conditions?: {
-      type: string;
-      status: string;
-    }[];
   };
 }
 
@@ -402,7 +396,7 @@ const KuadrantOverviewPage: React.FC = () => {
     },
   ];
 
-  const getGatewayStatusRank = (gw: Gateway): number => {
+  const getGatewayResourceStatusRank = (gw: GatewayResource): number => {
     const conditions = gw.status?.conditions ?? [];
     const isAccepted = conditions.some((c) => c.type === 'Accepted' && c.status === 'True');
     const isProgrammed = conditions.some((c) => c.type === 'Programmed' && c.status === 'True');
@@ -416,12 +410,14 @@ const KuadrantOverviewPage: React.FC = () => {
     return 0;
   };
 
-  const sortGatewaysByStatus = (
+  const sortGatewayResourcesByStatus = (
     data: K8sResourceCommon[],
     sortDirection: 'asc' | 'desc',
   ): K8sResourceCommon[] => {
     const sorted = [...data].sort(
-      (a, b) => getGatewayStatusRank(a as Gateway) - getGatewayStatusRank(b as Gateway),
+      (a, b) =>
+        getGatewayResourceStatusRank(a as GatewayResource) -
+        getGatewayResourceStatusRank(b as GatewayResource),
     );
     return sortDirection === 'desc' ? sorted.reverse() : sorted;
   };
@@ -449,7 +445,7 @@ const KuadrantOverviewPage: React.FC = () => {
         </span>
       ) as unknown as string,
       id: 'Status',
-      sort: sortGatewaysByStatus,
+      sort: sortGatewayResourcesByStatus,
       transforms: [sortable],
     },
     {
@@ -533,29 +529,29 @@ const KuadrantOverviewPage: React.FC = () => {
   );
 
   // Map out query reponses to more easily accessible objects based on gateway name
-  const totalRequestsByGateway: TotalRequestsByGateway = {};
-  const getGateway = (name: string) => {
-    if (!totalRequestsByGateway[name]) {
-      totalRequestsByGateway[name] = {};
+  const totalRequestsByGatewayResource: TotalRequestsByGatewayResource = {};
+  const getGatewayResource = (name: string) => {
+    if (!totalRequestsByGatewayResource[name]) {
+      totalRequestsByGatewayResource[name] = {};
     }
-    return totalRequestsByGateway[name];
+    return totalRequestsByGatewayResource[name];
   };
   if (!totalRequestsError && totalRequestsLoaded) {
     totalRequestsRes.data.result.forEach((item) => {
       const gatewayName = `${item.metric.source_workload_namespace}/${item.metric.source_workload}`;
-      getGateway(gatewayName).total = parseFloat(item.value[1]);
+      getGatewayResource(gatewayName).total = parseFloat(item.value[1]);
     });
   }
   if (!totalErrorsError && totalErrorsLoaded) {
     totalErrorsRes.data.result.forEach((item) => {
       const gatewayName = `${item.metric.source_workload_namespace}/${item.metric.source_workload}`;
-      getGateway(gatewayName).errors = parseFloat(item.value[1]);
+      getGatewayResource(gatewayName).errors = parseFloat(item.value[1]);
     });
   }
   if (!totalErrorsByCodeError && totalErrorsByCodeLoaded) {
     totalErrorsByCodeRes.data.result.forEach((item) => {
       const gatewayName = `${item.metric.source_workload_namespace}/${item.metric.source_workload}`;
-      const gateway = getGateway(gatewayName);
+      const gateway = getGatewayResource(gatewayName);
       if (!gateway.codes) gateway.codes = {};
       gateway.codes[item.metric.response_code] = parseFloat(item.value[1]);
     });
@@ -564,26 +560,29 @@ const KuadrantOverviewPage: React.FC = () => {
   // Helper functions to pull out metric values in correct format, given a gateway object
   const getTotalRequests = (obj: { metadata: { namespace: string; name: string } }): number => {
     const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
-    const total = totalRequestsByGateway[key]?.total;
+    const total = totalRequestsByGatewayResource[key]?.total;
     return Number.isFinite(total) ? Math.round(total) : 0;
   };
   const getSuccessfulRequests = (obj: {
     metadata: { namespace: string; name: string };
   }): number => {
     const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
-    const success = totalRequestsByGateway[key]?.total - totalRequestsByGateway[key]?.errors;
+    const success =
+      totalRequestsByGatewayResource[key]?.total - totalRequestsByGatewayResource[key]?.errors;
     return Number.isFinite(success) ? Math.round(success) : 0;
   };
   const getErrorRate = (obj: { metadata: { namespace: string; name: string } }): string => {
     const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
-    const rate = (totalRequestsByGateway[key]?.errors / totalRequestsByGateway[key]?.total) * 100;
+    const rate =
+      (totalRequestsByGatewayResource[key]?.errors / totalRequestsByGatewayResource[key]?.total) *
+      100;
     return Number.isFinite(rate) ? rate.toFixed(1) : '-';
   };
   const getErrorCodes = (obj: { metadata: { namespace: string; name: string } }): Set<string> => {
     const codes = new Set<string>();
     const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
-    if (totalRequestsByGateway[key]?.codes) {
-      Object.entries(totalRequestsByGateway[key].codes).forEach(([key, value]) => {
+    if (totalRequestsByGatewayResource[key]?.codes) {
+      Object.entries(totalRequestsByGatewayResource[key].codes).forEach(([key, value]) => {
         if (key.startsWith('4') && value > 0) {
           codes.add('4xx');
         } else if (key.startsWith('5') && value > 0) {
@@ -600,7 +599,7 @@ const KuadrantOverviewPage: React.FC = () => {
     prefix: string,
   ): Array<[string, Distribution]> => {
     const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
-    const codes = totalRequestsByGateway[key]?.codes ?? {};
+    const codes = totalRequestsByGatewayResource[key]?.codes ?? {};
     const filteredCodes = Object.entries(codes).filter(([code]) => code.startsWith(prefix));
 
     const total = filteredCodes.reduce((sum, [, count]) => sum + count, 0);
@@ -672,11 +671,31 @@ const KuadrantOverviewPage: React.FC = () => {
 
   const gvk = RESOURCES.Gateway.gvk;
 
-  const [gateways] = useK8sWatchResource<Gateway[]>({
+  const [gateways] = useK8sWatchResource<GatewayResource[]>({
     groupVersionKind: gvk,
     isList: true,
     namespace: watchNamespace === '#ALL_NS#' ? undefined : watchNamespace,
   });
+
+  const [canListGatewayClasses] = useAccessReview({
+    group: 'gateway.networking.k8s.io',
+    resource: 'gatewayclasses',
+    verb: 'list',
+  });
+
+  const [gatewayClasses] = useK8sWatchResource<K8sResourceCommon[]>(
+    canListGatewayClasses
+      ? {
+          groupVersionKind: RESOURCES.GatewayClass.gvk,
+          isList: true,
+        }
+      : null,
+  );
+
+  const gatewayClassNames = React.useMemo(
+    () => (gatewayClasses || []).map((gc) => gc.metadata?.name).filter(Boolean) as string[],
+    [gatewayClasses],
+  );
 
   const healthyCount = React.useMemo(() => {
     return gateways.filter((gw) => {
@@ -767,7 +786,7 @@ const KuadrantOverviewPage: React.FC = () => {
                       justifyContent={{ default: 'justifyContentSpaceAround' }}
                       alignItems={{ default: 'alignItemsCenter' }}
                     >
-                      {/* Total Gateways */}
+                      {/* Total GatewayResources */}
                       <FlexItem>
                         <Flex
                           direction={{ default: 'column' }}
@@ -778,7 +797,7 @@ const KuadrantOverviewPage: React.FC = () => {
                         </Flex>
                       </FlexItem>
 
-                      {/* Healthy Gateways */}
+                      {/* Healthy GatewayResources */}
                       <FlexItem>
                         <Flex
                           direction={{ default: 'column' }}
@@ -802,7 +821,7 @@ const KuadrantOverviewPage: React.FC = () => {
                         </Flex>
                       </FlexItem>
 
-                      {/* Unhealthy Gateways */}
+                      {/* Unhealthy GatewayResources */}
                       <FlexItem>
                         <Flex
                           direction={{ default: 'column' }}
@@ -858,6 +877,19 @@ const KuadrantOverviewPage: React.FC = () => {
                       renderers={gatewayTrafficRenders}
                       namespace={watchNamespace}
                       emptyResourceName={t('Gateways')}
+                      additionalFilters={
+                        canListGatewayClasses
+                          ? [
+                              {
+                                label: t('GatewayClass'),
+                                allLabel: t('All GatewayClasses'),
+                                options: gatewayClassNames,
+                                filterFn: (item, value) =>
+                                  (item as GatewayResource).spec?.gatewayClassName === value,
+                              },
+                            ]
+                          : []
+                      }
                     />
                   </CardBody>
                 </Card>
