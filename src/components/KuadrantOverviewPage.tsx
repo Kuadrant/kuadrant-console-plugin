@@ -35,7 +35,7 @@ import {
   EllipsisVIcon,
   LockIcon,
   CheckCircleIcon,
-  ExclamationCircleIcon,
+  ExclamationTriangleIcon,
   BuildIcon,
   UploadIcon,
   QuestionCircleIcon,
@@ -54,7 +54,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import ResourceList from './ResourceList';
-import { sortable } from '@patternfly/react-table';
+import { sortable, SortByDirection } from '@patternfly/react-table';
 import { EXTERNAL_LINKS } from '../constants/links';
 import { RESOURCES, resourceGVKMapping } from '../utils/resources';
 import useAccessReviews from '../utils/resourceRBAC';
@@ -69,6 +69,7 @@ import {
 } from '../utils/metricsQueries';
 import { fetchConfig, KuadrantConfig } from '../utils/configLoader';
 import { GatewayResource } from './gateway/types';
+import { getStatusSortRank } from '../utils/statusLabel';
 
 export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
@@ -114,7 +115,7 @@ export const StatusLegend: React.FC = () => {
         <>
           <Content component={ContentVariants.p}>
             {t(
-              'It indicates the current operational state of the Gateway and reflects whether its configuration is applied and functioning correctly.',
+              'It indicates the current operational state of the resource and reflects whether its configuration is applied and functioning correctly.',
             )}
           </Content>
           <div
@@ -151,7 +152,7 @@ export const StatusLegend: React.FC = () => {
               {t('Resource is being configured but not yet enforced.')}
             </span>
 
-            <Label isCompact color="red" icon={<ExclamationCircleIcon />}>
+            <Label isCompact color="red" icon={<ExclamationTriangleIcon />}>
               {' '}
               {t('Conflicted')}{' '}
             </Label>
@@ -159,12 +160,20 @@ export const StatusLegend: React.FC = () => {
               {t('Resource has conflicts, possibly due to policies or configuration issues.')}
             </span>
 
-            <Label isCompact color="red" icon={<ExclamationCircleIcon />}>
+            <Label isCompact color="blue" icon={<CheckCircleIcon />}>
               {' '}
               {t('Resolved')}{' '}
             </Label>
             <span style={{ fontSize: 12 }}>
               {t('All dependencies for the policy are successfully resolved.')}
+            </span>
+
+            <Label isCompact color="orange" icon={<ExclamationTriangleIcon />}>
+              {' '}
+              {t('Unknown')}{' '}
+            </Label>
+            <span style={{ fontSize: 12 }}>
+              {t('The status of the resource could not be determined.')}
             </span>
           </div>
         </>
@@ -372,112 +381,107 @@ const KuadrantOverviewPage: React.FC = () => {
     setIsGettingStartedMenuOpen(false);
   };
 
-  const columns = [
-    {
-      title: t('plugin__kuadrant-console-plugin~Name'),
-      id: 'name',
-      sort: 'metadata.name',
-      transforms: [sortable],
-    },
-    {
-      title: t('plugin__kuadrant-console-plugin~Namespace'),
-      id: 'namespace',
-      sort: 'metadata.namespace',
-      transforms: [sortable],
-    },
-    {
-      title: t('plugin__kuadrant-console-plugin~Status'),
-      id: 'Status',
-    },
-    {
-      title: '',
-      id: 'kebab',
-      props: { className: 'pf-v6-c-table__action' },
-    },
-  ];
-
-  const getGatewayResourceStatusRank = (gw: GatewayResource): number => {
-    const conditions = gw.status?.conditions ?? [];
-    const isAccepted = conditions.some((c) => c.type === 'Accepted' && c.status === 'True');
-    const isProgrammed = conditions.some((c) => c.type === 'Programmed' && c.status === 'True');
-    const isConflicted = conditions.some((c) => c.type === 'Conflicted' && c.status === 'True');
-    const isResolvedRefs = conditions.some((c) => c.type === 'ResolvedRefs' && c.status === 'True');
-
-    if (isAccepted && isProgrammed) return 5;
-    if (isProgrammed) return 3;
-    if (isConflicted) return 2;
-    if (isResolvedRefs) return 1;
-    return 0;
-  };
-
-  const sortGatewayResourcesByStatus = (
-    data: K8sResourceCommon[],
-    sortDirection: 'asc' | 'desc',
-  ): K8sResourceCommon[] => {
-    const sorted = [...data].sort(
-      (a, b) =>
-        getGatewayResourceStatusRank(a as GatewayResource) -
-        getGatewayResourceStatusRank(b as GatewayResource),
-    );
-    return sortDirection === 'desc' ? sorted.reverse() : sorted;
-  };
-
-  const gatewayTrafficColumns = [
-    {
-      title: t('plugin__kuadrant-console-plugin~Name'),
-      id: 'name',
-      sort: 'metadata.name',
-      transforms: [sortable],
-    },
-    {
-      title: t('plugin__kuadrant-console-plugin~Namespace'),
-      id: 'namespace',
-      sort: 'metadata.namespace',
-      transforms: [sortable],
-    },
-    {
-      title: (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-          {t('plugin__kuadrant-console-plugin~Status')}
-          <span style={{ display: 'inline-flex' }}>
-            <StatusLegend />
+  const columns = React.useMemo(
+    () => [
+      {
+        title: t('plugin__kuadrant-console-plugin~Name'),
+        id: 'name',
+        sort: 'metadata.name',
+        transforms: [sortable],
+      },
+      {
+        title: t('plugin__kuadrant-console-plugin~Namespace'),
+        id: 'namespace',
+        sort: 'metadata.namespace',
+        transforms: [sortable],
+      },
+      {
+        title: (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            {t('plugin__kuadrant-console-plugin~Status')}
+            <span style={{ display: 'inline-flex' }}>
+              <StatusLegend />
+            </span>
           </span>
-        </span>
-      ) as unknown as string,
-      id: 'Status',
-      sort: sortGatewayResourcesByStatus,
-      transforms: [sortable],
-    },
-    {
-      title: t('Total Requests'),
-      id: 'totalRequests',
-      sort: 'totalRequests',
-      transforms: [sortable],
-    },
-    {
-      title: t('Successful Requests'),
-      id: 'successfulRequests',
-      sort: 'successfulRequests',
-      transforms: [sortable],
-    },
-    {
-      title: t('Error Rate'),
-      id: 'errorRate',
-      sort: 'errorRate',
-      transforms: [sortable],
-    },
-    {
-      title: t('Error Codes'),
-      id: 'errorCodes',
-      sort: 'errorCodes',
-      transforms: [sortable],
-    },
-    {
-      title: '',
-      id: 'kebab',
-      props: { className: 'pf-v6-c-table__action' },
-    },
-  ];
+        ) as unknown as string,
+        id: 'Status',
+        sort: (data: K8sResourceCommon[], direction: SortByDirection) => {
+          const sorted = [...data].sort((a, b) => getStatusSortRank(a) - getStatusSortRank(b));
+          return direction === SortByDirection.desc ? sorted.reverse() : sorted;
+        },
+        transforms: [sortable],
+      },
+      {
+        title: '',
+        id: 'kebab',
+        props: { className: 'pf-v6-c-table__action' },
+      },
+    ],
+    [t],
+  );
+
+  const gatewayTrafficColumns = React.useMemo(
+    () => [
+      {
+        title: t('plugin__kuadrant-console-plugin~Name'),
+        id: 'name',
+        sort: 'metadata.name',
+        transforms: [sortable],
+      },
+      {
+        title: t('plugin__kuadrant-console-plugin~Namespace'),
+        id: 'namespace',
+        sort: 'metadata.namespace',
+        transforms: [sortable],
+      },
+      {
+        title: (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            {t('plugin__kuadrant-console-plugin~Status')}
+            <span style={{ display: 'inline-flex' }}>
+              <StatusLegend />
+            </span>
+          </span>
+        ) as unknown as string,
+        id: 'Status',
+        sort: (data: K8sResourceCommon[], direction: SortByDirection) => {
+          const sorted = [...data].sort((a, b) => getStatusSortRank(a) - getStatusSortRank(b));
+          return direction === SortByDirection.desc ? sorted.reverse() : sorted;
+        },
+        transforms: [sortable],
+      },
+      {
+        title: t('Total Requests'),
+        id: 'totalRequests',
+        sort: 'totalRequests',
+        transforms: [sortable],
+      },
+      {
+        title: t('Successful Requests'),
+        id: 'successfulRequests',
+        sort: 'successfulRequests',
+        transforms: [sortable],
+      },
+      {
+        title: t('Error Rate'),
+        id: 'errorRate',
+        sort: 'errorRate',
+        transforms: [sortable],
+      },
+      {
+        title: t('Error Codes'),
+        id: 'errorCodes',
+        sort: 'errorCodes',
+        transforms: [sortable],
+      },
+      {
+        title: '',
+        id: 'kebab',
+        props: { className: 'pf-v6-c-table__action' },
+      },
+    ],
+    [t],
+  );
 
   const handleCreateResource = (resource) => {
     const resolvedNamespace = watchNamespace === '#ALL_NS#' ? 'default' : watchNamespace;
