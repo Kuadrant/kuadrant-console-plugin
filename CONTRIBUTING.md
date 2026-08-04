@@ -121,6 +121,37 @@ If you want to submit code changes to the project, here are some guidelines:
 
     Go to the original repository and click on **New Pull Request**. Fill in the PR template with a clear description, the issue it fixes, and your test plan.
 
+## Branch Model and Backport Policy
+
+The project maintains two long-lived branches:
+
+- **`main`** -- tracks the latest OpenShift Console SDK and serves OCP 4.22+.
+- **`release-0.x`** -- supports OCP <=4.21 (pre-SDK 4.22, React 17, react-router 5).
+
+### Why two branches?
+
+The OpenShift Console uses Module Federation singletons (`react`, `react-router`) with `allowFallback: false`. A plugin built against SDK 4.22 (React 18, react-router 7) will fail at runtime on consoles that provide the older singletons. The `release-0.x` branch keeps the plugin compatible with those older consoles.
+
+### Backport policy
+
+Bug fixes and non-SDK-dependent features should be backported from `main` to `release-0.x` when they apply. To backport:
+
+1. Open a PR targeting `release-0.x` with the cherry-picked commits.
+2. Prefix the PR title with `[backport]` for traceability.
+3. CI runs the same checks on both branches.
+
+SDK-dependent changes (anything requiring React 18, react-router 7, or SDK 4.22+ APIs) cannot be backported.
+
+### Image tags
+
+Each branch publishes distinct container images to Quay.io:
+
+| Branch | Image tags |
+|---|---|
+| `main` | `latest`, `<sha>` |
+| `release-0.x` | `release-0.x-latest`, `release-0.x-<sha>` |
+| Tags (`vX.Y.Z`) | `vX.Y.Z` |
+
 ## Commit Messages
 
 Follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
