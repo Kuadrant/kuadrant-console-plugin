@@ -320,7 +320,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
         title: t('plugin__kuadrant-console-plugin~Status'),
         id: 'Status',
         sort: (data: K8sResourceCommon[], direction: SortByDirection) => {
-          const sorted = [...data].sort((a, b) => getStatusSortRank(b) - getStatusSortRank(a));
+          const sorted = [...data].sort((a, b) => getStatusSortRank(a) - getStatusSortRank(b));
           return direction === SortByDirection.desc ? sorted.reverse() : sorted;
         },
         transforms: [sortable],
@@ -342,36 +342,20 @@ const ResourceList: React.FC<ResourceListProps> = ({
 
   const usedColumns = columns || defaultColumns;
 
-  const [activeSortIndex, setActiveSortIndex] = React.useState<number>(-1);
-  const [activeSortDirection, setActiveSortDirection] = React.useState<SortByDirection>(
-    SortByDirection.asc,
-  );
-
-  // VT only sorts the current page it receives, so we intercept each column's
-  // sort function to sort the full dataset first, then slice to the current page.
-  const activeSortIndexRef = React.useRef(-1);
-  const activeSortDirectionRef = React.useRef<SortByDirection>(SortByDirection.asc);
+  // Refs give the intercepted sort function access to current values
+  // without triggering re-renders. Updated synchronously during render
+  // so they are never stale when VT's useMemo calls the sort function.
   const filteredDataRef = React.useRef(filteredData);
+  filteredDataRef.current = filteredData;
   const currentPageRef = React.useRef(1);
   const perPageRef = React.useRef(paginationLimit);
 
-  React.useEffect(() => {
-    filteredDataRef.current = filteredData;
-  }, [filteredData]);
-
-  // Blocks auto-sort calls VirtualizedTable makes on mount (before user interaction)
-  const readyForUserSortRef = React.useRef(false);
-  React.useEffect(() => {
-    readyForUserSortRef.current = true;
-  }, []);
-
-  // Guards against VT's second synchronous sort call after a reset click
-  const justResetRef = React.useRef(false);
-  const [tableKey, setTableKey] = React.useState(0);
-
+  // VT calls column sort functions inside a useMemo (during render),
+  // so they must be pure: no setState. The intercepted function sorts
+  // the full filtered dataset and returns the slice for the current page.
   const interceptedColumns = React.useMemo(
     () =>
-      usedColumns.map((col, idx) => {
+      usedColumns.map((col) => {
         if (!col.sort) return col;
         const originalSort = col.sort;
         return {
@@ -379,41 +363,6 @@ const ResourceList: React.FC<ResourceListProps> = ({
           sort: (_data: K8sResourceCommon[], direction: SortByDirection): K8sResourceCommon[] => {
             const full = filteredDataRef.current;
             const si = (currentPageRef.current - 1) * perPageRef.current;
-
-            if (!readyForUserSortRef.current) return [..._data];
-
-            // VT calls sort twice per click - block the follow-up call after a reset
-            if (justResetRef.current) {
-              justResetRef.current = false;
-              return full.slice(si, si + perPageRef.current);
-            }
-
-            const isUserClick =
-              activeSortIndexRef.current !== idx || activeSortDirectionRef.current !== direction;
-
-            if (isUserClick) {
-              // 3rd click: same column, desc → asc cycle means user wants to reset sort
-              const isReset =
-                activeSortIndexRef.current === idx &&
-                activeSortDirectionRef.current === SortByDirection.desc &&
-                direction === SortByDirection.asc;
-
-              if (isReset) {
-                justResetRef.current = true;
-                activeSortIndexRef.current = -1;
-                activeSortDirectionRef.current = SortByDirection.asc;
-                setActiveSortIndex(-1);
-                setTableKey((k) => k + 1);
-                return full.slice(si, si + perPageRef.current);
-              }
-
-              activeSortIndexRef.current = idx;
-              activeSortDirectionRef.current = direction;
-              setActiveSortIndex(idx);
-              setActiveSortDirection(direction);
-              setCurrentPage(1);
-            }
-
             let sorted: K8sResourceCommon[];
             if (typeof originalSort === 'function') {
               sorted = originalSort([...full], direction);
@@ -432,32 +381,14 @@ const ResourceList: React.FC<ResourceListProps> = ({
     [usedColumns],
   );
 
-  const sortedFilteredData = React.useMemo(() => {
-    if (activeSortIndex < 0) return filteredData;
-    const col = usedColumns[activeSortIndex];
-    if (!col?.sort) return filteredData;
-    if (typeof col.sort === 'function') {
-      return col.sort([...filteredData], activeSortDirection);
-    }
-    const sorted = [...filteredData].sort((a, b) => {
-      const aVal = String(getNestedValue(a, col.sort as string) ?? '');
-      const bVal = String(getNestedValue(b, col.sort as string) ?? '');
-      return aVal.localeCompare(bVal);
-    });
-    return activeSortDirection === SortByDirection.desc ? sorted.reverse() : sorted;
-  }, [filteredData, activeSortIndex, activeSortDirection, usedColumns]);
-
   const [currentPage, setCurrentPage] = React.useState<number>(1);
   const [perPage, setPerPage] = React.useState<number>(paginationLimit);
-
-  React.useEffect(() => {
-    currentPageRef.current = currentPage;
-    perPageRef.current = perPage;
-  }, [currentPage, perPage]);
+  currentPageRef.current = currentPage;
+  perPageRef.current = perPage;
 
   const startIndex = (currentPage - 1) * perPage;
   const endIndex = startIndex + perPage;
-  const paginatedData = sortedFilteredData.slice(startIndex, endIndex);
+  const paginatedData = filteredData.slice(startIndex, endIndex);
 
   const onSetPage = (
     _event: React.MouseEvent | React.KeyboardEvent | MouseEvent,
@@ -584,7 +515,6 @@ const ResourceList: React.FC<ResourceListProps> = ({
             </EmptyState>
           ) : (
             <VirtualizedTable<K8sResourceCommon>
-              key={tableKey}
               data={paginatedData}
               unfilteredData={filteredData}
               loaded={allLoaded}
@@ -594,10 +524,10 @@ const ResourceList: React.FC<ResourceListProps> = ({
             />
           )}
 
-          {sortedFilteredData.length > 0 && (
+          {filteredData.length > 0 && (
             <div className="kuadrant-pagination-left">
               <Pagination
-                itemCount={sortedFilteredData.length}
+                itemCount={filteredData.length}
                 perPage={perPage}
                 page={currentPage}
                 onSetPage={onSetPage}

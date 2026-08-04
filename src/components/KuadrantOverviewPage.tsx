@@ -406,7 +406,7 @@ const KuadrantOverviewPage: React.FC = () => {
         ) as unknown as string,
         id: 'Status',
         sort: (data: K8sResourceCommon[], direction: SortByDirection) => {
-          const sorted = [...data].sort((a, b) => getStatusSortRank(b) - getStatusSortRank(a));
+          const sorted = [...data].sort((a, b) => getStatusSortRank(a) - getStatusSortRank(b));
           return direction === SortByDirection.desc ? sorted.reverse() : sorted;
         },
         transforms: [sortable],
@@ -445,7 +445,7 @@ const KuadrantOverviewPage: React.FC = () => {
         ) as unknown as string,
         id: 'Status',
         sort: (data: K8sResourceCommon[], direction: SortByDirection) => {
-          const sorted = [...data].sort((a, b) => getStatusSortRank(b) - getStatusSortRank(a));
+          const sorted = [...data].sort((a, b) => getStatusSortRank(a) - getStatusSortRank(b));
           return direction === SortByDirection.desc ? sorted.reverse() : sorted;
         },
         transforms: [sortable],
