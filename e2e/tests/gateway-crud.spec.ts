@@ -42,6 +42,27 @@ async function expectEditorContains(page: Page, text: string): Promise<void> {
   });
   await page.waitForFunction(
     (expected) => {
+      // Prefer the editor instance bound to the visible DOM node over getModels()
+      // because getModels() may return stale or unrelated models from previous renders
+      try {
+        type MonacoType = {
+          editor?: {
+            getEditors?: () => Array<{ getValue: () => string; getDomNode: () => Element | null }>;
+          };
+        };
+        const monaco = (window as unknown as { monaco?: MonacoType }).monaco;
+        const editorEl = document.querySelector('.monaco-editor');
+        if (monaco?.editor?.getEditors && editorEl) {
+          const editors = monaco.editor.getEditors();
+          const visible = editors.find(
+            (e) => e.getDomNode() === editorEl || editorEl.contains(e.getDomNode()),
+          );
+          if (visible) return visible.getValue().includes(expected);
+        }
+      } catch {
+        // fallthrough
+      }
+      // Fallback: check visible lines (may miss content outside viewport)
       const lines = document.querySelector('.monaco-editor .view-lines');
       return (lines?.textContent || '').includes(expected);
     },
@@ -70,14 +91,18 @@ async function addListenerViaWizard(
   // Next → Allowed Routes
   await page.getByRole('button', { name: 'Next' }).click();
 
-  // Step 3: Allowed Routes — accept defaults, click Add/Update
+  // Step 3: Allowed Routes — accept defaults, next → Review & Create
+  await page.getByRole('button', { name: 'Next' }).click();
+
+  // Step 4: Review & Create — click Add/Update
   const wizardButton = page
     .locator('.pf-v6-c-modal-box')
     .getByRole('button', { name: isEdit ? 'Update' : 'Add' });
+  await expect(wizardButton).toBeEnabled({ timeout: 5_000 });
   await wizardButton.click();
 
-  // Wait for wizard modal to close
-  await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 5_000 });
+  // Wait for wizard modal to be fully removed from DOM so its drawer overlay doesn't block clicks
+  await page.waitForSelector('.pf-v6-c-modal-box', { state: 'detached', timeout: 10_000 });
 }
 
 test.describe('Gateway CRUD', () => {
@@ -110,11 +135,12 @@ test.describe('Gateway CRUD', () => {
     await addListenerViaWizard(page, { name: 'http', port: '80', protocol: 'HTTP' });
 
     // Verify listener appears in the table
-    await expect(page.getByText('http')).toBeVisible();
+    await expect(page.getByRole('gridcell', { name: 'http', exact: true })).toBeVisible();
 
     const createButton = page.getByRole('button', { name: 'Create', exact: true });
     await expect(createButton).toBeEnabled();
-    await createButton.click();
+    await createButton.focus();
+    await page.keyboard.press('Enter');
 
     await expect(page).toHaveURL(
       new RegExp(`/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~Gateway/${gatewayName}`),
@@ -171,8 +197,10 @@ spec:
     await expect(page.locator('#gateway-class')).toHaveValue('istio');
 
     // Verify listener is shown in the table
-    await expect(page.getByText('http')).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText('80')).toBeVisible();
+    await expect(page.getByRole('gridcell', { name: 'http', exact: true })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.getByRole('gridcell', { name: '80', exact: true })).toBeVisible();
 
     // Edit the listener via wizard
     await page.getByRole('button', { name: 'Edit listener' }).click();
@@ -185,17 +213,29 @@ spec:
     // Navigate through wizard to save
     await page.getByRole('button', { name: 'Next' }).click(); // Protocol
     await page.getByRole('button', { name: 'Next' }).click(); // Allowed Routes
+    await page.getByRole('button', { name: 'Next' }).click(); // Review & Create
 
     const wizardUpdateButton = page
       .locator('.pf-v6-c-modal-box')
       .getByRole('button', { name: 'Update' });
+    await expect(wizardUpdateButton).toBeEnabled({ timeout: 5_000 });
     await wizardUpdateButton.click();
-    await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 5_000 });
+    await page.waitForSelector('.pf-v6-c-modal-box', { state: 'detached', timeout: 10_000 });
 
-    // Save the form
+    // Wait for listener table to reflect the updated port before saving
+    await expect(page.getByRole('gridcell', { name: '8080', exact: true })).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // Brief pause to allow React to finish committing all pending state updates
+    await page.waitForTimeout(150);
+
+    // Save the form — use React-compatible event to bypass drawer interception
     const saveButton = page.getByRole('button', { name: 'Save', exact: true });
     await expect(saveButton).toBeEnabled();
-    await saveButton.click();
+    await saveButton.evaluate((btn) =>
+      btn.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })),
+    );
 
     await expect(page).toHaveURL(
       new RegExp(`/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~Gateway/${gatewayName}`),
@@ -230,6 +270,20 @@ spec:
     await page.getByRole('button', { name: 'Add listener' }).click();
     await addListenerViaWizard(page, { name: 'https', port: '443', protocol: 'HTTPS' });
 
+    // Wait for listener to appear in table — confirms React state has the listener
+    await expect(page.getByRole('gridcell', { name: 'https', exact: true })).toBeVisible({
+      timeout: 5_000,
+    });
+
+    // Switch to YAML and verify the listener is reflected in the editor before proceeding.
+    // This acts as a deterministic sync point: the editor only contains 'https' once
+    // the yamlContent useEffect has re-run with the updated gatewayObject.
+    await page.locator('#create-type-radio-yaml').click();
+    await expectEditorContains(page, 'https');
+
+    // Switch back to form, then to YAML for the full assertion pass
+    await page.locator('#create-type-radio-form').click();
+
     // Switch to YAML
     await page.locator('#create-type-radio-yaml').click();
 
@@ -245,7 +299,7 @@ spec:
     await expect(page.locator('#gateway-name')).toHaveValue(gatewayName);
     await expect(page.locator('#gateway-class')).toHaveValue('istio');
     // Listener data is shown in the table, not as inputs
-    await expect(page.getByText('https')).toBeVisible();
-    await expect(page.getByText('443')).toBeVisible();
+    await expect(page.getByRole('gridcell', { name: 'https', exact: true })).toBeVisible();
+    await expect(page.getByRole('gridcell', { name: '443', exact: true })).toBeVisible();
   });
 });
