@@ -98,36 +98,38 @@ export const parseMatchesFromYAML = (
     return [];
   }
 
-  return yamlMatches.map((match, matchIndex: number) => ({
-    id: `match-${Date.now()}-${matchIndex}`,
-    pathType: VALID_PATH_TYPES.includes(match.path?.type as HTTPRoutePathType)
-      ? (match.path.type as HTTPRoutePathType)
-      : 'PathPrefix',
-    pathValue: match.path?.value || '/',
-    method: VALID_METHODS.includes(match.method as HTTPRouteMethod)
-      ? (match.method as HTTPRouteMethod)
-      : '',
-    headers: match.headers
-      ? match.headers.map(
-          (header, headerIndex: number): HTTPRouteHeader => ({
-            id: `header-${Date.now()}-${headerIndex}`,
-            type: (header.type as HTTPRouteHeader['type']) || 'Exact',
-            name: header.name || '',
-            value: header.value || '',
-          }),
-        )
-      : [],
-    queryParams: match.queryParams
-      ? match.queryParams.map(
-          (queryParam, queryParamIndex: number): HTTPRouteQueryParam => ({
-            id: `queryparam-${Date.now()}-${queryParamIndex}`,
-            type: (queryParam.type as HTTPRouteQueryParam['type']) || 'Exact',
-            name: queryParam.name || '',
-            value: queryParam.value || '',
-          }),
-        )
-      : [],
-  }));
+  return yamlMatches
+    .filter((match) => match != null)
+    .map((match, matchIndex: number) => ({
+      id: `match-${Date.now()}-${matchIndex}`,
+      pathType: VALID_PATH_TYPES.includes(match.path?.type as HTTPRoutePathType)
+        ? (match.path.type as HTTPRoutePathType)
+        : 'PathPrefix',
+      pathValue: match.path?.value || '/',
+      method: VALID_METHODS.includes(match.method as HTTPRouteMethod)
+        ? (match.method as HTTPRouteMethod)
+        : '',
+      headers: match.headers
+        ? match.headers.map(
+            (header, headerIndex: number): HTTPRouteHeader => ({
+              id: `header-${Date.now()}-${headerIndex}`,
+              type: (header.type as HTTPRouteHeader['type']) || 'Exact',
+              name: header.name || '',
+              value: header.value || '',
+            }),
+          )
+        : [],
+      queryParams: match.queryParams
+        ? match.queryParams.map(
+            (queryParam, queryParamIndex: number): HTTPRouteQueryParam => ({
+              id: `queryparam-${Date.now()}-${queryParamIndex}`,
+              type: (queryParam.type as HTTPRouteQueryParam['type']) || 'Exact',
+              name: queryParam.name || '',
+              value: queryParam.value || '',
+            }),
+          )
+        : [],
+    }));
 };
 
 export const validateMatchesInRule = (matches: HTTPRouteMatch[]): boolean => {
