@@ -42,6 +42,24 @@ async function expectEditorContains(page: Page, text: string): Promise<void> {
   });
   await page.waitForFunction(
     (expected) => {
+      try {
+        type MonacoType = {
+          editor?: {
+            getEditors?: () => Array<{ getValue: () => string; getDomNode: () => Element | null }>;
+          };
+        };
+        const monaco = (window as unknown as { monaco?: MonacoType }).monaco;
+        const editorEl = document.querySelector('.monaco-editor');
+        if (monaco?.editor?.getEditors && editorEl) {
+          const editors = monaco.editor.getEditors();
+          const visible = editors.find(
+            (e) => e.getDomNode() === editorEl || editorEl.contains(e.getDomNode()),
+          );
+          if (visible) return visible.getValue().includes(expected);
+        }
+      } catch {
+        // fallthrough
+      }
       const lines = document.querySelector('.monaco-editor .view-lines');
       return (lines?.textContent || '').includes(expected);
     },
@@ -184,6 +202,7 @@ spec:
     - path:
         type: PathPrefix
         value: /api
+      method: GET
     backendRefs:
     - name: example-svc
       port: 8080
@@ -267,16 +286,23 @@ spec:
     await expect(gatewayOption).toBeAttached({ timeout: 15_000 });
     await page.locator('#parent-gateway-0').selectOption(gateway);
 
+    const sectionOption = page.locator('#parent-section-0 option[value="http"]');
+    await expect(sectionOption).toBeAttached({ timeout: 15_000 });
+    await page.locator('#parent-section-0').selectOption('http');
+
     // Add rule via wizard
     await page.getByRole('button', { name: 'Add rule' }).click();
     await addRuleViaWizard(page, { pathValue: '/test', serviceName: 'test-svc' });
 
-    // Switch to YAML
+    // Wait for rule to appear in table before switching views
+    await expect(page.getByText('/test')).toBeVisible({ timeout: 5_000 });
+
+    // Switch to YAML and verify data is synced
     await page.locator('#create-type-radio-yaml').click();
+    await expectEditorContains(page, '/test');
 
     await expectEditorContains(page, routeName);
     await expectEditorContains(page, gateway);
-    await expectEditorContains(page, '/test');
 
     // Switch back to form
     await page.locator('#create-type-radio-form').click();
