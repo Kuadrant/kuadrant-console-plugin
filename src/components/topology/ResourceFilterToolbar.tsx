@@ -77,13 +77,13 @@ export const ResourceFilterToolbar: React.FC<ResourceFilterToolbarProps> = ({
       <ToolbarContent>
         <ToolbarItem variant="label-group">
           <ToolbarFilter
-            categoryName="Resource"
+            categoryName={t('Resource')}
             labels={uniqueSelectedResourceTypes}
             deleteLabel={handleDeleteLabel}
             deleteLabelGroup={onDeleteGroup}
           >
             <Select
-              aria-label="Resource filter"
+              aria-label={t('Resource filter')}
               role="menu"
               isOpen={isOpen}
               onOpenChange={setIsOpen}
@@ -91,7 +91,7 @@ export const ResourceFilterToolbar: React.FC<ResourceFilterToolbarProps> = ({
               selected={uniqueSelectedResourceTypes}
               toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
                 <MenuToggle ref={toggleRef} onClick={() => setIsOpen(!isOpen)} isExpanded={isOpen}>
-                  Resource{' '}
+                  {t('Resource')}{' '}
                   {uniqueSelectedResourceTypes.length > 0 && (
                     <Badge isRead>{uniqueSelectedResourceTypes.length}</Badge>
                   )}
@@ -116,13 +116,13 @@ export const ResourceFilterToolbar: React.FC<ResourceFilterToolbarProps> = ({
         {allNamespaces && allNamespaces.length > 0 && onNamespaceSelect && (
           <ToolbarItem variant="label-group">
             <ToolbarFilter
-              categoryName="Namespace"
+              categoryName={t('Namespace')}
               labels={selectedNamespace ? [selectedNamespace] : []}
               deleteLabel={() => onDeleteNamespace?.()}
               deleteLabelGroup={() => onDeleteNamespace?.()}
             >
               <Select
-                aria-label="Namespace filter"
+                aria-label={t('Namespace filter')}
                 role="menu"
                 isOpen={isNamespaceOpen}
                 onOpenChange={setIsNamespaceOpen}
@@ -138,7 +138,7 @@ export const ResourceFilterToolbar: React.FC<ResourceFilterToolbarProps> = ({
                     onClick={() => setIsNamespaceOpen(!isNamespaceOpen)}
                     isExpanded={isNamespaceOpen}
                   >
-                    Namespace {selectedNamespace && <Badge isRead>1</Badge>}
+                    {t('Namespace')} {selectedNamespace && <Badge isRead>1</Badge>}
                   </MenuToggle>
                 )}
               >

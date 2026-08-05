@@ -248,7 +248,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
                 name="client-id"
                 value={clientID}
                 onChange={(_event, val) => setClientID(val)}
-                placeholder="my-client-id"
+                placeholder={t('my-client-id')}
               />
               <FormHelperText>
                 <HelperText>
@@ -266,7 +266,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
                 name="issuer-url"
                 value={issuerURL}
                 onChange={(_event, val) => setIssuerURL(val)}
-                placeholder="https://auth.example.com"
+                placeholder={t('https://auth.example.com')}
               />
               <FormHelperText>
                 <HelperText>

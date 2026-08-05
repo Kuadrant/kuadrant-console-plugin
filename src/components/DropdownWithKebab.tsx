@@ -125,7 +125,7 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj, onDeleteClic
         toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
           <MenuToggle
             ref={toggleRef}
-            aria-label="kebab dropdown toggle"
+            aria-label={t('kebab dropdown toggle')}
             variant="plain"
             onClick={onToggleClick}
             isExpanded={isOpen}

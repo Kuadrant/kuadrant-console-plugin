@@ -490,7 +490,7 @@ const ResourceList: React.FC<ResourceListProps> = ({
                         })}
                         onChange={(_event, value) => handleFilterChange(value)}
                         className="pf-v6-c-form-control co-text-filter-with-icon"
-                        aria-label="Resource search"
+                        aria-label={t('Resource search')}
                       />
                     </InputGroup>
                   )}

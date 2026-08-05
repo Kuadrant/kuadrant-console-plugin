@@ -306,7 +306,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
                       {limitConfig.rates.map((r, i) => (
                         <span key={i}>
                           {i > 0 ? ', ' : ''}
-                          {r.limit} per {r.window}
+                          {t('{{limit}} per {{window}}', { limit: r.limit, window: r.window })}
                         </span>
                       ))}
                     </Label>
@@ -352,7 +352,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
         isOpen={isAddLimitOpen}
         onClose={() => setIsAddLimitOpen(false)}
         variant="small"
-        aria-label="Add token rate limit"
+        aria-label={t('Add token rate limit')}
       >
         <ModalBody>
           <Form>
@@ -386,7 +386,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
                   color="blue"
                   onClose={() => setModalRates((prev) => prev.filter((_, idx) => idx !== i))}
                 >
-                  {rate.limit} per {rate.window}
+                  {t('{{limit}} per {{window}}', { limit: rate.limit, window: rate.window })}
                 </Label>
               ))}
             </LabelGroup>
@@ -419,7 +419,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
                 id="new-limit-window"
                 value={newLimitWindow}
                 onChange={(_event, value) => setNewLimitWindow(value)}
-                placeholder="e.g. 1h, 60s, 500ms, 1h30m"
+                placeholder={t('e.g. 1h, 60s, 500ms, 1h30m')}
                 validated={isValidWindow ? 'default' : 'error'}
               />
               <FormHelperText>

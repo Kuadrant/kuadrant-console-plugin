@@ -785,7 +785,7 @@ const MyAPIKeysPage: React.FC = () => {
                       onChange={handleNameFilterChange}
                       value={nameFilter}
                       className="pf-v5-c-form-control co-text-filter-with-icon"
-                      aria-label="Name filter"
+                      aria-label={t('Name filter')}
                     />
                   </InputGroup>
                 </ToolbarFilter>
@@ -859,7 +859,7 @@ const MyAPIKeysPage: React.FC = () => {
                       onChange={handleOwnerFilterChange}
                       value={ownerFilter}
                       className="pf-v5-c-form-control co-text-filter-with-icon"
-                      aria-label="Owner filter"
+                      aria-label={t('Owner filter')}
                     />
                   </InputGroup>
                 </ToolbarFilter>

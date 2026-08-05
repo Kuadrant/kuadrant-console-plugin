@@ -290,7 +290,7 @@ const APIProductForm: React.FC<APIProductFormProps> = ({
                     name="version"
                     value={formData.version}
                     onChange={(_event, value) => onFormDataChange({ ...formData, version: value })}
-                    placeholder="v1"
+                    placeholder={t('v1')}
                     style={{ maxWidth: '400px' }}
                   />
                   <FormHelperText>
