@@ -681,6 +681,7 @@ const FilterActions: React.FC<FilterActionsProps> = ({ filters, onChange }) => {
                             </FormGroup>
                             <FormGroup label={t('Port')} fieldId="rr-port">
                               <TextInput
+                                type="number"
                                 id="rr-port"
                                 value={
                                   (f.requestRedirect?.port as number | undefined)?.toString?.() ||
