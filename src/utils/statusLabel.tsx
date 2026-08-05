@@ -1,5 +1,3 @@
-import * as React from 'react';
-
 import type { TFunction } from 'react-i18next';
 
 import {

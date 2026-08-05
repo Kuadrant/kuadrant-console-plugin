@@ -5,9 +5,10 @@
     "moduleResolution": "node",
     "target": "es2020",
     "sourceMap": true,
-    "jsx": "react",
+    "jsx": "react-jsx",
     "allowJs": true,
     "strict": false,
+    "skipLibCheck": true,
     "noUnusedLocals": true,
     "paths": {
       "react": [ "./node_modules/@types/react" ]

@@ -308,7 +308,7 @@ const KuadrantOverviewPage: React.FC = () => {
             navigate(`/kuadrant/overview/ns/${targetNamespace}`, { replace: true });
           }
           // Otherwise, stay on current path (cluster-wide view)
-        } catch (error) {
+        } catch (_error) {
           // On error, redirect to namespace-scoped view
           const targetNamespace =
             activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';

@@ -1,3 +1,4 @@
+root: true
 env:
   browser: true
   es2021: true
@@ -19,6 +20,15 @@ plugins:
 rules:
   prettier/prettier:
     - error
+  react/react-in-jsx-scope: off
+  '@typescript-eslint/no-unused-vars':
+    - error
+    - argsIgnorePattern: ^_
+      varsIgnorePattern: ^_
+      caughtErrorsIgnorePattern: ^_
+  '@typescript-eslint/no-unused-expressions':
+    - error
+    - allowShortCircuit: true
 settings:
   react:
     version: detect
