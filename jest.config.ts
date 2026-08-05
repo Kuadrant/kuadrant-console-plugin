@@ -9,9 +9,8 @@ const config: Config = {
         jsx: 'react',
         esModuleInterop: true,
       },
-      // react-i18next 16 augments React.HTMLAttributes.children which
-      // widens the type and trips PatternFly prop checks at compile time.
-      // not real errors; skip type diagnostics during test runs
+      // react-i18next 16 widens React.HTMLAttributes.children,
+      // tripping spurious PatternFly prop checks. remove after sdk 4.22 bump
       diagnostics: false,
     }],
   },

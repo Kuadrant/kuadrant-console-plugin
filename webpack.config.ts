@@ -52,10 +52,8 @@ const config: Configuration = {
             loader: 'ts-loader',
             options: {
               configFile: path.resolve(__dirname, 'tsconfig.json'),
-              // react-i18next 16 augments React.HTMLAttributes.children which
-              // widens the type and trips PatternFly prop checks. These are not
-              // real errors; the augmentation is benign at runtime. Skip type
-              // checking during build; lint/tsc --noEmit can catch real issues.
+              // react-i18next 16 widens React.HTMLAttributes.children,
+              // tripping spurious PatternFly prop checks. remove after sdk 4.22 bump
               transpileOnly: true,
             },
           },
@@ -101,8 +99,7 @@ const config: Configuration = {
   plugins: [
     new ConsoleRemotePlugin({
       extensions: allExtensions,
-      // sdk 1.x still declares react-i18next ^11 but ocp 4.22 console provides ~16.5.8;
-      // skip until the sdk bump lands
+      // sdk 1.x declares react-i18next ^11; ocp 4.22 provides ~16.5.8. remove after sdk bump
       validateSharedModules: false,
     }),
     new CopyWebpackPlugin({
