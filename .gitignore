@@ -7,6 +7,9 @@ integration-tests/screenshots
 playwright-report/
 test-results/
 
+# npm (this project uses yarn)
+package-lock.json
+
 # Yarn v4
 .yarn/*
 !.yarn/patches
