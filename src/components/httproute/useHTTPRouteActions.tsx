@@ -93,7 +93,7 @@ const useHTTPRouteActions = (obj: K8sResourceCommon): ExtensionHookResult<Action
     t,
   ]);
 
-  return [actions, true, undefined];
+  return [actions, !!httpRouteModel, undefined];
 };
 
 export default useHTTPRouteActions;

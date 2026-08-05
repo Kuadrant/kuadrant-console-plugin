@@ -40,9 +40,7 @@ export const createDefaultFilter = (type: HTTPRouteFilter['type']): HTTPRouteFil
 
 // Helper: Strip UI-only fields (id) from header arrays for YAML
 const cleanHeaders = (items: Array<{ id?: string; name: string; value: string }>) =>
-  items
-    .filter((i) => i.name?.trim() && i.value?.trim())
-    .map(({ name, value }) => ({ name, value }));
+  items.filter((i) => i.name?.trim()).map(({ name, value }) => ({ name, value }));
 
 const cleanRemove = (items: Array<string | { id?: string; name: string }>) =>
   items.map((e) => (typeof e === 'string' ? e : e.name)).filter((s) => s?.trim());
@@ -87,7 +85,7 @@ export const generateFiltersForYAML = (filters: HTTPRouteFilter[]): HTTPRouteFil
   if (!Array.isArray(filters) || filters.length === 0) return [];
 
   return filters
-    .map((f) => {
+    .map((f): HTTPRouteFilter | null => {
       switch (f.type) {
         case 'RequestHeaderModifier': {
           const modifier = processHeaderModifier(f.requestHeaderModifier || {});
@@ -136,18 +134,18 @@ export const generateFiltersForYAML = (filters: HTTPRouteFilter[]): HTTPRouteFil
 
         case 'RequestMirror': {
           const rm = f.requestMirror || { backendRef: { name: '' } };
-          const backendRef: Partial<RequestMirrorFilter['requestMirror']['backendRef']> = {};
+          const ref: RequestMirrorFilter['requestMirror']['backendRef'] = { name: '' };
 
           if (rm.backendRef?.name?.trim()) {
-            backendRef.name = rm.backendRef.name;
+            ref.name = rm.backendRef.name;
             if (typeof rm.backendRef.port === 'number') {
-              backendRef.port = rm.backendRef.port;
+              ref.port = rm.backendRef.port;
             }
           }
 
           return {
-            type: 'RequestMirror',
-            requestMirror: { backendRef: backendRef.name ? backendRef : { name: '' } },
+            type: 'RequestMirror' as const,
+            requestMirror: { backendRef: ref },
           };
         }
 
@@ -155,10 +153,13 @@ export const generateFiltersForYAML = (filters: HTTPRouteFilter[]): HTTPRouteFil
           return f;
       }
     })
-    .filter(Boolean) as HTTPRouteFilter[];
+    .filter((f): f is HTTPRouteFilter => f !== null);
 };
 
-export const getFilterSummary = (filter: HTTPRouteFilter) => {
+type TranslateFn = (key: string) => string;
+const identity = (key: string) => key;
+
+export const getFilterSummary = (filter: HTTPRouteFilter, t: TranslateFn = identity) => {
   if (!filter) return '';
   switch (filter.type) {
     case 'RequestHeaderModifier':
@@ -168,20 +169,20 @@ export const getFilterSummary = (filter: HTTPRouteFilter) => {
           ? filter.requestHeaderModifier || {}
           : filter.responseHeaderModifier || {};
       const parts: string[] = [];
-      if (Array.isArray(hm.add)) parts.push(`add:${hm.add.length}`);
-      if (Array.isArray(hm.set)) parts.push(`set:${hm.set.length}`);
-      if (hm.remove) parts.push(`remove:${hm.remove.length}`);
-      return parts.length ? `${filter.type} — ${parts.join(' | ')}` : filter.type;
+      if (Array.isArray(hm.add)) parts.push(`${t('add')}:${hm.add.length}`);
+      if (Array.isArray(hm.set)) parts.push(`${t('set')}:${hm.set.length}`);
+      if (hm.remove) parts.push(`${t('remove')}:${hm.remove.length}`);
+      return parts.length ? `${filter.type} - ${parts.join(' | ')}` : filter.type;
     }
     case 'URLRewrite': {
       const f = filter.urlRewrite || {};
       const parts: string[] = [];
-      if (f.hostname) parts.push(`host → ${f.hostname}`);
+      if (f.hostname) parts.push(`${t('host')} → ${f.hostname}`);
       if (f.path?.type === 'ReplaceFullPath' && f.path.replaceFullPath)
         parts.push(`ReplaceFullPath → ${f.path.replaceFullPath}`);
       if (f.path?.type === 'ReplacePrefixMatch' && f.path.replacePrefixMatch)
         parts.push(`ReplacePrefixMatch → ${f.path.replacePrefixMatch}`);
-      return parts.length ? `${filter.type} — ${parts.join(' | ')}` : filter.type;
+      return parts.length ? `${filter.type} - ${parts.join(' | ')}` : filter.type;
     }
     case 'RequestRedirect': {
       const rr = filter.requestRedirect || {};
@@ -194,17 +195,17 @@ export const getFilterSummary = (filter: HTTPRouteFilter) => {
         rr.path?.replaceFullPath,
         rr.path?.replacePrefixMatch,
       ].filter(Boolean) as string[];
-      return parts.length ? `${filter.type} — ${parts.join(' | ')}` : filter.type;
+      return parts.length ? `${filter.type} - ${parts.join(' | ')}` : filter.type;
     }
     case 'RequestMirror': {
       const rm = filter.requestMirror || { backendRef: { name: '' } };
       const parts = [rm.backendRef.name, rm.backendRef.port?.toString?.()].filter(
         Boolean,
       ) as string[];
-      return `${filter.type} — ${parts.join(' | ')}`;
+      return `${filter.type} - ${parts.join(' | ')}`;
     }
     default:
-      return 'Filter';
+      return t('Filter');
   }
 };
 
@@ -310,23 +311,21 @@ export const parseFiltersFromYAML = (filters: HTTPRouteFilter[] | undefined): HT
   });
 };
 
+const hasValidHeaders = (items: HeaderKV[] | undefined) =>
+  Array.isArray(items) && items.some((i) => i.name?.trim());
+
+const hasValidRemove = (items: Array<string | HeaderNameOnly> | undefined) =>
+  Array.isArray(items) && items.some((e) => (typeof e === 'string' ? e : e?.name)?.trim());
+
 export const isFilterConfigValid = (f: HTTPRouteFilter): boolean => {
   switch (f.type) {
     case 'RequestHeaderModifier': {
       const hm = f.requestHeaderModifier || {};
-      return Boolean(
-        (hm.add && Object.keys(hm.add).length) ||
-          (hm.set && Object.keys(hm.set).length) ||
-          (hm.remove && hm.remove.length),
-      );
+      return hasValidHeaders(hm.add) || hasValidHeaders(hm.set) || hasValidRemove(hm.remove);
     }
     case 'ResponseHeaderModifier': {
       const hm = f.responseHeaderModifier || {};
-      return Boolean(
-        (hm.add && Object.keys(hm.add).length) ||
-          (hm.set && Object.keys(hm.set).length) ||
-          (hm.remove && hm.remove.length),
-      );
+      return hasValidHeaders(hm.add) || hasValidHeaders(hm.set) || hasValidRemove(hm.remove);
     }
     case 'RequestRedirect': {
       const rr = f.requestRedirect || {};

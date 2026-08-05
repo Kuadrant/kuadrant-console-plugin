@@ -81,9 +81,9 @@ export const parseMatchesFromYAML = (
 
   return yamlMatches.map((match, matchIndex: number) => ({
     id: `match-${Date.now()}-${matchIndex}`,
-    pathType: match.path?.type || 'PathPrefix',
+    pathType: (match.path?.type || 'PathPrefix') as HTTPRouteMatch['pathType'],
     pathValue: match.path?.value || '/',
-    method: match.method || '',
+    method: (match.method || '') as HTTPRouteMatch['method'],
     headers: match.headers
       ? match.headers.map(
           (header, headerIndex: number): HTTPRouteHeader => ({

@@ -97,9 +97,11 @@ const HTTPRouteCreatePage: React.FC = () => {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const pathSplit = location.pathname.split('/');
-  const nameEdit = pathSplit[5];
-  const namespaceEdit = pathSplit[3];
+  const segments = location.pathname.split('/');
+  const nsIndex = segments.indexOf('ns');
+  const namespaceEdit = nsIndex >= 0 ? segments[nsIndex + 1] : undefined;
+  const resourceIndex = segments.findIndex((s) => s.includes('~'));
+  const nameEdit = resourceIndex >= 0 ? segments[resourceIndex + 1] : undefined;
   const selectedNamespace =
     !selectedNamespaceRaw || selectedNamespaceRaw === '#ALL_NS#' ? 'default' : selectedNamespaceRaw;
   // Function to add a new hostname field
@@ -124,7 +126,7 @@ const HTTPRouteCreatePage: React.FC = () => {
   const httpRouteObject = React.useMemo(() => {
     // Filter out empty hostnames
     const validHostnames = hostnames.filter((h) => h.trim().length > 0);
-    const validParentRefs = parentRefs.filter((ref) => ref.gatewayName && ref.sectionName);
+    const validParentRefs = parentRefs.filter((ref) => ref.gatewayName);
 
     const httpRoute = {
       apiVersion: 'gateway.networking.k8s.io/v1',
@@ -531,7 +533,7 @@ const HTTPRouteCreatePage: React.FC = () => {
                           {rule.filters && rule.filters.length > 0 ? (
                             <div>
                               {rule.filters.map((filter, idx: number) => (
-                                <div key={idx}>{getFilterSummary(filter)}</div>
+                                <div key={idx}>{getFilterSummary(filter, t)}</div>
                               ))}
                             </div>
                           ) : (

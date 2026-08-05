@@ -701,7 +701,10 @@ const GatewayCreatePage: React.FC = () => {
               id="listener-port"
               value={currentListener.port}
               onChange={(_event, value) =>
-                setCurrentListener({ ...currentListener, port: parseInt(value, 10) })
+                setCurrentListener({
+                  ...currentListener,
+                  port: value === '' ? 0 : parseInt(value, 10),
+                })
               }
               placeholder={t('Enter port (1-65535)')}
               isRequired
