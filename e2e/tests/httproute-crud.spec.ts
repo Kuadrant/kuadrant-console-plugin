@@ -114,7 +114,7 @@ spec:
     deleteNamespace(namespace);
   });
 
-  test('creates an HTTPRoute via the form', { tag: '@nightly' }, async ({ page }) => {
+  test('creates an HTTPRoute via the form', { tag: '@smoke' }, async ({ page }) => {
     const routeName = `e2e-httproute-${uid()}`;
     await gotoPage(page, `/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~HTTPRoute/~new`);
 
@@ -167,7 +167,7 @@ spec:
     ).toBe(gateway);
   });
 
-  test('edits an existing HTTPRoute', { tag: '@nightly' }, async ({ page }) => {
+  test('edits an existing HTTPRoute', { tag: '@smoke' }, async ({ page }) => {
     const routeName = `e2e-httproute-${uid()}`;
     applyResource(`
 apiVersion: gateway.networking.k8s.io/v1
@@ -250,7 +250,7 @@ spec:
     ).toBe('/v2/api');
   });
 
-  test('form↔YAML sync preserves data', { tag: '@nightly' }, async ({ page }) => {
+  test('form↔YAML sync preserves data', { tag: '@smoke' }, async ({ page }) => {
     const routeName = `e2e-httproute-${uid()}`;
     await gotoPage(page, `/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~HTTPRoute/~new`);
 

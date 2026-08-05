@@ -117,7 +117,7 @@ test.describe('Gateway CRUD', () => {
     deleteNamespace(namespace);
   });
 
-  test('creates a Gateway via the form', { tag: '@nightly' }, async ({ page }) => {
+  test('creates a Gateway via the form', { tag: '@smoke' }, async ({ page }) => {
     const gatewayName = `e2e-gateway-${uid()}`;
     await gotoPage(page, `/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~Gateway/~new`);
 
@@ -162,7 +162,7 @@ test.describe('Gateway CRUD', () => {
     ).toBe('istio');
   });
 
-  test('edits an existing Gateway', { tag: '@nightly' }, async ({ page }) => {
+  test('edits an existing Gateway', { tag: '@smoke' }, async ({ page }) => {
     const gatewayName = `e2e-gateway-${uid()}`;
     applyResource(`
 apiVersion: gateway.networking.k8s.io/v1
@@ -255,7 +255,7 @@ spec:
     ).toBe('8080');
   });
 
-  test('form↔YAML sync preserves data', { tag: '@nightly' }, async ({ page }) => {
+  test('form↔YAML sync preserves data', { tag: '@smoke' }, async ({ page }) => {
     const gatewayName = `e2e-gateway-${uid()}`;
     await gotoPage(page, `/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~Gateway/~new`);
 
