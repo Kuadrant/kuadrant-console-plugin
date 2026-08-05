@@ -687,8 +687,11 @@ const FilterActions: React.FC<FilterActionsProps> = ({ filters, onChange }) => {
                                   ''
                                 }
                                 onChange={(_, value) => {
-                                  const parsed = parseInt(value, 10);
-                                  const portNum = value && !isNaN(parsed) ? parsed : undefined;
+                                  const num = Number(value);
+                                  const portNum =
+                                    value && Number.isInteger(num) && num >= 1 && num <= 65535
+                                      ? num
+                                      : undefined;
                                   handleFilterChangeAt(activeFilterTab, { port: portNum });
                                 }}
                                 placeholder={'8080'}
@@ -755,8 +758,11 @@ const FilterActions: React.FC<FilterActionsProps> = ({ filters, onChange }) => {
                                 )?.toString?.() || ''
                               }
                               onChange={(_, value) => {
-                                const parsed = parseInt(value, 10);
-                                const portNum = value && !isNaN(parsed) ? parsed : undefined;
+                                const num = Number(value);
+                                const portNum =
+                                  value && Number.isInteger(num) && num >= 1 && num <= 65535
+                                    ? num
+                                    : undefined;
                                 handleFilterChangeAt(activeFilterTab, {
                                   backendRef: {
                                     ...(f.requestMirror?.backendRef || {}),

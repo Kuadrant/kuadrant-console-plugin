@@ -218,7 +218,10 @@ describe('generateFiltersForYAML', () => {
       {
         type: 'RequestHeaderModifier',
         requestHeaderModifier: {
-          add: [{ name: 'Valid', value: 'ok' }],
+          add: [
+            { name: 'Valid', value: 'ok' },
+            { name: 'Empty-Val', value: '  ' },
+          ],
         },
       },
     ]);

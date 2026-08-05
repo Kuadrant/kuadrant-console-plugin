@@ -1,4 +1,23 @@
-import { HTTPRouteMatch, HTTPRouteHeader, HTTPRouteQueryParam } from './types';
+import {
+  HTTPRouteMatch,
+  HTTPRouteHeader,
+  HTTPRouteQueryParam,
+  HTTPRoutePathType,
+  HTTPRouteMethod,
+} from './types';
+
+const VALID_PATH_TYPES: HTTPRoutePathType[] = ['Exact', 'PathPrefix', 'RegularExpression'];
+const VALID_METHODS: HTTPRouteMethod[] = [
+  'GET',
+  'HEAD',
+  'POST',
+  'PUT',
+  'DELETE',
+  'CONNECT',
+  'OPTIONS',
+  'TRACE',
+  'PATCH',
+];
 
 export const generateMatchesForYAML = (matches: HTTPRouteMatch[]) => {
   if (!matches || matches.length === 0) {
@@ -81,9 +100,13 @@ export const parseMatchesFromYAML = (
 
   return yamlMatches.map((match, matchIndex: number) => ({
     id: `match-${Date.now()}-${matchIndex}`,
-    pathType: (match.path?.type || 'PathPrefix') as HTTPRouteMatch['pathType'],
+    pathType: VALID_PATH_TYPES.includes(match.path?.type as HTTPRoutePathType)
+      ? (match.path.type as HTTPRoutePathType)
+      : 'PathPrefix',
     pathValue: match.path?.value || '/',
-    method: (match.method || '') as HTTPRouteMatch['method'],
+    method: VALID_METHODS.includes(match.method as HTTPRouteMethod)
+      ? (match.method as HTTPRouteMethod)
+      : '',
     headers: match.headers
       ? match.headers.map(
           (header, headerIndex: number): HTTPRouteHeader => ({

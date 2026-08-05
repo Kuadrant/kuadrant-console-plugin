@@ -147,7 +147,7 @@ const HTTPRouteCreatePage: React.FC = () => {
             ? { namespace: ref.gatewayNamespace }
             : {}),
           ...(ref.sectionName ? { sectionName: ref.sectionName } : {}),
-          ...(ref.port ? { port: ref.port } : {}),
+          ...(ref.sectionName && ref.port ? { port: ref.port } : {}),
         })),
         ...(validHostnames.length > 0 ? { hostnames: validHostnames } : {}),
         rules: rules.map((rule) => ({
