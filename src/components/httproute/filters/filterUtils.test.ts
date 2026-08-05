@@ -218,7 +218,10 @@ describe('generateFiltersForYAML', () => {
       {
         type: 'RequestHeaderModifier',
         requestHeaderModifier: {
-          add: [{ name: 'Valid', value: 'ok' }],
+          add: [
+            { name: 'Valid', value: 'ok' },
+            { name: 'Empty-Val', value: '  ' },
+          ],
         },
       },
     ]);
@@ -420,7 +423,7 @@ describe('getFilterSummary', () => {
 
     const summary = getFilterSummary(filter);
 
-    expect(summary).toBe('RequestHeaderModifier — add:1 | set:1 | remove:1');
+    expect(summary).toBe('RequestHeaderModifier - add:1 | set:1 | remove:1');
   });
 
   it('returns summary for ResponseHeaderModifier with add count only', () => {
@@ -433,7 +436,7 @@ describe('getFilterSummary', () => {
 
     const summary = getFilterSummary(filter);
 
-    expect(summary).toBe('ResponseHeaderModifier — add:1');
+    expect(summary).toBe('ResponseHeaderModifier - add:1');
   });
 
   it('returns summary for URLRewrite with hostname and path', () => {
@@ -450,7 +453,7 @@ describe('getFilterSummary', () => {
 
     const summary = getFilterSummary(filter);
 
-    expect(summary).toBe('URLRewrite — host → rewritten.com | ReplaceFullPath → /new');
+    expect(summary).toBe('URLRewrite - host → rewritten.com | ReplaceFullPath → /new');
   });
 
   it('returns summary for RequestRedirect with scheme, hostname, port, statusCode', () => {
@@ -466,7 +469,7 @@ describe('getFilterSummary', () => {
 
     const summary = getFilterSummary(filter);
 
-    expect(summary).toBe('RequestRedirect — https | example.com | 8443 | 302');
+    expect(summary).toBe('RequestRedirect - https | example.com | 8443 | 302');
   });
 
   it('returns summary for RequestMirror with backendRef name and port', () => {
@@ -479,7 +482,7 @@ describe('getFilterSummary', () => {
 
     const summary = getFilterSummary(filter);
 
-    expect(summary).toBe('RequestMirror — mirror-svc | 9000');
+    expect(summary).toBe('RequestMirror - mirror-svc | 9000');
   });
 
   it('returns type only when RequestHeaderModifier has no data', () => {

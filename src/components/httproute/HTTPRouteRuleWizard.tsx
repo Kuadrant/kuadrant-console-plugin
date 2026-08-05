@@ -53,9 +53,7 @@ const validateMatchesStep = (currentRule: { matches: HTTPRouteMatch[] }): boolea
   if (currentRule.matches.length === 0) {
     return true;
   }
-  return currentRule.matches.every(
-    (match) => match.pathType && match.pathType !== '' && match.method && match.method !== '',
-  );
+  return currentRule.matches.every((match) => !!match.pathType && !!match.method);
 };
 
 export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
@@ -349,7 +347,10 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
                               value={match.pathType}
                               onChange={(_, value) => {
                                 const updatedMatches = [...currentRule.matches];
-                                updatedMatches[index] = { ...match, pathType: value };
+                                updatedMatches[index] = {
+                                  ...match,
+                                  pathType: value as HTTPRouteMatch['pathType'],
+                                };
                                 setCurrentRule({ ...currentRule, matches: updatedMatches });
                               }}
                               aria-label={t('Select path type')}
@@ -395,16 +396,23 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
                               value={match.method}
                               onChange={(_, value) => {
                                 const updatedMatches = [...currentRule.matches];
-                                updatedMatches[index] = { ...match, method: value };
+                                updatedMatches[index] = {
+                                  ...match,
+                                  method: value as HTTPRouteMatch['method'],
+                                };
                                 setCurrentRule({ ...currentRule, matches: updatedMatches });
                               }}
                               aria-label={t('Select HTTP method')}
                             >
                               <FormSelectOption value="" label={t('Select...')} />
                               <FormSelectOption value="GET" label="GET" />
+                              <FormSelectOption value="HEAD" label="HEAD" />
                               <FormSelectOption value="POST" label="POST" />
                               <FormSelectOption value="PUT" label="PUT" />
                               <FormSelectOption value="DELETE" label="DELETE" />
+                              <FormSelectOption value="CONNECT" label="CONNECT" />
+                              <FormSelectOption value="OPTIONS" label="OPTIONS" />
+                              <FormSelectOption value="TRACE" label="TRACE" />
                               <FormSelectOption value="PATCH" label="PATCH" />
                             </FormSelect>
                           </FormGroup>
@@ -660,7 +668,7 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
                   </div>
                   <div style={{ color: 'var(--pf-v6-global--Color--200)' }}>
                     {currentRule.filters.map((filter, idx) => (
-                      <div key={idx}>{getFilterSummary(filter)}</div>
+                      <div key={idx}>{getFilterSummary(filter, t)}</div>
                     ))}
                   </div>
                 </>

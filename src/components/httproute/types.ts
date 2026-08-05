@@ -88,11 +88,24 @@ export interface HTTPRouteQueryParam {
   value: string;
 }
 
+export type HTTPRoutePathType = '' | 'Exact' | 'PathPrefix' | 'RegularExpression';
+export type HTTPRouteMethod =
+  | ''
+  | 'GET'
+  | 'HEAD'
+  | 'POST'
+  | 'PUT'
+  | 'DELETE'
+  | 'CONNECT'
+  | 'OPTIONS'
+  | 'TRACE'
+  | 'PATCH';
+
 export interface HTTPRouteMatch {
   id: string;
-  pathType: string;
+  pathType: HTTPRoutePathType;
   pathValue: string;
-  method: string;
+  method: HTTPRouteMethod;
   headers?: HTTPRouteHeader[];
   queryParams?: HTTPRouteQueryParam[];
 }

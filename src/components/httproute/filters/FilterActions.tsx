@@ -264,7 +264,7 @@ const FilterActions: React.FC<FilterActionsProps> = ({ filters, onChange }) => {
                     key={`${filter.type}-${idx}`}
                     eventKey={idx}
                     title={
-                      <Tooltip content={getFilterSummary(filter)} position="top">
+                      <Tooltip content={getFilterSummary(filter, t)} position="top">
                         <TabTitleText>{`Filter-${idx + 1}`}</TabTitleText>
                       </Tooltip>
                     }
@@ -412,8 +412,8 @@ const FilterActions: React.FC<FilterActionsProps> = ({ filters, onChange }) => {
                               const name = (r.name || '').trim();
                               if (!name) return;
                               if (r.action === 'Delete') remove.push(name);
-                              if (r.action === 'Add' && r.value) add.push({ name, value: r.value });
-                              if (r.action === 'Set' && r.value) set.push({ name, value: r.value });
+                              if (r.action === 'Add') add.push({ name, value: r.value ?? '' });
+                              if (r.action === 'Set') set.push({ name, value: r.value ?? '' });
                             });
                             handleFilterChangeAt(
                               activeFilterTab,
@@ -681,13 +681,18 @@ const FilterActions: React.FC<FilterActionsProps> = ({ filters, onChange }) => {
                             </FormGroup>
                             <FormGroup label={t('Port')} fieldId="rr-port">
                               <TextInput
+                                type="number"
                                 id="rr-port"
                                 value={
                                   (f.requestRedirect?.port as number | undefined)?.toString?.() ||
                                   ''
                                 }
                                 onChange={(_, value) => {
-                                  const portNum = value ? Number(value) : undefined;
+                                  const num = Number(value);
+                                  const portNum =
+                                    value && Number.isInteger(num) && num >= 1 && num <= 65535
+                                      ? num
+                                      : undefined;
                                   handleFilterChangeAt(activeFilterTab, { port: portNum });
                                 }}
                                 placeholder={'8080'}
@@ -746,6 +751,7 @@ const FilterActions: React.FC<FilterActionsProps> = ({ filters, onChange }) => {
                           </FormGroup>
                           <FormGroup label={t('Port')} fieldId="rm-port">
                             <TextInput
+                              type="number"
                               id="rm-port"
                               value={
                                 (
@@ -753,7 +759,11 @@ const FilterActions: React.FC<FilterActionsProps> = ({ filters, onChange }) => {
                                 )?.toString?.() || ''
                               }
                               onChange={(_, value) => {
-                                const portNum = value ? Number(value) : undefined;
+                                const num = Number(value);
+                                const portNum =
+                                  value && Number.isInteger(num) && num >= 1 && num <= 65535
+                                    ? num
+                                    : undefined;
                                 handleFilterChangeAt(activeFilterTab, {
                                   backendRef: {
                                     ...(f.requestMirror?.backendRef || {}),

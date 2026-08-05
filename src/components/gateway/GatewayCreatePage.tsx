@@ -700,9 +700,13 @@ const GatewayCreatePage: React.FC = () => {
               type="number"
               id="listener-port"
               value={currentListener.port}
-              onChange={(_event, value) =>
-                setCurrentListener({ ...currentListener, port: parseInt(value, 10) })
-              }
+              onChange={(_event, value) => {
+                const num = Number(value);
+                setCurrentListener({
+                  ...currentListener,
+                  port: value && Number.isInteger(num) && num >= 1 && num <= 65535 ? num : 0,
+                });
+              }}
               placeholder={t('Enter port (1-65535)')}
               isRequired
             />
