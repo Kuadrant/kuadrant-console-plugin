@@ -604,5 +604,39 @@
       "perspective": "admin",
       "section": "kuadrant-api-catalog-section-admin"
     }
+  },
+  {
+    "type": "console.navigation/section",
+    "properties": {
+      "id": "kuadrant-mcp-section-admin",
+      "name": "%plugin__kuadrant-console-plugin~MCP Management%",
+      "perspective": "admin"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "kuadrant-mcp-overview-admin",
+      "name": "%plugin__kuadrant-console-plugin~Overview%",
+      "href": "/kuadrant/mcp/overview",
+      "perspective": "admin",
+      "section": "kuadrant-mcp-section-admin"
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/mcp/overview",
+      "component": { "$codeRef": "MCPOverviewPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/mcp/setup-wizard",
+      "component": { "$codeRef": "MCPSetupWizard" }
+    }
   }
 ]
