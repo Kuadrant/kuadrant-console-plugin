@@ -305,6 +305,14 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
+      "path": "/k8s/ns/:ns/planpolicy/name/:name/edit",
+      "component": { "$codeRef": "KuadrantPlanPolicyCreatePage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
       "path": "/k8s/ns/:ns/dnspolicy/name/:name/edit",
       "component": { "$codeRef": "KuadrantDNSPolicyCreatePage" }
     }
@@ -439,6 +447,17 @@
         "kind": "TokenRateLimitPolicy"
       },
       "provider": { "$codeRef": "useTokenRateLimitPolicyActions" }
+    }
+  },
+  {
+    "type": "console.action/resource-provider",
+    "properties": {
+      "model": {
+        "group": "extensions.kuadrant.io",
+        "version": "v1alpha1",
+        "kind": "PlanPolicy"
+      },
+      "provider": { "$codeRef": "usePlanPolicyActions" }
     }
   },
   {

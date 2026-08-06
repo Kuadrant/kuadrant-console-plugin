@@ -469,16 +469,22 @@ test.describe('other policy create pages render', () => {
     await expect(page.locator('#issuer-url')).toBeVisible();
   });
 
-  test('PlanPolicy create page renders YAML editor', { tag: '@smoke' }, async ({ page }) => {
+  test('PlanPolicy create form renders with required fields', { tag: '@smoke' }, async ({ page }) => {
     await gotoPage(
       page,
       createPagePath(TEST_NAMESPACE, 'extensions.kuadrant.io~v1alpha1~PlanPolicy'),
     );
 
-    await expect(page.locator('text=Create Plan Policy').first()).toBeVisible({
+    await expect(page.getByRole('heading', { name: 'Create Plan Policy' })).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 15_000 });
+
+    await expect(page.locator('#create-type-radio-form')).toBeChecked();
+    await expect(page.locator('#policy-name')).toBeVisible();
+    await expect(page.locator('#plan-tier-0')).toBeVisible();
+    await expect(page.locator('#plan-predicate-0')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
   });
 
   test('TokenRateLimitPolicy create page renders YAML editor', { tag: '@smoke' }, async ({ page }) => {
@@ -490,8 +496,180 @@ test.describe('other policy create pages render', () => {
     await expect(page.locator('text=Create TokenRateLimit Policy').first()).toBeVisible({
       timeout: 15_000,
     });
+
     await page.locator('#create-type-radio-yaml').click();
     await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 15_000 });
+  });
+});
+
+test.describe('PlanPolicy form', () => {
+  test(
+    'create button enables only when required fields are set',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      await gotoPage(
+        page,
+        createPagePath(TEST_NAMESPACE, 'extensions.kuadrant.io~v1alpha1~PlanPolicy'),
+      );
+
+      const createButton = page.getByRole('button', { name: 'Create', exact: true });
+      await expect(createButton).toBeDisabled();
+
+      await page.locator('#policy-name').fill(`e2e-plan-${uid()}`);
+      await expect(createButton).toBeDisabled();
+
+      await page.locator('#plan-tier-0').fill('gold');
+      await expect(createButton).toBeDisabled();
+
+      await page.locator('#plan-predicate-0').fill('auth.identity.tier == "gold"');
+      await expect(createButton).toBeDisabled();
+
+      await page.locator('#httproute-select').click();
+      await page.getByRole('menuitem', { name: `${TEST_NAMESPACE}/test-route` }).click();
+      await expect(createButton).toBeEnabled();
+
+      await page.locator('#plan-tier-0').fill('');
+      await expect(createButton).toBeDisabled();
+    },
+  );
+
+  test.describe('with seeded namespace', () => {
+    let namespace = '';
+    let httproute = '';
+
+    const httprouteManifest = (name: string, ns: string) => `
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${name}
+  namespace: ${ns}
+spec:
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+`;
+
+    test.beforeEach(async () => {
+      namespace = `e2e-planp-${uid()}`;
+      httproute = `e2e-route-${uid()}`;
+      kubectl(['create', 'namespace', namespace]);
+      applyManifest(httprouteManifest(httproute, namespace));
+    });
+
+    test.afterEach(async () => {
+      deleteNamespace(namespace);
+    });
+
+    test('creates a PlanPolicy via the form', { tag: '@smoke' }, async ({ page }) => {
+      const policyName = `e2e-plan-${uid()}`;
+      await gotoPage(
+        page,
+        createPagePath(namespace, 'extensions.kuadrant.io~v1alpha1~PlanPolicy'),
+      );
+
+      await expect(page.getByRole('heading', { name: 'Create Plan Policy' })).toBeVisible({
+        timeout: 15_000,
+      });
+
+      await page.locator('#policy-name').fill(policyName);
+      await page.locator('#plan-tier-0').fill('gold');
+      await page.locator('#plan-predicate-0').fill(
+        'has(auth.identity) && auth.identity.metadata.annotations["secret.kuadrant.io/plan-id"] == "gold"',
+      );
+      await page.locator('#plan-daily-0').fill('100');
+
+      await page.locator('#httproute-select').click();
+      await page.getByRole('menuitem', { name: `${namespace}/${httproute}` }).click();
+
+      const createButton = page.getByRole('button', { name: 'Create', exact: true });
+      await expect(createButton).toBeEnabled();
+      await createButton.click();
+
+      await expect(page).toHaveURL(new RegExp(`/kuadrant/policies/ns/${namespace}/plan`), {
+        timeout: 15_000,
+      });
+
+      expect(resourceExists('planpolicy', policyName, namespace)).toBe(true);
+    });
+
+    test('edits an existing PlanPolicy (name immutable, plan tier persisted)', { tag: '@smoke' }, async ({
+      page,
+    }) => {
+      const policyName = `e2e-plan-${uid()}`;
+      applyManifest(`
+apiVersion: extensions.kuadrant.io/v1alpha1
+kind: PlanPolicy
+metadata:
+  name: ${policyName}
+  namespace: ${namespace}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: ${httproute}
+  plans:
+  - tier: gold
+    predicate: 'auth.identity.tier == "gold"'
+    limits:
+      daily: 100
+`);
+
+      await gotoPage(page, `/k8s/ns/${namespace}/planpolicy/name/${policyName}/edit`);
+
+      await expect(page.getByRole('heading', { name: 'Edit Plan Policy' })).toBeVisible({
+        timeout: 15_000,
+      });
+
+      const nameInput = page.locator('#policy-name');
+      await expect(nameInput).toHaveValue(policyName, { timeout: 15_000 });
+      await expect(nameInput).toBeDisabled();
+      await expect(page.locator('#plan-tier-0')).toHaveValue('gold');
+      await expect(page.locator('#plan-predicate-0')).toHaveValue('auth.identity.tier == "gold"');
+      await expect(page.locator('#plan-daily-0')).toHaveValue('100');
+
+      await page.locator('#plan-daily-0').fill('200');
+
+      const saveButton = page.getByRole('button', { name: 'Save', exact: true });
+      await expect(saveButton).toBeEnabled();
+      await saveButton.click();
+
+      await expect(page).toHaveURL(new RegExp(`/kuadrant/policies/ns/${namespace}/plan`), {
+        timeout: 15_000,
+      });
+
+      expect(
+        kubectl([
+          'get',
+          'planpolicy',
+          policyName,
+          '-n',
+          namespace,
+          '-o',
+          'jsonpath={.spec.plans[0].limits.daily}',
+        ]),
+      ).toBe('200');
+    });
+
+    test('add and remove plans dynamically', { tag: '@smoke' }, async ({ page }) => {
+      await gotoPage(
+        page,
+        createPagePath(namespace, 'extensions.kuadrant.io~v1alpha1~PlanPolicy'),
+      );
+
+      await expect(page.locator('#plan-tier-0')).toBeVisible();
+      await expect(page.locator('#plan-tier-1')).not.toBeVisible();
+      await expect(page.getByRole('button', { name: 'Remove Plan' }).first()).toBeDisabled();
+
+      await page.getByRole('button', { name: 'Add Plan' }).click();
+      await expect(page.locator('#plan-tier-1')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Remove Plan' }).first()).toBeEnabled();
+
+      await page.getByRole('button', { name: 'Remove Plan' }).nth(1).click();
+      await expect(page.locator('#plan-tier-1')).not.toBeVisible();
+      await expect(page.getByRole('button', { name: 'Remove Plan' }).first()).toBeDisabled();
+    });
   });
 });
 

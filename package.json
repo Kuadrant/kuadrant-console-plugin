@@ -116,6 +116,7 @@
       "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions",
       "useOIDCPolicyActions": "./components/oidcpolicy/useOIDCPolicyActions",
       "useTokenRateLimitPolicyActions": "./components/tokenratelimitpolicy/useTokenRateLimitPolicyActions",
+      "usePlanPolicyActions": "./components/planpolicy/usePlanPolicyActions",
       "GRPCRoutePoliciesPage": "./components/GRPCRoutePoliciesPage",
       "GatewayCreatePage": "./components/gateway/GatewayCreatePage",
       "useGatewayActions": "./components/gateway/useGatewayActions",
