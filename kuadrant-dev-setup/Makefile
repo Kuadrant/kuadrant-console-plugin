@@ -1,4 +1,4 @@
-.PHONY: help local-setup
+.PHONY: help local-setup mcp-gateway-install
 
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 PROJECT_PATH := $(patsubst %/,%,$(dir $(MKFILE_PATH)))
@@ -17,10 +17,13 @@ local-setup:
 	@echo "installing kuadrant..."
 	@$(MAKE) kuadrant-install
 	@echo ""
+	@echo "installing MCP Gateway..."
+	@$(MAKE) mcp-gateway-install
+	@echo ""
 	@echo "installing demo resources..."
 	@$(MAKE) demo-install
 	@echo ""
-	@echo "cluster ready! kuadrant and demo resources installed."
+	@echo "cluster ready! kuadrant, MCP Gateway, and demo resources installed."
 	@echo ""
 
 cert-manager-install:
@@ -56,6 +59,29 @@ kuadrant-install:
 	@echo ""
 	@echo "kuadrant installed!"
 
+MCP_GATEWAY_VERSION ?= 0.7.1
+MCP_GATEWAY_REPO := https://github.com/Kuadrant/mcp-gateway
+
+mcp-gateway-install:
+	@echo ""
+	@echo "installing MCP Gateway CRDs (v$(MCP_GATEWAY_VERSION))..."
+	@kubectl apply -k "$(MCP_GATEWAY_REPO)/config/crd?ref=v$(MCP_GATEWAY_VERSION)"
+	@echo ""
+	@echo "creating MCP Gateway infrastructure..."
+	@kubectl apply -k "$(MCP_GATEWAY_REPO)/config/istio/gateway?ref=v$(MCP_GATEWAY_VERSION)"
+	@echo ""
+	@echo "deploying MCP Gateway controller..."
+	@kubectl apply -k "$(MCP_GATEWAY_REPO)/config/mcp-gateway/overlays/mcp-system?ref=v$(MCP_GATEWAY_VERSION)"
+	@echo ""
+	@echo "waiting for MCP Gateway controller..."
+	@kubectl wait --for=condition=available --timeout=120s deployment/mcp-gateway-controller -n mcp-system
+	@echo "waiting for MCP broker-router..."
+	@kubectl wait --for=condition=available --timeout=120s deployment/mcp-gateway -n mcp-system
+	@echo "waiting for MCP gateway pod..."
+	@kubectl wait --for=condition=ready --timeout=120s pod -l gateway.networking.k8s.io/gateway-name=mcp-gateway -n gateway-system
+	@echo ""
+	@echo "MCP Gateway installed!"
+
 demo-install:
 	@echo "installing demo resources..."
 	@echo ""
@@ -75,6 +101,9 @@ demo-install:
 	@kubectl apply -f demo/toystore-demo.yaml
 	@kubectl apply -f demo/gamestore-demo.yaml
 	@kubectl apply -f demo/additional-demos.yaml
+	@echo ""
+	@echo "creating demo MCP resources..."
+	@kubectl apply -f demo/mcp-demo.yaml
 	@echo ""
 	@echo "Creating rejection for rejected-shipping-apikey..."
 	@bash $(PROJECT_PATH)/demo/reject-shipping-apikey.sh
