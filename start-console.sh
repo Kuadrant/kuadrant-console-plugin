@@ -4,8 +4,12 @@ set -euo pipefail
 
 CONSOLE_PORT=${CONSOLE_PORT:=9000}
 
-# The latest origin-console image requires x86-64-v3, which can't be emulated on Apple Silicon.
-if [ "$(uname -m)" = "arm64" ]; then
+# The latest origin-console image requires x86-64-v3, which can't be emulated on ARM hosts.
+ARCH=$(uname -m)
+if [ "$ARCH" = "x86_64" ] && [ "$(uname -s)" = "Darwin" ] && sysctl -n hw.optional.arm64 2>/dev/null | grep -q 1; then
+    ARCH="arm64"
+fi
+if [ "$ARCH" = "arm64" ] || [ "$ARCH" = "aarch64" ]; then
     CONSOLE_IMAGE=${CONSOLE_IMAGE:="quay.io/openshift/origin-console:4.21"}
 else
     CONSOLE_IMAGE=${CONSOLE_IMAGE:="quay.io/openshift/origin-console:latest"}
