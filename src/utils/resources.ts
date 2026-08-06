@@ -311,6 +311,26 @@ export const RESOURCES = {
     isKuadrantInternal: false,
   },
 
+  // gateway api reference grants
+  ReferenceGrant: {
+    gvk: { group: 'gateway.networking.k8s.io', version: 'v1beta1', kind: 'ReferenceGrant' },
+    plural: 'ReferenceGrants',
+    isPolicy: false,
+    isGatewayAPI: true,
+    showInTopologyByDefault: false,
+    isKuadrantInternal: false,
+  },
+
+  // mcp resources
+  MCPGatewayExtension: {
+    gvk: { group: 'mcp.kuadrant.io', version: 'v1alpha1', kind: 'MCPGatewayExtension' },
+    plural: 'MCPGatewayExtensions',
+    isPolicy: false,
+    isGatewayAPI: false,
+    showInTopologyByDefault: false,
+    isKuadrantInternal: false,
+  },
+
   // developer portal resources
   APIProduct: {
     gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIProduct' },
