@@ -50,7 +50,11 @@ import {
 import { RESOURCES } from '../../utils/resources';
 import '../css/gateway-api-plugin.css';
 
-const GatewayCreatePage: React.FC = () => {
+interface GatewayCreatePageProps {
+  onFormChange?: (resource: GatewayResource, isValid: boolean) => void;
+}
+
+const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange } = {}) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [activeNamespace] = useActiveNamespace();
@@ -619,6 +623,15 @@ const GatewayCreatePage: React.FC = () => {
       setYamlContent(gatewayObject);
     } catch (error) {
       console.error('Error converting form data to YAML:', error);
+    }
+  }, [gatewayObject]);
+
+  const onFormChangeRef = React.useRef(onFormChange);
+  onFormChangeRef.current = onFormChange;
+
+  React.useEffect(() => {
+    if (onFormChangeRef.current) {
+      onFormChangeRef.current(gatewayObject, formValidation());
     }
   }, [gatewayObject]);
 

@@ -56,7 +56,11 @@ interface ParentReference {
   isExpanded?: boolean;
 }
 
-const HTTPRouteCreatePage: React.FC = () => {
+interface HTTPRouteCreatePageProps {
+  onFormChange?: (resource: HTTPRouteResource, isValid: boolean) => void;
+}
+
+const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange } = {}) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [routeName, setRouteName] = React.useState('');
@@ -171,6 +175,15 @@ const HTTPRouteCreatePage: React.FC = () => {
 
     return httpRoute;
   }, [routeName, hostnames, parentRefs, rules, selectedNamespace, originalMetadata]);
+
+  const onFormChangeRef = React.useRef(onFormChange);
+  onFormChangeRef.current = onFormChange;
+
+  React.useEffect(() => {
+    if (onFormChangeRef.current) {
+      onFormChangeRef.current(httpRouteObject as HTTPRouteResource, formValidation());
+    }
+  }, [httpRouteObject, routeName, parentRefs, rules]);
 
   const populateFormFromHTTPRoute = (httpRoute: unknown) => {
     try {
