@@ -16,6 +16,7 @@ kuadrant-console-plugin/
 │   │   ├── gateway/       # Gateway components
 │   │   ├── httproute/     # HTTPRoute components
 │   │   ├── issuer/        # Certificate issuer components
+│   │   ├── mcp/           # MCP Management overview and setup wizard
 │   │   ├── ratelimitpolicy/ # RateLimitPolicy components
 │   │   ├── tlspolicy/     # TLSPolicy components
 │   │   └── topology/      # Topology visualization components
@@ -61,6 +62,10 @@ The plugin manages these Custom Resource Definitions (CRDs):
 10. **APIKey** (`devportal.kuadrant.io/v1alpha1`) - API key credentials for consumers
 11. **APIKeyApproval** (`devportal.kuadrant.io/v1alpha1`) - Approval records for API key requests
 
+### MCP Resources
+12. **MCPGatewayExtension** (`mcp.kuadrant.io/v1alpha1`) - Extends a Gateway with MCP protocol support via an EnvoyFilter
+13. **ReferenceGrant** (`gateway.networking.k8s.io/v1beta1`) - Cross-namespace reference permissions for Gateway API resources
+
 ## Common Patterns
 
 ### 1. Resource Watching
@@ -80,6 +85,9 @@ All policy creation forms follow a similar structure:
 - Form validation before submission
 - Use `KuadrantCreateUpdate` component for save operations
 - Redirect to list view after success
+
+### 2a. Embedding Create Pages in Wizards
+`GatewayCreatePage` and `HTTPRouteCreatePage` accept an optional `onFormChange` callback that reports the built resource object and validation state on every change. This allows embedding them inside other components (e.g. the MCP Setup Wizard) while keeping form state synchronised. Use the `kuadrant-mcp-embedded-form` CSS class to hide the page title, Form/YAML toggle, and Create/Cancel buttons when embedding.
 
 ### 3. Error Handling
 ```typescript
@@ -134,6 +142,10 @@ METRICS_WORKLOAD_SUFFIX: "-openshift-default"
 - **APIProductAPIKeysTab**: API keys tab showing approved keys for the product
 - **APIKeyApprovalPage**: Admin interface for reviewing and approving API key requests
 - **MyAPIKeysPage**: User interface for requesting and managing API keys
+- **MCPOverviewPage**: Empty state entry point for MCP Management with link to setup wizard
+- **MCPSetupWizard**: 4-step wizard for creating MCP infrastructure (Gateway, HTTPRoute, MCPGatewayExtension)
+  - `MCPExtensionStep`: Step 3 form with Form/YAML tabs for configuring the MCPGatewayExtension targetRef
+  - `MCPVerifyStep`: Step 4 sequential resource creation with live status watching
 
 ## Policy Topology Architecture
 
