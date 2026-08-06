@@ -487,7 +487,7 @@ test.describe('other policy create pages render', () => {
     await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
   });
 
-  test('TokenRateLimitPolicy create page renders YAML editor', async ({ page }) => {
+  test('TokenRateLimitPolicy create page renders YAML editor', { tag: '@smoke' }, async ({ page }) => {
     await gotoPage(
       page,
       createPagePath(TEST_NAMESPACE, 'kuadrant.io~v1alpha1~TokenRateLimitPolicy'),

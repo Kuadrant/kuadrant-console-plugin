@@ -77,11 +77,7 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj, onDeleteClic
           obj.kind
         }/${obj.metadata.name}/edit`,
       });
-    } else if (
-      obj.kind === 'AuthPolicy' ||
-      obj.kind === 'RateLimitPolicy' ||
-      obj.kind === 'PlanPolicy'
-    ) {
+    } else if (obj.kind === 'AuthPolicy' || obj.kind === 'RateLimitPolicy') {
       navigate({
         pathname: `/k8s/ns/${obj.metadata.namespace}/${obj.apiVersion.replace('/', '~')}~${
           obj.kind

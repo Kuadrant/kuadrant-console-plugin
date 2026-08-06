@@ -203,7 +203,8 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
   const isFormValid = !!(
     policyName &&
     selectedRoute.name &&
-    plans.some((p) => p.tier !== '' && p.predicate !== '')
+    plans.some((p) => p.tier !== '') &&
+    plans.filter((p) => p.tier !== '').every((p) => p.predicate !== '')
   );
 
   const handleCancelResource = () => {
@@ -424,6 +425,74 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
                           </HelperTextItem>
                         </HelperText>
                       </FormHelperText>
+                    </FormGroup>
+                    <FormGroup
+                      label={t('Custom Limits')}
+                      fieldId={`plan-custom-${i}`}
+                      className="pf-u-mt-md"
+                    >
+                      <FormHelperText>
+                        <HelperText>
+                          <HelperTextItem>
+                            {t('Custom rate limits (limit + time window, e.g. 500 per 1h)')}
+                          </HelperTextItem>
+                        </HelperText>
+                      </FormHelperText>
+                      {(plan.limits.custom || []).map((entry, j) => (
+                        <div
+                          key={j}
+                          className="pf-u-display-flex pf-u-align-items-center pf-u-mt-sm"
+                        >
+                          <TextInput
+                            type="text"
+                            id={`plan-custom-limit-${i}-${j}`}
+                            value={entry.limit}
+                            onChange={(_event, val) => {
+                              if (val === '' || /^\d+$/.test(val)) {
+                                const updated = [...(plan.limits.custom || [])];
+                                updated[j] = { ...updated[j], limit: val === '' ? 0 : Number(val) };
+                                updatePlan(i, 'limits', { ...plan.limits, custom: updated });
+                              }
+                            }}
+                            placeholder={t('Limit')}
+                            style={{ width: '120px', marginRight: '8px' }}
+                          />
+                          <TextInput
+                            type="text"
+                            id={`plan-custom-window-${i}-${j}`}
+                            value={entry.window}
+                            onChange={(_event, val) => {
+                              const updated = [...(plan.limits.custom || [])];
+                              updated[j] = { ...updated[j], window: val };
+                              updatePlan(i, 'limits', { ...plan.limits, custom: updated });
+                            }}
+                            placeholder="e.g. 1h, 60s"
+                            style={{ width: '120px', marginRight: '8px' }}
+                          />
+                          <Button
+                            variant="plain"
+                            aria-label={t('Remove custom limit')}
+                            onClick={() => {
+                              const updated = (plan.limits.custom || []).filter(
+                                (_, idx) => idx !== j,
+                              );
+                              updatePlan(i, 'limits', { ...plan.limits, custom: updated });
+                            }}
+                          >
+                            ✕
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        variant="link"
+                        className="pf-u-mt-sm"
+                        onClick={() => {
+                          const updated = [...(plan.limits.custom || []), { limit: 0, window: '' }];
+                          updatePlan(i, 'limits', { ...plan.limits, custom: updated });
+                        }}
+                      >
+                        {t('Add Custom Limit')}
+                      </Button>
                     </FormGroup>
                     <div className="pf-u-mt-md">
                       <Button
