@@ -51,6 +51,13 @@ const MCPOverviewPage: React.FC = () => {
               >
                 {t('MCP gateway setup wizard')}
               </Button>
+              <Button
+                variant="secondary"
+                onClick={() => navigate('/kuadrant/mcp/servers/create')}
+                data-test="mcp-create-server-button"
+              >
+                {t('Create MCP server')}
+              </Button>
             </EmptyStateActions>
           </EmptyStateFooter>
         </EmptyState>
