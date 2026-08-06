@@ -2,8 +2,14 @@
 
 set -euo pipefail
 
-CONSOLE_IMAGE=${CONSOLE_IMAGE:="quay.io/openshift/origin-console:latest"}
 CONSOLE_PORT=${CONSOLE_PORT:=9000}
+
+# The latest origin-console image requires x86-64-v3, which can't be emulated on Apple Silicon.
+if [ "$(uname -m)" = "arm64" ]; then
+    CONSOLE_IMAGE=${CONSOLE_IMAGE:="quay.io/openshift/origin-console:4.21"}
+else
+    CONSOLE_IMAGE=${CONSOLE_IMAGE:="quay.io/openshift/origin-console:latest"}
+fi
 CONSOLE_IMAGE_PLATFORM=${CONSOLE_IMAGE_PLATFORM:="linux/amd64"}
 
 # Plugin metadata is declared in package.json
