@@ -1,8 +1,8 @@
 import * as React from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router-dom-v5-compat';
+import { useNavigate, useLocation, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import Helmet from 'react-helmet';
-import { Link } from 'react-router-dom-v5-compat';
+import { Link } from 'react-router';
 import { sortable } from '@patternfly/react-table';
 import {
   PageSection,
