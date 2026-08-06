@@ -60,6 +60,8 @@ type ResourceListProps = {
   columns?: KuadrantDataViewColumn<K8sResourceCommon>[];
   renderers?: ResourceRenderers;
   additionalFilters?: AdditionalFilter[];
+  dataFilter?: (item: K8sResourceCommon) => boolean;
+  hideTypeFilter?: boolean;
 };
 
 type ResourceFilterValues = {
@@ -77,6 +79,8 @@ const ResourceList: React.FC<ResourceListProps> = ({
   renderers,
   emptyResourceName = 'Policies',
   additionalFilters = [],
+  dataFilter,
+  hideTypeFilter = false,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
@@ -165,31 +169,30 @@ const ResourceList: React.FC<ResourceListProps> = ({
     [additionalFilterEntries],
   );
 
-  const filteredData = React.useMemo(
-    () =>
-      allData.filter((item) => {
-        const nameFilter = filterValues.name.toLowerCase();
-        const namespaceFilter = filterValues.namespace.toLowerCase();
-        const typeFilter = filterValues.type.toLowerCase();
-        const matchesStandardFilters =
-          (!nameFilter || item.metadata.name.toLowerCase().includes(nameFilter)) &&
-          (!namespaceFilter || item.metadata.namespace?.toLowerCase().includes(namespaceFilter)) &&
-          (!typeFilter || item.kind.toLowerCase().includes(typeFilter));
+  const filteredData = React.useMemo(() => {
+    const preFiltered = dataFilter ? allData.filter(dataFilter) : allData;
+    return preFiltered.filter((item) => {
+      const nameFilter = filterValues.name.toLowerCase();
+      const namespaceFilter = filterValues.namespace.toLowerCase();
+      const typeFilter = filterValues.type.toLowerCase();
+      const matchesStandardFilters =
+        (!nameFilter || item.metadata.name.toLowerCase().includes(nameFilter)) &&
+        (!namespaceFilter || item.metadata.namespace?.toLowerCase().includes(namespaceFilter)) &&
+        (!typeFilter || item.kind.toLowerCase().includes(typeFilter));
 
-        return (
-          matchesStandardFilters &&
-          additionalFilterEntries.every(({ filter, id }) => {
-            const selectedValues = filterValues[id];
-            return (
-              !Array.isArray(selectedValues) ||
-              selectedValues.length === 0 ||
-              selectedValues.some((value) => filter.filterFn(item, value))
-            );
-          })
-        );
-      }),
-    [additionalFilterEntries, allData, filterValues],
-  );
+      return (
+        matchesStandardFilters &&
+        additionalFilterEntries.every(({ filter, id }) => {
+          const selectedValues = filterValues[id];
+          return (
+            !Array.isArray(selectedValues) ||
+            selectedValues.length === 0 ||
+            selectedValues.some((value) => filter.filterFn(item, value))
+          );
+        })
+      );
+    });
+  }, [additionalFilterEntries, allData, filterValues, dataFilter]);
 
   const defaultColumns = React.useMemo<KuadrantDataViewColumn<K8sResourceCommon>[]>(
     () => [
@@ -358,14 +361,16 @@ const ResourceList: React.FC<ResourceListProps> = ({
                   })}
                   ouiaId="ResourceListNamespaceFilter"
                 />
-                <DataViewTextFilter
-                  filterId="type"
-                  title={t('Type')}
-                  placeholder={t('Search by {{filterValue}}...', {
-                    filterValue: t('Type').toLowerCase(),
-                  })}
-                  ouiaId="ResourceListTypeFilter"
-                />
+                {!hideTypeFilter && (
+                  <DataViewTextFilter
+                    filterId="type"
+                    title={t('Type')}
+                    placeholder={t('Search by {{filterValue}}...', {
+                      filterValue: t('Type').toLowerCase(),
+                    })}
+                    ouiaId="ResourceListTypeFilter"
+                  />
+                )}
                 {additionalFilterEntries.map(({ filter, id }) => (
                   <DataViewCheckboxFilter
                     key={id}

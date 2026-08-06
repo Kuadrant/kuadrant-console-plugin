@@ -91,7 +91,7 @@ const MCPSetupWizard: React.FC = () => {
   }, [gateways, formState.gatewayMode, formState.selectedGatewayName]);
 
   const handleCancel = () => {
-    navigate('/kuadrant/mcp/overview');
+    navigate(`/kuadrant/mcp/overview/ns/${selectedNamespace}`);
   };
 
   // Step 1 validation: must have a gateway selected or a valid new gateway form
@@ -384,7 +384,7 @@ const MCPSetupWizard: React.FC = () => {
             id="step-verify"
             footer={{
               nextButtonText: t('Done'),
-              onNext: () => navigate('/kuadrant/mcp/overview'),
+              onNext: () => navigate(`/kuadrant/mcp/overview/ns/${selectedNamespace}`),
               isBackHidden: true,
             }}
           >

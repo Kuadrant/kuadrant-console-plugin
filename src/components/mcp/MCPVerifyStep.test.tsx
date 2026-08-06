@@ -77,7 +77,7 @@ describe('MCPVerifyStep', () => {
   it('navigates to overview on button click', () => {
     render(<MCPVerifyStep {...defaultProps} />);
     screen.getByTestId('mcp-view-overview-button').click();
-    expect(mockNavigate).toHaveBeenCalledWith('/kuadrant/mcp/overview');
+    expect(mockNavigate).toHaveBeenCalledWith('/kuadrant/mcp/overview/ns/test-ns');
   });
 
   it('shows no reference grant needed when same namespace', async () => {

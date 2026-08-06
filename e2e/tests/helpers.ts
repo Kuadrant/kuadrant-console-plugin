@@ -190,6 +190,11 @@ export async function navigateToAPIProductsAllNamespaces(page: Page): Promise<vo
   await spaNavigate(page, '/kuadrant/apiproducts/all-namespaces');
 }
 
+export async function navigateToMCPOverview(page: Page, namespace?: string): Promise<void> {
+  const ns = namespace || TEST_NAMESPACE;
+  await spaNavigate(page, `/kuadrant/mcp/overview/ns/${ns}`);
+}
+
 export async function navigateToAPIKeyApprovals(page: Page, namespace?: string): Promise<void> {
   const ns = namespace || TEST_NAMESPACE;
   // Full page navigation so the console reads the namespace from the URL and updates its

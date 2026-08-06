@@ -180,6 +180,22 @@
   {
     "type": "console.page/route",
     "properties": {
+      "exact": true,
+      "path": "/kuadrant/mcp/overview/ns/:ns",
+      "component": { "$codeRef": "MCPOverviewPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/mcp/overview/all-namespaces",
+      "component": { "$codeRef": "MCPOverviewPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
       "exact": false,
       "path": "/kuadrant/policies/ns/:ns",
       "component": { "$codeRef": "KuadrantPoliciesPage" }
@@ -628,7 +644,7 @@
     "type": "console.navigation/section",
     "properties": {
       "id": "kuadrant-mcp-section-admin",
-      "name": "%plugin__kuadrant-console-plugin~MCP Management%",
+      "name": "%plugin__kuadrant-console-plugin~MCP management%",
       "perspective": "admin"
     }
   },
@@ -638,15 +654,43 @@
       "id": "kuadrant-mcp-overview-admin",
       "name": "%plugin__kuadrant-console-plugin~Overview%",
       "href": "/kuadrant/mcp/overview",
+      "namespaced": true,
       "perspective": "admin",
       "section": "kuadrant-mcp-section-admin"
+    }
+  },
+  {
+    "type": "console.navigation/section",
+    "properties": {
+      "id": "kuadrant-mcp-section-dev",
+      "name": "%plugin__kuadrant-console-plugin~MCP management%",
+      "perspective": "dev"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "kuadrant-mcp-overview-dev",
+      "name": "%plugin__kuadrant-console-plugin~Overview%",
+      "href": "/kuadrant/mcp/overview",
+      "namespaced": true,
+      "perspective": "dev",
+      "section": "kuadrant-mcp-section-dev"
     }
   },
   {
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/kuadrant/mcp/overview",
+      "path": "/kuadrant/mcp/overview/ns/:ns",
+      "component": { "$codeRef": "MCPOverviewPage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/kuadrant/mcp/overview/all-namespaces",
       "component": { "$codeRef": "MCPOverviewPage" }
     }
   },

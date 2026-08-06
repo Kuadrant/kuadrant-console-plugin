@@ -55,23 +55,34 @@ test.describe('MCP Management', () => {
   });
 
   test.describe('Overview page', () => {
-    test('renders the MCP overview empty state', { tag: '@smoke' }, async ({ page }) => {
-      await spaNavigate(page, '/kuadrant/mcp/overview');
+    let emptyNs = '';
 
-      await expect(page.getByRole('heading', { name: 'MCP Management' })).toBeVisible({
+    test.beforeAll(() => {
+      emptyNs = `e2e-mcp-empty-${uid()}`;
+      kubectl(['create', 'namespace', emptyNs]);
+    });
+
+    test.afterAll(() => {
+      deleteNamespace(emptyNs);
+    });
+
+    test('renders the MCP overview empty state', { tag: '@smoke' }, async ({ page }) => {
+      await spaNavigate(page, `/kuadrant/mcp/overview/ns/${emptyNs}`);
+
+      await expect(page.getByRole('heading', { name: 'MCP management' })).toBeVisible({
         timeout: 15_000,
       });
       await expect(page.getByRole('heading', { name: 'Get started' })).toBeVisible();
     });
 
     test('shows setup wizard button', { tag: '@nightly' }, async ({ page }) => {
-      await spaNavigate(page, '/kuadrant/mcp/overview');
+      await spaNavigate(page, `/kuadrant/mcp/overview/ns/${emptyNs}`);
 
       await expect(page.locator('[data-test="mcp-setup-wizard-button"]')).toBeVisible({ timeout: 15_000 });
     });
 
     test('setup wizard button navigates to wizard', { tag: '@nightly' }, async ({ page }) => {
-      await spaNavigate(page, '/kuadrant/mcp/overview');
+      await spaNavigate(page, `/kuadrant/mcp/overview/ns/${emptyNs}`);
 
       await page.locator('[data-test="mcp-setup-wizard-button"]').click();
       await expect(page).toHaveURL(/\/kuadrant\/mcp\/setup-wizard/);
