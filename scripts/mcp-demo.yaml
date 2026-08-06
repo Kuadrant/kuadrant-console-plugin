@@ -1,0 +1,89 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-test-server
+  namespace: toystore
+  labels:
+    app: mcp-test-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-test-server
+  template:
+    metadata:
+      labels:
+        app: mcp-test-server
+    spec:
+      containers:
+        - name: mcp-test-server
+          image: ghcr.io/kuadrant/mcp-gateway/test-server1:latest
+          imagePullPolicy: IfNotPresent
+          command: ["/mcp-test-server"]
+          args: ["--http", "0.0.0.0:9090"]
+          ports:
+            - containerPort: 9090
+              name: http
+          env:
+            - name: LOG_LEVEL
+              value: "info"
+          resources:
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-test-server
+  namespace: toystore
+  labels:
+    app: mcp-test-server
+spec:
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 9090
+  selector:
+    app: mcp-test-server
+  type: ClusterIP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: mcp-test-server-route
+  namespace: toystore
+  labels:
+    mcp-server: "true"
+spec:
+  parentRefs:
+    - name: mcp-gateway
+      namespace: gateway-system
+  hostnames:
+    - "mcp-test-server.mcp.local"
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: mcp-test-server
+          port: 9090
+---
+apiVersion: mcp.kuadrant.io/v1alpha1
+kind: MCPServerRegistration
+metadata:
+  name: toystore-mcp-server
+  namespace: toystore
+  labels:
+    mcp.kuadrant.io/managed: "true"
+spec:
+  prefix: toystore_
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: mcp-test-server-route
