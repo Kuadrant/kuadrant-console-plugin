@@ -52,8 +52,6 @@ const config: Configuration = {
             loader: 'ts-loader',
             options: {
               configFile: path.resolve(__dirname, 'tsconfig.json'),
-              // react-i18next 16 widens React.HTMLAttributes.children,
-              // tripping spurious PatternFly prop checks. remove after sdk 4.22 bump
               transpileOnly: true,
             },
           },
@@ -99,8 +97,6 @@ const config: Configuration = {
   plugins: [
     new ConsoleRemotePlugin({
       extensions: allExtensions,
-      // sdk 1.x declares react-i18next ^11; ocp 4.22 provides ~16.5.8. remove after sdk bump
-      validateSharedModules: false,
     }),
     new CopyWebpackPlugin({
       patterns: [{ from: path.resolve(__dirname, 'locales'), to: 'locales' }],

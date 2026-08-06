@@ -12,7 +12,7 @@ import {
   DescriptionListDescription,
   Skeleton,
 } from '@patternfly/react-core';
-import { useLocation } from 'react-router-dom-v5-compat';
+import { useLocation } from 'react-router';
 import {
   K8sResourceCommon,
   ResourceLink,

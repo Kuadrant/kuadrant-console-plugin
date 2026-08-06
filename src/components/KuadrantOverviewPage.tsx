@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router-dom-v5-compat';
+import { useNavigate, useLocation, useParams } from 'react-router';
 import Helmet from 'react-helmet';
 import { useTranslation } from 'react-i18next';
 import {

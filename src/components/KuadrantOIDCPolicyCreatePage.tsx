@@ -23,7 +23,7 @@ import {
   K8sResourceCommon,
   useActiveNamespace,
 } from '@openshift-console/dynamic-plugin-sdk';
-import { useNavigate, useLocation } from 'react-router-dom-v5-compat';
+import { useNavigate, useLocation } from 'react-router';
 import { GatewayResource } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
 import * as yaml from 'js-yaml';

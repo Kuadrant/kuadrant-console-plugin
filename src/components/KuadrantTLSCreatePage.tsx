@@ -22,7 +22,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
 import { handleCancel } from '../utils/cancel';
-import { useNavigate, useLocation } from 'react-router-dom-v5-compat';
+import { useNavigate, useLocation } from 'react-router';
 import * as yaml from 'js-yaml';
 import { useTranslation } from 'react-i18next';
 import ClusterIssuerSelect from './issuer/clusterIssuerSelect';

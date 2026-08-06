@@ -19,7 +19,7 @@ import {
 } from '@patternfly/react-core';
 import { HelpIcon } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom-v5-compat';
+import { useNavigate } from 'react-router';
 import { RESOURCES } from '../../utils/resources';
 import { getModelFromResource } from '../../utils/getModelFromResource';
 import { APIProduct } from './types';

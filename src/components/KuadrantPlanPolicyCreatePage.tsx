@@ -25,7 +25,7 @@ import {
   K8sResourceCommon,
   useActiveNamespace,
 } from '@openshift-console/dynamic-plugin-sdk';
-import { useNavigate, useLocation } from 'react-router-dom-v5-compat';
+import { useNavigate, useLocation } from 'react-router';
 import HTTPRouteSelect from './httproute/HTTPRouteSelect';
 import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';

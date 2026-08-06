@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { useNavigate } from 'react-router-dom-v5-compat';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router';
 import { ExtensionHookResult } from '@openshift-console/dynamic-plugin-sdk/lib/api/common-types';
 import { Action } from '@openshift-console/dynamic-plugin-sdk/lib/extensions/actions';
 import {

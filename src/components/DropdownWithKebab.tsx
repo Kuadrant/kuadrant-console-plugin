@@ -17,7 +17,7 @@ import {
 } from '@patternfly/react-core';
 
 import { k8sDelete, K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
-import { useNavigate } from 'react-router-dom-v5-compat';
+import { useNavigate } from 'react-router';
 import { RESOURCES, ResourceKind } from '../utils/resources';
 import useAccessReviews from '../utils/resourceRBAC';
 import { getModelFromResource, getResourceNameFromKind } from '../utils/getModelFromResource';
