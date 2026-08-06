@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom-v5-compat';
+import { useTranslation } from 'react-i18next';
 import { ExtensionHookResult } from '@openshift-console/dynamic-plugin-sdk/lib/api/common-types';
 import { Action } from '@openshift-console/dynamic-plugin-sdk/lib/extensions/actions';
 import {
@@ -36,6 +37,7 @@ const APIProductDeleteModalWrapper: React.FC<{
 };
 
 const useAPIProductActions = (obj: K8sResourceCommon): ExtensionHookResult<Action[]> => {
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const navigate = useNavigate();
   const gvk = obj ? getGroupVersionKindForResource(obj) : undefined;
   const [apiProductModel] = useK8sModel(
@@ -74,20 +76,20 @@ const useAPIProductActions = (obj: K8sResourceCommon): ExtensionHookResult<Actio
     const actionsList: Action[] = [
       {
         id: 'edit-labels-apiproduct',
-        label: 'Edit labels',
+        label: t('Edit labels'),
         cta: launchLabelsModal,
         accessReview: updateAccess,
       },
       {
         id: 'edit-annotations-apiproduct',
-        label: 'Edit annotations',
+        label: t('Edit annotations'),
         cta: launchAnnotationsModal,
         accessReview: updateAccess,
       },
       {
         id: 'kuadrant-apiproduct-edit-form',
-        label: 'Edit APIProduct',
-        description: 'Edit via form',
+        label: t('Edit APIProduct'),
+        description: t('Edit via form'),
         cta: () =>
           navigate({
             pathname: `/kuadrant/apiproducts/ns/${namespace}/${name}/edit`,
@@ -97,14 +99,14 @@ const useAPIProductActions = (obj: K8sResourceCommon): ExtensionHookResult<Actio
       },
       {
         id: 'delete-apiproduct',
-        label: 'Delete APIProduct',
+        label: t('Delete APIProduct'),
         cta: () => launchModal(APIProductDeleteModalWrapper, { resource: obj }),
         accessReview: deleteAccess,
       },
     ];
 
     return actionsList;
-  }, [navigate, obj, apiProductModel, launchAnnotationsModal, launchModal, launchLabelsModal]);
+  }, [navigate, obj, apiProductModel, launchAnnotationsModal, launchModal, launchLabelsModal, t]);
 
   return [actions, true, undefined];
 };

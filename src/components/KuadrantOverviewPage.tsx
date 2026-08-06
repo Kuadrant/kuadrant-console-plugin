@@ -181,7 +181,7 @@ export const StatusLegend: React.FC = () => {
       triggerAction="hover"
       position="top"
     >
-      <QuestionCircleIcon style={{ marginLeft: 6, cursor: 'help' }} aria-label="Status help" />
+      <QuestionCircleIcon style={{ marginLeft: 6, cursor: 'help' }} aria-label={t('Status help')} />
     </Popover>
   );
 };
@@ -761,7 +761,7 @@ const KuadrantOverviewPage: React.FC = () => {
                           isExpanded={isGettingStartedMenuOpen}
                           onClick={() => setIsGettingStartedMenuOpen(!isGettingStartedMenuOpen)}
                           variant="plain"
-                          aria-label="Getting started actions"
+                          aria-label={t('Getting started actions')}
                         >
                           <EllipsisVIcon aria-hidden="true" />
                         </MenuToggle>

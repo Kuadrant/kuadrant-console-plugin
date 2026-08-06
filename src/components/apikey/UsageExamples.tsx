@@ -62,7 +62,11 @@ const UsageExamples: React.FC<UsageExamplesProps> = ({ apiKey }) => {
     <Card isCompact>
       <CardTitle>{t('Usage Examples')}</CardTitle>
       <CardBody>
-        <Tabs activeKey={activeTabKey} onSelect={handleTabClick} aria-label="Code examples tabs">
+        <Tabs
+          activeKey={activeTabKey}
+          onSelect={handleTabClick}
+          aria-label={t('Code examples tabs')}
+        >
           <Tab eventKey={0} title={<TabTitleText>cURL</TabTitleText>}>
             <div style={{ marginTop: '16px' }}>
               <CodeBlock>
