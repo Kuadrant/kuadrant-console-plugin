@@ -16,12 +16,22 @@ The **Kuadrant** section provides gateway and policy management with the followi
 - **Policy Topology** - visual graph of the relationships between Gateways, HTTPRoutes, and the Kuadrant policies attached to them
 - **Policy creation forms** - guided forms for creating AuthPolicy, RateLimitPolicy, DNSPolicy, and TLSPolicy resources, with a toggle to switch between form and YAML views
 
-### MCP Management section
+### MCP management section
 
-The **MCP Management** section provides setup and management for MCP (Model Context Protocol) gateway infrastructure:
+The **MCP management** section provides setup and management for MCP (Model Context Protocol) gateway infrastructure:
 
-- **Overview** - entry point with a guided setup wizard for creating MCP infrastructure
+- **Overview** - when no MCPGatewayExtensions exist, shows a guided setup wizard for creating MCP infrastructure. Once extensions are created, shows a dashboard with summary cards for MCP Gateways (Total, Healthy, Unhealthy) and MCP Servers (Types, Total, Online, Offline). Includes tables for MCP Gateway Extensions, MCP Servers, Reference Grants, and Policies attached to MCP gateways or servers. Each table has toolbar filters and RBAC-aware create actions.
 - **MCP Gateway Setup Wizard** - 4-step wizard that walks through selecting or creating a Gateway, HTTPRoute, and MCPGatewayExtension resource. Supports both existing resource selection and inline creation of new resources. Resources are created sequentially in the final verification step, with live status watching for the MCPGatewayExtension Ready condition.
+
+Key resources managed on this page:
+
+| Resource | API Group | Purpose |
+|-|-|-|
+| `MCPGatewayExtension` | `mcp.kuadrant.io/v1alpha1` | Extends a Gateway with MCP capabilities (public host, OAuth, session store) |
+| `MCPServerRegistration` | `mcp.kuadrant.io/v1alpha1` | Registers an MCP server behind an HTTPRoute with prefix routing |
+| `ReferenceGrant` | `gateway.networking.k8s.io/v1beta1` | Allows cross-namespace references between MCPGatewayExtensions and Gateways |
+
+MCP Gateways are identified by finding Gateway resources that have an MCPGatewayExtension targeting them via `spec.targetRef`. The summary cards compute health based on the Gateway's `Accepted` and `Programmed` conditions, and server readiness based on the `Ready` condition.
 
 ### Kuadrant API Catalog section
 

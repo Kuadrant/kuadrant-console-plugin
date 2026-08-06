@@ -383,7 +383,7 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
       <div style={{ marginTop: '24px', display: 'flex', gap: '8px' }}>
         <Button
           variant="primary"
-          onClick={() => navigate('/kuadrant/mcp/overview')}
+          onClick={() => navigate(`/kuadrant/mcp/overview/ns/${selectedNamespace}`)}
           data-test="mcp-view-overview-button"
         >
           {t('View in overview')}

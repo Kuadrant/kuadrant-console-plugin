@@ -4,7 +4,7 @@ Every permission check in the plugin UI is listed below. All checks use the Kube
 
 ## Overview page
 
-Checks `list` and `create` on each resource type. Checks run against the active namespace, or `default` when all-namespaces is selected.
+Checks `list` and `create` on each resource type. Checks run against the active namespace. When all-namespaces is selected, checks are cluster-scoped and create actions are disabled.
 
 | Resource | Group | Verb | UI effect |
 |-|-|-|-|
@@ -40,6 +40,26 @@ The kebab menu on each resource row checks `update` and `delete`:
 |-|-|-|
 | The resource's own type | `update` | Enables "Edit" action. Disabled with tooltip if denied. |
 | The resource's own type | `delete` | Enables "Delete" action. Disabled with tooltip if denied. |
+
+## MCP Overview page
+
+Checks `list` and `create` on each MCP-related resource type. Checks run against the active namespace. When all-namespaces is selected, checks are cluster-scoped and create actions are disabled.
+
+| Resource | Group | Verb | UI effect |
+|-|-|-|-|
+| `mcpgatewayextensions` | `mcp.kuadrant.io` | `list` | Shows MCP Gateway Extensions table. "Access Denied" if denied. |
+| `mcpgatewayextensions` | `mcp.kuadrant.io` | `create` | Enables "Create extension" button. Disabled with tooltip if denied. |
+| `mcpserverregistrations` | `mcp.kuadrant.io` | `list` | Shows MCP Servers table. "Access Denied" if denied. |
+| `mcpserverregistrations` | `mcp.kuadrant.io` | `create` | Enables "Internal" option in "Register MCP Server" dropdown. Disabled with tooltip if denied. |
+| `referencegrants` | `gateway.networking.k8s.io` | `list` | Shows Reference Grants table. "Access Denied" if denied. |
+| `referencegrants` | `gateway.networking.k8s.io` | `create` | Enables "Create reference grant" button. Disabled with tooltip if denied. |
+| `authpolicies` | `kuadrant.io` | `list` | Shows Policies table (needs at least one policy type). "Access Denied" if all denied. |
+| `ratelimitpolicies` | `kuadrant.io` | `list` | Same as above. |
+| `dnspolicies` | `kuadrant.io` | `list` | Same as above. |
+| `tlspolicies` | `kuadrant.io` | `list` | Same as above. |
+| Each policy type | respective group | `create` | Enables that policy in the "Create policy" dropdown. Disabled with tooltip if denied. |
+
+The summary cards (MCP Gateways and MCP Servers) are always visible. They watch Gateway, MCPGatewayExtension, and MCPServerRegistration resources to compute health and status counts.
 
 ## Policy Topology page
 
@@ -121,7 +141,10 @@ rules:
   resources: ["authpolicies", "ratelimitpolicies", "dnspolicies", "tlspolicies"]
   verbs: ["get", "list", "create", "update", "patch", "delete"]
 - apiGroups: ["gateway.networking.k8s.io"]
-  resources: ["gateways", "httproutes"]
+  resources: ["gateways", "httproutes", "referencegrants"]
+  verbs: ["get", "list", "create", "update", "patch", "delete"]
+- apiGroups: ["mcp.kuadrant.io"]
+  resources: ["mcpgatewayextensions", "mcpserverregistrations"]
   verbs: ["get", "list", "create", "update", "patch", "delete"]
 - apiGroups: ["cert-manager.io"]
   resources: ["clusterissuers", "issuers"]

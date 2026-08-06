@@ -27,6 +27,9 @@ kubectl apply -f "${SCRIPT_DIR}/manifests/test-resources.yaml"
 log "creating APIProduct test fixtures..."
 kubectl apply -f "${SCRIPT_DIR}/manifests/test-apiproduct-fixtures.yaml"
 
+log "creating MCP test resources..."
+kubectl apply -f "${SCRIPT_DIR}/manifests/test-mcp-resources.yaml"
+
 log "creating APIKey consumer fixtures (controller will create APIKeyRequests)..."
 kubectl apply -f "${SCRIPT_DIR}/manifests/test-apikey-fixtures.yaml"
 

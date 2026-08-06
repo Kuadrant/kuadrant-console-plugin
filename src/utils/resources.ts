@@ -330,6 +330,14 @@ export const RESOURCES = {
     showInTopologyByDefault: false,
     isKuadrantInternal: false,
   },
+  MCPServerRegistration: {
+    gvk: { group: 'mcp.kuadrant.io', version: 'v1alpha1', kind: 'MCPServerRegistration' },
+    plural: 'MCPServerRegistrations',
+    isPolicy: false,
+    isGatewayAPI: false,
+    showInTopologyByDefault: false,
+    isKuadrantInternal: false,
+  },
 
   // developer portal resources
   APIProduct: {
