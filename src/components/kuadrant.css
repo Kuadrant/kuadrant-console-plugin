@@ -246,7 +246,8 @@
 /* fix virtualized table cell alignment for kuadrant tables */
 .kuadrant-resource-list .ReactVirtualized__Table__rowColumn,
 .kuadrant-policy-list .ReactVirtualized__Table__rowColumn,
-.kuadrant-overview-page .ReactVirtualized__Table__rowColumn {
+.kuadrant-overview-page .ReactVirtualized__Table__rowColumn,
+.kuadrant-mcp-overview-page .ReactVirtualized__Table__rowColumn {
   display: flex !important;
   align-items: center !important;
 }
