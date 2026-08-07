@@ -104,28 +104,12 @@ async function addRuleViaWizard(
 
 test.describe('HTTPRoute CRUD', () => {
   let namespace = '';
-  let gateway = '';
+  const gateway = 'kuadrant-ingressgateway';
+  const gatewayNamespace = 'gateway-system';
 
   test.beforeEach(async () => {
     namespace = `e2e-route-${uid()}`;
-    gateway = `e2e-gw-${uid()}`;
     kubectl(['create', 'namespace', namespace]);
-    applyResource(`
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: ${gateway}
-  namespace: ${namespace}
-spec:
-  gatewayClassName: istio
-  listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
-    allowedRoutes:
-      namespaces:
-        from: Same
-`);
   });
 
   test.afterEach(async () => {
@@ -150,6 +134,7 @@ spec:
 
     const gatewayOption = page.locator(`#parent-gateway-0 option[value="${gateway}"]`);
     await expect(gatewayOption).toBeAttached({ timeout: 15_000 });
+    await expect(gatewayOption).not.toBeDisabled({ timeout: 15_000 });
     await page.locator('#parent-gateway-0').selectOption(gateway);
 
     const sectionOption = page.locator('#parent-section-0 option[value="http"]');
@@ -196,6 +181,7 @@ metadata:
 spec:
   parentRefs:
   - name: ${gateway}
+    namespace: ${gatewayNamespace}
     sectionName: http
   rules:
   - matches:
@@ -284,6 +270,7 @@ spec:
 
     const gatewayOption = page.locator(`#parent-gateway-0 option[value="${gateway}"]`);
     await expect(gatewayOption).toBeAttached({ timeout: 15_000 });
+    await expect(gatewayOption).not.toBeDisabled({ timeout: 15_000 });
     await page.locator('#parent-gateway-0').selectOption(gateway);
 
     const sectionOption = page.locator('#parent-section-0 option[value="http"]');

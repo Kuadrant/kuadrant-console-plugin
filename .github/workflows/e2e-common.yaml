@@ -41,9 +41,11 @@ jobs:
 
       - name: Install oinc
         run: |
-          OINC_VERSION="${OINC_VERSION:-v0.2.3}"
-          curl -L -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
+          OINC_VERSION="${OINC_VERSION:-v0.4.3}"
+          curl -fL -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
           chmod +x oinc
+          file oinc | grep -q ELF || { echo "downloaded file is not a valid binary"; exit 1; }
+          ./oinc version
           sudo mv oinc /usr/local/bin/
 
       - name: Install Helm
