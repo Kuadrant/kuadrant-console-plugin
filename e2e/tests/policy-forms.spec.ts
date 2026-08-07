@@ -481,16 +481,286 @@ test.describe('other policy create pages render', () => {
     await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 15_000 });
   });
 
-  test('TokenRateLimitPolicy create page renders YAML editor', async ({ page }) => {
+  test('TokenRateLimitPolicy create form renders with required fields', { tag: '@smoke' }, async ({ page }) => {
     await gotoPage(
       page,
       createPagePath(TEST_NAMESPACE, 'kuadrant.io~v1alpha1~TokenRateLimitPolicy'),
     );
 
-    await expect(page.locator('text=Create TokenRateLimit Policy').first()).toBeVisible({
+    await expect(page.getByRole('heading', { name: 'Create TokenRateLimit Policy' })).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 15_000 });
+
+    await expect(page.locator('#create-type-radio-form')).toBeChecked();
+    await expect(page.locator('#policy-name')).toBeVisible();
+    await expect(page.locator('#gateway-select')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
+  });
+});
+
+test.describe('OIDCPolicy form', () => {
+  test('create button enables only when required fields are set', { tag: '@smoke' }, async ({ page }) => {
+    await gotoPage(
+      page,
+      createPagePath(TEST_NAMESPACE, 'extensions.kuadrant.io~v1alpha1~OIDCPolicy'),
+    );
+
+    const createButton = page.getByRole('button', { name: 'Create', exact: true });
+    await expect(createButton).toBeDisabled();
+
+    await page.locator('#policy-name').fill(`e2e-oidc-${uid()}`);
+    await expect(createButton).toBeDisabled();
+
+    const gatewayOption = page.locator(
+      `#gateway-select option[value="${TEST_NAMESPACE}/test-gateway"]`,
+    );
+    await expect(gatewayOption).toBeAttached({ timeout: 15_000 });
+    await page.locator('#gateway-select').selectOption(`${TEST_NAMESPACE}/test-gateway`);
+    await expect(createButton).toBeDisabled();
+
+    await page.locator('#client-id').fill('my-client-id');
+    await expect(createButton).toBeDisabled();
+
+    await page.locator('#issuer-url').fill('https://auth.example.com');
+    await expect(createButton).toBeEnabled();
+
+    await page.locator('#client-id').fill('');
+    await expect(createButton).toBeDisabled();
+  });
+
+  test.describe('with seeded namespace', () => {
+    let namespace = '';
+    let gateway = '';
+
+    test.beforeEach(async () => {
+      namespace = `e2e-oidcp-${uid()}`;
+      gateway = `e2e-gw-${uid()}`;
+      kubectl(['create', 'namespace', namespace]);
+      applyManifest(gatewayManifest(gateway, namespace));
+    });
+
+    test.afterEach(async () => {
+      deleteNamespace(namespace);
+    });
+
+    test('creates an OIDCPolicy via the form', { tag: '@smoke' }, async ({ page }) => {
+      const policyName = `e2e-oidc-${uid()}`;
+      await gotoPage(
+        page,
+        createPagePath(namespace, 'extensions.kuadrant.io~v1alpha1~OIDCPolicy'),
+      );
+
+      await expect(page.getByRole('heading', { name: 'Create OIDC Policy' })).toBeVisible({
+        timeout: 15_000,
+      });
+
+      await page.locator('#policy-name').fill(policyName);
+
+      const gatewayOption = page.locator(
+        `#gateway-select option[value="${namespace}/${gateway}"]`,
+      );
+      await expect(gatewayOption).toBeAttached({ timeout: 15_000 });
+      await page.locator('#gateway-select').selectOption(`${namespace}/${gateway}`);
+
+      await page.locator('#client-id').fill('my-client-id');
+      await page.locator('#issuer-url').fill('https://auth.example.com');
+
+      const createButton = page.getByRole('button', { name: 'Create', exact: true });
+      await expect(createButton).toBeEnabled();
+      await createButton.click();
+
+      await expect(page).toHaveURL(new RegExp(`/kuadrant/policies/ns/${namespace}/oidc`), {
+        timeout: 15_000,
+      });
+
+      expect(resourceExists('oidcpolicy', policyName, namespace)).toBe(true);
+
+      await expect(page.locator(`a[data-test="${policyName}"]`)).toBeVisible({
+        timeout: 15_000,
+      });
+    });
+
+    test('edits an existing OIDCPolicy (name immutable, clientID persisted)', { tag: '@smoke' }, async ({
+      page,
+    }) => {
+      const policyName = `e2e-oidc-${uid()}`;
+      applyManifest(`
+apiVersion: extensions.kuadrant.io/v1alpha1
+kind: OIDCPolicy
+metadata:
+  name: ${policyName}
+  namespace: ${namespace}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: ${gateway}
+  provider:
+    clientID: original-client-id
+    issuerURL: https://auth.example.com
+`);
+
+      await gotoPage(page, `/k8s/ns/${namespace}/oidcpolicy/name/${policyName}/edit`);
+
+      await expect(page.getByRole('heading', { name: 'Edit OIDC Policy' })).toBeVisible({
+        timeout: 15_000,
+      });
+
+      const nameInput = page.locator('#policy-name');
+      await expect(nameInput).toHaveValue(policyName, { timeout: 15_000 });
+      await expect(nameInput).toBeDisabled();
+      await expect(page.locator('#gateway-select')).toHaveValue(`${namespace}/${gateway}`);
+      await expect(page.locator('#client-id')).toHaveValue('original-client-id');
+      await expect(page.locator('#issuer-url')).toHaveValue('https://auth.example.com');
+
+      await page.locator('#client-id').fill('updated-client-id');
+
+      const saveButton = page.getByRole('button', { name: 'Save', exact: true });
+      await expect(saveButton).toBeEnabled();
+      await saveButton.click();
+
+      await expect(page).toHaveURL(new RegExp(`/kuadrant/policies/ns/${namespace}/oidc`), {
+        timeout: 15_000,
+      });
+
+      expect(
+        kubectl([
+          'get', 'oidcpolicy', policyName, '-n', namespace,
+          '-o', 'jsonpath={.spec.provider.clientID}',
+        ]),
+      ).toBe('updated-client-id');
+    });
+  });
+});
+
+test.describe('TokenRateLimitPolicy form', () => {
+  test('create button enables only when required fields are set', { tag: '@smoke' }, async ({ page }) => {
+    await gotoPage(
+      page,
+      createPagePath(TEST_NAMESPACE, 'kuadrant.io~v1alpha1~TokenRateLimitPolicy'),
+    );
+
+    const createButton = page.getByRole('button', { name: 'Create', exact: true });
+    await expect(createButton).toBeDisabled();
+
+    await page.locator('#policy-name').fill(`e2e-trl-${uid()}`);
+    await expect(createButton).toBeDisabled();
+
+    const gatewayOption = page.locator(
+      `#gateway-select option[value="${TEST_NAMESPACE}/test-gateway"]`,
+    );
+    await expect(gatewayOption).toBeAttached({ timeout: 15_000 });
+    await page.locator('#gateway-select').selectOption(`${TEST_NAMESPACE}/test-gateway`);
+    await expect(createButton).toBeEnabled();
+
+    await page.locator('#policy-name').fill('');
+    await expect(createButton).toBeDisabled();
+  });
+
+  test.describe('with seeded namespace', () => {
+    let namespace = '';
+    let gateway = '';
+
+    test.beforeEach(async () => {
+      namespace = `e2e-trlp-${uid()}`;
+      gateway = `e2e-gw-${uid()}`;
+      kubectl(['create', 'namespace', namespace]);
+      applyManifest(gatewayManifest(gateway, namespace));
+    });
+
+    test.afterEach(async () => {
+      deleteNamespace(namespace);
+    });
+
+    test('creates a TokenRateLimitPolicy via the form', { tag: '@smoke' }, async ({ page }) => {
+      const policyName = `e2e-trl-${uid()}`;
+      await gotoPage(
+        page,
+        createPagePath(namespace, 'kuadrant.io~v1alpha1~TokenRateLimitPolicy'),
+      );
+
+      await expect(
+        page.getByRole('heading', { name: 'Create TokenRateLimit Policy' }),
+      ).toBeVisible({ timeout: 15_000 });
+
+      await page.locator('#policy-name').fill(policyName);
+
+      const gatewayOption = page.locator(
+        `#gateway-select option[value="${namespace}/${gateway}"]`,
+      );
+      await expect(gatewayOption).toBeAttached({ timeout: 15_000 });
+      await page.locator('#gateway-select').selectOption(`${namespace}/${gateway}`);
+
+      // CRD requires at least one spec.limits entry
+      await page.getByRole('button', { name: 'Add Limit' }).click();
+      await page.locator('#new-limit-name').fill('default');
+      await page.locator('#new-limit-value').fill('100');
+      await page.locator('#new-limit-window').fill('1m');
+      await page.getByRole('button', { name: 'Add Rate' }).click();
+      await page.getByRole('button', { name: 'Save Limit' }).click();
+
+      const createButton = page.getByRole('button', { name: 'Create', exact: true });
+      await expect(createButton).toBeEnabled();
+      await createButton.click();
+
+      await expect(page).toHaveURL(
+        new RegExp(`/kuadrant/policies/ns/${namespace}/tokenratelimit`),
+        { timeout: 15_000 },
+      );
+
+      expect(resourceExists('tokenratelimitpolicy', policyName, namespace)).toBe(true);
+
+      await expect(page.locator(`a[data-test="${policyName}"]`)).toBeVisible({
+        timeout: 15_000,
+      });
+    });
+
+    test('edits an existing TokenRateLimitPolicy (name immutable)', { tag: '@smoke' }, async ({
+      page,
+    }) => {
+      const policyName = `e2e-trl-${uid()}`;
+      applyManifest(`
+apiVersion: kuadrant.io/v1alpha1
+kind: TokenRateLimitPolicy
+metadata:
+  name: ${policyName}
+  namespace: ${namespace}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: ${gateway}
+  limits:
+    default:
+      rates:
+      - limit: 100
+        window: 1m
+`);
+
+      await gotoPage(
+        page,
+        `/k8s/ns/${namespace}/tokenratelimitpolicy/name/${policyName}/edit`,
+      );
+
+      await expect(
+        page.getByRole('heading', { name: 'Edit TokenRateLimit Policy' }),
+      ).toBeVisible({ timeout: 15_000 });
+
+      const nameInput = page.locator('#policy-name');
+      await expect(nameInput).toHaveValue(policyName, { timeout: 15_000 });
+      await expect(nameInput).toBeDisabled();
+      await expect(page.locator('#gateway-select')).toHaveValue(`${namespace}/${gateway}`);
+
+      const saveButton = page.getByRole('button', { name: 'Save', exact: true });
+      await expect(saveButton).toBeEnabled();
+      await saveButton.click();
+
+      await expect(page).toHaveURL(
+        new RegExp(`/kuadrant/policies/ns/${namespace}/tokenratelimit`),
+        { timeout: 15_000 },
+      );
+    });
   });
 });
 
