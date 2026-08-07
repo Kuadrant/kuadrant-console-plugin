@@ -1,20 +1,20 @@
 name: Bump Version
 
 on:
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch: # Manual trigger
 
 jobs:
   bump-version:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # ratchet:actions/checkout@v3
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@3235b876344d2a9aa001b8d1453c930bba69e610 # ratchet:actions/setup-node@v3
         with:
           node-version: '18'
-      
+
       - name: Install jq
         run: sudo apt-get install -y jq
 
