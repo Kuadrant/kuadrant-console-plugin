@@ -40,7 +40,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from '../KuadrantCreateUpdate';
-import { useLocation, useNavigate } from 'react-router-dom-v5-compat';
+import { useLocation, useNavigate } from 'react-router';
 import { GatewayResource } from './types';
 import type { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
 import {

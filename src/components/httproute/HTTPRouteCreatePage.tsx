@@ -26,7 +26,7 @@ import {
   useK8sWatchResource,
   useActiveNamespace,
 } from '@openshift-console/dynamic-plugin-sdk';
-import { useLocation, useNavigate } from 'react-router-dom-v5-compat';
+import { useLocation, useNavigate } from 'react-router';
 import * as yaml from 'js-yaml';
 import ParentReferencesSelect from '../../utils/ParentReferencesSelect';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
