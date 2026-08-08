@@ -13,7 +13,7 @@ import {
 import { Timestamp } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import { APIKeyRequest } from './types';
-import { getRequestStatus, truncateUseCase, getStatusSortWeight } from './utils';
+import { getRequestStatus, truncateUseCase, getStatusSortWeight, formatExpiryDate } from './utils';
 import { APIKeyStatusBadge } from './APIKeyStatusBadge';
 import { APIProduct } from '../apiproduct/types';
 import { formatLimits } from '../../utils/apiKeyUtils';
@@ -179,8 +179,9 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
             <Th sort={{ sortBy, onSort, columnIndex: 3 }}>{t('Plan')}</Th>
             <Th>{t('Use Case')}</Th>
             <Th sort={{ sortBy, onSort, columnIndex: 5 }}>{t('Date')}</Th>
+            <Th>{t('Expiration')}</Th>
             <Th sort={{ sortBy, onSort, columnIndex: 6 }}>{t('Status')}</Th>
-            <Th>{t('Actions')}</Th>
+            <Th screenReaderText={t('Actions')} />
           </Tr>
         </Thead>
         <Tbody>
@@ -227,6 +228,7 @@ const APIKeyApprovalTable: React.FC<APIKeyApprovalTableProps> = ({
                 <Td dataLabel={t('Date')}>
                   <Timestamp timestamp={request.metadata?.creationTimestamp || ''} />
                 </Td>
+                <Td dataLabel={t('Expiration')}>{formatExpiryDate(request.spec.expiresAt)}</Td>
                 <Td dataLabel={t('Status')}>
                   <APIKeyStatusBadge phase={status} />
                 </Td>

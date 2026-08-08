@@ -55,6 +55,7 @@ import {
   getAPIKeyPhase,
 } from '../../utils/resources';
 import { getModelFromResource, getResourceNameFromKind } from '../../utils/getModelFromResource';
+import { formatExpiry } from './utils';
 import APIKeyRevealModal from './APIKeyRevealModal';
 import APIKeyDeleteModal from './APIKeyDeleteModal';
 import RequestAPIKeyModal from './RequestAPIKeyModal';
@@ -173,6 +174,12 @@ const APIKeyRow: React.FC<
       </TableData>
       <TableData id="requestedTime" activeColumnIDs={activeColumnIDs}>
         <Timestamp timestamp={obj.metadata.creationTimestamp} />
+      </TableData>
+      <TableData id="expires" activeColumnIDs={activeColumnIDs}>
+        {(() => {
+          const { text, isExpired } = formatExpiry(obj.spec?.expiresAt, t);
+          return <span style={isExpired ? { color: '#6a6e73' } : undefined}>{text}</span>;
+        })()}
       </TableData>
       <TableData id="actions" activeColumnIDs={activeColumnIDs}>
         <Dropdown
@@ -295,7 +302,7 @@ const MyAPIKeysPage: React.FC = () => {
             navigate(`/kuadrant/apikeys/ns/${targetNamespace}`, { replace: true });
           }
           // Otherwise, stay on current path (cluster-wide view)
-        } catch (error) {
+        } catch (_error) {
           // On error, redirect to namespace-scoped view
           const targetNamespace =
             activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
@@ -605,6 +612,10 @@ const MyAPIKeysPage: React.FC = () => {
         transforms: [sortable],
       },
       {
+        title: t('Expires'),
+        id: 'expires',
+      },
+      {
         title: '',
         id: 'actions',
       },
@@ -774,7 +785,7 @@ const MyAPIKeysPage: React.FC = () => {
                       onChange={handleNameFilterChange}
                       value={nameFilter}
                       className="pf-v5-c-form-control co-text-filter-with-icon"
-                      aria-label="Name filter"
+                      aria-label={t('Name filter')}
                     />
                   </InputGroup>
                 </ToolbarFilter>
@@ -848,7 +859,7 @@ const MyAPIKeysPage: React.FC = () => {
                       onChange={handleOwnerFilterChange}
                       value={ownerFilter}
                       className="pf-v5-c-form-control co-text-filter-with-icon"
-                      aria-label="Owner filter"
+                      aria-label={t('Owner filter')}
                     />
                   </InputGroup>
                 </ToolbarFilter>

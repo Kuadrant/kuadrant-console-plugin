@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom-v5-compat';
+import { useTranslation } from 'react-i18next';
 import { ExtensionHookResult } from '@openshift-console/dynamic-plugin-sdk/lib/api/common-types';
 import { Action } from '@openshift-console/dynamic-plugin-sdk/lib/extensions/actions';
 import {
@@ -15,6 +16,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 
 const useOIDCPolicyActions = (obj: K8sResourceCommon): ExtensionHookResult<Action[]> => {
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const navigate = useNavigate();
   const gvk = obj ? getGroupVersionKindForResource(obj) : undefined;
   const [oidcPolicyModel] = useK8sModel(
@@ -53,20 +55,20 @@ const useOIDCPolicyActions = (obj: K8sResourceCommon): ExtensionHookResult<Actio
     const actionsList: Action[] = [
       {
         id: 'edit-labels-oidcpolicy',
-        label: 'Edit labels',
+        label: t('Edit labels'),
         cta: launchLabelsModal,
         accessReview: updateAccess,
       },
       {
         id: 'edit-annotations-oidcpolicy',
-        label: 'Edit annotations',
+        label: t('Edit annotations'),
         cta: launchAnnotationsModal,
         accessReview: updateAccess,
       },
       {
         id: 'kuadrant-oidc-policy-edit-form',
-        label: 'Edit',
-        description: 'Edit via form',
+        label: t('Edit'),
+        description: t('Edit via form'),
         cta: () =>
           navigate({
             pathname: `/k8s/ns/${namespace}/oidcpolicy/name/${name}/edit`,
@@ -76,7 +78,7 @@ const useOIDCPolicyActions = (obj: K8sResourceCommon): ExtensionHookResult<Actio
       },
       {
         id: 'delete-oidcpolicy',
-        label: 'Delete',
+        label: t('Delete'),
         cta: launchDeleteModal,
         accessReview: deleteAccess,
       },
@@ -90,6 +92,7 @@ const useOIDCPolicyActions = (obj: K8sResourceCommon): ExtensionHookResult<Actio
     launchAnnotationsModal,
     launchDeleteModal,
     launchLabelsModal,
+    t,
   ]);
 
   return [actions, true, undefined];

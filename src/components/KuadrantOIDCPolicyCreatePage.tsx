@@ -24,7 +24,7 @@ import {
   useActiveNamespace,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useNavigate, useLocation } from 'react-router-dom-v5-compat';
-import { Gateway } from './gateway/types';
+import { GatewayResource } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
 import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
@@ -36,10 +36,9 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<Gateway>({
-    name: '',
-    namespace: '',
-  });
+  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>(
+    {} as GatewayResource,
+  );
   const [clientID, setClientID] = React.useState('');
   const [issuerURL, setIssuerURL] = React.useState('');
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
@@ -62,7 +61,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
         targetRef: {
           group: 'gateway.networking.k8s.io',
           kind: 'Gateway',
-          name: selectedGateway.name,
+          name: selectedGateway.metadata?.name ?? '',
         },
         provider: { clientID, issuerURL },
       },
@@ -127,9 +126,11 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
         setCreate(false);
         setPolicyName(oidcPolicyUpdate.metadata?.name || '');
         setSelectedGateway({
-          name: oidcPolicyUpdate.spec?.targetRef?.name || '',
-          namespace: oidcPolicyUpdate.metadata?.namespace ?? '',
-        });
+          metadata: {
+            name: oidcPolicyUpdate.spec?.targetRef?.name || '',
+            namespace: oidcPolicyUpdate.metadata?.namespace ?? '',
+          },
+        } as GatewayResource);
         setClientID(oidcPolicyUpdate.spec?.provider?.clientID || '');
         setIssuerURL(oidcPolicyUpdate.spec?.provider?.issuerURL || '');
       }
@@ -144,9 +145,11 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
       const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
       setPolicyName(parsedYaml.metadata?.name || '');
       setSelectedGateway({
-        name: parsedYaml.spec?.targetRef?.name || '',
-        namespace: parsedYaml.metadata?.namespace ?? '',
-      });
+        metadata: {
+          name: parsedYaml.spec?.targetRef?.name || '',
+          namespace: parsedYaml.metadata?.namespace ?? '',
+        },
+      } as GatewayResource);
       setClientID(parsedYaml.spec?.provider?.clientID || '');
       setIssuerURL(parsedYaml.spec?.provider?.issuerURL || '');
     } catch (e) {
@@ -170,7 +173,12 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
     handleCancel(navigate);
   };
 
-  const isFormValid = !!(policyName && selectedGateway.name && clientID && issuerURL);
+  const isFormValid = !!(
+    policyName &&
+    (selectedGateway.metadata?.name ?? '') &&
+    clientID &&
+    issuerURL
+  );
 
   return (
     <>
@@ -214,7 +222,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
       {createView === 'form' ? (
         <PageSection hasBodyWrapper={false}>
           <Form className="co-m-pane__form">
-            <FormGroup label={t('Policy Name')} isRequired fieldId="policy-name">
+            <FormGroup label={t('Policy name')} isRequired fieldId="policy-name">
               <TextInput
                 isRequired
                 type="text"
@@ -240,7 +248,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
                 name="client-id"
                 value={clientID}
                 onChange={(_event, val) => setClientID(val)}
-                placeholder="my-client-id"
+                placeholder={t('my-client-id')}
               />
               <FormHelperText>
                 <HelperText>
@@ -258,7 +266,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
                 name="issuer-url"
                 value={issuerURL}
                 onChange={(_event, val) => setIssuerURL(val)}
-                placeholder="https://auth.example.com"
+                placeholder={t('https://auth.example.com')}
               />
               <FormHelperText>
                 <HelperText>

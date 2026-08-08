@@ -1,6 +1,6 @@
 import * as React from 'react';
 
-import type { TFunction } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 import {
   CheckCircleIcon,
@@ -11,6 +11,34 @@ import {
 } from '@patternfly/react-icons';
 
 import { Label, Tooltip } from '@patternfly/react-core';
+
+const POLICIES_MAP: Record<string, string[]> = {
+  Gateway: [
+    'kuadrant.io/DNSPolicyAffected',
+    'kuadrant.io/TLSPolicyAffected',
+    'kuadrant.io/AuthPolicyAffected',
+    'kuadrant.io/RateLimitPolicyAffected',
+    'kuadrant.io/TokenRateLimitPolicyAffected',
+  ],
+  HTTPRoute: [
+    'kuadrant.io/AuthPolicyAffected',
+    'kuadrant.io/RateLimitPolicyAffected',
+    'kuadrant.io/TokenRateLimitPolicyAffected',
+  ],
+  GRPCRoute: [
+    'kuadrant.io/AuthPolicyAffected',
+    'kuadrant.io/RateLimitPolicyAffected',
+    'kuadrant.io/TokenRateLimitPolicyAffected',
+  ],
+};
+
+const hasAllPoliciesEnforced = (policiesAffected: string[], conditions): boolean => {
+  const relevant = policiesAffected.filter((p) => conditions.some((c) => c.type === p));
+  return relevant.every((p) => conditions.some((c) => c.type === p && c.status === 'True'));
+};
+
+const hasAnyPolicyError = (policiesAffected: string[], conditions): boolean =>
+  policiesAffected.some((p) => conditions.some((c) => c.type === p && c.status === 'False'));
 
 const generateLabelWithTooltip = (labelText, color, icon, tooltipText) => {
   return (
@@ -41,44 +69,7 @@ const getStatusLabel = (t: TFunction, obj) => {
   };
 
   const { kind, status } = obj;
-
-  const policiesMap = {
-    Gateway: [
-      'kuadrant.io/DNSPolicyAffected',
-      'kuadrant.io/TLSPolicyAffected',
-      'kuadrant.io/AuthPolicyAffected',
-      'kuadrant.io/RateLimitPolicyAffected',
-      'kuadrant.io/TokenRateLimitPolicyAffected',
-    ],
-    HTTPRoute: [
-      'kuadrant.io/AuthPolicyAffected',
-      'kuadrant.io/RateLimitPolicyAffected',
-      'kuadrant.io/TokenRateLimitPolicyAffected',
-    ],
-    GRPCRoute: [
-      'kuadrant.io/AuthPolicyAffected',
-      'kuadrant.io/RateLimitPolicyAffected',
-      'kuadrant.io/TokenRateLimitPolicyAffected',
-    ],
-  };
-
-  const policiesAffected = policiesMap[kind] || [];
-
-  const hasAllPoliciesEnforced = (conditions) => {
-    const relevantPolicies = policiesAffected.filter((policy) =>
-      conditions.some((cond) => cond.type === policy),
-    );
-
-    return relevantPolicies.every((policy) =>
-      conditions.some((cond) => cond.type === policy && cond.status === 'True'),
-    );
-  };
-
-  const hasAnyPolicyError = (conditions) => {
-    return policiesAffected.some((policy) =>
-      conditions.some((cond) => cond.type === policy && cond.status === 'False'),
-    );
-  };
+  const policiesAffected = POLICIES_MAP[kind] || [];
 
   if (kind === 'Gateway') {
     const conditions = status?.conditions || [];
@@ -91,7 +82,10 @@ const getStatusLabel = (t: TFunction, obj) => {
     );
 
     if (acceptedCondition && programmedCondition) {
-      if (hasAllPoliciesEnforced(conditions) && !hasAnyPolicyError(conditions)) {
+      if (
+        hasAllPoliciesEnforced(policiesAffected, conditions) &&
+        !hasAnyPolicyError(policiesAffected, conditions)
+      ) {
         return generateLabelWithTooltip(
           'Enforced',
           'green',
@@ -151,7 +145,10 @@ const getStatusLabel = (t: TFunction, obj) => {
     );
 
     if (acceptedCondition) {
-      if (hasAllPoliciesEnforced(parentConditions) && !hasAnyPolicyError(parentConditions)) {
+      if (
+        hasAllPoliciesEnforced(policiesAffected, parentConditions) &&
+        !hasAnyPolicyError(policiesAffected, parentConditions)
+      ) {
         return generateLabelWithTooltip(
           'Enforced',
           'green',
@@ -277,4 +274,50 @@ const getStatusLabel = (t: TFunction, obj) => {
   }
 };
 
-export { getStatusLabel };
+const getStatusSortRank = (obj): number => {
+  const { kind, status } = obj;
+  const policiesAffected = POLICIES_MAP[kind] || [];
+
+  if (kind === 'Gateway') {
+    const conditions = status?.conditions || [];
+    const accepted = conditions.some((c) => c.type === 'Accepted' && c.status === 'True');
+    const programmed = conditions.some((c) => c.type === 'Programmed' && c.status === 'True');
+    if (accepted && programmed) {
+      return hasAllPoliciesEnforced(policiesAffected, conditions) &&
+        !hasAnyPolicyError(policiesAffected, conditions)
+        ? 8
+        : 6;
+    }
+    if (programmed) return 5;
+    if (conditions.some((c) => c.type === 'Conflicted' && c.status === 'True')) return 2;
+    if (conditions.some((c) => c.type === 'ResolvedRefs' && c.status === 'True')) return 4;
+    return 1;
+  }
+
+  if (policiesAffected.length > 0) {
+    const parentConditions = status?.parents?.flatMap((p) => p.conditions) || [];
+    const accepted = parentConditions.some((c) => c.type === 'Accepted' && c.status === 'True');
+    if (accepted) {
+      return hasAllPoliciesEnforced(policiesAffected, parentConditions) &&
+        !hasAnyPolicyError(policiesAffected, parentConditions)
+        ? 8
+        : 6;
+    }
+    if (parentConditions.some((c) => c.type === 'Conflicted' && c.status === 'True')) return 2;
+    if (parentConditions.some((c) => c.type === 'ResolvedRefs' && c.status === 'True')) return 4;
+    return 1;
+  }
+
+  const conditions = status?.conditions || [];
+  if (conditions.length === 0) return 0;
+  if (conditions.some((c) => c.type === 'Enforced' && c.status === 'True')) return 8;
+  if (conditions.some((c) => c.reason === 'Overridden' && c.status === 'False')) return 3;
+  if (conditions.some((c) => c.type === 'Accepted' && c.status === 'True')) return 6;
+  if (conditions.some((c) => c.reason === 'Conflicted' && c.status === 'False')) return 2;
+  if (conditions.some((c) => c.reason === 'TargetNotFound' && c.status === 'False')) return 2;
+  if (conditions.some((c) => c.reason === 'Unknown' && c.status === 'False')) return 1;
+  if (conditions.some((c) => c.type === 'Accepted' && c.status === 'False')) return 1;
+  return 1;
+};
+
+export { getStatusLabel, getStatusSortRank };

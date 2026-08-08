@@ -20,7 +20,7 @@ import {
   MenuToggleElement,
   Popper,
   InputGroup,
-  TextInput,
+  SearchInput,
   Pagination,
   EmptyState,
   EmptyStateBody,
@@ -696,7 +696,15 @@ const APIProductsListPage: React.FC = () => {
             </AlertGroup>
           )}
           <ListPageBody>
-            <Toolbar>
+            <Toolbar
+              clearAllFilters={() => {
+                setSelectedStatuses([]);
+                setNameFilter('');
+                setNamespaceFilter('');
+                setSelectedHTTPRoutes([]);
+                setCurrentPage(1);
+              }}
+            >
               <ToolbarContent>
                 <ToolbarGroup variant="filter-group">
                   <ToolbarFilter
@@ -871,14 +879,14 @@ const APIProductsListPage: React.FC = () => {
                         />
                       </div>
                     ) : (
-                      <TextInput
-                        type="text"
+                      <SearchInput
                         id="composite-filter-search-by-input"
                         placeholder={t('Search by {{filterValue}}...', {
                           filterValue: filterLabels[filterSelected],
                         })}
                         value={filterSelected === 'name' ? nameFilter : namespaceFilter}
                         onChange={(_event, value) => handleFilterChange(value)}
+                        onClear={() => handleFilterChange('')}
                         aria-label={t('Resource search')}
                       />
                     )}

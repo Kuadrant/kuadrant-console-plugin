@@ -17,8 +17,8 @@ PLUGIN_PORT="${PLUGIN_PORT:-9001}"
 # if a latest release breaks plugin development or CI.
 KUADRANT_VERSION="${KUADRANT_VERSION:-latest}"
 
-# pin to a published, soaked image; oinc v0.2.3 defaults to 4.22
-OCP_VERSION="${OCP_VERSION:-4.21}"
+# default to 4.22; override with OCP_VERSION to pin to a different version
+OCP_VERSION="${OCP_VERSION:-4.22}"
 
 check_command oinc "Install from https://github.com/jasonmadigan/oinc"
 check_command kubectl "Install from https://kubernetes.io/docs/tasks/tools/"
@@ -51,7 +51,8 @@ dump_kuadrant_diagnostics() {
 log "creating oinc cluster with addons (kuadrant@${KUADRANT_VERSION})..."
 if ! oinc create \
 	--version "${OCP_VERSION}" \
-	--addons "gateway-api,cert-manager,metallb,istio,kuadrant@${KUADRANT_VERSION}" \
+	--addons "gateway-api,cert-manager,metallb,istio,kuadrant@${KUADRANT_VERSION},mcp-gateway" \
+	--metallb-address-pool auto \
 	--console-plugin "${PLUGIN_NAME}=http://${HOST}:${PLUGIN_PORT}"; then
 	dump_kuadrant_diagnostics
 	exit 1
@@ -59,31 +60,6 @@ fi
 
 log "patch kuadrant to enable developer portal controller..."
 kubectl patch kuadrant kuadrant -n kuadrant-system --type merge --patch '{"spec": {"components": {"developerPortal": {"enabled": true}}}}'
-
-# --- MetalLB IP pool ---
-
-log "configuring MetalLB IP pool..."
-DOCKER_SUBNET=$(${RUNTIME} network inspect bridge -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' 2>/dev/null || echo "172.18.0.0/16")
-POOL_PREFIX=$(echo "${DOCKER_SUBNET}" | sed 's|\.[0-9]*/.*|.200|')
-POOL_END=$(echo "${DOCKER_SUBNET}" | sed 's|\.[0-9]*/.*|.220|')
-
-log "MetalLB pool: ${POOL_PREFIX}-${POOL_END}"
-kubectl apply -f - <<EOF
-apiVersion: metallb.io/v1beta1
-kind: IPAddressPool
-metadata:
-  name: dev-pool
-  namespace: metallb-system
-spec:
-  addresses:
-  - ${POOL_PREFIX}-${POOL_END}
----
-apiVersion: metallb.io/v1beta1
-kind: L2Advertisement
-metadata:
-  name: dev-l2
-  namespace: metallb-system
-EOF
 
 # --- Gateway ---
 
@@ -105,5 +81,9 @@ spec:
       namespaces:
         from: All
 EOF
+
+log "creating demo MCP resources..."
+kubectl create namespace toystore 2>/dev/null || true
+kubectl apply -f "${REPO_DIR}/scripts/mcp-demo.yaml"
 
 log "cluster setup complete"

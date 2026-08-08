@@ -18,12 +18,12 @@ test.describe('Overview dashboard', () => {
     await waitForPermissionsLoaded(page);
   });
 
-  test('renders the dashboard cards', async ({ page }) => {
+  test('renders the dashboard cards', { tag: '@smoke' }, async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Kuadrant Overview' })).toBeVisible({
       timeout: 15_000,
     });
 
-    await expect(page.locator('text=Getting started resources')).toBeVisible();
+    await expect(page.locator('text=Getting started with')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Gateways', exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Gateways - Traffic Analysis' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Policies', exact: true })).toBeVisible();
@@ -31,7 +31,7 @@ test.describe('Overview dashboard', () => {
     await expect(page.getByRole('heading', { name: 'GRPCRoutes', exact: true })).toBeVisible();
   });
 
-  test('gateway summary shows health stats', async ({ page }) => {
+  test('gateway summary shows health stats', { tag: '@smoke' }, async ({ page }) => {
     await expect(page.locator('span:text-is("Total Gateways")')).toBeVisible({
       timeout: 15_000,
     });
@@ -45,7 +45,7 @@ test.describe('Overview dashboard', () => {
     await expect(totalCount).toHaveText(/^[1-9]\d*$/, { timeout: 15_000 });
   });
 
-  test('traffic analysis card lists gateways with metric columns', async ({ page }) => {
+  test('traffic analysis card lists gateways with metric columns', { tag: '@nightly' }, async ({ page }) => {
     await expect(page.getByRole('heading', { name: 'Gateways - Traffic Analysis' })).toBeVisible({
       timeout: 15_000,
     });
@@ -59,14 +59,14 @@ test.describe('Overview dashboard', () => {
     });
   });
 
-  test('policies card lists fixture policies', async ({ page }) => {
+  test('policies card lists fixture policies', { tag: '@smoke' }, async ({ page }) => {
     await expect(page.locator('a[data-test="test-auth-policy"]').first()).toBeVisible({
       timeout: 15_000,
     });
     await expect(page.locator('a[data-test="test-plan-policy"]').first()).toBeVisible();
   });
 
-  test('navigates to gateway details from the traffic analysis card', async ({ page }) => {
+  test('navigates to gateway details from the traffic analysis card', { tag: '@smoke' }, async ({ page }) => {
     const gatewayLink = page.locator('a[data-test="test-gateway"]').first();
     await expect(gatewayLink).toBeVisible({ timeout: 15_000 });
     await gatewayLink.click();
@@ -77,7 +77,7 @@ test.describe('Overview dashboard', () => {
     );
   });
 
-  test('navigates to policy details from the policies card', async ({ page }) => {
+  test('navigates to policy details from the policies card', { tag: '@smoke' }, async ({ page }) => {
     const policyLink = page.locator('a[data-test="test-auth-policy"]').first();
     await expect(policyLink).toBeVisible({ timeout: 15_000 });
     await policyLink.click();
@@ -88,7 +88,7 @@ test.describe('Overview dashboard', () => {
     );
   });
 
-  test('navigates to HTTPRoute details from the routes card', async ({ page }) => {
+  test('navigates to HTTPRoute details from the routes card', { tag: '@smoke' }, async ({ page }) => {
     const routeLink = page.locator('a[data-test="test-route"]').first();
     await expect(routeLink).toBeVisible({ timeout: 15_000 });
     await routeLink.click();

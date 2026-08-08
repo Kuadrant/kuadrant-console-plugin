@@ -18,6 +18,7 @@ export interface APIKeyRequestSpec {
     name: string;
     namespace: string; // cross-namespace ref to original APIKey
   };
+  expiresAt?: string; // ISO 8601, mirrored from APIKey.spec.expiresAt by controller
 }
 
 export interface APIKeyRequestStatus {

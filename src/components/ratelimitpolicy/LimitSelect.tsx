@@ -85,11 +85,11 @@ const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
         handleSave={onAddLimit}
       />
       <Modal
-        title="Validation Error"
+        title={t('Validation Error')}
         isOpen={isLimitNameAlertModalOpen}
         onClose={() => setIsLimitNameAlertModalOpen(false)}
         variant="small"
-        aria-label="Rate Name is required error"
+        aria-label={t('Rate Name is required error')}
       >
         <p>{t('Limit Name is required!')}</p>
         <Button variant="primary" onClick={() => setIsLimitNameAlertModalOpen(false)}>

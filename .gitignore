@@ -5,7 +5,11 @@
 integration-tests/videos
 integration-tests/screenshots
 playwright-report/
+playwright-results.json
 test-results/
+
+# npm (this project uses yarn)
+package-lock.json
 
 # Yarn v4
 .yarn/*

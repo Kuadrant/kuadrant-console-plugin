@@ -7,7 +7,11 @@ export default defineConfig({
   fullyParallel: true,
   retries: 1,
   workers: 3,
-  reporter: [['html', { open: 'never' }], ['list']],
+  reporter: [
+    ['html', { open: 'never' }],
+    ['list'],
+    ['json', { outputFile: 'playwright-results.json' }],
+  ],
   use: {
     baseURL: process.env.CONSOLE_URL || 'http://localhost:9000',
     screenshot: 'only-on-failure',

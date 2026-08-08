@@ -9,6 +9,9 @@ const config: Config = {
         jsx: 'react',
         esModuleInterop: true,
       },
+      // react-i18next 16 widens React.HTMLAttributes.children,
+      // tripping spurious PatternFly prop checks. remove after sdk 4.22 bump
+      diagnostics: false,
     }],
   },
   moduleNameMapper: {

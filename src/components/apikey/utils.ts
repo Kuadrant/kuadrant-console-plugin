@@ -39,6 +39,59 @@ export const getStatusSortWeight = (status: string): number => {
 };
 
 /**
+ * Format an expiresAt ISO string for display in My API Keys.
+ * Uses UTC date arithmetic and display to avoid timezone-shift on midnight-UTC dates.
+ */
+export const formatExpiry = (
+  expiresAt: string | undefined,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): { text: string; isExpired: boolean } => {
+  if (!expiresAt) {
+    return { text: t('No expiration'), isExpired: false };
+  }
+  const expiry = new Date(expiresAt);
+  const now = new Date();
+  const todayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  const expiryUTC = Date.UTC(expiry.getUTCFullYear(), expiry.getUTCMonth(), expiry.getUTCDate());
+  const diffDays = Math.round((expiryUTC - todayUTC) / (1000 * 60 * 60 * 24));
+  const dateLabel = expiry.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+
+  if (diffDays < 0) {
+    return { text: t('Expired ({{date}})', { date: dateLabel }), isExpired: true };
+  }
+  if (diffDays === 0) {
+    return { text: t('Expires today ({{date}})', { date: dateLabel }), isExpired: false };
+  }
+  if (diffDays === 1) {
+    return { text: t('1 day left ({{date}})', { date: dateLabel }), isExpired: false };
+  }
+  return {
+    text: t('{{days}} days left ({{date}})', { days: diffDays, date: dateLabel }),
+    isExpired: false,
+  };
+};
+
+/**
+ * Format an expiresAt ISO string as an absolute date for display in the approval table.
+ * Uses UTC timezone to avoid date shift on midnight-UTC values in negative-offset timezones.
+ */
+export const formatExpiryDate = (expiresAt?: string): string => {
+  if (!expiresAt) return '—';
+  const expiry = new Date(expiresAt);
+  return expiry.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    timeZone: 'UTC',
+  });
+};
+
+/**
  * Truncate use case text with ellipsis
  */
 export const truncateUseCase = (text: string, maxLength = 50): string => {

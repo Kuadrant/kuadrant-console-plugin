@@ -1,6 +1,12 @@
 import { test, expect, Page } from '@playwright/test';
 import { execSync } from 'child_process';
-import { TEST_NAMESPACE, dismissConsoleTour } from './helpers';
+import {
+  TEST_NAMESPACE,
+  dismissConsoleTour,
+  impersonateUser,
+  stopImpersonation,
+  navigateToAPIKeyApprovals,
+} from './helpers';
 
 /**
  * API Key Lifecycle E2E Tests
@@ -48,6 +54,8 @@ async function navigateToAPIKeyDetails(
 ): Promise<void> {
   await spaNavigate(page, `/kuadrant/ns/${namespace}/apikeys/name/${name}`);
 }
+
+// ── API Key lifecycle ─────────────────────────────────────────────────────────
 
 test.describe('API Key Lifecycle', () => {
   const uniqueId = Date.now();
@@ -348,4 +356,158 @@ test.describe('API Key Lifecycle', () => {
       .catch(() => false);
     expect(gamestoreVisible).toBe(false);
   });
+});
+
+// ── Expiry lifecycle ──────────────────────────────────────────────────────────
+
+test.describe('API Key expiry lifecycle', () => {
+  // Derive future date dynamically so the test never becomes time-bombed.
+  // Use midday UTC so the rendered local date matches the UTC date in all runner timezones.
+  const futureDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000);
+  futureDate.setUTCHours(12, 0, 0, 0);
+  const FUTURE_EXPIRES_AT = futureDate.toISOString();
+  const PAST_EXPIRES_AT = '2020-01-01T12:00:00Z';
+
+  const formatDateLabel = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+  const FUTURE_LABEL = formatDateLabel(FUTURE_EXPIRES_AT);
+  const PAST_LABEL = formatDateLabel(PAST_EXPIRES_AT);
+
+  async function navigateAsOwner(page: Page) {
+    await page.route('**/api/kubernetes/apis/user.openshift.io/v1/users/~', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ metadata: { name: 'test-api-owner' } }),
+      }),
+    );
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    await impersonateUser(page, 'test-api-owner');
+    await navigateToAPIKeyApprovals(page);
+    await dismissConsoleTour(page);
+    await page.waitForLoadState('networkidle');
+  }
+
+  let consumerNs: string;
+  let keyName: string;
+  let email: string;
+
+  test.beforeEach(async () => {
+    const uid = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    consumerNs = `consumer-expiry-${uid}`;
+    keyName = `expiry-key-${uid}`;
+    email = `expiry-${uid}@example.com`;
+
+    execSync(
+      `
+      kubectl create namespace ${consumerNs} || true
+      kubectl apply -f - <<EOF
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ${keyName}
+  namespace: ${consumerNs}
+stringData:
+  api_key: test-expiry-key-value
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: ${keyName}
+  namespace: ${consumerNs}
+spec:
+  apiProductRef:
+    name: test-approval-product
+    namespace: ${TEST_NAMESPACE}
+  planTier: gold
+  useCase: "Expiry lifecycle test"
+  requestedBy:
+    userId: "expiry-user"
+    email: "${email}"
+  secretRef:
+    name: ${keyName}
+  expiresAt: "${FUTURE_EXPIRES_AT}"
+EOF
+      `,
+      { stdio: 'inherit' },
+    );
+
+    execSync(
+      `timeout 30 bash -c 'until kubectl get apikeyrequests -n ${TEST_NAMESPACE} | grep -q ${keyName}; do sleep 1; done'`,
+      { stdio: 'inherit' },
+    );
+  });
+
+  test.afterEach(async ({ page }) => {
+    try {
+      await stopImpersonation(page);
+    } finally {
+      execSync(`kubectl delete namespace ${consumerNs} --ignore-not-found=true`, {
+        stdio: 'inherit',
+      });
+    }
+  });
+
+  test(
+    'expiry date set → appears in UI → fast-forward → shows Expired',
+    { tag: '@nightly' },
+    async ({ page }) => {
+      // Step 1: approval table shows expiration date
+      await navigateAsOwner(page);
+      const row = page.locator(`tr:has-text("${email}")`);
+      await expect(row).toBeVisible({ timeout: 15_000 });
+      await expect(row.locator(`td:has-text("${FUTURE_LABEL}")`)).toBeVisible({ timeout: 10_000 });
+
+      // Step 2: approve modal shows expiration date
+      await expect(row.locator('[aria-label="Actions"]')).toBeEnabled({ timeout: 30_000 });
+      await row.locator('[aria-label="Actions"]').click();
+      await page.locator('[role="menuitem"]:has-text("Approve")').click();
+      const modal = page.locator('.pf-v6-c-modal-box');
+      await expect(modal.locator(`text=${FUTURE_LABEL}`)).toBeVisible({ timeout: 10_000 });
+
+      // Step 3: approve
+      await modal.locator('button:has-text("Approve")').click();
+      await expect(page.locator('.pf-v6-c-alert:has-text("approved successfully")')).toBeVisible({
+        timeout: 30_000,
+      });
+
+      await stopImpersonation(page);
+
+      // Step 4: My API Keys shows "X days left"
+      await spaNavigate(page, `/kuadrant/apikeys/ns/${consumerNs}`);
+      await page.waitForLoadState('networkidle');
+      const keyRow = page.locator(`tr:has-text("${keyName}")`);
+      await expect(keyRow.locator('td:has-text("days left")')).toBeVisible({ timeout: 15_000 });
+      await expect(keyRow.locator(`td:has-text("${FUTURE_LABEL}")`)).toBeVisible();
+
+      // Step 5: fast-forward — patch expiresAt to the past
+      execSync(
+        `kubectl patch apikey ${keyName} -n ${consumerNs} --type=merge -p '{"spec":{"expiresAt":"${PAST_EXPIRES_AT}"}}'`,
+        { stdio: 'inherit' },
+      );
+
+      // Step 6: wait for controller to set Expired condition
+      execSync(
+        `timeout 30 bash -c 'until kubectl get apikey ${keyName} -n ${consumerNs} -o jsonpath="{.status.conditions}" | grep -q Expired; do sleep 2; done'`,
+        { stdio: 'inherit' },
+      );
+
+      // Step 7: reload → Expired badge + "Expired (date)" in Expires column
+      await spaNavigate(page, `/kuadrant/apikeys/ns/${consumerNs}`);
+      await page.waitForLoadState('networkidle');
+      const expiredRow = page.locator(`tr:has-text("${keyName}")`);
+      await expect(
+        expiredRow.locator('td[data-label="status"]:has-text("Expired")'),
+      ).toBeVisible({ timeout: 15_000 });
+      await expect(
+        expiredRow.locator(`td[data-label="expires"]:has-text("${PAST_LABEL}")`),
+      ).toBeVisible();
+    },
+  );
 });

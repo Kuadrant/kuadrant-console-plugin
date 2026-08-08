@@ -183,7 +183,7 @@ const APIKeyDetailPage: React.FC = () => {
         <Tabs
           activeKey={activeTabKey}
           onSelect={(_event, tabIndex) => setActiveTabKey(tabIndex)}
-          aria-label="APIKey details tabs"
+          aria-label={t('APIKey details tabs')}
         >
           <Tab eventKey={0} title={<TabTitleText>{t('Details')}</TabTitleText>}>
             <APIKeyDetailsTab apiKey={apiKeyToUse} />

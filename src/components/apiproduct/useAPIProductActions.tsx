@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom-v5-compat';
+import { useTranslation } from 'react-i18next';
 import { ExtensionHookResult } from '@openshift-console/dynamic-plugin-sdk/lib/api/common-types';
 import { Action } from '@openshift-console/dynamic-plugin-sdk/lib/extensions/actions';
 import {
@@ -10,11 +11,33 @@ import {
 import { AccessReviewResourceAttributes } from '@openshift-console/dynamic-plugin-sdk/lib/extensions/console-types';
 import {
   useAnnotationsModal,
-  useDeleteModal,
   useLabelsModal,
+  useModal,
 } from '@openshift-console/dynamic-plugin-sdk';
+import APIProductDeleteModal from './APIProductDeleteModal';
+
+const APIProductDeleteModalWrapper: React.FC<{
+  closeModal: () => void;
+  resource: K8sResourceCommon;
+}> = ({ closeModal, resource }) => {
+  const navigate = useNavigate();
+
+  return (
+    <APIProductDeleteModal
+      isOpen={true}
+      onClose={closeModal}
+      onDeleteSuccess={() => {
+        const namespace = resource.metadata?.namespace || 'default';
+        closeModal();
+        navigate(`/kuadrant/apiproducts/ns/${namespace}`);
+      }}
+      resource={resource}
+    />
+  );
+};
 
 const useAPIProductActions = (obj: K8sResourceCommon): ExtensionHookResult<Action[]> => {
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const navigate = useNavigate();
   const gvk = obj ? getGroupVersionKindForResource(obj) : undefined;
   const [apiProductModel] = useK8sModel(
@@ -22,7 +45,7 @@ const useAPIProductActions = (obj: K8sResourceCommon): ExtensionHookResult<Actio
       ? { group: gvk.group, version: gvk.version, kind: gvk.kind }
       : { group: '', version: '', kind: '' },
   );
-  const launchDeleteModal = useDeleteModal(obj);
+  const launchModal = useModal();
   const launchLabelsModal = useLabelsModal(obj);
   const launchAnnotationsModal = useAnnotationsModal(obj);
 
@@ -53,20 +76,20 @@ const useAPIProductActions = (obj: K8sResourceCommon): ExtensionHookResult<Actio
     const actionsList: Action[] = [
       {
         id: 'edit-labels-apiproduct',
-        label: 'Edit labels',
+        label: t('Edit labels'),
         cta: launchLabelsModal,
         accessReview: updateAccess,
       },
       {
         id: 'edit-annotations-apiproduct',
-        label: 'Edit annotations',
+        label: t('Edit annotations'),
         cta: launchAnnotationsModal,
         accessReview: updateAccess,
       },
       {
         id: 'kuadrant-apiproduct-edit-form',
-        label: 'Edit APIProduct',
-        description: 'Edit via form',
+        label: t('Edit APIProduct'),
+        description: t('Edit via form'),
         cta: () =>
           navigate({
             pathname: `/kuadrant/apiproducts/ns/${namespace}/${name}/edit`,
@@ -76,21 +99,14 @@ const useAPIProductActions = (obj: K8sResourceCommon): ExtensionHookResult<Actio
       },
       {
         id: 'delete-apiproduct',
-        label: 'Delete APIProduct',
-        cta: launchDeleteModal,
+        label: t('Delete APIProduct'),
+        cta: () => launchModal(APIProductDeleteModalWrapper, { resource: obj }),
         accessReview: deleteAccess,
       },
     ];
 
     return actionsList;
-  }, [
-    navigate,
-    obj,
-    apiProductModel,
-    launchAnnotationsModal,
-    launchDeleteModal,
-    launchLabelsModal,
-  ]);
+  }, [navigate, obj, apiProductModel, launchAnnotationsModal, launchModal, launchLabelsModal, t]);
 
   return [actions, true, undefined];
 };
