@@ -14,3 +14,28 @@
 .kuadrant-gateway-editor-toggle .pf-v6-c-radio {
   padding: 0 0 0 0.5rem;
 }
+
+.kuadrant-mcp-embedded-form .pf-v6-c-form__group.pf-m-action,
+.kuadrant-mcp-embedded-form .pf-u-mt-0 {
+  display: none;
+}
+
+.kuadrant-mcp-embedded-form .co-m-nav-title {
+  display: none;
+}
+
+.kuadrant-mcp-embedded-form .kuadrant-gateway-editor-toggle {
+  display: none;
+}
+
+.kuadrant-mcp-yaml-editor .yaml-editor__buttons {
+  display: none;
+}
+
+.kuadrant-mcp-yaml-editor .yaml-editor {
+  min-height: 400px;
+}
+
+.kuadrant-mcp-yaml-editor .react-monaco-editor-container {
+  min-height: 400px;
+}
