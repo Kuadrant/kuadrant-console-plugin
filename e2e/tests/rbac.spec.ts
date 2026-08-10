@@ -13,7 +13,7 @@ import {
 test.describe('RBAC - test-dev persona', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-dev');
   });
 
@@ -42,7 +42,7 @@ test.describe('RBAC - test-dev persona', () => {
   // /kuadrant/overview/ns/default/ (fallback namespace when activeNamespace is #ALL_NS#).
   test('overview redirects to namespace-scoped view (namespace-scoped user)', { tag: '@smoke' }, async ({ page }) => {
     await navigateToOverview(page);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // verify we were redirected to namespace-scoped URL (uses 'default' as fallback)
     await expect(page).toHaveURL(/\/kuadrant\/overview\/ns\/default/, { timeout: 15_000 });
@@ -59,7 +59,7 @@ test.describe('RBAC - test-dev persona', () => {
       window.history.pushState({}, '', '/kuadrant/overview/ns/kuadrant-test');
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // should stay on this URL (no redirect since they have permissions)
     await expect(page).toHaveURL('/kuadrant/overview/ns/kuadrant-test', { timeout: 15_000 });
@@ -97,7 +97,7 @@ test.describe('RBAC - kebab menu (edit/delete)', () => {
 
     // go to Auth tab where our test fixture lives
     await page.locator('[data-test-id="horizontal-link-Auth"]').click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // wait for the test policy row to appear
     const row = page.locator('tr:has-text("test-auth-policy")');
@@ -110,7 +110,7 @@ test.describe('RBAC - kebab menu (edit/delete)', () => {
 
   test('read-only user sees disabled edit and delete', { tag: '@smoke' }, async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-viewer');
 
     await openKebabForTestPolicy(page);
@@ -128,7 +128,7 @@ test.describe('RBAC - kebab menu (edit/delete)', () => {
 
   test('CRUD user sees enabled edit and delete', { tag: '@smoke' }, async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-devops');
 
     await openKebabForTestPolicy(page);
@@ -146,7 +146,7 @@ test.describe('RBAC - kebab menu (edit/delete)', () => {
 
   test('admin user sees enabled edit and delete', { tag: '@smoke' }, async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-admin');
 
     await openKebabForTestPolicy(page);
@@ -168,7 +168,7 @@ test.describe('RBAC - kebab menu (edit/delete)', () => {
 test.describe('RBAC - test-viewer persona', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-viewer');
   });
 
@@ -210,7 +210,7 @@ test.describe('RBAC - test-viewer persona', () => {
 
   test('overview redirects to namespace-scoped view (namespace-scoped user)', { tag: '@nightly' }, async ({ page }) => {
     await navigateToOverview(page);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // verify we were redirected to namespace-scoped URL (uses 'default' as fallback)
     await expect(page).toHaveURL(/\/kuadrant\/overview\/ns\/default/, { timeout: 15_000 });
@@ -227,7 +227,7 @@ test.describe('RBAC - test-viewer persona', () => {
       window.history.pushState({}, '', '/kuadrant/overview/ns/kuadrant-test');
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // should stay on this URL (no redirect since they have permissions)
     await expect(page).toHaveURL('/kuadrant/overview/ns/kuadrant-test', { timeout: 15_000 });
@@ -251,7 +251,7 @@ test.describe('RBAC - test-viewer persona', () => {
 test.describe('RBAC - test-devops persona', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-devops');
   });
 
@@ -305,7 +305,7 @@ test.describe('RBAC - test-devops persona', () => {
 
   test('overview redirects to namespace-scoped view (namespace-scoped user)', { tag: '@nightly' }, async ({ page }) => {
     await navigateToOverview(page);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // verify we were redirected to namespace-scoped URL (uses 'default' as fallback)
     await expect(page).toHaveURL(/\/kuadrant\/overview\/ns\/default/, { timeout: 15_000 });
@@ -322,7 +322,7 @@ test.describe('RBAC - test-devops persona', () => {
       window.history.pushState({}, '', '/kuadrant/overview/ns/kuadrant-test');
       window.dispatchEvent(new PopStateEvent('popstate'));
     });
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // should stay on this URL (no redirect since they have permissions)
     await expect(page).toHaveURL('/kuadrant/overview/ns/kuadrant-test', { timeout: 15_000 });
@@ -346,7 +346,7 @@ test.describe('RBAC - test-devops persona', () => {
 test.describe('RBAC - test-admin persona', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-admin');
   });
 
@@ -383,7 +383,7 @@ test.describe('RBAC - test-admin persona', () => {
 
   test('overview stays on cluster-wide view (no redirect for cluster-admin)', { tag: '@smoke' }, async ({ page }) => {
     await navigateToOverview(page);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // verify admin users stay on /kuadrant/overview (cluster-wide view, no redirect)
     await expect(page).toHaveURL('/kuadrant/overview/all-namespaces', { timeout: 15_000 });

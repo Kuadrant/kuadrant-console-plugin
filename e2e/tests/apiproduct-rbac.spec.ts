@@ -14,14 +14,14 @@ async function impersonateAndNavigate(
   targetUrl: string,
 ): Promise<void> {
   await page.goto(startUrl);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   await impersonateUser(page, 'test-dev');
   // now on Projects page, impersonated as test-dev
   await page.evaluate((url: string) => {
     window.history.pushState({}, '', url);
     window.dispatchEvent(new PopStateEvent('popstate'));
   }, targetUrl);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 // test-dev: no API Management permissions.

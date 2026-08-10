@@ -12,7 +12,7 @@ import {
 test.describe('Overview dashboard', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await dismissConsoleTour(page);
     await spaNavigate(page, `/kuadrant/overview/ns/${TEST_NAMESPACE}`);
     await waitForPermissionsLoaded(page);

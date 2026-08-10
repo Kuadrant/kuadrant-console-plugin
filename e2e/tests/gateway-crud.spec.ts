@@ -31,7 +31,7 @@ function deleteNamespace(namespace: string): void {
 
 async function gotoPage(page: Page, path: string): Promise<void> {
   await page.goto(path);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   await dismissConsoleTour(page);
 }
 
