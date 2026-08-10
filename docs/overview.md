@@ -4,7 +4,7 @@ The Kuadrant OpenShift Console Plugin extends the OpenShift web console with UI 
 
 ## What the plugin provides
 
-The plugin adds two main sections to the OpenShift console:
+The plugin adds three main sections to the OpenShift console:
 
 ### Kuadrant section
 
@@ -15,6 +15,13 @@ The **Kuadrant** section provides gateway and policy management with the followi
 - **API Products** - manage published API products that can be consumed through the API Catalog
 - **Policy Topology** - visual graph of the relationships between Gateways, HTTPRoutes, and the Kuadrant policies attached to them
 - **Policy creation forms** - guided forms for creating AuthPolicy, RateLimitPolicy, DNSPolicy, and TLSPolicy resources, with a toggle to switch between form and YAML views
+
+### MCP Management section
+
+The **MCP Management** section provides setup and management for MCP (Model Context Protocol) gateway infrastructure:
+
+- **Overview** - entry point with a guided setup wizard for creating MCP infrastructure
+- **MCP Gateway Setup Wizard** - 4-step wizard that walks through selecting or creating a Gateway, HTTPRoute, and MCPGatewayExtension resource. Supports both existing resource selection and inline creation of new resources. Resources are created sequentially in the final verification step, with live status watching for the MCPGatewayExtension Ready condition.
 
 ### Kuadrant API Catalog section
 
