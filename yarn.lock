@@ -11983,7 +11983,7 @@ __metadata:
     react-dom: "npm:^18.0.0"
     react-helmet: "npm:^6.1.0"
     react-i18next: "npm:~16.5.8"
-    react-router: "npm:~7.13.1"
+    react-router: "npm:~7.18.2"
     style-loader: "npm:^3.3.1"
     stylelint: "npm:^15.3.0"
     stylelint-config-standard: "npm:^31.0.0"
@@ -14708,9 +14708,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-router@npm:~7.13.1":
-  version: 7.13.2
-  resolution: "react-router@npm:7.13.2"
+"react-router@npm:~7.18.2":
+  version: 7.18.2
+  resolution: "react-router@npm:7.18.2"
   dependencies:
     cookie: "npm:^1.0.1"
     set-cookie-parser: "npm:^2.6.0"
@@ -14720,7 +14720,7 @@ __metadata:
   peerDependenciesMeta:
     react-dom:
       optional: true
-  checksum: 10c0/c7620565df0b444507cfceb76733adbd26e28a72fc4d52d344190bcb2e6483427313a3b6076c53d362e2682ccdb1262731bcaa6c3577cbbeea130291a38715f1
+  checksum: 10c0/513b04adf020fcf95124557418e003d16b175765045332858d5817b045e49dfe33b529c4871c57b0cddf24fa5432589ffc45d1a9a5b398b069f02adb755fab15
   languageName: node
   linkType: hard
 
