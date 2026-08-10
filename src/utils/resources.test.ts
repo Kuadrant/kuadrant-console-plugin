@@ -200,3 +200,45 @@ describe('getAPIKeyPhase', () => {
     expect(getAPIKeyPhase(makeAPIKey([{ type: 'Unknown', status: 'True' }]))).toBe('Pending');
   });
 });
+
+// ── MCPGatewayExtension and ReferenceGrant resource definitions ──────────────
+
+describe('MCPGatewayExtension resource', () => {
+  it('is registered in the resource registry', () => {
+    expect(getGVK('MCPGatewayExtension')).toEqual({
+      group: 'mcp.kuadrant.io',
+      version: 'v1alpha1',
+      kind: 'MCPGatewayExtension',
+    });
+  });
+
+  it('is not a policy', () => {
+    expect(getResourceMetadata('MCPGatewayExtension').isPolicy).toBe(false);
+  });
+
+  it('is not shown in topology by default', () => {
+    expect(getResourceMetadata('MCPGatewayExtension').showInTopologyByDefault).toBe(false);
+  });
+
+  it('is not included in policy kinds', () => {
+    expect(getPolicyKinds()).not.toContain('MCPGatewayExtension');
+  });
+});
+
+describe('ReferenceGrant resource', () => {
+  it('is registered in the resource registry', () => {
+    expect(getGVK('ReferenceGrant')).toEqual({
+      group: 'gateway.networking.k8s.io',
+      version: 'v1beta1',
+      kind: 'ReferenceGrant',
+    });
+  });
+
+  it('is a gateway API resource', () => {
+    expect(getResourceMetadata('ReferenceGrant').isGatewayAPI).toBe(true);
+  });
+
+  it('is not a policy', () => {
+    expect(getResourceMetadata('ReferenceGrant').isPolicy).toBe(false);
+  });
+});
