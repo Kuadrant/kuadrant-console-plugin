@@ -415,8 +415,13 @@ spec:
     await expect(createButton).toBeEnabled({ timeout: 10000 });
     await createButton.click();
 
-    // ResourceYAMLEditor navigates to the k8s details page after creation (not our custom page).
-    // Use a full page.goto() so the console properly loads our custom list route.
+    // Wait for ResourceYAMLEditor to finish creating and navigate to the details page
+    await expect(page).toHaveURL(
+      new RegExp(`devportal\\.kuadrant\\.io~v1alpha1~APIProduct/${yamlProductName}`),
+      { timeout: 15_000 },
+    );
+
+    // Navigate to our custom list route (ResourceYAMLEditor goes to k8s details, not ours)
     await page.goto(`/kuadrant/apiproducts/ns/${TEST_NAMESPACE}`);
     await page.waitForLoadState('domcontentloaded');
     await page.waitForSelector('table', { timeout: 15000 });
