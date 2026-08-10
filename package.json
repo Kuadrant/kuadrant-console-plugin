@@ -121,7 +121,9 @@
       "HTTPRouteCreatePage": "./components/httproute/HTTPRouteCreatePage",
       "useHTTPRouteActions": "./components/httproute/useHTTPRouteActions",
       "GatewaySingleOverview": "./components/gateway/GatewaySingleOverview",
-      "HTTPRouteSingleOverview": "./components/httproute/HTTPRouteSingleOverview"
+      "HTTPRouteSingleOverview": "./components/httproute/HTTPRouteSingleOverview",
+      "MCPOverviewPage": "./components/mcp/MCPOverviewPage",
+      "MCPSetupWizard": "./components/mcp/MCPSetupWizard"
     },
     "dependencies": {
       "@console/pluginAPI": ">=4.22.0-0"
