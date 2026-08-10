@@ -145,7 +145,6 @@ export async function spaNavigate(page: Page, path: string): Promise<void> {
     window.history.pushState({}, '', p);
     window.dispatchEvent(new PopStateEvent('popstate'));
   }, path);
-  await page.waitForLoadState('domcontentloaded');
 }
 
 // Scroll through all pagination pages looking for a row matching `text`.

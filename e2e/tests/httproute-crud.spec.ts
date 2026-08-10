@@ -168,6 +168,18 @@ test.describe('HTTPRoute CRUD', () => {
         'jsonpath={.spec.parentRefs[0].name}',
       ]),
     ).toBe(gateway);
+
+    expect(
+      kubectl([
+        'get',
+        'httproute',
+        routeName,
+        '-n',
+        namespace,
+        '-o',
+        'jsonpath={.spec.parentRefs[0].namespace}',
+      ]),
+    ).toBe(gatewayNamespace);
   });
 
   test('edits an existing HTTPRoute', { tag: '@smoke' }, async ({ page }) => {
