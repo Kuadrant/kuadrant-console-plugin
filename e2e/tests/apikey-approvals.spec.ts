@@ -33,11 +33,11 @@ async function navigateAsOwner(page: Parameters<typeof navigateToAPIKeyApprovals
     }),
   );
   await page.goto('/');
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   await impersonateUser(page, 'test-api-owner');
   await navigateToAPIKeyApprovals(page);
   await dismissConsoleTour(page);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 // ── RBAC ──────────────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ async function navigateAsOwner(page: Parameters<typeof navigateToAPIKeyApprovals
 test.describe('APIKey Approvals - RBAC', () => {
   test('user without apikeyrequests access cannot see the approval table', { tag: '@smoke' }, async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await dismissConsoleTour(page);
     await impersonateUser(page, 'test-dev');
 
@@ -54,7 +54,7 @@ test.describe('APIKey Approvals - RBAC', () => {
       window.history.pushState({}, '', path);
       window.dispatchEvent(new PopStateEvent('popstate'));
     }, '/kuadrant/apikey-approvals/ns/kuadrant-test');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await expect(page.locator('th:has-text("Requester")')).not.toBeVisible({ timeout: 10_000 });
     await expect(page.locator('td:has-text("alice@example.com")')).not.toBeVisible();
@@ -134,7 +134,7 @@ EOF
       execSync(`timeout 30 bash -c 'until kubectl get apikeyrequests -n kuadrant-test | grep -q ${aliceKey}; do sleep 1; done'`, { stdio: 'inherit' });
 
       await page.reload();
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
     });
 
     test.afterEach(async () => {

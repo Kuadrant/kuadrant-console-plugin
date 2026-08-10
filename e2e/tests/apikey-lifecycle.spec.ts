@@ -40,7 +40,7 @@ async function spaNavigate(page: Page, path: string): Promise<void> {
     window.history.pushState({}, '', p);
     window.dispatchEvent(new PopStateEvent('popstate'));
   }, path);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 async function navigateToMyAPIKeys(page: Page, namespace: string): Promise<void> {
@@ -63,7 +63,7 @@ test.describe('API Key Lifecycle', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await dismissConsoleTour(page);
   });
 
@@ -75,7 +75,7 @@ test.describe('API Key Lifecycle', () => {
   test('should complete full API key lifecycle: request, reveal, and delete', { tag: '@smoke' }, async ({ page }) => {
     // Step 1: Navigate to My API Keys page
     await navigateToMyAPIKeys(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Dismiss tour modal if it appears after navigation
     await dismissConsoleTour(page);
@@ -198,7 +198,7 @@ test.describe('API Key Lifecycle', () => {
     // Step 10: Navigate to API key details page
     const apiKeyNameLink = apiKeyRow.locator(`a:has-text("${testAPIKeyName}")`);
     await apiKeyNameLink.click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Verify we're on the details page
     await expect(page.getByRole('heading', { name: testAPIKeyName, exact: true })).toBeVisible({
@@ -237,7 +237,7 @@ test.describe('API Key Lifecycle', () => {
     await confirmDeleteButton.click();
 
     // Step 14: Verify redirect back to list page
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.getByRole('heading', { name: 'My API Keys', exact: true })).toBeVisible({
       timeout: 15000,
     });
@@ -250,7 +250,7 @@ test.describe('API Key Lifecycle', () => {
   test('should show disabled request button when namespace is not selected', { tag: '@smoke' }, async ({ page }) => {
     // Navigate to all namespaces view
     await spaNavigate(page, '/kuadrant/apikeys/all-namespaces');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await dismissConsoleTour(page);
 
     // Request button should be disabled in all-namespaces view
@@ -267,7 +267,7 @@ test.describe('API Key Lifecycle', () => {
 
   test('should validate API key name format in request form', { tag: '@nightly' }, async ({ page }) => {
     await navigateToMyAPIKeys(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await dismissConsoleTour(page);
 
     // Open request modal
@@ -318,7 +318,7 @@ test.describe('API Key Lifecycle', () => {
 
   test('should filter API products in request form', { tag: '@nightly' }, async ({ page }) => {
     await navigateToMyAPIKeys(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await dismissConsoleTour(page);
 
     // Open request modal
@@ -387,11 +387,11 @@ test.describe('API Key expiry lifecycle', () => {
       }),
     );
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-api-owner');
     await navigateToAPIKeyApprovals(page);
     await dismissConsoleTour(page);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   }
 
   let consumerNs: string;
@@ -481,7 +481,7 @@ EOF
 
       // Step 4: My API Keys shows "X days left"
       await spaNavigate(page, `/kuadrant/apikeys/ns/${consumerNs}`);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       const keyRow = page.locator(`tr:has-text("${keyName}")`);
       await expect(keyRow.locator('td:has-text("days left")')).toBeVisible({ timeout: 15_000 });
       await expect(keyRow.locator(`td:has-text("${FUTURE_LABEL}")`)).toBeVisible();
@@ -500,7 +500,7 @@ EOF
 
       // Step 7: reload → Expired badge + "Expired (date)" in Expires column
       await spaNavigate(page, `/kuadrant/apikeys/ns/${consumerNs}`);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('domcontentloaded');
       const expiredRow = page.locator(`tr:has-text("${keyName}")`);
       await expect(
         expiredRow.locator('td[data-label="status"]:has-text("Expired")'),

@@ -26,7 +26,7 @@ async function closeFilterMenu(page: Page): Promise<void> {
 test.describe('Policy Topology', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await dismissConsoleTour(page);
     await navigateToTopology(page);
 

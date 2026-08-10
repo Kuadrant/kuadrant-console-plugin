@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom-v5-compat';
+import { useParams, useNavigate, useLocation } from 'react-router';
 import { useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
 
 /**

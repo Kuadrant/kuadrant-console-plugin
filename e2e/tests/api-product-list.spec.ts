@@ -11,11 +11,11 @@ import {
 test.describe('APIProduct List Page - Display and Filters', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-admin');
     await navigateToAPIProducts(page);
     await dismissConsoleTour(page);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test.afterEach(async ({ page }) => {
@@ -110,11 +110,11 @@ test.describe('APIProduct List Page - Display and Filters', () => {
 test.describe('APIProduct List Page - Status Filter', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-admin');
     await navigateToAPIProducts(page);
     await dismissConsoleTour(page);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test.afterEach(async ({ page }) => {
@@ -226,11 +226,11 @@ test.describe('APIProduct List Page - Status Filter', () => {
 test.describe('APIProduct List Page - Name Filter', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-admin');
     await navigateToAPIProducts(page);
     await dismissConsoleTour(page);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test.afterEach(async ({ page }) => {
@@ -325,11 +325,11 @@ test.describe('APIProduct List Page - Name Filter', () => {
 test.describe('APIProduct List Page - Namespace Filter', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-admin');
     await navigateToAPIProducts(page);
     await dismissConsoleTour(page);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test.afterEach(async ({ page }) => {
@@ -424,11 +424,11 @@ test.describe('APIProduct List Page - Namespace Filter', () => {
 test.describe('APIProduct List Page - HTTPRoute Filter', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-admin');
     await navigateToAPIProducts(page);
     await dismissConsoleTour(page);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test.afterEach(async ({ page }) => {
@@ -580,11 +580,11 @@ test.describe('APIProduct List Page - HTTPRoute Filter', () => {
 test.describe('APIProduct List Page - Combined Filters', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await impersonateUser(page, 'test-admin');
     await navigateToAPIProducts(page);
     await dismissConsoleTour(page);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
   });
 
   test.afterEach(async ({ page }) => {

@@ -18,7 +18,7 @@ import {
   useActiveNamespace,
   NamespaceBar,
 } from '@openshift-console/dynamic-plugin-sdk';
-import { useLocation, useNavigate } from 'react-router-dom-v5-compat';
+import { useLocation, useNavigate } from 'react-router';
 import { APIProduct } from './types';
 import APIProductForm, { APIProductFormData } from './APIProductForm';
 import { RESOURCES } from '../../utils/resources';

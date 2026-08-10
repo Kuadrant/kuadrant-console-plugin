@@ -17,7 +17,7 @@ test.describe('APIProduct CRUD Operations', () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await dismissConsoleTour(page);
   });
 
@@ -35,7 +35,7 @@ test.describe('APIProduct CRUD Operations', () => {
   test('should navigate from list page to create page via Create button', { tag: '@smoke' }, async ({ page }) => {
     // Navigate to API Products list page
     await navigateToAPIProducts(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Wait for page to load and verify we're on the list page (use exact role match to avoid matching empty state)
     await expect(page.getByRole('heading', { name: 'API Products', exact: true })).toBeVisible({
@@ -61,7 +61,7 @@ test.describe('APIProduct CRUD Operations', () => {
     // TEST_NAMESPACE before we SPA-navigate to the create page. Without this,
     // useActiveNamespace() returns '#ALL_NS#' and k8sCreate posts to an invalid namespace.
     await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     // Wait for form to render — confirms routing and component mount, not just URL change
     await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
@@ -140,7 +140,7 @@ test.describe('APIProduct CRUD Operations', () => {
 
   test('should validate resource name format', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const displayNameInput = page.locator('#display-name');
     const resourceNameInput = page.locator('#resource-name');
@@ -201,7 +201,7 @@ test.describe('APIProduct CRUD Operations', () => {
   test('should sync between Form and YAML views', { tag: '@smoke' }, async ({ page }) => {
     // Full page load first so activeNamespace is set correctly before SPA navigation
     await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
 
@@ -265,7 +265,7 @@ test.describe('APIProduct CRUD Operations', () => {
 
     // Form -> YAML: verify YAML reflects form values
     await page.locator('button:has-text("YAML View")').click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Poll Monaco API directly until YAML is populated
     const yamlHandle = await page.waitForFunction(
@@ -295,7 +295,7 @@ test.describe('APIProduct CRUD Operations', () => {
 
     // State retention: verify form values survive a tab switch to YAML and back
     await page.locator('button:has-text("Form View")').click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     await expect(page.locator('#display-name')).toHaveValue('YAML Sync Test');
     await expect(page.locator('#resource-name')).toHaveValue(resourceName);
@@ -306,7 +306,7 @@ test.describe('APIProduct CRUD Operations', () => {
 
   test('should disable Deprecated and Retired statuses', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Scroll to publish status section
     await page.locator('text=Lifecycle and Visibility').scrollIntoViewIfNeeded();
@@ -332,7 +332,7 @@ test.describe('APIProduct CRUD Operations', () => {
 
   test('should prevent form submission on Enter in tags', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Fill required fields first
     await page.locator('#display-name').fill('Enter Key Test');
@@ -366,13 +366,13 @@ test.describe('APIProduct CRUD Operations', () => {
 
   test('should create APIProduct via YAML view and verify in list', { tag: '@smoke' }, async ({ page }) => {
     await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForSelector('#display-name', { state: 'visible', timeout: 20000 });
 
     // Switch to YAML view
     await page.locator('button:has-text("YAML View")').click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const yamlProductName = `yaml-product-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
     generatedResourceName = yamlProductName;
@@ -418,7 +418,7 @@ spec:
     // ResourceYAMLEditor navigates to the k8s details page after creation (not our custom page).
     // Use a full page.goto() so the console properly loads our custom list route.
     await page.goto(`/kuadrant/apiproducts/ns/${TEST_NAMESPACE}`);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await page.waitForSelector('table', { timeout: 15000 });
 
     const found = await findRowWithPagination(page, yamlProductName);
@@ -588,7 +588,7 @@ EOF`, { stdio: 'inherit' });
 
     // Switch to YAML view
     await page.locator('button:has-text("YAML View")').click();
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     // Wait for Monaco to initialise with existing resource YAML
     const yamlHandle = await page.waitForFunction(
@@ -647,7 +647,7 @@ EOF`, { stdio: 'inherit' });
     await saveButton.click();
 
     // Verify redirect to list
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
     await expect(page.getByRole('heading', { name: 'API Products', exact: true })).toBeVisible({
       timeout: 20000,
     });
@@ -707,7 +707,7 @@ EOF`, { stdio: 'inherit' });
 
   test('should auto-generate resource name with unique suffix', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const displayNameInput = page.locator('#display-name');
     const resourceNameInput = page.locator('#resource-name');
@@ -733,7 +733,7 @@ EOF`, { stdio: 'inherit' });
 
   test('should handle special characters in display name conversion', { tag: '@nightly' }, async ({ page }) => {
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
     const displayNameInput = page.locator('#display-name');
     const resourceNameInput = page.locator('#resource-name');

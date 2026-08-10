@@ -109,7 +109,7 @@ export async function impersonateUser(page: Page, username: string): Promise<voi
     state: 'visible',
     timeout: 10_000,
   });
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 // stop impersonation if active
@@ -145,7 +145,7 @@ export async function spaNavigate(page: Page, path: string): Promise<void> {
     window.history.pushState({}, '', p);
     window.dispatchEvent(new PopStateEvent('popstate'));
   }, path);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 // Scroll through all pagination pages looking for a row matching `text`.
@@ -196,7 +196,7 @@ export async function navigateToAPIKeyApprovals(page: Page, namespace?: string):
   // Full page navigation so the console reads the namespace from the URL and updates its
   // active namespace state. spaNavigate (pushState) does not trigger the namespace update.
   await page.goto(`/kuadrant/apikey-approvals/ns/${ns}`);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 // wait for RBAC permission checks to finish loading.

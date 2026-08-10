@@ -8,7 +8,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import { Button, AlertVariant, Alert, AlertGroup } from '@patternfly/react-core';
-import { NavigateFunction } from 'react-router-dom-v5-compat';
+import { NavigateFunction } from 'react-router';
 
 interface GenericPolicyForm {
   model: K8sModel;

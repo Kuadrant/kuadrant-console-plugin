@@ -150,7 +150,7 @@ async function navigateToAPIProductAPIKeysTab(
     },
     { ns: namespace, name: productName },
   );
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 
   // Wait for the tab content to load - either the table header or empty state
   await expect(page.locator('th:has-text("Name"), th:has-text("Requester")').first()).toBeVisible({
@@ -160,11 +160,11 @@ async function navigateToAPIProductAPIKeysTab(
 
 async function navigateAsOwner(page: Parameters<typeof impersonateUser>[0]) {
   await page.goto('/');
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
   await dismissConsoleTour(page);
   await impersonateUser(page, 'test-api-owner');
   await navigateToAPIProductAPIKeysTab(page);
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
 }
 
 // ── View API Keys Tab ─────────────────────────────────────────────────────────
