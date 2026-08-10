@@ -2,7 +2,7 @@ name: E2E Tests (Nightly)
 
 on:
   schedule:
-    - cron: '0 2 * * *'  # Every night at 2:00 UTC
+    - cron: '0 2 * * *' # Every night at 2:00 UTC
   workflow_dispatch:
 
 permissions:
@@ -20,7 +20,7 @@ jobs:
     if: failure()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # ratchet:actions/checkout@v4
 
       - name: Ensure labels exist
         env:
@@ -37,7 +37,7 @@ jobs:
 
       - name: Download test results
         if: steps.failure.outputs.type == 'test'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # ratchet:actions/download-artifact@v4
         with:
           name: playwright-results-json
           path: ./results
