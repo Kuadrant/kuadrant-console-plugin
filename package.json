@@ -131,6 +131,7 @@
     "@babel/core": "^7.29.6",
     "@babel/preset-env": "^7.25.3",
     "@babel/preset-react": "^7.24.7",
+    "@patternfly/react-data-view": "6.4.0-prerelease.12",
     "@patternfly/react-table": "^6.4.0",
     "@patternfly/react-topology": "~6.4.0",
     "babel-loader": "^8.2.0",

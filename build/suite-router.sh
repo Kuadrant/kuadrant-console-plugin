@@ -42,7 +42,7 @@ done
 SPECS=""
 
 if echo "$CHANGED" | grep -qE "^src/components/apikey/"; then
-  SPECS="$SPECS apikey-lifecycle.spec.ts apikey-approvals.spec.ts apiproduct-apikeys-tab.spec.ts"
+  SPECS="$SPECS apikey-lifecycle.spec.ts apikey-approvals.spec.ts apiproduct-apikeys-tab.spec.ts data-view-regressions.spec.ts"
 fi
 
 if echo "$CHANGED" | grep -qE "^src/components/apiproduct/APIProductsListPage"; then
@@ -50,7 +50,7 @@ if echo "$CHANGED" | grep -qE "^src/components/apiproduct/APIProductsListPage"; 
 fi
 
 if echo "$CHANGED" | grep -qE "^src/components/apiproduct/APIProductAPIKeysTab"; then
-  SPECS="$SPECS apiproduct-apikeys-tab.spec.ts"
+  SPECS="$SPECS apiproduct-apikeys-tab.spec.ts data-view-regressions.spec.ts"
 fi
 
 if echo "$CHANGED" | grep -qE "^src/components/apiproduct/APIProductDefinitionTab|^src/components/apiproduct/APIProductPoliciesTab"; then
@@ -74,7 +74,11 @@ if echo "$CHANGED" | grep -qE "^src/components/topology/"; then
 fi
 
 if echo "$CHANGED" | grep -qE "^src/components/(gateway|KuadrantOverview|KuadrantPolicies|ResourceList|DropdownWithKebab)"; then
-  SPECS="$SPECS overview.spec.ts rbac.spec.ts"
+  SPECS="$SPECS overview.spec.ts rbac.spec.ts data-view-regressions.spec.ts"
+fi
+
+if echo "$CHANGED" | grep -qE "^src/components/KuadrantDataView"; then
+  SPECS="$SPECS data-view-regressions.spec.ts"
 fi
 
 if echo "$CHANGED" | grep -qE "^src/components/(dnspolicy|tlspolicy)/"; then

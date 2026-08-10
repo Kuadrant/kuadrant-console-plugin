@@ -48,7 +48,6 @@ import {
   useAccessReview,
   GreenCheckCircleIcon,
   YellowExclamationTriangleIcon,
-  TableData,
   NamespaceBar,
   checkAccess,
 } from '@openshift-console/dynamic-plugin-sdk';
@@ -103,6 +102,33 @@ interface TotalRequestsByGatewayResource {
     };
   };
 }
+
+type ComputedSortValue = number | string | null | undefined;
+
+const sortByComputedValue = <T,>(
+  data: T[],
+  direction: SortByDirection,
+  getValue: (item: T) => ComputedSortValue,
+): T[] => {
+  const multiplier = direction === SortByDirection.desc ? -1 : 1;
+  return [...data].sort((left, right) => {
+    const leftValue = getValue(left);
+    const rightValue = getValue(right);
+
+    if (leftValue === rightValue) return 0;
+    if (leftValue === undefined || leftValue === null) return -1 * multiplier;
+    if (rightValue === undefined || rightValue === null) return 1 * multiplier;
+
+    const comparison =
+      typeof leftValue === 'number' && typeof rightValue === 'number'
+        ? leftValue - rightValue
+        : String(leftValue).localeCompare(String(rightValue), undefined, {
+            numeric: true,
+            sensitivity: 'base',
+          });
+    return comparison * multiplier;
+  });
+};
 
 // module scope: components defined inside a render function get a new identity
 // on every re-render, remounting and flickering open popovers (#631)
@@ -420,69 +446,6 @@ const KuadrantOverviewPage: React.FC = () => {
     [t],
   );
 
-  const gatewayTrafficColumns = React.useMemo(
-    () => [
-      {
-        title: t('plugin__kuadrant-console-plugin~Name'),
-        id: 'name',
-        sort: 'metadata.name',
-        transforms: [sortable],
-      },
-      {
-        title: t('plugin__kuadrant-console-plugin~Namespace'),
-        id: 'namespace',
-        sort: 'metadata.namespace',
-        transforms: [sortable],
-      },
-      {
-        title: (
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-            {t('plugin__kuadrant-console-plugin~Status')}
-            <span style={{ display: 'inline-flex' }}>
-              <StatusLegend />
-            </span>
-          </span>
-        ) as unknown as string,
-        id: 'Status',
-        sort: (data: K8sResourceCommon[], direction: SortByDirection) => {
-          const sorted = [...data].sort((a, b) => getStatusSortRank(a) - getStatusSortRank(b));
-          return direction === SortByDirection.desc ? sorted.reverse() : sorted;
-        },
-        transforms: [sortable],
-      },
-      {
-        title: t('Total Requests'),
-        id: 'totalRequests',
-        sort: 'totalRequests',
-        transforms: [sortable],
-      },
-      {
-        title: t('Successful Requests'),
-        id: 'successfulRequests',
-        sort: 'successfulRequests',
-        transforms: [sortable],
-      },
-      {
-        title: t('Error Rate'),
-        id: 'errorRate',
-        sort: 'errorRate',
-        transforms: [sortable],
-      },
-      {
-        title: t('Error Codes'),
-        id: 'errorCodes',
-        sort: 'errorCodes',
-        transforms: [sortable],
-      },
-      {
-        title: '',
-        id: 'kebab',
-        props: { className: 'pf-v6-c-table__action' },
-      },
-    ],
-    [t],
-  );
-
   const handleCreateResource = (resource) => {
     const resolvedNamespace = watchNamespace === '#ALL_NS#' ? 'default' : watchNamespace;
     const gvk = resourceGVKMapping[resource];
@@ -562,29 +525,31 @@ const KuadrantOverviewPage: React.FC = () => {
   }
 
   // Helper functions to pull out metric values in correct format, given a gateway object
-  const getTotalRequests = (obj: { metadata: { namespace: string; name: string } }): number => {
-    const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
+  const getGatewayMetricKey = (obj: K8sResourceCommon): string =>
+    buildGatewayKey(obj.metadata.namespace || '', obj.metadata.name, metricsWorkloadSuffix);
+  const getTotalRequests = (obj: K8sResourceCommon): number => {
+    const key = getGatewayMetricKey(obj);
     const total = totalRequestsByGatewayResource[key]?.total;
     return Number.isFinite(total) ? Math.round(total) : 0;
   };
-  const getSuccessfulRequests = (obj: {
-    metadata: { namespace: string; name: string };
-  }): number => {
-    const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
+  const getSuccessfulRequests = (obj: K8sResourceCommon): number => {
+    const key = getGatewayMetricKey(obj);
     const success =
       totalRequestsByGatewayResource[key]?.total - totalRequestsByGatewayResource[key]?.errors;
     return Number.isFinite(success) ? Math.round(success) : 0;
   };
-  const getErrorRate = (obj: { metadata: { namespace: string; name: string } }): string => {
-    const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
+  const getErrorRateValue = (obj: K8sResourceCommon): number | null => {
+    const key = getGatewayMetricKey(obj);
     const rate =
       (totalRequestsByGatewayResource[key]?.errors / totalRequestsByGatewayResource[key]?.total) *
       100;
-    return Number.isFinite(rate) ? rate.toFixed(1) : '-';
+    return Number.isFinite(rate) ? rate : null;
   };
-  const getErrorCodes = (obj: { metadata: { namespace: string; name: string } }): Set<string> => {
+  const getErrorRate = (obj: K8sResourceCommon): string =>
+    getErrorRateValue(obj)?.toFixed(1) ?? '-';
+  const getErrorCodes = (obj: K8sResourceCommon): Set<string> => {
     const codes = new Set<string>();
-    const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
+    const key = getGatewayMetricKey(obj);
     if (totalRequestsByGatewayResource[key]?.codes) {
       Object.entries(totalRequestsByGatewayResource[key].codes).forEach(([key, value]) => {
         if (key.startsWith('4') && value > 0) {
@@ -599,10 +564,10 @@ const KuadrantOverviewPage: React.FC = () => {
 
   // Metrics columns rendering
   const getErrorCodeDistribution = (
-    obj: { metadata: { namespace: string; name: string } },
+    obj: K8sResourceCommon,
     prefix: string,
   ): Array<[string, Distribution]> => {
-    const key = buildGatewayKey(obj.metadata.namespace, obj.metadata.name, metricsWorkloadSuffix);
+    const key = getGatewayMetricKey(obj);
     const codes = totalRequestsByGatewayResource[key]?.codes ?? {};
     const filteredCodes = Object.entries(codes).filter(([code]) => code.startsWith(prefix));
 
@@ -628,50 +593,89 @@ const KuadrantOverviewPage: React.FC = () => {
     return sortedDistribution;
   };
   const gatewayTrafficRenders = {
-    totalRequests: (column, obj, activeColumnIDs) => {
-      return (
-        <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-          {getTotalRequests(obj) || '-'}
-        </TableData>
-      );
-    },
-    successfulRequests: (column, obj, activeColumnIDs) => {
-      return (
-        <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-          {getSuccessfulRequests(obj) || '-'}
-        </TableData>
-      );
-    },
-    errorRate: (column, obj, activeColumnIDs) => {
-      return (
-        <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-          {getErrorRate(obj) || '-'}%
-        </TableData>
-      );
-    },
-    errorCodes: (column, obj, activeColumnIDs) => {
+    totalRequests: (_column, obj) => getTotalRequests(obj) || '-',
+    successfulRequests: (_column, obj) => getSuccessfulRequests(obj) || '-',
+    errorRate: (_column, obj) => `${getErrorRate(obj) || '-'}%`,
+    errorCodes: (_column, obj) => {
       const errorCodes = [...getErrorCodes(obj)];
       return (
-        <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
+        <>
           {errorCodes.length === 0 ? (
             <Label variant="outline" color="green">
               {t('None')}
             </Label>
           ) : (
-            errorCodes.map((code) => {
-              return (
-                <ErrorCodeLabel
-                  key={code}
-                  codeGroup={code}
-                  distribution={getErrorCodeDistribution(obj, code[0])}
-                />
-              );
-            })
+            errorCodes.map((code) => (
+              <ErrorCodeLabel
+                key={code}
+                codeGroup={code}
+                distribution={getErrorCodeDistribution(obj, code[0])}
+              />
+            ))
           )}
-        </TableData>
+        </>
       );
     },
   };
+
+  const gatewayTrafficColumns = [
+    {
+      title: t('plugin__kuadrant-console-plugin~Name'),
+      id: 'name',
+      sort: 'metadata.name',
+    },
+    {
+      title: t('plugin__kuadrant-console-plugin~Namespace'),
+      id: 'namespace',
+      sort: 'metadata.namespace',
+    },
+    {
+      title: (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          {t('plugin__kuadrant-console-plugin~Status')}
+          <span style={{ display: 'inline-flex' }}>
+            <StatusLegend />
+          </span>
+        </span>
+      ) as unknown as string,
+      id: 'Status',
+      sort: (data: K8sResourceCommon[], direction: SortByDirection) =>
+        sortByComputedValue(data, direction, getStatusSortRank),
+    },
+    {
+      title: t('Total Requests'),
+      id: 'totalRequests',
+      sort: (data: K8sResourceCommon[], direction: SortByDirection) =>
+        sortByComputedValue(data, direction, getTotalRequests),
+    },
+    {
+      title: t('Successful Requests'),
+      id: 'successfulRequests',
+      sort: (data: K8sResourceCommon[], direction: SortByDirection) =>
+        sortByComputedValue(data, direction, getSuccessfulRequests),
+    },
+    {
+      title: t('Error Rate'),
+      id: 'errorRate',
+      sort: (data: K8sResourceCommon[], direction: SortByDirection) =>
+        sortByComputedValue(data, direction, getErrorRateValue),
+    },
+    {
+      title: t('Error Codes'),
+      id: 'errorCodes',
+      sort: (data: K8sResourceCommon[], direction: SortByDirection) =>
+        sortByComputedValue(
+          data,
+          direction,
+          (item) => [...getErrorCodes(item)].join(', ') || t('None'),
+        ),
+    },
+    {
+      title: '',
+      id: 'kebab',
+      props: { className: 'pf-v6-c-table__action' },
+    },
+  ];
 
   const gvk = RESOURCES.Gateway.gvk;
 

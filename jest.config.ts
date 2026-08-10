@@ -5,13 +5,16 @@ const config: Config = {
   setupFiles: ['<rootDir>/__mocks__/jestSetup.ts'],
   setupFilesAfterEnv: ['@testing-library/jest-dom'],
   transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: {
-        jsx: 'react',
-        esModuleInterop: true,
+    '^.+\\.(ts|tsx)$': [
+      'ts-jest',
+      {
+        tsconfig: {
+          jsx: 'react',
+          esModuleInterop: true,
+        },
+        diagnostics: true,
       },
-      diagnostics: true,
-    }],
+    ],
   },
   moduleNameMapper: {
     // CSS and static file imports
@@ -19,6 +22,8 @@ const config: Config = {
     // ESM modules that Jest cannot parse — stub with no-op exports
     '^@openshift-console/dynamic-plugin-sdk$': '<rootDir>/__mocks__/esmStubs.ts',
     '^@patternfly/react-topology$': '<rootDir>/__mocks__/esmStubs.ts',
+    // DataView's CommonJS bundle imports individual tokens through their ESM paths.
+    '^@patternfly/react-tokens/dist/esm/(.*)$': '@patternfly/react-tokens/dist/js/$1',
   },
   testMatch: ['**/*.test.{ts,tsx}'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx'],
