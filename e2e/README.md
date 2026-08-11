@@ -85,6 +85,9 @@ npx playwright test --config=e2e/playwright.config.ts
 - `e2e/tests/apiproduct-overview-tab.spec.ts` - API product overview tab
 - `e2e/tests/apiproduct-rbac.spec.ts` - API product RBAC
 - `e2e/tests/api-product-list.spec.ts` - API product list page
+- `e2e/tests/attached-tab.spec.ts` - Attached tab for Gateway, HTTPRoute, and GRPCRoute detail views
+- `e2e/tests/gateway-crud.spec.ts` - Gateway create, edit, and delete operations
+- `e2e/tests/httproute-crud.spec.ts` - HTTPRoute create, edit, and delete operations
 - `e2e/tests/overview.spec.ts` - Overview dashboard cards, stats, and navigation
 - `e2e/tests/policy-forms.spec.ts` - Policy creation forms (DNS, TLS, Auth, RateLimit, etc.)
 - `e2e/tests/rbac.spec.ts` - RBAC permission tests
@@ -116,7 +119,7 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
 
   | Workflow | Trigger | What runs |
   |---|---|---|
-  | `e2e.yaml` | PRs to `main`/`release-*` | Runs the suite router, then calls `e2e-common.yaml` with `suite: smoke` |
+  | `e2e.yaml` | PRs to `main`/`release-*`, `merge_group`, `workflow_dispatch` | Runs the suite router, then calls `e2e-common.yaml` with `suite: smoke` |
   | `e2e-nightly.yaml` | Cron daily at 02:00 UTC | Calls `e2e-common.yaml` with `suite: full` (all specs, all tags) |
   | `e2e-common.yaml` | Called by the above two | Reusable workflow that does the actual work (see below) |
 
@@ -165,8 +168,10 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
   | `src/components/apiproduct/` (catch-all) | `apiproduct-crud`, `apiproduct-overview-tab`, `api-product-list`, `apiproduct-rbac` |
   | `src/components/topology/` | `topology`, `rbac` |
   | `src/components/gateway/` | `gateway-crud`, `overview`, `rbac` |
+  | `src/components/(KuadrantOverview\|KuadrantPolicies\|ResourceList\|DropdownWithKebab)` | `overview`, `rbac` |
   | `src/components/(dnspolicy\|tlspolicy\|ratelimitpolicy\|authpolicy)/` | `policy-forms`, `rbac` |
   | `src/components/(httproute\|issuer)/` | `rbac`, `httproute-crud` |
+  | `src/components/(AttachedResources\|gateway/GatewaySingleOverview\|httproute/HTTPRouteSingleOverview\|grpcroute/)` | `attached-tab` |
   | `src/components/NoPermissionsView` | `apiproduct-rbac`, `rbac` |
 
   **Shared-file fallback** — if any of these paths changed, the router outputs empty
@@ -198,7 +203,7 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
   - Run `yarn check:spec-map` to verify that the spec is referenced by `suite-router.sh`
   - Verify separately that the new component path matches the intended router mapping
   - Add the file to the [Test Files](#test-files) list above
-  - **Run locally** to verify: `npx playwright test e2e/tests/your-file.spec.ts --config=e2e/playwright.config.ts`
+  - **Run locally** to verify: `npx playwright test --config=e2e/playwright.config.ts e2e/tests/your-file.spec.ts`
 
 ## Test Environment
 
