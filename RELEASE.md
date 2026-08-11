@@ -16,6 +16,52 @@ The tag push triggers `build-push.yaml`, which builds and pushes the
 Use the guarded Claude command for the happy path. The manual steps below are
 the equivalent fallback and are also useful when diagnosing a failed release.
 
+## Maintaining release streams
+
+### New console generation
+
+If a console release changes a shared-module major:
+
+1. Land compatible prerequisites before the SDK bump.
+2. Cut a branch for the outgoing generation. Give each stream a distinct
+   `consolePlugin.version`.
+3. Bump the SDK, React and React Router together. Set the new `pluginAPI` floor
+   and `latestSupportedOpenshiftVersion`.
+4. Test against a real cluster. Federation failures do not appear in
+   `yarn build`.
+
+Before merging, check that CI, image tags, Quay cleanup and the release process
+cover both branches. Update the local console image and README matrix as well.
+
+### Operator image selection
+
+The Kuadrant operator reads `ClusterVersion/version.status.desired.version`,
+maps it to a `RELATED_IMAGE_*` value, and updates the plugin Deployment. These
+image values also appear in the OLM bundle's `relatedImages`, so `oc-mirror` can
+find them.
+
+This mapping first handled the PatternFly 5/6 split. For each new console
+generation, add the OCP range and an immutable plugin image to the operator's
+release configuration, OLM bundle and Helm chart. Test the boundary and the
+cluster-upgrade path. The 4.22 work is tracked in
+[Kuadrant/kuadrant-console-plugin#737](https://github.com/Kuadrant/kuadrant-console-plugin/issues/737).
+
+### SDK and shared modules
+
+Use the `X.Y-latest` SDK dist-tag for the target console generation. Wait for GA
+before adopting a new generation; prerelease peer ranges can still change.
+
+The console supplies shared modules at runtime. A dependency bump in this repo
+changes the build and lockfile, not the code running in the console. If the SDK
+peer range excludes a fixed version needed for scanning, widen it with a patch
+under `.yarn/patches`. Check the version shipped by the console separately.
+
+### Backports
+
+Send applicable bug fixes and SDK-independent changes to `release-0.x` in a PR
+with a `[backport]` title. Do not backport code that needs React 18, React Router
+7 or SDK 4.22. Review cherry-picks normally; the branches have diverged.
+
 ## Prerequisites
 
 - Push access to `Kuadrant/console-plugin`
