@@ -29,9 +29,43 @@ cleanup() {
   log "cluster is still running. tear down with: make oinc-teardown"
 }
 
+RUNTIME=$(detect_runtime)
+HOST=$(container_host "${RUNTIME}")
+PLUGIN_NAME=$(node -p "require('${SCRIPT_DIR}/package.json').consolePlugin.name")
+PLUGIN_URL="http://${HOST}:${PLUGIN_PORT}"
+
+console_has_plugin() {
+  "${RUNTIME}" inspect oinc-console --format '{{json .Config.Cmd}}' 2>/dev/null \
+    | grep -q "${PLUGIN_NAME}"
+}
+
+restart_console_with_plugin() {
+  log "console running without plugin, restarting with plugin wired..."
+  local image
+  image=$("${RUNTIME}" inspect oinc-console --format '{{.Config.Image}}')
+  local env_args=()
+  while IFS= read -r var; do
+    env_args+=(-e "${var}")
+  done < <("${RUNTIME}" inspect oinc-console --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -v '^$')
+
+  "${RUNTIME}" rm -f oinc-console >/dev/null 2>&1
+  "${RUNTIME}" run -d --name oinc-console \
+    "${env_args[@]}" \
+    -p "127.0.0.1:${CONSOLE_PORT}:9000" \
+    "${image}" \
+    /opt/bridge/bin/bridge \
+    --public-dir=/opt/bridge/static \
+    -plugins "${PLUGIN_NAME}=${PLUGIN_URL}"
+  log "console restarted with plugin registered"
+}
+
 if kubectl get nodes &>/dev/null 2>&1; then
   if curl -sf "http://localhost:${CONSOLE_PORT}" >/dev/null 2>&1; then
-    log "existing cluster and console detected, skipping setup"
+    if console_has_plugin; then
+      log "existing cluster and console detected, skipping setup"
+    else
+      restart_console_with_plugin
+    fi
   else
     log "cluster running but console is down, recreating..."
     oinc delete --force
