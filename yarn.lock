@@ -2878,7 +2878,7 @@ __metadata:
 
 "@openshift-console/dynamic-plugin-sdk@patch:@openshift-console/dynamic-plugin-sdk@npm%3A4.22.0#~/.yarn/patches/@openshift-console-dynamic-plugin-sdk-npm-4.22.0-40a905f3df.patch":
   version: 4.22.0
-  resolution: "@openshift-console/dynamic-plugin-sdk@patch:@openshift-console/dynamic-plugin-sdk@npm%3A4.22.0#~/.yarn/patches/@openshift-console-dynamic-plugin-sdk-npm-4.22.0-40a905f3df.patch::version=4.22.0&hash=256046"
+  resolution: "@openshift-console/dynamic-plugin-sdk@patch:@openshift-console/dynamic-plugin-sdk@npm%3A4.22.0#~/.yarn/patches/@openshift-console-dynamic-plugin-sdk-npm-4.22.0-40a905f3df.patch::version=4.22.0&hash=39ae31"
   dependencies:
     "@openshift/dynamic-plugin-sdk": "npm:^8.0.0"
     immutable: "npm:^3.8.3"
@@ -2908,7 +2908,7 @@ __metadata:
       optional: true
     redux-thunk:
       optional: true
-  checksum: 10c0/2c1ee146cdb1cec96845591aedd2f85ecfe992e9553078bfb3951b0eb08dcba20a697d60a98d201bce6ca07d1bbfd8e9f5993c1f2212fdd375cd8df51607761f
+  checksum: 10c0/c756a94b3235dcdbbdfe55a4ac7e6621fe98523beb20d0a165f908d7b012840148d7006940ff38acfb68d9dc41122518d859a05c41b388351005e99cdee1b784
   languageName: node
   linkType: hard
 
@@ -12286,7 +12286,6 @@ __metadata:
     react-helmet: "npm:^6.1.0"
     react-i18next: "npm:~16.5.8"
     react-router: "npm:~7.18.1"
-    semver: "npm:^7.7.3"
     style-loader: "npm:^3.3.1"
     stylelint: "npm:^15.3.0"
     stylelint-config-standard: "npm:^31.0.0"
