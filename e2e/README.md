@@ -137,6 +137,29 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
   On nightly failures, `e2e-nightly.yaml` automatically opens a GitHub issue with the
   failed test names extracted from `playwright-results.json`.
 
+### Failure Classification
+
+  `e2e-common.yaml` classifies every run into one of three failure types:
+
+  | Type | Meaning | Trigger |
+  |---|---|---|
+  | `none` | All steps passed | — |
+  | `infrastructure` | Cluster setup or dev server failed | `setup` or `wait-server` step failed |
+  | `test` | Tests themselves failed | Any Playwright test step failed |
+
+  The nightly workflow uses this classification to label auto-opened issues:
+  `nightly-infrastructure` for infra errors, `nightly-failure` for test failures.
+  Infrastructure issues only download test results when tests actually ran, avoiding
+  noise from cluster setup failures.
+
+### Paths Filter (build, lint, i18n)
+
+  `build.yaml`, `lint.yaml`, and `i18n.yaml` each have a `changes` job that skips
+  the check for **docs-only PRs.** If every changed file matches a docs-only pattern
+  (`.md`, `docs/`, `.github/`, `charts/`, `config/`, `kuadrant-dev-setup/`,
+  `.devcontainer/`, `LICENSE`), the build/lint/i18n jobs are skipped entirely.
+  Non-PR events (`merge_group`, `workflow_dispatch`) always run.
+
 ### Suite Router (`build/suite-router.sh`)
 
   The suite router optimises PR CI by running only the e2e specs relevant to changed
