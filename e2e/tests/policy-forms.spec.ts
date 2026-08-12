@@ -584,7 +584,8 @@ test.describe('OIDCPolicy form', () => {
       await page.locator('#issuer-url').fill('https://auth.example.com');
       await expect(createButton).toBeEnabled();
 
-      await page.locator('#client-id').fill('');
+      // clearing a required field disables it again — consistent with DNS/TLS tests
+      await page.locator('#policy-name').fill('');
       await expect(createButton).toBeDisabled();
     },
   );
@@ -811,6 +812,17 @@ spec:
         await expect(nameInput).toBeDisabled();
         await expect(page.locator('#gateway-select')).toHaveValue(`${namespace}/${gateway}`);
 
+        // open the limit label and verify it loaded
+        await expect(page.locator('text=default')).toBeVisible({ timeout: 10_000 });
+
+        // remove existing limit and add updated one
+        await page.getByRole('button', { name: 'Add Limit' }).click();
+        await page.locator('#new-limit-name').fill('updated');
+        await page.locator('#new-limit-value').fill('200');
+        await page.locator('#new-limit-window').fill('1h');
+        await page.getByRole('button', { name: 'Add Rate' }).click();
+        await page.getByRole('button', { name: 'Save Limit' }).click();
+
         const saveButton = page.getByRole('button', { name: 'Save', exact: true });
         await expect(saveButton).toBeEnabled();
         await saveButton.click();
@@ -819,6 +831,18 @@ spec:
           new RegExp(`/kuadrant/policies/ns/${namespace}/tokenratelimit`),
           { timeout: 15_000 },
         );
+
+        expect(
+          kubectl([
+            'get',
+            'tokenratelimitpolicy',
+            policyName,
+            '-n',
+            namespace,
+            '-o',
+            'jsonpath={.spec.limits.updated.rates[0].limit}',
+          ]),
+        ).toBe('200');
       },
     );
   });
