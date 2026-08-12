@@ -1,19 +1,26 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, AlertGroup, EmptyState, EmptyStateBody, Title } from '@patternfly/react-core';
+import {
+  Alert,
+  AlertGroup,
+  EmptyState,
+  EmptyStateBody,
+  Pagination,
+  Title,
+} from '@patternfly/react-core';
 import {
   K8sResourceKind,
   ResourceLink,
   useK8sWatchResources,
-  VirtualizedTable,
-  TableData,
-  RowProps,
-  TableColumn,
   WatchK8sResource,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { SearchIcon } from '@patternfly/react-icons';
 import { getStatusLabel } from '../utils/statusLabel';
 import { RESOURCES } from '../utils/resources';
+import KuadrantDataView, {
+  KuadrantDataViewColumn,
+  useKuadrantDataViewPagination,
+} from './KuadrantDataView';
 
 type AssociatedResourceListProps = {
   resource: K8sResourceKind;
@@ -68,71 +75,53 @@ const AssociatedResourceList: React.FC<AssociatedResourceListProps> = ({ resourc
     return resourcesArray;
   }, [watchedResources, resource, resourceGroup]);
 
-  const columns: TableColumn<K8sResourceKind>[] = [
-    {
-      title: t('plugin__kuadrant-console-plugin~Name'),
-      id: 'name',
-      sort: 'metadata.name',
-    },
-    {
-      title: t('plugin__kuadrant-console-plugin~Type'),
-      id: 'type',
-      sort: 'kind',
-    },
-    {
-      title: t('plugin__kuadrant-console-plugin~Namespace'),
-      id: 'namespace',
-      sort: 'metadata.namespace',
-    },
-    {
-      title: t('plugin__kuadrant-console-plugin~Status'),
-      id: 'status',
-    },
-  ];
+  const columns = React.useMemo<KuadrantDataViewColumn<K8sResourceKind>[]>(
+    () => [
+      {
+        title: t('plugin__kuadrant-console-plugin~Name'),
+        id: 'name',
+        sort: 'metadata.name',
+      },
+      {
+        title: t('plugin__kuadrant-console-plugin~Type'),
+        id: 'type',
+        sort: 'kind',
+      },
+      {
+        title: t('plugin__kuadrant-console-plugin~Namespace'),
+        id: 'namespace',
+        sort: 'metadata.namespace',
+      },
+      {
+        title: t('plugin__kuadrant-console-plugin~Status'),
+        id: 'status',
+      },
+    ],
+    [t],
+  );
 
-  const AssociatedResourceRow: React.FC<RowProps<K8sResourceKind>> = ({ obj, activeColumnIDs }) => {
-    const [group, version] = obj.apiVersion.includes('/')
-      ? obj.apiVersion.split('/')
-      : ['', obj.apiVersion];
-    return (
-      <>
-        {columns.map((column) => {
-          switch (column.id) {
-            case 'name':
-              return (
-                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                  <ResourceLink
-                    groupVersionKind={{ group, version, kind: obj.kind }}
-                    name={obj.metadata.name}
-                    namespace={obj.metadata.namespace}
-                  />
-                </TableData>
-              );
-            case 'type':
-              return (
-                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                  {obj.kind}
-                </TableData>
-              );
-            case 'namespace':
-              return (
-                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                  {obj.metadata.namespace || '-'}
-                </TableData>
-              );
-            case 'status':
-              return (
-                <TableData key={column.id} id={column.id} activeColumnIDs={activeColumnIDs}>
-                  {getStatusLabel(t, obj)}
-                </TableData>
-              );
-            default:
-              return null;
-          }
-        })}
-      </>
-    );
-  };
+  const getRow = React.useCallback(
+    (obj: K8sResourceKind) => {
+      const [group, version] = obj.apiVersion.includes('/')
+        ? obj.apiVersion.split('/')
+        : ['', obj.apiVersion];
+      return [
+        {
+          cell: (
+            <ResourceLink
+              groupVersionKind={{ group, version, kind: obj.kind }}
+              name={obj.metadata.name}
+              namespace={obj.metadata.namespace}
+            />
+          ),
+        },
+        obj.kind,
+        obj.metadata.namespace || '-',
+        getStatusLabel(t, obj),
+      ];
+    },
+    [t],
+  );
 
   const allLoaded = Object.values(watchedResources).every((res) => res.loaded);
   const loadErrors = Object.values(watchedResources)
@@ -140,6 +129,9 @@ const AssociatedResourceList: React.FC<AssociatedResourceListProps> = ({ resourc
     .map((res) => res.loadError);
   const combinedLoadError =
     loadErrors.length > 0 ? new Error(loadErrors.map((err) => err.message).join('; ')) : null;
+  const { page, perPage, onSetPage, onPerPageSelect } = useKuadrantDataViewPagination(
+    allAssociatedResources.length,
+  );
 
   return (
     <>
@@ -162,14 +154,32 @@ const AssociatedResourceList: React.FC<AssociatedResourceListProps> = ({ resourc
           <EmptyStateBody>{t('No associated policies found')}</EmptyStateBody>
         </EmptyState>
       ) : (
-        <VirtualizedTable<K8sResourceKind>
-          data={allAssociatedResources}
-          unfilteredData={allAssociatedResources}
-          loaded={allLoaded}
-          loadError={combinedLoadError}
-          columns={columns}
-          Row={AssociatedResourceRow}
-        />
+        <>
+          <KuadrantDataView<K8sResourceKind>
+            ariaLabel={t('Associated resources')}
+            data={allAssociatedResources}
+            loaded={allLoaded}
+            loadError={combinedLoadError}
+            columns={columns}
+            getRow={getRow}
+            page={page}
+            perPage={perPage}
+            ouiaId="AssociatedResourcesDataView"
+          />
+          <Pagination
+            itemCount={allAssociatedResources.length}
+            page={page}
+            perPage={perPage}
+            onSetPage={onSetPage}
+            onPerPageSelect={onPerPageSelect}
+            variant="bottom"
+            perPageOptions={[
+              { title: '5', value: 5 },
+              { title: '10', value: 10 },
+              { title: '20', value: 20 },
+            ]}
+          />
+        </>
       )}
     </>
   );

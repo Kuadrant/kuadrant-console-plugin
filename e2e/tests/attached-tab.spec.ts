@@ -135,7 +135,7 @@ spec:
 
       const authpolicyRow = page.locator(`tr:has(a[data-test="${authpolicy}"])`);
       await expect(
-        authpolicyRow.getByRole('gridcell', { name: 'AuthPolicy', exact: true }),
+        authpolicyRow.getByRole('cell', { name: 'AuthPolicy', exact: true }),
       ).toBeVisible();
     },
   );

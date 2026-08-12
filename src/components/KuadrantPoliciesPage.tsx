@@ -2,11 +2,9 @@ import * as React from 'react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useTranslation } from 'react-i18next';
-import { sortable } from '@patternfly/react-table';
 import {
   NamespaceBar,
   HorizontalNav,
-  TableColumn,
   K8sResourceCommon,
   useActivePerspective,
   ListPageCreateLink,
@@ -22,6 +20,7 @@ import {
   MenuToggleElement,
 } from '@patternfly/react-core';
 import ResourceList from './ResourceList';
+import { KuadrantDataViewColumn } from './KuadrantDataView';
 import './kuadrant.css';
 import { RESOURCES, getPolicyKinds, resourceGVKMapping } from '../utils/resources';
 import NoPermissionsView from './NoPermissionsView';
@@ -82,7 +81,7 @@ const useResourceRBAC = (resourceKey: string, namespace?: string): ResourceRBAC 
 
 export const AllPoliciesListPage: React.FC<{
   activeNamespace: string;
-  columns?: TableColumn<K8sResourceCommon>[];
+  columns?: KuadrantDataViewColumn<K8sResourceCommon>[];
   showAlertGroup?: boolean;
   paginationLimit?: number;
   resourceRBAC: RBACMap;
@@ -238,7 +237,7 @@ const PoliciesListPage: React.FC<{
 // Context to pass data to tab components without prop drilling
 const PolicyPageContext = React.createContext<{
   activeNamespace: string;
-  defaultColumns: TableColumn<K8sResourceCommon>[];
+  defaultColumns: KuadrantDataViewColumn<K8sResourceCommon>[];
   resourceRBAC: RBACMap;
 } | null>(null);
 
@@ -344,24 +343,21 @@ const KuadrantPoliciesPage: React.FC = () => {
   const { handleNamespaceChange, activeNamespace } = useKuadrantNamespaceChange('/policies');
   const [activePerspective] = useActivePerspective();
 
-  const defaultColumns: TableColumn<K8sResourceCommon>[] = [
+  const defaultColumns: KuadrantDataViewColumn<K8sResourceCommon>[] = [
     {
       title: t('plugin__kuadrant-console-plugin~Name'),
       id: 'name',
       sort: 'metadata.name',
-      transforms: [sortable],
     },
     {
       title: t('plugin__kuadrant-console-plugin~Type'),
       id: 'type',
       sort: 'kind',
-      transforms: [sortable],
     },
     {
       title: t('plugin__kuadrant-console-plugin~Namespace'),
       id: 'namespace',
       sort: 'metadata.namespace',
-      transforms: [sortable],
     },
     {
       title: t('plugin__kuadrant-console-plugin~Target'),
@@ -375,7 +371,6 @@ const KuadrantPoliciesPage: React.FC = () => {
       title: t('plugin__kuadrant-console-plugin~Created'),
       id: 'Created',
       sort: 'metadata.creationTimestamp',
-      transforms: [sortable],
     },
     {
       title: '', // No title for the kebab menu column

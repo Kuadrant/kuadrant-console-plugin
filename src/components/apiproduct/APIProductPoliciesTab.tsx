@@ -9,6 +9,7 @@ import {
   EmptyState,
   EmptyStateBody,
   Alert,
+  Pagination,
   Spinner,
 } from '@patternfly/react-core';
 import { SearchIcon } from '@patternfly/react-icons';
@@ -19,10 +20,6 @@ import {
   useAccessReview,
   ResourceLink,
   K8sResourceCommon,
-  VirtualizedTable,
-  TableData,
-  RowProps,
-  TableColumn,
   WatchK8sResource,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { APIProduct } from './types';
@@ -31,6 +28,10 @@ import { getStatusLabel } from '../../utils/statusLabel';
 import extractResourceNameFromURL from '../../utils/nameFromPath';
 import { getResourceNameFromKind } from '../../utils/getModelFromResource';
 import NoPermissionsView from '../NoPermissionsView';
+import KuadrantDataView, {
+  KuadrantDataViewColumn,
+  useKuadrantDataViewPagination,
+} from '../KuadrantDataView';
 import '../kuadrant.css';
 
 type PolicyKind = 'PlanPolicy' | 'AuthPolicy' | 'RateLimitPolicy' | 'OIDCPolicy';
@@ -169,47 +170,51 @@ const APIProductPoliciesTab: React.FC = () => {
   }, [watchedPolicies]);
 
   // Table columns
-  const columns: TableColumn<PolicyResource>[] = [
-    {
-      title: t('Name'),
-      id: 'name',
-      sort: 'metadata.name',
-    },
-    {
-      title: t('Type'),
-      id: 'type',
-      sort: 'kind',
-    },
-    {
-      title: t('Status'),
-      id: 'status',
-    },
-  ];
+  const columns = React.useMemo<KuadrantDataViewColumn<PolicyResource>[]>(
+    () => [
+      {
+        title: t('Name'),
+        id: 'name',
+        sort: 'metadata.name',
+      },
+      {
+        title: t('Type'),
+        id: 'type',
+        sort: 'kind',
+      },
+      {
+        title: t('Status'),
+        id: 'status',
+      },
+    ],
+    [t],
+  );
 
-  // Table row component
-  const PolicyRow: React.FC<RowProps<PolicyResource>> = ({ obj, activeColumnIDs }) => {
-    const [group, version] = obj.apiVersion.includes('/')
-      ? obj.apiVersion.split('/')
-      : ['', obj.apiVersion];
+  const getRow = React.useCallback(
+    (obj: PolicyResource) => {
+      const [group, version] = obj.apiVersion.includes('/')
+        ? obj.apiVersion.split('/')
+        : ['', obj.apiVersion];
+      return [
+        {
+          cell: (
+            <ResourceLink
+              groupVersionKind={{ group, version, kind: obj.kind }}
+              name={obj.metadata.name}
+              namespace={obj.metadata.namespace}
+            />
+          ),
+        },
+        obj.kind,
+        getStatusLabel(t, obj),
+      ];
+    },
+    [t],
+  );
 
-    return (
-      <>
-        <TableData id="name" activeColumnIDs={activeColumnIDs}>
-          <ResourceLink
-            groupVersionKind={{ group, version, kind: obj.kind }}
-            name={obj.metadata.name}
-            namespace={obj.metadata.namespace}
-          />
-        </TableData>
-        <TableData id="type" activeColumnIDs={activeColumnIDs}>
-          {obj.kind}
-        </TableData>
-        <TableData id="status" activeColumnIDs={activeColumnIDs}>
-          {getStatusLabel(t, obj)}
-        </TableData>
-      </>
-    );
-  };
+  const { page, perPage, onSetPage, onPerPageSelect } = useKuadrantDataViewPagination(
+    discoveredPolicies.length,
+  );
 
   if (canGetLoading) {
     return (
@@ -316,14 +321,32 @@ const APIProductPoliciesTab: React.FC = () => {
           </EmptyStateBody>
         </EmptyState>
       ) : (
-        <VirtualizedTable<PolicyResource>
-          data={discoveredPolicies}
-          unfilteredData={discoveredPolicies}
-          loaded={allPoliciesLoaded}
-          loadError={null}
-          columns={columns}
-          Row={PolicyRow}
-        />
+        <>
+          <KuadrantDataView<PolicyResource>
+            ariaLabel={t('Policies')}
+            data={discoveredPolicies}
+            loaded={allPoliciesLoaded}
+            loadError={null}
+            columns={columns}
+            getRow={getRow}
+            page={page}
+            perPage={perPage}
+            ouiaId="APIProductPoliciesDataView"
+          />
+          <Pagination
+            itemCount={discoveredPolicies.length}
+            page={page}
+            perPage={perPage}
+            onSetPage={onSetPage}
+            onPerPageSelect={onPerPageSelect}
+            variant="bottom"
+            perPageOptions={[
+              { title: '5', value: 5 },
+              { title: '10', value: 10 },
+              { title: '20', value: 20 },
+            ]}
+          />
+        </>
       )}
     </PageSection>
   );

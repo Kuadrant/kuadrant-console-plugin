@@ -3,7 +3,6 @@ import { useNavigate, useLocation, useParams } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import Helmet from 'react-helmet';
 import { Link } from 'react-router';
-import { sortable } from '@patternfly/react-table';
 import {
   PageSection,
   Title,
@@ -11,17 +10,7 @@ import {
   EmptyStateBody,
   AlertGroup,
   Alert,
-  Toolbar,
-  ToolbarContent,
-  ToolbarItem,
-  ToolbarGroup,
-  Select,
-  SelectOption,
   MenuToggle,
-  MenuToggleElement,
-  InputGroup,
-  TextInput,
-  ToolbarFilter,
   Dropdown,
   DropdownList,
   DropdownItem,
@@ -32,11 +21,14 @@ import {
   Spinner,
 } from '@patternfly/react-core';
 import {
+  DataViewCheckboxFilter,
+  DataViewFilters,
+  DataViewTextFilter,
+  DataViewToolbar,
+} from '@patternfly/react-data-view';
+import type { DataViewTr } from '@patternfly/react-data-view';
+import {
   useK8sWatchResource,
-  VirtualizedTable,
-  TableColumn,
-  RowProps,
-  TableData,
   Timestamp,
   ListPageBody,
   ResourceLink,
@@ -65,153 +57,59 @@ import { formatLimits } from '../../utils/apiKeyUtils';
 import NoPermissionsView from '../NoPermissionsView';
 import '../kuadrant.css';
 import { useKuadrantNamespaceChange } from '../../hooks/useKuadrantNamespaceChange';
+import KuadrantDataView, { KuadrantDataViewColumn } from '../KuadrantDataView';
 
-// APIKeyRow component defined outside to avoid hooks violations
-const APIKeyRow: React.FC<
-  RowProps<APIKey> & {
-    activeNamespace: string;
-    onReveal: (apiKey: APIKey) => void;
-    onDelete: (apiKey: APIKey) => void;
-    canDelete: boolean;
-    canDeleteLoading: boolean;
-    getPlanLimits: (apiKey: APIKey) => string | null;
-  }
-> = ({
-  obj,
-  activeColumnIDs,
-  activeNamespace,
-  onReveal,
+type APIKeyFilters = {
+  name: string;
+  status: string[];
+  owner: string;
+};
+
+type APIKeyActionsProps = {
+  apiKey: APIKey;
+  onDelete: (apiKey: APIKey) => void;
+  canDelete: boolean;
+  canDeleteLoading: boolean;
+};
+
+const APIKeyActions: React.FC<APIKeyActionsProps> = ({
+  apiKey,
   onDelete,
   canDelete,
   canDeleteLoading,
-  getPlanLimits,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [isKebabOpen, setIsKebabOpen] = React.useState(false);
 
   return (
-    <>
-      <TableData id="name" activeColumnIDs={activeColumnIDs}>
-        <Link to={`/kuadrant/ns/${obj.metadata.namespace}/apikeys/name/${obj.metadata.name}`}>
-          {obj.metadata.name}
-        </Link>
-      </TableData>
-      {activeNamespace === '#ALL_NS#' && (
-        <TableData id="namespace" activeColumnIDs={activeColumnIDs}>
-          {obj.metadata.namespace ? (
-            <ResourceLink
-              groupVersionKind={{ version: 'v1', kind: 'Namespace' }}
-              name={obj.metadata.namespace}
-            />
-          ) : (
-            '-'
-          )}
-        </TableData>
-      )}
-      <TableData id="owner" activeColumnIDs={activeColumnIDs}>
-        {obj.spec?.requestedBy?.userId || '-'}
-      </TableData>
-      <TableData id="apiProduct" activeColumnIDs={activeColumnIDs}>
-        {obj.spec?.apiProductRef?.name ? (
-          <Link
-            to={`/k8s/ns/${
-              obj.spec.apiProductRef.namespace || obj.metadata.namespace
-            }/devportal.kuadrant.io~v1alpha1~APIProduct/${obj.spec.apiProductRef.name}/overview`}
-          >
-            {obj.spec.apiProductRef.name}
-          </Link>
-        ) : (
-          '-'
-        )}
-      </TableData>
-      <TableData id="status" activeColumnIDs={activeColumnIDs}>
-        <APIKeyStatusBadge phase={getAPIKeyPhase(obj)} />
-      </TableData>
-      <TableData id="tier" activeColumnIDs={activeColumnIDs}>
-        {(() => {
-          const limitsText = getPlanLimits(obj);
-          return obj.spec?.planTier || limitsText ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {obj.spec?.planTier && <Label isCompact>{obj.spec.planTier}</Label>}
-              {limitsText && <span>{limitsText}</span>}
-            </div>
-          ) : (
-            '-'
-          );
-        })()}
-      </TableData>
-      <TableData id="apiKey" activeColumnIDs={activeColumnIDs}>
-        {getAPIKeyPhase(obj) !== 'Approved' || !obj.spec?.secretRef?.name ? (
-          '-'
-        ) : (
-          <div
-            onClick={(e) => {
-              e.stopPropagation();
-              onReveal(obj);
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              cursor: 'pointer',
-              userSelect: 'none',
-            }}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                e.stopPropagation();
-                onReveal(obj);
-              }
-            }}
-            aria-label={t('Reveal API key')}
-          >
-            <span style={{ fontFamily: 'monospace' }}>••••••••••••••••</span>
-            <EyeIcon style={{ color: 'var(--pf-v6-global--primary-color--100)' }} />
-          </div>
-        )}
-      </TableData>
-      <TableData id="requestedTime" activeColumnIDs={activeColumnIDs}>
-        <Timestamp timestamp={obj.metadata.creationTimestamp} />
-      </TableData>
-      <TableData id="expires" activeColumnIDs={activeColumnIDs}>
-        {(() => {
-          const { text, isExpired } = formatExpiry(obj.spec?.expiresAt, t);
-          return <span style={isExpired ? { color: '#6a6e73' } : undefined}>{text}</span>;
-        })()}
-      </TableData>
-      <TableData id="actions" activeColumnIDs={activeColumnIDs}>
-        <Dropdown
-          isOpen={isKebabOpen}
-          onOpenChange={(isOpen) => setIsKebabOpen(isOpen)}
-          toggle={(toggleRef) => (
-            <MenuToggle
-              ref={toggleRef}
-              variant="plain"
-              onClick={() => setIsKebabOpen(!isKebabOpen)}
-              isExpanded={isKebabOpen}
-              aria-label={t('Actions')}
-            >
-              <EllipsisVIcon />
-            </MenuToggle>
-          )}
+    <Dropdown
+      isOpen={isKebabOpen}
+      onOpenChange={(isOpen) => setIsKebabOpen(isOpen)}
+      toggle={(toggleRef) => (
+        <MenuToggle
+          ref={toggleRef}
+          variant="plain"
+          onClick={() => setIsKebabOpen(!isKebabOpen)}
+          isExpanded={isKebabOpen}
+          aria-label={t('Actions')}
         >
-          <DropdownList>
-            <DropdownItem
-              key="delete"
-              onClick={() => {
-                setIsKebabOpen(false);
-                onDelete(obj);
-              }}
-              isDisabled={canDeleteLoading || !canDelete}
-            >
-              {t('Delete')}
-            </DropdownItem>
-          </DropdownList>
-        </Dropdown>
-      </TableData>
-    </>
+          <EllipsisVIcon />
+        </MenuToggle>
+      )}
+    >
+      <DropdownList>
+        <DropdownItem
+          key="delete"
+          onClick={() => {
+            setIsKebabOpen(false);
+            onDelete(apiKey);
+          }}
+          isDisabled={canDeleteLoading || !canDelete}
+        >
+          {t('Delete')}
+        </DropdownItem>
+      </DropdownList>
+    </Dropdown>
   );
 };
 
@@ -360,13 +258,11 @@ const MyAPIKeysPage: React.FC = () => {
     fetchUsername();
   }, []);
 
-  // Filter state
-  const [isFilterTypeOpen, setIsFilterTypeOpen] = React.useState(false);
-  const [filterType, setFilterType] = React.useState<string>('Name');
-  const [isFilterValueOpen, setIsFilterValueOpen] = React.useState(false);
-  const [nameFilter, setNameFilter] = React.useState<string>('');
-  const [statusFilters, setStatusFilters] = React.useState<string[]>([]);
-  const [ownerFilter, setOwnerFilter] = React.useState<string>('');
+  const [filters, setFilters] = React.useState<APIKeyFilters>({
+    name: '',
+    status: [],
+    owner: '',
+  });
   const [currentPage, setCurrentPage] = React.useState<number>(1);
   const [perPage, setPerPage] = React.useState<number>(10);
 
@@ -419,34 +315,29 @@ const MyAPIKeysPage: React.FC = () => {
     if (!Array.isArray(apiKeys)) return [];
     return apiKeys.filter((key) => {
       // Name filter
-      if (nameFilter && !key.metadata.name.toLowerCase().includes(nameFilter.toLowerCase())) {
+      if (filters.name && !key.metadata.name.toLowerCase().includes(filters.name.toLowerCase())) {
         return false;
       }
 
       // Status filter (multiple selection)
-      if (statusFilters.length > 0) {
+      if (filters.status.length > 0) {
         const phase = getAPIKeyPhase(key);
-        if (!statusFilters.includes(phase)) {
+        if (!filters.status.includes(phase)) {
           return false;
         }
       }
 
       // Owner filter
       if (
-        ownerFilter &&
-        !key.spec?.requestedBy?.userId?.toLowerCase().includes(ownerFilter.toLowerCase())
+        filters.owner &&
+        !key.spec?.requestedBy?.userId?.toLowerCase().includes(filters.owner.toLowerCase())
       ) {
         return false;
       }
 
       return true;
     });
-  }, [apiKeys, nameFilter, statusFilters, ownerFilter]);
-
-  // Pagination
-  const startIndex = (currentPage - 1) * perPage;
-  const endIndex = startIndex + perPage;
-  const paginatedData = filteredData.slice(startIndex, endIndex);
+  }, [apiKeys, filters]);
 
   React.useEffect(() => {
     const lastPage = Math.max(1, Math.ceil(filteredData.length / perPage));
@@ -470,72 +361,13 @@ const MyAPIKeysPage: React.FC = () => {
     setCurrentPage(1);
   };
 
-  const onFilterTypeToggle = () => setIsFilterTypeOpen(!isFilterTypeOpen);
-
-  const onFilterTypeSelect = (
-    _event: React.MouseEvent<Element, MouseEvent> | undefined,
-    selection: string,
-  ) => {
-    setFilterType(selection);
-    setIsFilterTypeOpen(false);
-  };
-
-  const onFilterValueToggle = () => setIsFilterValueOpen(!isFilterValueOpen);
-
-  const onStatusFilterSelect = (
-    _event: React.MouseEvent<Element, MouseEvent> | undefined,
-    selection: string,
-  ) => {
-    setStatusFilters((prev) =>
-      prev.includes(selection) ? prev.filter((s) => s !== selection) : [...prev, selection],
-    );
-    setCurrentPage(1);
-  };
-
-  const handleNameFilterChange = (_event: React.FormEvent<HTMLInputElement>, value: string) => {
-    setNameFilter(value);
-    setCurrentPage(1);
-  };
-
-  const handleOwnerFilterChange = (_event: React.FormEvent<HTMLInputElement>, value: string) => {
-    setOwnerFilter(value);
-    setCurrentPage(1);
-  };
-
-  const onDeleteNameFilter = () => {
-    setNameFilter('');
-    setCurrentPage(1);
-  };
-
-  const onDeleteStatusFilter = (_category: string, label: string) => {
-    setStatusFilters((prev) => prev.filter((s) => s !== label));
-    setCurrentPage(1);
-  };
-
-  const onDeleteOwnerFilter = () => {
-    setOwnerFilter('');
-    setCurrentPage(1);
-  };
-
-  const onDeleteNameGroup = () => {
-    setNameFilter('');
-    setCurrentPage(1);
-  };
-
-  const onDeleteStatusGroup = () => {
-    setStatusFilters([]);
-    setCurrentPage(1);
-  };
-
-  const onDeleteOwnerGroup = () => {
-    setOwnerFilter('');
+  const onFilterChange = (_filterId: string, values: Partial<APIKeyFilters>) => {
+    setFilters((current) => ({ ...current, ...values }));
     setCurrentPage(1);
   };
 
   const onClearAllFilters = () => {
-    setNameFilter('');
-    setStatusFilters([]);
-    setOwnerFilter('');
+    setFilters({ name: '', status: [], owner: '' });
     setCurrentPage(1);
   };
 
@@ -564,13 +396,12 @@ const MyAPIKeysPage: React.FC = () => {
     setDeleteError('');
   };
 
-  const columns: TableColumn<APIKey>[] = React.useMemo(() => {
-    const cols: TableColumn<APIKey>[] = [
+  const columns: KuadrantDataViewColumn<APIKey>[] = React.useMemo(() => {
+    const cols: KuadrantDataViewColumn<APIKey>[] = [
       {
         title: t('Name'),
         id: 'name',
         sort: 'metadata.name',
-        transforms: [sortable],
       },
     ];
 
@@ -580,7 +411,6 @@ const MyAPIKeysPage: React.FC = () => {
         title: t('Namespace'),
         id: 'namespace',
         sort: 'metadata.namespace',
-        transforms: [sortable],
       });
     }
 
@@ -609,7 +439,6 @@ const MyAPIKeysPage: React.FC = () => {
         title: t('Requested Time'),
         id: 'requestedTime',
         sort: 'metadata.creationTimestamp',
-        transforms: [sortable],
       },
       {
         title: t('Expires'),
@@ -624,20 +453,124 @@ const MyAPIKeysPage: React.FC = () => {
     return cols;
   }, [t, activeNamespace]);
 
-  // Create a memoized wrapper for APIKeyRow with bound props
-  const BoundAPIKeyRow = React.useCallback(
-    (props: RowProps<APIKey>) => (
-      <APIKeyRow
-        {...props}
-        activeNamespace={activeNamespace}
-        onReveal={setRevealAPIKey}
-        onDelete={handleDeleteClick}
-        canDelete={canDelete}
-        canDeleteLoading={canDeleteLoading}
-        getPlanLimits={getPlanLimits}
-      />
-    ),
-    [activeNamespace, handleDeleteClick, canDelete, canDeleteLoading, getPlanLimits],
+  const getRow = React.useCallback(
+    (apiKey: APIKey): DataViewTr => {
+      const limitsText = getPlanLimits(apiKey);
+      const { text: expiryText, isExpired } = formatExpiry(apiKey.spec?.expiresAt, t);
+      const row: DataViewTr = [
+        {
+          cell: (
+            <Link
+              to={
+                '/kuadrant/ns/' +
+                apiKey.metadata.namespace +
+                '/apikeys/name/' +
+                apiKey.metadata.name
+              }
+            >
+              {apiKey.metadata.name}
+            </Link>
+          ),
+        },
+      ];
+
+      if (activeNamespace === '#ALL_NS#') {
+        row.push({
+          cell: apiKey.metadata.namespace ? (
+            <ResourceLink
+              groupVersionKind={{ version: 'v1', kind: 'Namespace' }}
+              name={apiKey.metadata.namespace}
+            />
+          ) : (
+            '-'
+          ),
+        });
+      }
+
+      row.push(
+        { cell: apiKey.spec?.requestedBy?.userId || '-' },
+        {
+          cell: apiKey.spec?.apiProductRef?.name ? (
+            <Link
+              to={
+                '/k8s/ns/' +
+                (apiKey.spec.apiProductRef.namespace || apiKey.metadata.namespace) +
+                '/devportal.kuadrant.io~v1alpha1~APIProduct/' +
+                apiKey.spec.apiProductRef.name +
+                '/overview'
+              }
+            >
+              {apiKey.spec.apiProductRef.name}
+            </Link>
+          ) : (
+            '-'
+          ),
+        },
+        { cell: <APIKeyStatusBadge phase={getAPIKeyPhase(apiKey)} /> },
+        {
+          cell:
+            apiKey.spec?.planTier || limitsText ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {apiKey.spec?.planTier && <Label isCompact>{apiKey.spec.planTier}</Label>}
+                {limitsText && <span>{limitsText}</span>}
+              </div>
+            ) : (
+              '-'
+            ),
+        },
+        {
+          cell:
+            getAPIKeyPhase(apiKey) !== 'Approved' || !apiKey.spec?.secretRef?.name ? (
+              '-'
+            ) : (
+              <div
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setRevealAPIKey(apiKey);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setRevealAPIKey(apiKey);
+                  }
+                }}
+                aria-label={t('Reveal API key')}
+              >
+                <span style={{ fontFamily: 'monospace' }}>••••••••••••••••</span>
+                <EyeIcon style={{ color: 'var(--pf-v6-global--primary-color--100)' }} />
+              </div>
+            ),
+        },
+        { cell: <Timestamp timestamp={apiKey.metadata.creationTimestamp} /> },
+        {
+          cell: <span style={isExpired ? { color: '#6a6e73' } : undefined}>{expiryText}</span>,
+        },
+        {
+          cell: (
+            <APIKeyActions
+              apiKey={apiKey}
+              onDelete={handleDeleteClick}
+              canDelete={canDelete}
+              canDeleteLoading={canDeleteLoading}
+            />
+          ),
+          props: { isActionCell: true },
+        },
+      );
+
+      return row;
+    },
+    [activeNamespace, canDelete, canDeleteLoading, getPlanLimits, handleDeleteClick, t],
   );
 
   // Loading view while checking permissions
@@ -742,130 +675,47 @@ const MyAPIKeysPage: React.FC = () => {
           </AlertGroup>
         )}
         <ListPageBody>
-          <Toolbar
+          <DataViewToolbar
             clearAllFilters={onClearAllFilters}
-            clearFiltersButtonText={t('Clear all filters')}
-          >
-            <ToolbarContent>
-              <ToolbarGroup variant="filter-group">
-                <ToolbarItem>
-                  <Select
-                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                      <MenuToggle
-                        ref={toggleRef}
-                        onClick={onFilterTypeToggle}
-                        isExpanded={isFilterTypeOpen}
-                      >
-                        {filterType}
-                      </MenuToggle>
-                    )}
-                    onSelect={onFilterTypeSelect}
-                    onOpenChange={setIsFilterTypeOpen}
-                    isOpen={isFilterTypeOpen}
-                  >
-                    <SelectOption value="Name">{t('Name')}</SelectOption>
-                    <SelectOption value="Status">{t('Status')}</SelectOption>
-                    <SelectOption value="Owner">{t('Owner')}</SelectOption>
-                  </Select>
-                </ToolbarItem>
-
-                <ToolbarFilter
-                  categoryName={t('Name')}
-                  labels={nameFilter ? [nameFilter] : []}
-                  deleteLabel={onDeleteNameFilter}
-                  deleteLabelGroup={onDeleteNameGroup}
-                  showToolbarItem={filterType === 'Name'}
-                >
-                  <InputGroup className="pf-v5-c-input-group co-filter-group">
-                    <TextInput
-                      type="text"
-                      placeholder={t('Search by {{filterValue}}...', {
-                        filterValue: filterType.toLowerCase(),
-                      })}
-                      onChange={handleNameFilterChange}
-                      value={nameFilter}
-                      className="pf-v5-c-form-control co-text-filter-with-icon"
-                      aria-label={t('Name filter')}
-                    />
-                  </InputGroup>
-                </ToolbarFilter>
-
-                <ToolbarFilter
-                  categoryName={t('Status')}
-                  labels={statusFilters}
-                  deleteLabel={onDeleteStatusFilter}
-                  deleteLabelGroup={onDeleteStatusGroup}
-                  showToolbarItem={filterType === 'Status'}
-                >
-                  <Select
-                    toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                      <MenuToggle
-                        ref={toggleRef}
-                        onClick={onFilterValueToggle}
-                        isExpanded={isFilterValueOpen}
-                      >
-                        {t('Select status')}
-                      </MenuToggle>
-                    )}
-                    onSelect={onStatusFilterSelect}
-                    onOpenChange={setIsFilterValueOpen}
-                    isOpen={isFilterValueOpen}
-                    selected={statusFilters}
-                  >
-                    <SelectOption
-                      hasCheckbox
-                      value="Approved"
-                      isSelected={statusFilters.includes('Approved')}
-                    >
-                      {t('Approved')}
-                    </SelectOption>
-                    <SelectOption
-                      hasCheckbox
-                      value="Pending"
-                      isSelected={statusFilters.includes('Pending')}
-                    >
-                      {t('Pending')}
-                    </SelectOption>
-                    <SelectOption
-                      hasCheckbox
-                      value="Denied"
-                      isSelected={statusFilters.includes('Denied')}
-                    >
-                      {t('Denied')}
-                    </SelectOption>
-                    <SelectOption
-                      hasCheckbox
-                      value="Failed"
-                      isSelected={statusFilters.includes('Failed')}
-                    >
-                      {t('Failed')}
-                    </SelectOption>
-                  </Select>
-                </ToolbarFilter>
-
-                <ToolbarFilter
-                  categoryName={t('Owner')}
-                  labels={ownerFilter ? [ownerFilter] : []}
-                  deleteLabel={onDeleteOwnerFilter}
-                  deleteLabelGroup={onDeleteOwnerGroup}
-                  showToolbarItem={filterType === 'Owner'}
-                >
-                  <InputGroup className="pf-v5-c-input-group co-filter-group">
-                    <TextInput
-                      type="text"
-                      placeholder={t('Search by {{filterValue}}...', {
-                        filterValue: filterType.toLowerCase(),
-                      })}
-                      onChange={handleOwnerFilterChange}
-                      value={ownerFilter}
-                      className="pf-v5-c-form-control co-text-filter-with-icon"
-                      aria-label={t('Owner filter')}
-                    />
-                  </InputGroup>
-                </ToolbarFilter>
-              </ToolbarGroup>
-            </ToolbarContent>
-          </Toolbar>
+            filters={
+              <DataViewFilters<APIKeyFilters>
+                onChange={onFilterChange}
+                values={filters}
+                ouiaId="MyAPIKeysDataViewFilters"
+              >
+                <DataViewTextFilter
+                  filterId="name"
+                  title={t('Name')}
+                  placeholder={t('Search by {{filterValue}}...', {
+                    filterValue: t('Name').toLowerCase(),
+                  })}
+                  ouiaId="MyAPIKeysNameFilter"
+                />
+                <DataViewCheckboxFilter
+                  filterId="status"
+                  title={t('Status')}
+                  placeholder={t('Select status')}
+                  options={[
+                    { value: 'Approved', label: t('Approved') },
+                    { value: 'Pending', label: t('Pending') },
+                    { value: 'Denied', label: t('Denied') },
+                    { value: 'Failed', label: t('Failed') },
+                    { value: 'Expired', label: t('Expired') },
+                  ]}
+                  ouiaId="MyAPIKeysStatusFilter"
+                />
+                <DataViewTextFilter
+                  filterId="owner"
+                  title={t('Owner')}
+                  placeholder={t('Search by {{filterValue}}...', {
+                    filterValue: t('Owner').toLowerCase(),
+                  })}
+                  ouiaId="MyAPIKeysOwnerFilter"
+                />
+              </DataViewFilters>
+            }
+            ouiaId="MyAPIKeysDataViewToolbar"
+          />
           {loaded && filteredData.length === 0 ? (
             <EmptyState
               titleText={
@@ -876,7 +726,7 @@ const MyAPIKeysPage: React.FC = () => {
               icon={SearchIcon}
             >
               <EmptyStateBody>
-                {!nameFilter && statusFilters.length === 0 && !ownerFilter
+                {!filters.name && filters.status.length === 0 && !filters.owner
                   ? t(
                       'There are no API Keys to display - request access to an API Product to get started.',
                     )
@@ -884,13 +734,16 @@ const MyAPIKeysPage: React.FC = () => {
               </EmptyStateBody>
             </EmptyState>
           ) : (
-            <VirtualizedTable<APIKey>
-              data={paginatedData}
-              unfilteredData={filteredData}
+            <KuadrantDataView<APIKey>
+              ariaLabel={t('My API Keys')}
+              data={filteredData}
               loaded={loaded}
               loadError={apiKeysLoadError}
               columns={columns}
-              Row={BoundAPIKeyRow}
+              getRow={getRow}
+              page={currentPage}
+              perPage={perPage}
+              ouiaId="MyAPIKeysDataView"
             />
           )}
           {filteredData.length > 0 && (

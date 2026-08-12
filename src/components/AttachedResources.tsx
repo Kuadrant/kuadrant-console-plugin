@@ -11,22 +11,23 @@ import {
   Grid,
   GridItem,
   PageSection,
+  Pagination,
   Title,
 } from '@patternfly/react-core';
 import {
   K8sResourceKind,
   ResourceLink,
   useK8sWatchResources,
-  VirtualizedTable,
-  TableData,
-  RowProps,
-  TableColumn,
   WatchK8sResource,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { SearchIcon } from '@patternfly/react-icons';
 import { getStatusLabel } from '../utils/statusLabel';
 import { RESOURCES } from '../utils/resources';
 import AssociatedResourceList from './AssociatedResourceList';
+import KuadrantDataView, {
+  KuadrantDataViewColumn,
+  useKuadrantDataViewPagination,
+} from './KuadrantDataView';
 
 type AttachedResourcesProps = {
   resource: K8sResourceKind;
@@ -41,31 +42,6 @@ type ParentRef = {
 
 type ParentStatus = {
   parentRef: ParentRef;
-};
-
-const ResourceRow: React.FC<RowProps<K8sResourceKind>> = ({ obj, activeColumnIDs }) => {
-  const { t } = useTranslation('plugin__kuadrant-console-plugin');
-  const [group, version] = obj.apiVersion?.includes('/')
-    ? obj.apiVersion.split('/')
-    : ['', obj.apiVersion];
-
-  return (
-    <>
-      <TableData id="name" activeColumnIDs={activeColumnIDs}>
-        <ResourceLink
-          groupVersionKind={{ group, version, kind: obj.kind }}
-          name={obj.metadata?.name}
-          namespace={obj.metadata?.namespace}
-        />
-      </TableData>
-      <TableData id="namespace" activeColumnIDs={activeColumnIDs}>
-        {obj.metadata?.namespace || '-'}
-      </TableData>
-      <TableData id="status" activeColumnIDs={activeColumnIDs}>
-        {getStatusLabel(t, obj)}
-      </TableData>
-    </>
-  );
 };
 
 const AttachedResources: React.FC<AttachedResourcesProps> = ({ resource }) => {
@@ -137,11 +113,36 @@ const AttachedResources: React.FC<AttachedResourcesProps> = ({ resource }) => {
     return results;
   }, [watchedResources, resource, resourceGroup]);
 
-  const columns: TableColumn<K8sResourceKind>[] = [
-    { title: t('Name'), id: 'name', sort: 'metadata.name' },
-    { title: t('Namespace'), id: 'namespace', sort: 'metadata.namespace' },
-    { title: t('Status'), id: 'status' },
-  ];
+  const columns = React.useMemo<KuadrantDataViewColumn<K8sResourceKind>[]>(
+    () => [
+      { title: t('Name'), id: 'name', sort: 'metadata.name' },
+      { title: t('Namespace'), id: 'namespace', sort: 'metadata.namespace' },
+      { title: t('Status'), id: 'status' },
+    ],
+    [t],
+  );
+
+  const getRow = React.useCallback(
+    (obj: K8sResourceKind) => {
+      const [group, version] = obj.apiVersion?.includes('/')
+        ? obj.apiVersion.split('/')
+        : ['', obj.apiVersion];
+      return [
+        {
+          cell: (
+            <ResourceLink
+              groupVersionKind={{ group, version, kind: obj.kind }}
+              name={obj.metadata?.name}
+              namespace={obj.metadata?.namespace}
+            />
+          ),
+        },
+        obj.metadata?.namespace || '-',
+        getStatusLabel(t, obj),
+      ];
+    },
+    [t],
+  );
 
   const allLoaded = Object.values(watchedResources).every((res) => res.loaded);
   const loadErrors = Object.values(watchedResources)
@@ -149,6 +150,9 @@ const AttachedResources: React.FC<AttachedResourcesProps> = ({ resource }) => {
     .map((res) => res.loadError);
   const combinedLoadError =
     loadErrors.length > 0 ? new Error(loadErrors.map((err) => err.message).join('; ')) : null;
+  const { page, perPage, onSetPage, onPerPageSelect } = useKuadrantDataViewPagination(
+    attachedResources.length,
+  );
 
   return (
     <PageSection hasBodyWrapper={false}>
@@ -178,14 +182,32 @@ const AttachedResources: React.FC<AttachedResourcesProps> = ({ resource }) => {
                   </EmptyStateBody>
                 </EmptyState>
               ) : (
-                <VirtualizedTable<K8sResourceKind>
-                  data={attachedResources}
-                  unfilteredData={attachedResources}
-                  loaded={allLoaded}
-                  loadError={combinedLoadError}
-                  columns={columns}
-                  Row={ResourceRow}
-                />
+                <>
+                  <KuadrantDataView<K8sResourceKind>
+                    ariaLabel={t('Attached Resources')}
+                    data={attachedResources}
+                    loaded={allLoaded}
+                    loadError={combinedLoadError}
+                    columns={columns}
+                    getRow={getRow}
+                    page={page}
+                    perPage={perPage}
+                    ouiaId="AttachedResourcesDataView"
+                  />
+                  <Pagination
+                    itemCount={attachedResources.length}
+                    page={page}
+                    perPage={perPage}
+                    onSetPage={onSetPage}
+                    onPerPageSelect={onPerPageSelect}
+                    variant="bottom"
+                    perPageOptions={[
+                      { title: '5', value: 5 },
+                      { title: '10', value: 10 },
+                      { title: '20', value: 20 },
+                    ]}
+                  />
+                </>
               )}
             </CardBody>
           </Card>
