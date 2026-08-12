@@ -10,7 +10,7 @@ import {
 import { useNavigate } from 'react-router';
 import { getModelFromResource } from '../../utils/getModelFromResource';
 import { RESOURCES } from '../../utils/resources';
-import { MCPWizardFormState, MCPGatewayExtension, ReferenceGrantResource } from './types';
+import { MCPWizardFormState, MCPGatewayExtension } from './types';
 import { GatewayResource } from '../gateway/types';
 import { HTTPRouteResource } from '../httproute/types';
 
@@ -185,7 +185,7 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
 
       // 3. Create ReferenceGrant if cross-namespace
       if (isCrossNamespace) {
-        const refGrantResource: ReferenceGrantResource = {
+        const refGrantResource = {
           apiVersion: 'gateway.networking.k8s.io/v1beta1',
           kind: 'ReferenceGrant',
           metadata: {
@@ -208,7 +208,7 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
               },
             ],
           },
-        };
+        } as K8sResourceCommon;
         const model = getModelFromResource(refGrantResource);
         await createOrSkipExisting(
           model,
