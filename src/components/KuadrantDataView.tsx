@@ -18,6 +18,8 @@ import { ISortBy, SortByDirection, Tbody, Td, ThProps, Tr } from '@patternfly/re
 export type KuadrantDataViewColumn<T> = {
   id: string;
   title: React.ReactNode;
+  /** plain-text label stamped onto body cells for responsive stacking. required when title is not a string */
+  label?: string;
   sort?: string | ((data: T[], direction: SortByDirection) => T[]);
   props?: Omit<ThProps, 'sort'>;
 };
@@ -93,22 +95,37 @@ const getResourceRowKey = (resource: K8sResourceCommon): string =>
     .map((value) => value ?? '')
     .join(':');
 
-const keyRowCells = (row: DataViewTr, rowKey: string): DataViewTr => {
-  const cells = isDataViewTrObject(row) ? row.row : row;
-  const keyedCells = cells.map((cell, columnIndex) => {
-    const key = `${rowKey}:${columnIndex}`;
+// stacked (narrow) tables render the label next to each cell, so an action column
+// with no header deliberately resolves to undefined rather than falling back to its id
+const getColumnLabel = <T,>(column: KuadrantDataViewColumn<T>): string | undefined => {
+  if (column.label !== undefined) {
+    return column.label || undefined;
+  }
+  if (typeof column.title === 'string') {
+    return column.title || undefined;
+  }
+  return column.id;
+};
 
-    return isDataViewTdObject(cell) ? (
-      {
+const decorateRowCells = (row: DataViewTr, rowKey: string, labels: (string | undefined)[]) => {
+  const cells = isDataViewTrObject(row) ? row.row : row;
+  const decorated = cells.map((cell, columnIndex) => {
+    const key = `${rowKey}:${columnIndex}`;
+    const dataLabel = labels[columnIndex];
+
+    if (isDataViewTdObject(cell)) {
+      return {
         ...cell,
         cell: <React.Fragment key={key}>{cell.cell}</React.Fragment>,
-      }
-    ) : (
-      <React.Fragment key={key}>{cell}</React.Fragment>
-    );
+        props: { ...(dataLabel ? { dataLabel } : {}), ...cell.props },
+      };
+    }
+
+    const keyedCell = <React.Fragment key={key}>{cell}</React.Fragment>;
+    return dataLabel ? { cell: keyedCell, props: { dataLabel } } : keyedCell;
   });
 
-  return isDataViewTrObject(row) ? { ...row, row: keyedCells } : keyedCells;
+  return isDataViewTrObject(row) ? { ...row, row: decorated } : decorated;
 };
 
 const getInitialSortBy = <T,>(columns: KuadrantDataViewColumn<T>[]): ISortBy => {
@@ -221,9 +238,14 @@ const KuadrantDataView = <T extends K8sResourceCommon>({
     return sortedData;
   }, [columns, data, page, perPage, sortBy]);
 
+  const columnLabels = React.useMemo(() => columns.map(getColumnLabel), [columns]);
+
   const rows = React.useMemo(
-    () => visibleData.map((item) => keyRowCells(getRow(item), getResourceRowKey(item))),
-    [getRow, visibleData],
+    () =>
+      visibleData.map((item) =>
+        decorateRowCells(getRow(item), getResourceRowKey(item), columnLabels),
+      ),
+    [columnLabels, getRow, visibleData],
   );
   const activeState = loadError ? DataViewState.error : !loaded ? DataViewState.loading : undefined;
 
@@ -257,7 +279,7 @@ const KuadrantDataView = <T extends K8sResourceCommon>({
         aria-label={ariaLabel}
         bodyStates={bodyStates}
         columns={dataViewColumns}
-        gridBreakPoint=""
+        gridBreakPoint="grid-lg"
         ouiaId={ouiaId}
         rows={rows}
         variant="compact"

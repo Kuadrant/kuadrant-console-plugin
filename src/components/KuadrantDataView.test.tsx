@@ -179,4 +179,35 @@ describe('KuadrantDataView', () => {
       expect(onDelete).not.toHaveBeenCalled();
     },
   );
+
+  it('labels body cells so narrow viewports stack them with field names', () => {
+    const labelledColumns: KuadrantDataViewColumn<Item>[] = [
+      { id: 'name', title: 'Name' },
+      { id: 'status', title: <span>Status</span>, label: 'Status' },
+      { id: 'namespace', title: 'Namespace' },
+      { id: 'kebab', title: '' },
+    ];
+    const getLabelledRow = (item: Item) => [
+      item.metadata.name,
+      'Healthy',
+      { cell: item.metadata.namespace },
+      { cell: <button type="button">Actions</button> },
+    ];
+
+    render(
+      <KuadrantDataView
+        ariaLabel="Items"
+        columns={labelledColumns}
+        data={[{ metadata: { name: 'alpha', namespace: 'apps' } }]}
+        loaded
+        getRow={getLabelledRow}
+      />,
+    );
+
+    const cells = screen.getAllByRole('cell');
+    expect(cells[0]).toHaveAttribute('data-label', 'Name');
+    expect(cells[1]).toHaveAttribute('data-label', 'Status');
+    expect(cells[2]).toHaveAttribute('data-label', 'Namespace');
+    expect(cells[3]).not.toHaveAttribute('data-label');
+  });
 });

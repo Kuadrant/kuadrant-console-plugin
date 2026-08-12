@@ -266,6 +266,7 @@ const APIProductsListPage: React.FC = () => {
             </Tooltip>
           </>
         ),
+        label: t('Route'),
         id: 'route',
       },
       {
@@ -282,6 +283,7 @@ const APIProductsListPage: React.FC = () => {
             </Tooltip>
           </>
         ),
+        label: t('PlanPolicy'),
         id: 'planpolicy',
       },
       {
@@ -306,6 +308,7 @@ const APIProductsListPage: React.FC = () => {
             </Tooltip>
           </>
         ),
+        label: t('Tags'),
         id: 'tags',
       },
       {

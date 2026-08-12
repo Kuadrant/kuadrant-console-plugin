@@ -429,7 +429,8 @@ const KuadrantOverviewPage: React.FC = () => {
               <StatusLegend />
             </span>
           </span>
-        ) as unknown as string,
+        ),
+        label: t('plugin__kuadrant-console-plugin~Status'),
         id: 'Status',
         sort: (data: K8sResourceCommon[], direction: SortByDirection) => {
           const sorted = [...data].sort((a, b) => getStatusSortRank(a) - getStatusSortRank(b));
@@ -637,7 +638,8 @@ const KuadrantOverviewPage: React.FC = () => {
             <StatusLegend />
           </span>
         </span>
-      ) as unknown as string,
+      ),
+      label: t('plugin__kuadrant-console-plugin~Status'),
       id: 'Status',
       sort: (data: K8sResourceCommon[], direction: SortByDirection) =>
         sortByComputedValue(data, direction, getStatusSortRank),
