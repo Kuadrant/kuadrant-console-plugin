@@ -147,10 +147,16 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
   | `infrastructure` | Cluster setup or dev server failed | `setup` or `wait-server` step failed |
   | `test` | Tests themselves failed | Any Playwright test step failed |
 
+  Cluster timeouts, network errors during setup, and dev server readiness failures
+  all fall under `infrastructure` because they occur in the `setup` or `wait-server`
+  steps. Only failures in the Playwright test steps (`tests`, `tests-full`,
+  `tests-changed`) are classified as `test`.
+
   The nightly workflow uses this classification to label auto-opened issues:
   `nightly-infrastructure` for infra errors, `nightly-failure` for test failures.
-  Infrastructure issues only download test results when tests actually ran, avoiding
-  noise from cluster setup failures.
+  Test results are only downloaded when `type=test`, so infrastructure-only failures
+  skip the results download and failed-test extraction — avoiding noise from cluster
+  setup failures where no tests ran.
 
 ### Paths Filter (build, lint, i18n)
 
@@ -163,8 +169,9 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
 ### Suite Router (`build/suite-router.sh`)
 
   The suite router optimises PR CI by running only the e2e specs relevant to changed
-  files instead of the full suite. It diffs against `origin/main` and produces **two
-  separate lists**:
+  files instead of the full suite. In CI, it diffs against the PR base branch
+  (`origin/${GITHUB_BASE_REF}`); locally, it defaults to `origin/main` (with a
+  `HEAD~1` fallback). It produces **two separate lists**:
 
   | Output | Contains | How it runs in CI |
   |---|---|---|
