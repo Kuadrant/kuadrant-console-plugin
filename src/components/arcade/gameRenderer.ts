@@ -1,6 +1,7 @@
 import { createBattleChatter } from './battleChatter';
 import { Fighter, GameState, GAME_HEIGHT, GAME_WIDTH } from './gameEngine';
 import { FIGHTER_PORTRAIT_URLS } from './fighterPortraits';
+import { createHeadPanic } from './headPanic';
 
 export interface GameLabels {
   title: string;
@@ -40,6 +41,7 @@ const portraitImages = FIGHTER_PORTRAIT_URLS.map((source) => {
 });
 
 const drawBattleChatter = createBattleChatter();
+const getHeadPanic = createHeadPanic();
 
 const block = (
   context: CanvasRenderingContext2D,
@@ -194,6 +196,15 @@ const drawFighter = (
     block(context, 27, -57 - walkCycle / 2, 24, 20, palette.skin);
   }
 
+  const panic = getHeadPanic(fighter, now);
+  context.save();
+  if (panic.isActive) {
+    context.translate(panic.offsetX, -136 + panic.offsetY);
+    context.rotate(panic.rotation);
+    context.scale(panic.scaleX, panic.scaleY);
+    context.translate(0, 136);
+  }
+
   const portrait = portraitImages[fighter.portraitIndex];
   if (portrait?.complete && portrait.naturalWidth > 0) {
     context.imageSmoothingEnabled = false;
@@ -205,6 +216,7 @@ const drawFighter = (
     block(context, 8, -134, 7, 5, palette.ink);
     block(context, 15, -117, 13, 5, palette.ink);
   }
+  context.restore();
 
   context.restore();
 };
