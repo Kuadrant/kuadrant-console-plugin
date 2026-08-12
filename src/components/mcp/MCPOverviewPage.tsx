@@ -549,7 +549,9 @@ const MCPOverviewPage: React.FC = () => {
                     >
                       <strong className="kuadrant-mcp-stat-value">
                         <YellowExclamationTriangleIcon size="md" />{' '}
-                        <span className="kuadrant-mcp-stat-icon-gap">{mcpGatewayUnhealthyCount}</span>
+                        <span className="kuadrant-mcp-stat-icon-gap">
+                          {mcpGatewayUnhealthyCount}
+                        </span>
                       </strong>
                       <Tooltip
                         content={
@@ -587,7 +589,8 @@ const MCPOverviewPage: React.FC = () => {
                       alignItems={{ default: 'alignItemsCenter' }}
                     >
                       <strong className="kuadrant-mcp-stat-value">
-                        <ListIcon /> <span className="kuadrant-mcp-stat-icon-gap">{mcpServerTypesCount}</span>
+                        <ListIcon />{' '}
+                        <span className="kuadrant-mcp-stat-icon-gap">{mcpServerTypesCount}</span>
                       </strong>
                       <span>{t('Types')}</span>
                     </Flex>

@@ -76,7 +76,6 @@ export interface MCPServerRegistration extends K8sResourceCommon {
   };
 }
 
-
 // Wizard form state for Steps 1-3, consumed in Step 4 for resource creation
 export interface MCPWizardFormState {
   // Step 1: Gateway
