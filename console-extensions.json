@@ -1,5 +1,16 @@
 [
   {
+    "type": "console.context-provider",
+    "properties": {
+      "provider": {
+        "$codeRef": "InteractionTelemetryProvider.InteractionTelemetryProvider"
+      },
+      "useValueHook": {
+        "$codeRef": "InteractionTelemetryProvider.useInteractionTelemetry"
+      }
+    }
+  },
+  {
     "type": "console.tab/horizontalNav",
     "properties": {
       "model": {
