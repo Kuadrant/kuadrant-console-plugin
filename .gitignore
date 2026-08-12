@@ -1,3 +1,4 @@
+.clawdio-state
 **/node_modules
 **/dist
 **/.DS_Store

@@ -20,6 +20,19 @@ describe('arcade game engine', () => {
     expect(random).toHaveBeenCalledTimes(2);
   });
 
+  it('keeps the chosen player and selects an eligible opponent', () => {
+    const random = jest.fn().mockReturnValue(0);
+
+    const state = createGameState(0, random, {
+      playerPortraitIndex: 3,
+      eligiblePortraitIndices: [1, 3, 4],
+    });
+
+    expect(state.player.portraitIndex).toBe(3);
+    expect(state.cpu.portraitIndex).toBe(1);
+    expect(random).toHaveBeenCalledTimes(1);
+  });
+
   it('lands a punch when the opponent is in range', () => {
     const now = 1000;
     const state = createGameState(now);

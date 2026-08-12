@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { render, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -35,11 +35,52 @@ describe('BonusStage', () => {
   });
 
   it('starts rendering after PatternFly mounts the modal canvas', async () => {
-    render(<BonusStage closeOverlay={jest.fn()} onExit={jest.fn()} />);
+    render(
+      <BonusStage
+        closeOverlay={jest.fn()}
+        onExit={jest.fn()}
+        resolveAvailability={() =>
+          Promise.resolve(
+            [0, 1, 2, 3, 4].map((portraitIndex) => ({
+              portraitIndex: portraitIndex as 0 | 1 | 2 | 3 | 4,
+              isAvailable: true,
+            })),
+          )
+        }
+      />,
+    );
+
+    fireEvent.click(await screen.findByText('Jason'));
 
     await waitFor(() => expect(mockDrawGame).toHaveBeenCalled());
 
     expect(mockDrawGame.mock.calls[0][0]).toBeDefined();
     expect(mockDrawGame.mock.calls[0][1].status).toBe('fighting');
+    expect(mockDrawGame.mock.calls[0][1].player.portraitIndex).toBe(0);
+    expect(mockDrawGame.mock.calls[0][3].battleLines[2]).toContain('Удар отклонён: RBAC.');
+  });
+
+  it('rechecks eligibility when the player chooses again', async () => {
+    const resolveAvailability = jest.fn(() =>
+      Promise.resolve(
+        [0, 1, 2, 3, 4].map((portraitIndex) => ({
+          portraitIndex: portraitIndex as 0 | 1 | 2 | 3 | 4,
+          isAvailable: true,
+        })),
+      ),
+    );
+    render(
+      <BonusStage
+        closeOverlay={jest.fn()}
+        onExit={jest.fn()}
+        resolveAvailability={resolveAvailability}
+      />,
+    );
+
+    fireEvent.click(await screen.findByText('Emma'));
+    await waitFor(() => expect(mockDrawGame).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole('button', { name: 'Choose again' }));
+
+    await waitFor(() => expect(resolveAvailability).toHaveBeenCalledTimes(2));
   });
 });

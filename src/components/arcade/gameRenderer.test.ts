@@ -45,14 +45,13 @@ describe('arcade game renderer', () => {
 
       drawGame(context, state, 0, {
         title: 'Kuadrant Clash',
-        playerName: 'Gatekeeper',
-        cpuName: 'Limit Breaker',
+        fighterNames: ['Jason', 'Grettel', 'Anton', 'Emma', 'Rachel'],
+        fighterWins: ['Jason wins', 'Grettel wins', 'Anton wins', 'Emma wins', 'Rachel wins'],
         timeUp: 'Time!',
         knockout: 'K.O.!',
-        playerWins: 'Gatekeeper wins',
-        cpuWins: 'Limit Breaker wins',
         draw: 'Draw game',
         rematch: 'Press R for a rematch',
+        battleLines: [[], [], [], [], []],
       });
 
       expect(imageInstances).toHaveLength(5);

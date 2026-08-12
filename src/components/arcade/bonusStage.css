@@ -3,6 +3,65 @@
   color: var(--pf-t--global--text--color--subtle);
 }
 
+.kuadrant-bonus-stage .kuadrant-bonus-stage__roster-loading {
+  min-height: 12rem;
+  display: grid;
+  place-items: center;
+  color: var(--pf-t--global--text--color--subtle);
+  font-family: var(--pf-t--global--font--family--mono);
+}
+
+.kuadrant-bonus-stage .kuadrant-bonus-stage__roster {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--pf-t--global--spacer--md);
+}
+
+.kuadrant-bonus-stage .kuadrant-bonus-stage__fighter-card {
+  display: grid;
+  gap: var(--pf-t--global--spacer--sm);
+  justify-items: center;
+  min-width: 0;
+  padding: var(--pf-t--global--spacer--md);
+  border: 3px solid var(--pf-t--global--border--color--default);
+  border-radius: var(--pf-t--global--border--radius--medium);
+  background: var(--pf-t--global--background--color--primary--default);
+  color: var(--pf-t--global--text--color--regular);
+  cursor: pointer;
+  font: inherit;
+  text-align: center;
+}
+
+.kuadrant-bonus-stage .kuadrant-bonus-stage__fighter-card:hover,
+.kuadrant-bonus-stage .kuadrant-bonus-stage__fighter-card:focus-visible {
+  border-color: var(--pf-t--global--border--color--brand--default);
+  box-shadow: 0 0 0 2px var(--pf-t--global--border--color--brand--default);
+  outline: none;
+}
+
+.kuadrant-bonus-stage .kuadrant-bonus-stage__fighter-card[data-available='false'] {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.kuadrant-bonus-stage .kuadrant-bonus-stage__fighter-card img {
+  width: min(100%, 8rem);
+  aspect-ratio: 1;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+
+.kuadrant-bonus-stage .kuadrant-bonus-stage__fighter-card strong {
+  font-family: var(--pf-t--global--font--family--mono);
+  font-size: var(--pf-t--global--font--size--heading--h4);
+}
+
+.kuadrant-bonus-stage .kuadrant-bonus-stage__fighter-card span {
+  min-height: 2.5em;
+  color: var(--pf-t--global--text--color--subtle);
+  font-size: var(--pf-t--global--font--size--body--sm);
+}
+
 .kuadrant-bonus-stage .kuadrant-bonus-stage__cabinet {
   overflow: hidden;
   width: 100%;
@@ -45,6 +104,10 @@
 }
 
 @media (max-width: 768px) {
+  .kuadrant-bonus-stage .kuadrant-bonus-stage__roster {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .kuadrant-bonus-stage .kuadrant-bonus-stage__controls {
     justify-content: flex-start;
   }
