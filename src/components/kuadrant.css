@@ -209,6 +209,45 @@
   overflow-y: auto;
 }
 
+/* MCP Overview page styles */
+.kuadrant-mcp-overview-page .kuadrant-mcp-page-title {
+  margin-bottom: 1rem;
+}
+
+.kuadrant-mcp-overview-page .kuadrant-mcp-divider {
+  margin-top: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.kuadrant-mcp-overview-page .kuadrant-mcp-getting-started {
+  margin-top: 8px;
+}
+
+.kuadrant-mcp-overview-page .kuadrant-mcp-getting-started-alert {
+  border-width: 1px;
+}
+
+.kuadrant-mcp-overview-page .kuadrant-mcp-getting-started-title {
+  font-weight: normal;
+}
+
+.kuadrant-mcp-overview-page .kuadrant-mcp-card-heading {
+  text-align: center;
+}
+
+.kuadrant-mcp-overview-page .kuadrant-mcp-stat-value {
+  font-size: 1.3rem;
+}
+
+.kuadrant-mcp-overview-page .kuadrant-mcp-stat-icon-gap {
+  margin: 5px;
+}
+
+/* position card titles for absolute buttons in MCP page */
+.kuadrant-mcp-overview-page .pf-v6-c-card__title {
+  position: relative;
+}
+
 /* fix virtualized table cell alignment for kuadrant tables */
 .kuadrant-resource-list .ReactVirtualized__Table__rowColumn,
 .kuadrant-policy-list .ReactVirtualized__Table__rowColumn,

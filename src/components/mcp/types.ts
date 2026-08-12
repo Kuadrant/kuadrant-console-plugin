@@ -76,20 +76,6 @@ export interface MCPServerRegistration extends K8sResourceCommon {
   };
 }
 
-export interface ReferenceGrantResource extends K8sResourceCommon {
-  spec?: {
-    from?: Array<{
-      group: string;
-      kind: string;
-      namespace: string;
-    }>;
-    to?: Array<{
-      group: string;
-      kind: string;
-      name?: string;
-    }>;
-  };
-}
 
 // Wizard form state for Steps 1-3, consumed in Step 4 for resource creation
 export interface MCPWizardFormState {

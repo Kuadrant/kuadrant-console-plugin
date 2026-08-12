@@ -26,6 +26,7 @@ import {
   Content,
   Flex,
   FlexItem,
+  MenuToggleElement,
 } from '@patternfly/react-core';
 import {
   ExternalLinkAltIcon,
@@ -89,8 +90,6 @@ const mcpResources = [
     namespace: undefined as string | undefined,
   },
 ];
-
-export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
 const mcpPolicies = ['AuthPolicy', 'RateLimitPolicy', 'TLSPolicy', 'DNSPolicy'];
 
@@ -243,7 +242,7 @@ const MCPOverviewPage: React.FC = () => {
     {} as Record<string, { list: boolean; create: boolean }>,
   );
 
-  const policyRBACNil = mcpPolicies.every((p) => !policyRBAC[p]?.list);
+  const cannotListAnyPolicy = mcpPolicies.every((p) => !policyRBAC[p]?.list);
 
   const isAllNamespaces = watchNamespace === '#ALL_NS#';
 
@@ -448,19 +447,19 @@ const MCPOverviewPage: React.FC = () => {
       </Helmet>
       <NamespaceBar onNamespaceChange={handleNamespaceChange} />
       <PageSection className="kuadrant-mcp-overview-page">
-        <Title headingLevel="h1" style={{ marginBottom: '1rem' }}>
+        <Title headingLevel="h1" className="kuadrant-mcp-page-title">
           {t('MCP management overview')}
         </Title>
-        <Divider style={{ marginTop: '0.5rem', marginBottom: '1rem' }} />
+        <Divider className="kuadrant-mcp-divider" />
         <Grid hasGutter>
           {!hideCard && (
-            <GridItem style={{ marginTop: '8px' }}>
+            <GridItem className="kuadrant-mcp-getting-started">
               <Alert
                 variant="info"
                 isInline
-                style={{ borderWidth: '1px' }}
+                className="kuadrant-mcp-getting-started-alert"
                 title={
-                  <span style={{ fontWeight: 'normal' }}>
+                  <span className="kuadrant-mcp-getting-started-title">
                     {t('Getting started with Kuadrant')}:{' '}
                     <a
                       href={EXTERNAL_LINKS.documentation}
@@ -503,7 +502,7 @@ const MCPOverviewPage: React.FC = () => {
           <GridItem lg={6}>
             <Card>
               <CardTitle>
-                <Title headingLevel="h2" size="md" style={{ textAlign: 'center' }}>
+                <Title headingLevel="h2" size="md" className="kuadrant-mcp-card-heading">
                   {t('MCP Gateways')}
                 </Title>
               </CardTitle>
@@ -517,7 +516,7 @@ const MCPOverviewPage: React.FC = () => {
                       direction={{ default: 'column' }}
                       alignItems={{ default: 'alignItemsCenter' }}
                     >
-                      <strong style={{ fontSize: '1.3rem' }}>{mcpGateways.length}</strong>
+                      <strong className="kuadrant-mcp-stat-value">{mcpGateways.length}</strong>
                       <span>{t('Total')}</span>
                     </Flex>
                   </FlexItem>
@@ -526,9 +525,9 @@ const MCPOverviewPage: React.FC = () => {
                       direction={{ default: 'column' }}
                       alignItems={{ default: 'alignItemsCenter' }}
                     >
-                      <strong style={{ fontSize: '1.3rem' }}>
+                      <strong className="kuadrant-mcp-stat-value">
                         <GreenCheckCircleIcon size="md" />{' '}
-                        <span style={{ margin: '5px' }}>{mcpGatewayHealthyCount}</span>
+                        <span className="kuadrant-mcp-stat-icon-gap">{mcpGatewayHealthyCount}</span>
                       </strong>
                       <Tooltip
                         content={
@@ -548,9 +547,9 @@ const MCPOverviewPage: React.FC = () => {
                       direction={{ default: 'column' }}
                       alignItems={{ default: 'alignItemsCenter' }}
                     >
-                      <strong style={{ fontSize: '1.3rem' }}>
+                      <strong className="kuadrant-mcp-stat-value">
                         <YellowExclamationTriangleIcon size="md" />{' '}
-                        <span style={{ margin: '5px' }}>{mcpGatewayUnhealthyCount}</span>
+                        <span className="kuadrant-mcp-stat-icon-gap">{mcpGatewayUnhealthyCount}</span>
                       </strong>
                       <Tooltip
                         content={
@@ -573,7 +572,7 @@ const MCPOverviewPage: React.FC = () => {
           <GridItem lg={6}>
             <Card>
               <CardTitle>
-                <Title headingLevel="h2" size="md" style={{ textAlign: 'center' }}>
+                <Title headingLevel="h2" size="md" className="kuadrant-mcp-card-heading">
                   {t('MCP Servers')}
                 </Title>
               </CardTitle>
@@ -587,8 +586,8 @@ const MCPOverviewPage: React.FC = () => {
                       direction={{ default: 'column' }}
                       alignItems={{ default: 'alignItemsCenter' }}
                     >
-                      <strong style={{ fontSize: '1.3rem' }}>
-                        <ListIcon /> <span style={{ margin: '5px' }}>{mcpServerTypesCount}</span>
+                      <strong className="kuadrant-mcp-stat-value">
+                        <ListIcon /> <span className="kuadrant-mcp-stat-icon-gap">{mcpServerTypesCount}</span>
                       </strong>
                       <span>{t('Types')}</span>
                     </Flex>
@@ -598,7 +597,7 @@ const MCPOverviewPage: React.FC = () => {
                       direction={{ default: 'column' }}
                       alignItems={{ default: 'alignItemsCenter' }}
                     >
-                      <strong style={{ fontSize: '1.3rem' }}>{servers?.length || 0}</strong>
+                      <strong className="kuadrant-mcp-stat-value">{servers?.length || 0}</strong>
                       <span>{t('Total')}</span>
                     </Flex>
                   </FlexItem>
@@ -607,9 +606,9 @@ const MCPOverviewPage: React.FC = () => {
                       direction={{ default: 'column' }}
                       alignItems={{ default: 'alignItemsCenter' }}
                     >
-                      <strong style={{ fontSize: '1.3rem' }}>
+                      <strong className="kuadrant-mcp-stat-value">
                         <GreenCheckCircleIcon size="md" />{' '}
-                        <span style={{ margin: '5px' }}>{mcpServerOnlineCount}</span>
+                        <span className="kuadrant-mcp-stat-icon-gap">{mcpServerOnlineCount}</span>
                       </strong>
                       <Tooltip
                         content={
@@ -627,9 +626,9 @@ const MCPOverviewPage: React.FC = () => {
                       direction={{ default: 'column' }}
                       alignItems={{ default: 'alignItemsCenter' }}
                     >
-                      <strong style={{ fontSize: '1.3rem' }}>
+                      <strong className="kuadrant-mcp-stat-value">
                         <YellowExclamationTriangleIcon size="md" />{' '}
-                        <span style={{ margin: '5px' }}>{mcpServerOfflineCount}</span>
+                        <span className="kuadrant-mcp-stat-icon-gap">{mcpServerOfflineCount}</span>
                       </strong>
                       <Tooltip
                         content={
@@ -665,7 +664,7 @@ const MCPOverviewPage: React.FC = () => {
                       }
                     >
                       <Button className="kuadrant-overview-create-button" isAriaDisabled>
-                        {t('Create extension')}
+                        {t('Create MCPGatewayExtension')}
                       </Button>
                     </Tooltip>
                   ) : (
@@ -673,7 +672,7 @@ const MCPOverviewPage: React.FC = () => {
                       onClick={() => handleCreateResource('MCPGatewayExtension')}
                       className="kuadrant-overview-create-button"
                     >
-                      {t('Create extension')}
+                      {t('Create MCPGatewayExtension')}
                     </Button>
                   )}
                 </CardTitle>
@@ -848,7 +847,7 @@ const MCPOverviewPage: React.FC = () => {
                       }
                     >
                       <Button className="kuadrant-overview-create-button" isAriaDisabled>
-                        {t('Create reference grant')}
+                        {t('Create ReferenceGrant')}
                       </Button>
                     </Tooltip>
                   ) : (
@@ -856,7 +855,7 @@ const MCPOverviewPage: React.FC = () => {
                       onClick={() => handleCreateResource('ReferenceGrant')}
                       className="kuadrant-overview-create-button"
                     >
-                      {t('Create reference grant')}
+                      {t('Create ReferenceGrant')}
                     </Button>
                   )}
                 </CardTitle>
@@ -899,7 +898,7 @@ const MCPOverviewPage: React.FC = () => {
             </GridItem>
           )}
 
-          {!policyRBACNil ? (
+          {!cannotListAnyPolicy ? (
             <GridItem>
               <Card>
                 <CardTitle className="kuadrant-resource-create-container">
@@ -918,7 +917,7 @@ const MCPOverviewPage: React.FC = () => {
                         variant="primary"
                         className="kuadrant-overview-create-button"
                       >
-                        {t('Create policy')}
+                        {t('Create Policy')}
                       </MenuToggle>
                     )}
                   >
