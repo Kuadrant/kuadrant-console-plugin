@@ -60,7 +60,7 @@ test.describe('MCP Overview dashboard', () => {
   });
 
   test('Create extension button navigates to YAML creation', { tag: '@smoke' }, async ({ page }) => {
-    const btn = page.getByRole('button', { name: 'Create extension' });
+    const btn = page.getByRole('button', { name: 'Create MCPGatewayExtension' });
     await expect(btn).toBeVisible({ timeout: 15_000 });
     await btn.click();
 
@@ -86,7 +86,7 @@ test.describe('MCP Overview dashboard', () => {
   });
 
   test('Create policy dropdown shows all policy types', { tag: '@smoke' }, async ({ page }) => {
-    const toggle = page.getByRole('button', { name: 'Create policy' });
+    const toggle = page.getByRole('button', { name: 'Create Policy' });
     await expect(toggle).toBeVisible({ timeout: 15_000 });
     await toggle.click();
 
@@ -96,7 +96,7 @@ test.describe('MCP Overview dashboard', () => {
   });
 
   test('Create reference grant button navigates to YAML creation', { tag: '@smoke' }, async ({ page }) => {
-    const btn = page.getByRole('button', { name: 'Create reference grant' });
+    const btn = page.getByRole('button', { name: 'Create ReferenceGrant' });
     await expect(btn).toBeVisible({ timeout: 15_000 });
     await btn.click();
 
