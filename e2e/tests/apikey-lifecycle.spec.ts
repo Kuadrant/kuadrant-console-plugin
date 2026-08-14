@@ -503,10 +503,10 @@ EOF
       await page.waitForLoadState('domcontentloaded');
       const expiredRow = page.locator(`tr:has-text("${keyName}")`);
       await expect(
-        expiredRow.locator('td[data-label="status"]:has-text("Expired")'),
+        expiredRow.locator('td[data-label="Status"]:has-text("Expired")'),
       ).toBeVisible({ timeout: 15_000 });
       await expect(
-        expiredRow.locator(`td[data-label="expires"]:has-text("${PAST_LABEL}")`),
+        expiredRow.locator(`td[data-label="Expires"]:has-text("${PAST_LABEL}")`),
       ).toBeVisible();
     },
   );

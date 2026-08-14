@@ -135,7 +135,7 @@ spec:
 
       const authpolicyRow = page.locator(`tr:has(a[data-test="${authpolicy}"])`);
       await expect(
-        authpolicyRow.getByRole('cell', { name: 'AuthPolicy', exact: true }),
+        authpolicyRow.locator('td[data-label="Type"]:has-text("AuthPolicy")'),
       ).toBeVisible();
     },
   );
