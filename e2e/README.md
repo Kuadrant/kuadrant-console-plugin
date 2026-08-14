@@ -86,8 +86,11 @@ npx playwright test --config=e2e/playwright.config.ts
 - `e2e/tests/apiproduct-rbac.spec.ts` - API product RBAC
 - `e2e/tests/api-product-list.spec.ts` - API product list page
 - `e2e/tests/attached-tab.spec.ts` - Attached tab for Gateway, HTTPRoute, and GRPCRoute detail views
+- `e2e/tests/data-view-regressions.spec.ts` - DataView regressions
 - `e2e/tests/gateway-crud.spec.ts` - Gateway create, edit, and delete operations
 - `e2e/tests/httproute-crud.spec.ts` - HTTPRoute create, edit, and delete operations
+- `e2e/tests/mcp-overview.spec.ts` - MCP Overview dashboard
+- `e2e/tests/mcp-setup-wizard.spec.ts` - MCP Management setup wizard
 - `e2e/tests/overview.spec.ts` - Overview dashboard cards, stats, and navigation
 - `e2e/tests/policy-forms.spec.ts` - Policy creation forms (DNS, TLS, Auth, RateLimit, etc.)
 - `e2e/tests/rbac.spec.ts` - RBAC permission tests
