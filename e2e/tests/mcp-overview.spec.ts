@@ -65,7 +65,7 @@ test.describe('MCP Overview dashboard', () => {
     await btn.click();
 
     await expect(page).toHaveURL(
-      /\/k8s\/ns\/kuadrant-test\/mcp\.kuadrant\.io~v1alpha1~MCPGatewayExtension\/~new/,
+      /\/k8s\/ns\/kuadrant-test\/mcp\.kuadrant\.io~v1~MCPGatewayExtension\/~new/,
       { timeout: 15_000 },
     );
   });
@@ -80,7 +80,7 @@ test.describe('MCP Overview dashboard', () => {
     await internalItem.click();
 
     await expect(page).toHaveURL(
-      /\/k8s\/ns\/kuadrant-test\/mcp\.kuadrant\.io~v1alpha1~MCPServerRegistration\/~new/,
+      /\/k8s\/ns\/kuadrant-test\/mcp\.kuadrant\.io~v1~MCPServerRegistration\/~new/,
       { timeout: 15_000 },
     );
   });
@@ -187,7 +187,7 @@ test.describe('MCP Overview dashboard', () => {
     await link.click();
 
     await expect(page).toHaveURL(
-      /\/k8s\/ns\/kuadrant-test\/mcp\.kuadrant\.io~v1alpha1~MCPGatewayExtension\/mcp-gateway-extension/,
+      /\/k8s\/ns\/kuadrant-test\/mcp\.kuadrant\.io~v1~MCPGatewayExtension\/mcp-gateway-extension/,
       { timeout: 15_000 },
     );
   });

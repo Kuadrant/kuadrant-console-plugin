@@ -74,7 +74,7 @@ spec:
         - name: mcp-test-server
           port: 9090
 ---
-apiVersion: mcp.kuadrant.io/v1alpha1
+apiVersion: mcp.kuadrant.io/v1
 kind: MCPServerRegistration
 metadata:
   name: toystore-mcp-server
