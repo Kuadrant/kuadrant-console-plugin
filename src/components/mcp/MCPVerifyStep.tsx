@@ -220,7 +220,7 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
 
       // 4. Create MCPGatewayExtension
       const mcpExtensionResource: MCPGatewayExtension = {
-        apiVersion: 'mcp.kuadrant.io/v1alpha1',
+        apiVersion: 'mcp.kuadrant.io/v1',
         kind: 'MCPGatewayExtension',
         metadata: {
           name: formState.extensionName,

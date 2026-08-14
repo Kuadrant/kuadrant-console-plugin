@@ -323,7 +323,7 @@ export const RESOURCES = {
 
   // mcp resources
   MCPGatewayExtension: {
-    gvk: { group: 'mcp.kuadrant.io', version: 'v1alpha1', kind: 'MCPGatewayExtension' },
+    gvk: { group: 'mcp.kuadrant.io', version: 'v1', kind: 'MCPGatewayExtension' },
     plural: 'MCPGatewayExtensions',
     isPolicy: false,
     isGatewayAPI: false,
@@ -331,7 +331,7 @@ export const RESOURCES = {
     isKuadrantInternal: false,
   },
   MCPServerRegistration: {
-    gvk: { group: 'mcp.kuadrant.io', version: 'v1alpha1', kind: 'MCPServerRegistration' },
+    gvk: { group: 'mcp.kuadrant.io', version: 'v1', kind: 'MCPServerRegistration' },
     plural: 'MCPServerRegistrations',
     isPolicy: false,
     isGatewayAPI: false,

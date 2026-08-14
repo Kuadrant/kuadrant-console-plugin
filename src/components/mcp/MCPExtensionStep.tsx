@@ -43,7 +43,7 @@ const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
   // Build YAML resource from form state for the YAML editor
   const extensionResource = React.useMemo<MCPGatewayExtension>(() => {
     const resource: MCPGatewayExtension = {
-      apiVersion: 'mcp.kuadrant.io/v1alpha1',
+      apiVersion: 'mcp.kuadrant.io/v1',
       kind: 'MCPGatewayExtension',
       metadata: {
         name: formState.extensionName || '',

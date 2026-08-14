@@ -27,8 +27,8 @@ Key resources managed on this page:
 
 | Resource | API Group | Purpose |
 |-|-|-|
-| `MCPGatewayExtension` | `mcp.kuadrant.io/v1alpha1` | Extends a Gateway with MCP capabilities (public host, OAuth, session store) |
-| `MCPServerRegistration` | `mcp.kuadrant.io/v1alpha1` | Registers an MCP server behind an HTTPRoute with prefix routing |
+| `MCPGatewayExtension` | `mcp.kuadrant.io/v1` | Extends a Gateway with MCP capabilities (public host, OAuth, session store) |
+| `MCPServerRegistration` | `mcp.kuadrant.io/v1` | Registers an MCP server behind an HTTPRoute with prefix routing |
 | `ReferenceGrant` | `gateway.networking.k8s.io/v1beta1` | Allows cross-namespace references between MCPGatewayExtensions and Gateways |
 
 MCP Gateways are identified by finding Gateway resources that have an MCPGatewayExtension targeting them via `spec.targetRef`. The summary cards compute health based on the Gateway's `Accepted` and `Programmed` conditions, and server readiness based on the `Ready` condition.

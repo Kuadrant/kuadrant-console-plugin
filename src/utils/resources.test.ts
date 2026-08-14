@@ -207,7 +207,7 @@ describe('MCPGatewayExtension resource', () => {
   it('is registered in the resource registry', () => {
     expect(getGVK('MCPGatewayExtension')).toEqual({
       group: 'mcp.kuadrant.io',
-      version: 'v1alpha1',
+      version: 'v1',
       kind: 'MCPGatewayExtension',
     });
   });

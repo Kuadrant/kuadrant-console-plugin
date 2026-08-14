@@ -63,7 +63,7 @@ The plugin manages these Custom Resource Definitions (CRDs):
 11. **APIKeyApproval** (`devportal.kuadrant.io/v1alpha1`) - Approval records for API key requests
 
 ### MCP Resources
-12. **MCPGatewayExtension** (`mcp.kuadrant.io/v1alpha1`) - Extends a Gateway with MCP protocol support via an EnvoyFilter
+12. **MCPGatewayExtension** (`mcp.kuadrant.io/v1`) - Extends a Gateway with MCP protocol support via an EnvoyFilter
 13. **ReferenceGrant** (`gateway.networking.k8s.io/v1beta1`) - Cross-namespace reference permissions for Gateway API resources
 
 ## Common Patterns
