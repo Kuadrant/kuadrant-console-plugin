@@ -17,9 +17,8 @@ import {
   Modal,
   Wizard,
   WizardStep,
-  Tabs,
-  Tab,
-  TabTitleText,
+  WizardHeader,
+  Radio,
   Alert,
   Spinner,
 } from '@patternfly/react-core';
@@ -629,7 +628,10 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
   }, [gatewayObject]);
 
   const onFormChangeRef = React.useRef(onFormChange);
-  onFormChangeRef.current = onFormChange;
+
+  React.useEffect(() => {
+    onFormChangeRef.current = onFormChange;
+  }, [onFormChange]);
 
   React.useEffect(() => {
     if (onFormChangeRef.current) {
@@ -656,566 +658,628 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
     }
   };
 
-  const formValidation = () => {
-    let isFormValid = false;
+  const SECTION_NAME_RE = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
 
-    if (
+  const isListenerConfigValid = (l: ListenerUI) =>
+    l.name.trim() !== '' &&
+    l.name.length <= 253 &&
+    SECTION_NAME_RE.test(l.name) &&
+    Number.isInteger(l.port) &&
+    l.port > 0 &&
+    l.port <= 65535;
+
+  const isListenerProtocolValid = (l: ListenerUI) =>
+    (l.protocol !== 'HTTPS' && l.protocol !== 'TLS') ||
+    l.tlsMode !== 'Terminate' ||
+    (l.certificateRefs.length > 0 &&
+      l.certificateRefs.every((ref) => ref.name.trim() !== '') &&
+      l.tlsOptions.every((opt) => opt.key.trim() !== '' && opt.value.trim() !== ''));
+
+  const isListenerAllowedRoutesValid = (l: ListenerUI) =>
+    l.allowedRoutes.kinds.every((k) => k.kind.trim() !== '' && k.group.trim() !== '');
+
+  const formValidation = () => {
+    const listenerNames = listeners.map((l) => l.name);
+    const hasDuplicateNames = new Set(listenerNames).size !== listenerNames.length;
+
+    return (
       gatewayName &&
       gatewayName.trim() !== '' &&
       gatewayClassName &&
       gatewayClassName !== '' &&
       listeners &&
       listeners.length > 0 &&
+      !hasDuplicateNames &&
       listeners.every(
         (listener) =>
-          listener.name &&
-          listener.name.trim() !== '' &&
-          listener.port > 0 &&
-          listener.certificateRefs.every((ref) => ref.name !== '') &&
-          listener.port <= 65535 &&
-          (!(listener.protocol === 'HTTPS' || listener.protocol === 'TLS') ||
-            listener.tlsMode !== 'Terminate' ||
-            listener.certificateRefs.length > 0),
+          isListenerConfigValid(listener) &&
+          isListenerProtocolValid(listener) &&
+          isListenerAllowedRoutesValid(listener),
       ) &&
       (!addresses ||
         addresses.length === 0 ||
         addresses.every((address) => address.value && address.value.trim() !== ''))
-    ) {
-      isFormValid = true;
-    }
-    return isFormValid;
+    );
   };
 
-  const wizardSteps = [
-    {
-      name: t('Configuration'),
-      nextButtonText: t('Next'),
-      form: (
-        <Form>
-          <FormGroup label={t('Listener Name')} isRequired fieldId="listener-name">
-            <TextInput
-              type="text"
-              id="listener-name"
-              value={currentListener.name}
-              onChange={(_event, value) => setCurrentListener({ ...currentListener, name: value })}
-              isRequired
-              placeholder={t('Enter listener name')}
-            />
-            <FormHelperText>
-              <HelperText>
-                <HelperTextItem>
-                  {t('A unique name for this listener within the gateway.')}
-                </HelperTextItem>
-              </HelperText>
-            </FormHelperText>
-          </FormGroup>
+  const isConfigStepValid =
+    isListenerConfigValid(currentListener) &&
+    !listeners.some((l, i) => i !== editingListenerIndex && l.name === currentListener.name);
 
-          <FormGroup label={t('Port')} isRequired fieldId="listener-port">
-            <TextInput
-              type="number"
-              id="listener-port"
-              value={currentListener.port}
-              onChange={(_event, value) => {
-                const num = Number(value);
-                setCurrentListener({
-                  ...currentListener,
-                  port: value && Number.isInteger(num) && num >= 1 && num <= 65535 ? num : 0,
-                });
-              }}
-              placeholder={t('Enter port (1-65535)')}
-              isRequired
-            />
-            <FormHelperText>
-              <HelperText>
-                <HelperTextItem>
-                  {t('The network port that this listener will bind to (1-65535).')}
-                </HelperTextItem>
-              </HelperText>
-            </FormHelperText>
-          </FormGroup>
+  const isProtocolStepValid = isListenerProtocolValid(currentListener);
 
-          <FormGroup label={t('Hostname')} fieldId="listener-hostname">
-            <TextInput
-              type="text"
-              id="listener-hostname"
-              value={currentListener.hostname}
-              onChange={(_event, value) =>
-                setCurrentListener({ ...currentListener, hostname: value })
-              }
-              placeholder={t('Enter hostname (optional)')}
-            />
-            <FormHelperText>
-              <HelperText>
-                <HelperTextItem>
-                  {t('Optional hostname to match requests. Leave empty to match all hostnames.')}
-                </HelperTextItem>
-              </HelperText>
-            </FormHelperText>
-          </FormGroup>
-        </Form>
-      ),
-    },
-    {
-      name: t('Protocol'),
-      nextButtonText: t('Next'),
-      form: (
-        <Form>
-          <FormGroup label={t('Protocol')} isRequired fieldId="listener-protocol">
-            <FormSelect
-              id="listener-protocol"
-              value={currentListener.protocol}
-              onChange={(_event, value) =>
-                setCurrentListener({
-                  ...currentListener,
-                  protocol: value as ListenerUI['protocol'],
-                })
-              }
-              aria-label={t('Select Protocol')}
-            >
-              <FormSelectOption value="HTTP" label="HTTP" />
-              <FormSelectOption value="HTTPS" label="HTTPS" />
-              <FormSelectOption value="TLS" label="TLS" />
-              <FormSelectOption value="TCP" label="TCP" />
-              <FormSelectOption value="UDP" label="UDP" />
-            </FormSelect>
-            <FormHelperText>
-              <HelperText>
-                <HelperTextItem>{t('The protocol that this listener will accept.')}</HelperTextItem>
-              </HelperText>
-            </FormHelperText>
-          </FormGroup>
+  const isAllowedRoutesStepValid = isListenerAllowedRoutesValid(currentListener);
 
-          {(currentListener.protocol === 'HTTPS' || currentListener.protocol === 'TLS') && (
-            <FormGroup
-              label={t('TLS Mode')}
-              isRequired
-              fieldId="listener-tls-mode"
-              style={{ marginLeft: '20px' }}
-            >
+  const wizardSteps = React.useMemo(
+    () => [
+      {
+        name: t('Configuration'),
+        nextButtonText: t('Next'),
+        isNextDisabled: !isConfigStepValid,
+        form: (
+          <Form>
+            <FormGroup label={t('Listener Name')} isRequired fieldId="listener-name">
+              <TextInput
+                type="text"
+                id="listener-name"
+                value={currentListener.name}
+                onChange={(_event, value) =>
+                  setCurrentListener({ ...currentListener, name: value })
+                }
+                isRequired
+                placeholder={t('Enter listener name')}
+              />
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem>
+                    {t('A unique name for this listener within the gateway.')}
+                  </HelperTextItem>
+                </HelperText>
+              </FormHelperText>
+            </FormGroup>
+
+            <FormGroup label={t('Port')} isRequired fieldId="listener-port">
+              <TextInput
+                type="number"
+                id="listener-port"
+                value={currentListener.port}
+                onChange={(_event, value) => {
+                  const num = Number(value);
+                  setCurrentListener({
+                    ...currentListener,
+                    port: value && Number.isInteger(num) && num >= 1 && num <= 65535 ? num : 0,
+                  });
+                }}
+                placeholder={t('Enter port (1-65535)')}
+                isRequired
+              />
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem>
+                    {t('The network port that this listener will bind to (1-65535).')}
+                  </HelperTextItem>
+                </HelperText>
+              </FormHelperText>
+            </FormGroup>
+
+            <FormGroup label={t('Hostname')} fieldId="listener-hostname">
+              <TextInput
+                type="text"
+                id="listener-hostname"
+                value={currentListener.hostname}
+                onChange={(_event, value) =>
+                  setCurrentListener({ ...currentListener, hostname: value })
+                }
+                placeholder={t('Enter hostname (optional)')}
+              />
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem>
+                    {t('Optional hostname to match requests. Leave empty to match all hostnames.')}
+                  </HelperTextItem>
+                </HelperText>
+              </FormHelperText>
+            </FormGroup>
+          </Form>
+        ),
+      },
+      {
+        name: t('Protocol'),
+        nextButtonText: t('Next'),
+        isNextDisabled: !isProtocolStepValid,
+        isDisabled: !isConfigStepValid,
+        form: (
+          <Form>
+            <FormGroup label={t('Protocol')} isRequired fieldId="listener-protocol">
               <FormSelect
-                value={currentListener.tlsMode}
+                id="listener-protocol"
+                value={currentListener.protocol}
                 onChange={(_event, value) =>
                   setCurrentListener({
                     ...currentListener,
-                    tlsMode: value as ListenerUI['tlsMode'],
+                    protocol: value as ListenerUI['protocol'],
                   })
                 }
-                aria-label={t('Select TLS Mode')}
+                aria-label={t('Select Protocol')}
               >
-                <FormSelectOption value="Terminate" label="Terminate" />
-                <FormSelectOption value="Passthrough" label="Passthrough" />
+                <FormSelectOption value="HTTP" label="HTTP" />
+                <FormSelectOption value="HTTPS" label="HTTPS" />
+                <FormSelectOption value="TLS" label="TLS" />
+                <FormSelectOption value="TCP" label="TCP" />
+                <FormSelectOption value="UDP" label="UDP" />
               </FormSelect>
               <FormHelperText>
                 <HelperText>
                   <HelperTextItem>
+                    {t('The protocol that this listener will accept.')}
+                  </HelperTextItem>
+                </HelperText>
+              </FormHelperText>
+            </FormGroup>
+
+            {(currentListener.protocol === 'HTTPS' || currentListener.protocol === 'TLS') && (
+              <FormGroup
+                label={t('TLS Mode')}
+                isRequired
+                fieldId="listener-tls-mode"
+                style={{ marginLeft: '20px' }}
+              >
+                <FormSelect
+                  value={currentListener.tlsMode}
+                  onChange={(_event, value) =>
+                    setCurrentListener({
+                      ...currentListener,
+                      tlsMode: value as ListenerUI['tlsMode'],
+                    })
+                  }
+                  aria-label={t('Select TLS Mode')}
+                >
+                  <FormSelectOption value="Terminate" label="Terminate" />
+                  <FormSelectOption value="Passthrough" label="Passthrough" />
+                </FormSelect>
+                <FormHelperText>
+                  <HelperText>
+                    <HelperTextItem>
+                      {t(
+                        'TLS termination mode. Terminate decrypts TLS at the gateway, Passthrough forwards encrypted traffic.',
+                      )}
+                    </HelperTextItem>
+                  </HelperText>
+                </FormHelperText>
+              </FormGroup>
+            )}
+
+            {(currentListener.protocol === 'HTTPS' || currentListener.protocol === 'TLS') &&
+              currentListener.tlsMode === 'Terminate' && (
+                <FormGroup
+                  label={t('Certificate References')}
+                  fieldId="listener-certificate-refs"
+                  style={{ marginLeft: '40px' }}
+                  isRequired
+                >
+                  {currentListener.certificateRefs.map((certRef, index) => (
+                    <div
+                      key={certRef.id}
+                      style={{
+                        marginBottom: '16px',
+                        padding: '16px',
+                        border: '1px solid var(--pf-t--global--border--color--default)',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '12px',
+                        }}
+                      >
+                        <strong>
+                          {t('Certificate Reference')} {index + 1}
+                        </strong>
+                        <Button
+                          variant="link"
+                          isDanger
+                          onClick={() => handleRemoveCertificateRef(certRef.id)}
+                          isDisabled={currentListener.certificateRefs.length === 1}
+                        >
+                          {t('Remove')}
+                        </Button>
+                      </div>
+
+                      <div
+                        style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}
+                      >
+                        <FormGroup label={t('Name')} isRequired fieldId={`cert-name-${certRef.id}`}>
+                          <TextInput
+                            type="text"
+                            id={`cert-name-${certRef.id}`}
+                            value={certRef.name}
+                            onChange={(_event, value) =>
+                              handleCertificateRefChange(certRef.id, 'name', value)
+                            }
+                            placeholder={t('Certificate name')}
+                            isRequired
+                          />
+                        </FormGroup>
+
+                        <FormGroup label={t('Namespace')} fieldId={`cert-namespace-${certRef.id}`}>
+                          <TextInput
+                            type="text"
+                            id={`cert-namespace-${certRef.id}`}
+                            value={certRef.namespace}
+                            onChange={(_event, value) =>
+                              handleCertificateRefChange(certRef.id, 'namespace', value)
+                            }
+                            placeholder={t('Certificate namespace')}
+                          />
+                        </FormGroup>
+
+                        <FormGroup label={t('Kind')} isRequired fieldId={`cert-kind-${certRef.id}`}>
+                          <FormSelect
+                            value={certRef.kind}
+                            onChange={(_event, value) =>
+                              handleCertificateRefChange(certRef.id, 'kind', value)
+                            }
+                            aria-label={t('Select Certificate Kind')}
+                          >
+                            <FormSelectOption value="Secret" label="Secret" />
+                            <FormSelectOption value="ConfigMap" label="ConfigMap" />
+                          </FormSelect>
+                        </FormGroup>
+                      </div>
+                    </div>
+                  ))}
+
+                  <Button
+                    variant="link"
+                    icon={<PlusCircleIcon />}
+                    onClick={handleAddCertificateRef}
+                  >
+                    {t('Add certificate reference')}
+                  </Button>
+
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>
+                        {t(
+                          'Certificate references for TLS termination. Specify the name, namespace, and kind of the certificate resource.',
+                        )}
+                      </HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
+              )}
+
+            {(currentListener.protocol === 'HTTPS' || currentListener.protocol === 'TLS') &&
+              currentListener.tlsMode === 'Terminate' && (
+                <FormGroup
+                  label={t('TLS Options')}
+                  fieldId="tls-options"
+                  style={{ marginLeft: '20px' }}
+                >
+                  {currentListener.tlsOptions.map((option, index) => (
+                    <div
+                      key={option.id}
+                      style={{
+                        marginBottom: '16px',
+                        padding: '16px',
+                        border: '1px solid var(--pf-t--global--border--color--default)',
+                        borderRadius: '4px',
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          marginBottom: '12px',
+                        }}
+                      >
+                        <strong>
+                          {t('TLS Option')} {index + 1}
+                        </strong>
+                        <Button
+                          variant="link"
+                          isDanger
+                          onClick={() => handleRemoveTlsOption(option.id)}
+                        >
+                          {t('Remove')}
+                        </Button>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                        <FormGroup label={t('Key')} isRequired fieldId={`tls-key-${option.id}`}>
+                          <TextInput
+                            type="text"
+                            id={`tls-key-${option.id}`}
+                            value={option.key}
+                            onChange={(_event, value) =>
+                              handleTlsOptionChange(option.id, 'key', value)
+                            }
+                            placeholder={t('e.g., minVersion, cipherSuites')}
+                            isRequired
+                          />
+                        </FormGroup>
+
+                        <FormGroup label={t('Value')} isRequired fieldId={`tls-value-${option.id}`}>
+                          <TextInput
+                            type="text"
+                            id={`tls-value-${option.id}`}
+                            value={option.value}
+                            onChange={(_event, value) =>
+                              handleTlsOptionChange(option.id, 'value', value)
+                            }
+                            placeholder={t('e.g., TLSv1.2, ECDHE-RSA-AES256-GCM-SHA384')}
+                            isRequired
+                          />
+                        </FormGroup>
+                      </div>
+                    </div>
+                  ))}
+
+                  <Button variant="link" icon={<PlusCircleIcon />} onClick={handleAddTlsOption}>
+                    {t('Add TLS option')}
+                  </Button>
+
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>
+                        {t(
+                          'A map of key/value pairs to enable implementation-specific TLS options, such as minimum TLS version or cipher suites.',
+                        )}
+                      </HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
+              )}
+          </Form>
+        ),
+      },
+      {
+        name: t('Allowed Routes'),
+        nextButtonText: t('Next'),
+        isNextDisabled: !isAllowedRoutesStepValid,
+        isDisabled: !isConfigStepValid || !isProtocolStepValid,
+        form: (
+          <Form>
+            <FormGroup label={t('Allowed Namespaces')} fieldId="allowed-namespaces">
+              <FormSelect
+                value={currentListener.allowedRoutes.namespaces.from}
+                onChange={(_event, value) =>
+                  setCurrentListener({
+                    ...currentListener,
+                    allowedRoutes: {
+                      ...currentListener.allowedRoutes,
+                      namespaces: {
+                        ...currentListener.allowedRoutes.namespaces,
+                        from: value as AllowedRoutesUI['namespaces']['from'],
+                      },
+                    },
+                  })
+                }
+                aria-label={t('Select Allowed Namespaces')}
+              >
+                <FormSelectOption value="All" label={t('All')} />
+                <FormSelectOption value="Same" label={t('Same')} />
+                <FormSelectOption value="Selector" label={t('Selector')} />
+              </FormSelect>
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem>
+                    {currentListener.allowedRoutes.namespaces.from === 'All' &&
+                      t('Allow from all namespaces.')}
+                    {currentListener.allowedRoutes.namespaces.from === 'Same' &&
+                      t("Allow only from the Gateway's namespace.")}
+                    {currentListener.allowedRoutes.namespaces.from === 'Selector' &&
+                      t('Allow from namespaces matching a specific label.')}
+                  </HelperTextItem>
+                </HelperText>
+              </FormHelperText>
+            </FormGroup>
+
+            {currentListener.allowedRoutes.namespaces.from === 'Selector' && (
+              <FormGroup label={t('Namespace selector labels')} fieldId="selector-labels">
+                {currentListener.allowedRoutes.namespaces.selectorLabels.map((label) => (
+                  <div
+                    key={label.id}
+                    style={{
+                      display: 'flex',
+                      gap: '8px',
+                      alignItems: 'flex-start',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    <TextInput
+                      value={label.key}
+                      onChange={(_event, val) => handleSelectorLabelChange(label.id, 'key', val)}
+                      aria-label={t('Label key')}
+                      placeholder={t('Key')}
+                    />
+                    <TextInput
+                      value={label.value}
+                      onChange={(_event, val) => handleSelectorLabelChange(label.id, 'value', val)}
+                      aria-label={t('Label value')}
+                      placeholder={t('Value')}
+                    />
+                    <Button
+                      variant="plain"
+                      aria-label={t('Remove label')}
+                      onClick={() => handleRemoveSelectorLabel(label.id)}
+                    >
+                      <TrashIcon />
+                    </Button>
+                  </div>
+                ))}
+                <Button variant="link" icon={<PlusCircleIcon />} onClick={handleAddSelectorLabel}>
+                  {t('Add label')}
+                </Button>
+              </FormGroup>
+            )}
+
+            <FormGroup label={t('Allowed Route Kinds')} fieldId="allowed-route-kinds">
+              {currentListener.allowedRoutes.kinds.map((routeKind, index) => (
+                <div
+                  key={routeKind.id}
+                  style={{
+                    marginBottom: '16px',
+                    padding: '16px',
+                    border: '1px solid var(--pf-t--global--border--color--default)',
+                    borderRadius: '4px',
+                  }}
+                >
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    <strong>
+                      {t('Route Kind')} {index + 1}
+                    </strong>
+                    <Button
+                      variant="link"
+                      isDanger
+                      onClick={() => handleRemoveRouteKind(routeKind.id)}
+                    >
+                      {t('Remove')}
+                    </Button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                    <FormGroup label={t('Kind')} isRequired fieldId={`route-kind-${routeKind.id}`}>
+                      <FormSelect
+                        value={routeKind.kind}
+                        onChange={(_event, value) =>
+                          handleRouteKindChange(routeKind.id, 'kind', value)
+                        }
+                        aria-label={t('Select Route Kind')}
+                      >
+                        <FormSelectOption value="HTTPRoute" label="HTTPRoute" />
+                        <FormSelectOption value="GRPCRoute" label="GRPCRoute" />
+                        <FormSelectOption value="TCPRoute" label="TCPRoute" />
+                        <FormSelectOption value="UDPRoute" label="UDPRoute" />
+                        <FormSelectOption value="TLSRoute" label="TLSRoute" />
+                      </FormSelect>
+                    </FormGroup>
+
+                    <FormGroup
+                      label={t('Group')}
+                      isRequired
+                      fieldId={`route-group-${routeKind.id}`}
+                    >
+                      <TextInput
+                        type="text"
+                        id={`route-group-${routeKind.id}`}
+                        value={routeKind.group}
+                        onChange={(_event, value) =>
+                          handleRouteKindChange(routeKind.id, 'group', value)
+                        }
+                        placeholder={t('e.g., gateway.networking.k8s.io')}
+                        isRequired
+                      />
+                    </FormGroup>
+                  </div>
+                </div>
+              ))}
+
+              <Button variant="link" icon={<PlusCircleIcon />} onClick={handleAddRouteKind}>
+                {t('Add route kind')}
+              </Button>
+
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem>
                     {t(
-                      'TLS termination mode. Terminate decrypts TLS at the gateway, Passthrough forwards encrypted traffic.',
+                      'Restricts the types of Route resources that can attach to this listener (e.g., only HTTPRoute).',
                     )}
                   </HelperTextItem>
                 </HelperText>
               </FormHelperText>
             </FormGroup>
-          )}
-
-          {(currentListener.protocol === 'HTTPS' || currentListener.protocol === 'TLS') &&
-            currentListener.tlsMode === 'Terminate' && (
-              <FormGroup
-                label={t('Certificate References')}
-                fieldId="listener-certificate-refs"
-                style={{ marginLeft: '40px' }}
-                isRequired
-              >
-                {currentListener.certificateRefs.map((certRef, index) => (
-                  <div
-                    key={certRef.id}
-                    style={{
-                      marginBottom: '16px',
-                      padding: '16px',
-                      border: '1px solid var(--pf-t--global--border--color--default)',
-                      borderRadius: '4px',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '12px',
-                      }}
-                    >
-                      <strong>
-                        {t('Certificate Reference')} {index + 1}
-                      </strong>
-                      <Button
-                        variant="link"
-                        isDanger
-                        onClick={() => handleRemoveCertificateRef(certRef.id)}
-                        isDisabled={currentListener.certificateRefs.length === 1}
-                      >
-                        {t('Remove')}
-                      </Button>
-                    </div>
-
-                    <div
-                      style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}
-                    >
-                      <FormGroup label={t('Name')} isRequired fieldId={`cert-name-${certRef.id}`}>
-                        <TextInput
-                          type="text"
-                          id={`cert-name-${certRef.id}`}
-                          value={certRef.name}
-                          onChange={(_event, value) =>
-                            handleCertificateRefChange(certRef.id, 'name', value)
-                          }
-                          placeholder={t('Certificate name')}
-                          isRequired
-                        />
-                      </FormGroup>
-
-                      <FormGroup label={t('Namespace')} fieldId={`cert-namespace-${certRef.id}`}>
-                        <TextInput
-                          type="text"
-                          id={`cert-namespace-${certRef.id}`}
-                          value={certRef.namespace}
-                          onChange={(_event, value) =>
-                            handleCertificateRefChange(certRef.id, 'namespace', value)
-                          }
-                          placeholder={t('Certificate namespace')}
-                        />
-                      </FormGroup>
-
-                      <FormGroup label={t('Kind')} isRequired fieldId={`cert-kind-${certRef.id}`}>
-                        <FormSelect
-                          value={certRef.kind}
-                          onChange={(_event, value) =>
-                            handleCertificateRefChange(certRef.id, 'kind', value)
-                          }
-                          aria-label={t('Select Certificate Kind')}
-                        >
-                          <FormSelectOption value="Secret" label="Secret" />
-                          <FormSelectOption value="ConfigMap" label="ConfigMap" />
-                        </FormSelect>
-                      </FormGroup>
-                    </div>
-                  </div>
-                ))}
-
-                <Button variant="link" icon={<PlusCircleIcon />} onClick={handleAddCertificateRef}>
-                  {t('Add certificate reference')}
-                </Button>
-
-                <FormHelperText>
-                  <HelperText>
-                    <HelperTextItem>
-                      {t(
-                        'Certificate references for TLS termination. Specify the name, namespace, and kind of the certificate resource.',
-                      )}
-                    </HelperTextItem>
-                  </HelperText>
-                </FormHelperText>
-              </FormGroup>
-            )}
-
-          {(currentListener.protocol === 'HTTPS' || currentListener.protocol === 'TLS') &&
-            currentListener.tlsMode === 'Terminate' && (
-              <FormGroup
-                label={t('TLS Options')}
-                fieldId="tls-options"
-                style={{ marginLeft: '20px' }}
-              >
-                {currentListener.tlsOptions.map((option, index) => (
-                  <div
-                    key={option.id}
-                    style={{
-                      marginBottom: '16px',
-                      padding: '16px',
-                      border: '1px solid var(--pf-t--global--border--color--default)',
-                      borderRadius: '4px',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: '12px',
-                      }}
-                    >
-                      <strong>
-                        {t('TLS Option')} {index + 1}
-                      </strong>
-                      <Button
-                        variant="link"
-                        isDanger
-                        onClick={() => handleRemoveTlsOption(option.id)}
-                      >
-                        {t('Remove')}
-                      </Button>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                      <FormGroup label={t('Key')} isRequired fieldId={`tls-key-${option.id}`}>
-                        <TextInput
-                          type="text"
-                          id={`tls-key-${option.id}`}
-                          value={option.key}
-                          onChange={(_event, value) =>
-                            handleTlsOptionChange(option.id, 'key', value)
-                          }
-                          placeholder={t('e.g., minVersion, cipherSuites')}
-                          isRequired
-                        />
-                      </FormGroup>
-
-                      <FormGroup label={t('Value')} isRequired fieldId={`tls-value-${option.id}`}>
-                        <TextInput
-                          type="text"
-                          id={`tls-value-${option.id}`}
-                          value={option.value}
-                          onChange={(_event, value) =>
-                            handleTlsOptionChange(option.id, 'value', value)
-                          }
-                          placeholder={t('e.g., TLSv1.2, ECDHE-RSA-AES256-GCM-SHA384')}
-                          isRequired
-                        />
-                      </FormGroup>
-                    </div>
-                  </div>
-                ))}
-
-                <Button variant="link" icon={<PlusCircleIcon />} onClick={handleAddTlsOption}>
-                  {t('Add TLS option')}
-                </Button>
-
-                <FormHelperText>
-                  <HelperText>
-                    <HelperTextItem>
-                      {t(
-                        'A map of key/value pairs to enable implementation-specific TLS options, such as minimum TLS version or cipher suites.',
-                      )}
-                    </HelperTextItem>
-                  </HelperText>
-                </FormHelperText>
-              </FormGroup>
-            )}
-        </Form>
-      ),
-    },
-    {
-      name: t('Allowed Routes'),
-      nextButtonText: t('Next'),
-      form: (
-        <Form>
-          <FormGroup label={t('Allowed Namespaces')} fieldId="allowed-namespaces">
-            <FormSelect
-              value={currentListener.allowedRoutes.namespaces.from}
-              onChange={(_event, value) =>
-                setCurrentListener({
-                  ...currentListener,
-                  allowedRoutes: {
-                    ...currentListener.allowedRoutes,
-                    namespaces: {
-                      ...currentListener.allowedRoutes.namespaces,
-                      from: value as AllowedRoutesUI['namespaces']['from'],
-                    },
-                  },
-                })
-              }
-              aria-label={t('Select Allowed Namespaces')}
-            >
-              <FormSelectOption value="All" label={t('All')} />
-              <FormSelectOption value="Same" label={t('Same')} />
-              <FormSelectOption value="Selector" label={t('Selector')} />
-            </FormSelect>
-            <FormHelperText>
-              <HelperText>
-                <HelperTextItem>
-                  {currentListener.allowedRoutes.namespaces.from === 'All' &&
-                    t('Allow from all namespaces.')}
-                  {currentListener.allowedRoutes.namespaces.from === 'Same' &&
-                    t("Allow only from the Gateway's namespace.")}
-                  {currentListener.allowedRoutes.namespaces.from === 'Selector' &&
-                    t('Allow from namespaces matching a specific label.')}
-                </HelperTextItem>
-              </HelperText>
-            </FormHelperText>
-          </FormGroup>
-
-          {currentListener.allowedRoutes.namespaces.from === 'Selector' && (
-            <FormGroup label={t('Namespace selector labels')} fieldId="selector-labels">
-              {currentListener.allowedRoutes.namespaces.selectorLabels.map((label) => (
-                <div
-                  key={label.id}
-                  style={{
-                    display: 'flex',
-                    gap: '8px',
-                    alignItems: 'flex-start',
-                    marginBottom: '8px',
-                  }}
-                >
-                  <TextInput
-                    value={label.key}
-                    onChange={(_event, val) => handleSelectorLabelChange(label.id, 'key', val)}
-                    aria-label={t('Label key')}
-                    placeholder={t('Key')}
-                  />
-                  <TextInput
-                    value={label.value}
-                    onChange={(_event, val) => handleSelectorLabelChange(label.id, 'value', val)}
-                    aria-label={t('Label value')}
-                    placeholder={t('Value')}
-                  />
-                  <Button
-                    variant="plain"
-                    aria-label={t('Remove label')}
-                    onClick={() => handleRemoveSelectorLabel(label.id)}
-                  >
-                    <TrashIcon />
-                  </Button>
-                </div>
-              ))}
-              <Button variant="link" icon={<PlusCircleIcon />} onClick={handleAddSelectorLabel}>
-                {t('Add label')}
-              </Button>
-            </FormGroup>
-          )}
-
-          <FormGroup label={t('Allowed Route Kinds')} fieldId="allowed-route-kinds">
-            {currentListener.allowedRoutes.kinds.map((routeKind, index) => (
-              <div
-                key={routeKind.id}
-                style={{
-                  marginBottom: '16px',
-                  padding: '16px',
-                  border: '1px solid var(--pf-t--global--border--color--default)',
-                  borderRadius: '4px',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '12px',
-                  }}
-                >
-                  <strong>
-                    {t('Route Kind')} {index + 1}
-                  </strong>
-                  <Button
-                    variant="link"
-                    isDanger
-                    onClick={() => handleRemoveRouteKind(routeKind.id)}
-                  >
-                    {t('Remove')}
-                  </Button>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                  <FormGroup label={t('Kind')} isRequired fieldId={`route-kind-${routeKind.id}`}>
-                    <FormSelect
-                      value={routeKind.kind}
-                      onChange={(_event, value) =>
-                        handleRouteKindChange(routeKind.id, 'kind', value)
-                      }
-                      aria-label={t('Select Route Kind')}
-                    >
-                      <FormSelectOption value="HTTPRoute" label="HTTPRoute" />
-                      <FormSelectOption value="GRPCRoute" label="GRPCRoute" />
-                      <FormSelectOption value="TCPRoute" label="TCPRoute" />
-                      <FormSelectOption value="UDPRoute" label="UDPRoute" />
-                      <FormSelectOption value="TLSRoute" label="TLSRoute" />
-                    </FormSelect>
-                  </FormGroup>
-
-                  <FormGroup label={t('Group')} isRequired fieldId={`route-group-${routeKind.id}`}>
-                    <TextInput
-                      type="text"
-                      id={`route-group-${routeKind.id}`}
-                      value={routeKind.group}
-                      onChange={(_event, value) =>
-                        handleRouteKindChange(routeKind.id, 'group', value)
-                      }
-                      placeholder={t('e.g., gateway.networking.k8s.io')}
-                      isRequired
-                    />
-                  </FormGroup>
-                </div>
+          </Form>
+        ),
+      },
+      {
+        name: t('Review & Create'),
+        nextButtonText: t('Create'),
+        isNextDisabled: !isConfigStepValid || !isProtocolStepValid || !isAllowedRoutesStepValid,
+        isDisabled: !isConfigStepValid || !isProtocolStepValid || !isAllowedRoutesStepValid,
+        form: (
+          <div>
+            <h1>{t('Listener Summary')}</h1>
+            <div style={{ marginTop: '20px' }}>
+              <div>
+                <strong>{t('Name')}:</strong> {currentListener.name || t('Not specified')}
               </div>
-            ))}
+              <div>
+                <strong>{t('Protocol')}:</strong> {currentListener.protocol}
+              </div>
+              <div>
+                <strong>{t('Port')}:</strong> {currentListener.port}
+              </div>
+              <div>
+                <strong>{t('Hostname')}:</strong> {currentListener.hostname || t('All hostnames')}
+              </div>
 
-            <Button variant="link" icon={<PlusCircleIcon />} onClick={handleAddRouteKind}>
-              {t('Add route kind')}
-            </Button>
+              {(currentListener.protocol === 'HTTPS' || currentListener.protocol === 'TLS') && (
+                <>
+                  <div>
+                    <strong>{t('TLS Mode')}:</strong> {currentListener.tlsMode}
+                  </div>
+                  <div>
+                    <strong>{t('Certificate References')}:</strong>{' '}
+                    {currentListener.certificateRefs.length > 0
+                      ? currentListener.certificateRefs.length
+                      : t('None')}
+                  </div>
+                  <div>
+                    <strong>{t('TLS Options')}:</strong>{' '}
+                    {currentListener.tlsOptions.length > 0
+                      ? currentListener.tlsOptions.length
+                      : t('None')}
+                  </div>
+                </>
+              )}
 
-            <FormHelperText>
-              <HelperText>
-                <HelperTextItem>
-                  {t(
-                    'Restricts the types of Route resources that can attach to this listener (e.g., only HTTPRoute).',
-                  )}
-                </HelperTextItem>
-              </HelperText>
-            </FormHelperText>
-          </FormGroup>
-        </Form>
-      ),
-    },
-    {
-      name: t('Review & Create'),
-      nextButtonText: t('Create'),
-      form: (
-        <div>
-          <h1>{t('Listener Summary')}</h1>
-          <div style={{ marginTop: '20px' }}>
-            <div>
-              <strong>{t('Name')}:</strong> {currentListener.name || t('Not specified')}
-            </div>
-            <div>
-              <strong>{t('Protocol')}:</strong> {currentListener.protocol}
-            </div>
-            <div>
-              <strong>{t('Port')}:</strong> {currentListener.port}
-            </div>
-            <div>
-              <strong>{t('Hostname')}:</strong> {currentListener.hostname || t('All hostnames')}
-            </div>
-
-            {(currentListener.protocol === 'HTTPS' || currentListener.protocol === 'TLS') && (
-              <>
-                <div>
-                  <strong>{t('TLS Mode')}:</strong> {currentListener.tlsMode}
-                </div>
-                <div>
-                  <strong>{t('Certificate References')}:</strong>{' '}
-                  {currentListener.certificateRefs.length > 0
-                    ? currentListener.certificateRefs.length
-                    : t('None')}
-                </div>
-                <div>
-                  <strong>{t('TLS Options')}:</strong>{' '}
-                  {currentListener.tlsOptions.length > 0
-                    ? currentListener.tlsOptions.length
-                    : t('None')}
-                </div>
-              </>
-            )}
-
-            <div>
-              <strong>{t('Allowed Namespaces')}:</strong>{' '}
-              {currentListener.allowedRoutes.namespaces.from}
-            </div>
-            <div>
-              <strong>{t('Allowed Route Kinds')}:</strong>{' '}
-              {currentListener.allowedRoutes.kinds.length > 0
-                ? currentListener.allowedRoutes.kinds.length
-                : t('All route kinds')}
+              <div>
+                <strong>{t('Allowed Namespaces')}:</strong>{' '}
+                {currentListener.allowedRoutes.namespaces.from}
+              </div>
+              <div>
+                <strong>{t('Allowed Route Kinds')}:</strong>{' '}
+                {currentListener.allowedRoutes.kinds.length > 0
+                  ? currentListener.allowedRoutes.kinds.length
+                  : t('All route kinds')}
+              </div>
             </div>
           </div>
-        </div>
-      ),
-    },
-  ];
+        ),
+      },
+    ],
+    [
+      isConfigStepValid,
+      isProtocolStepValid,
+      isAllowedRoutesStepValid,
+      currentListener,
+      handleAddCertificateRef,
+      handleCertificateRefChange,
+      handleRemoveCertificateRef,
+      handleAddTlsOption,
+      handleTlsOptionChange,
+      handleRemoveTlsOption,
+      handleAddSelectorLabel,
+      handleSelectorLabelChange,
+      handleRemoveSelectorLabel,
+      handleAddRouteKind,
+      handleRouteKindChange,
+      handleRemoveRouteKind,
+      t,
+    ],
+  );
 
   return (
     <>
@@ -1233,328 +1297,346 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
             )}
           </p>
         </div>
-        {/* Loading state */}
-        {isLoading ? (
+        <div className="kuadrant-gateway-editor-toggle">
+          <span>{t('Create via:')}</span>
+          <Radio
+            name="create-type-radio"
+            label={t('Form')}
+            id="create-type-radio-form"
+            isChecked={createView === 'form'}
+            onChange={() => setCreateView('form')}
+          />
+          <Radio
+            name="create-type-radio"
+            label={t('YAML')}
+            id="create-type-radio-yaml"
+            isChecked={createView === 'yaml'}
+            onChange={() => setCreateView('yaml')}
+          />
+        </div>
+      </PageSection>
+
+      {/* Loading state */}
+      {isLoading ? (
+        <PageSection hasBodyWrapper={false}>
           <div
             style={{
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
               height: '200px',
-              marginTop: '20px',
             }}
           >
             <Spinner size="lg" />
             <span style={{ marginLeft: '16px' }}>{t('Loading gateway...')}</span>
           </div>
-        ) : (
-          <Tabs
-            activeKey={createView}
-            onSelect={(_e, key) => {
-              setYamlError(null);
-              setCreateView(key as 'form' | 'yaml');
-            }}
-          >
-            <Tab eventKey="form" title={<TabTitleText>{t('Form')}</TabTitleText>}>
-              <PageSection hasBodyWrapper={false}>
-                <Form className="co-m-pane__form">
-                  <FormGroup label={t('Gateway name')} isRequired fieldId="gateway-name">
-                    <TextInput
-                      type="text"
-                      id="gateway-name"
-                      name="gateway-name"
-                      value={gatewayName}
-                      onChange={(_event, value) => setGatewayName(value)}
-                      isRequired
-                      isDisabled={!create} // Disable during edit as names are immutable
-                      placeholder={t('Enter gateway name')}
-                    />
-                    <FormHelperText>
-                      <HelperText>
-                        <HelperTextItem>
-                          {!create
-                            ? t('Gateway names cannot be changed after creation.')
-                            : t('A unique name for the gateway within the namespace.')}
-                        </HelperTextItem>
-                      </HelperText>
-                    </FormHelperText>
-                  </FormGroup>
+        </PageSection>
+      ) : (
+        <>
+          {/* Conditional rendering based on current view */}
+          {createView === 'form' ? (
+            <PageSection hasBodyWrapper={false}>
+              <Form className="co-m-pane__form">
+                <FormGroup label={t('Gateway name')} isRequired fieldId="gateway-name">
+                  <TextInput
+                    type="text"
+                    id="gateway-name"
+                    name="gateway-name"
+                    value={gatewayName}
+                    onChange={(_event, value) => setGatewayName(value)}
+                    isRequired
+                    isDisabled={!create} // Disable during edit as names are immutable
+                    placeholder={t('Enter gateway name')}
+                  />
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>
+                        {!create
+                          ? t('Gateway names cannot be changed after creation.')
+                          : t('A unique name for the gateway within the namespace.')}
+                      </HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
 
-                  <FormGroup label={t('Gateway Class Name')} isRequired fieldId="gateway-class">
-                    <TextInput
-                      id="gateway-class"
-                      value={gatewayClassName}
-                      isDisabled
-                      aria-label={t('Gateway Class Name')}
-                    />
-                    <FormHelperText>
-                      <HelperText>
-                        <HelperTextItem>
-                          {t('The gateway class used for this Gateway.')}
-                        </HelperTextItem>
-                      </HelperText>
-                    </FormHelperText>
-                  </FormGroup>
+                <FormGroup label={t('Gateway Class Name')} isRequired fieldId="gateway-class">
+                  <TextInput
+                    id="gateway-class"
+                    value={gatewayClassName}
+                    isDisabled
+                    aria-label={t('Gateway Class Name')}
+                  />
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>
+                        {t('The gateway class used for this Gateway.')}
+                      </HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
 
-                  <FormGroup
-                    label={
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          width: '100%',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div>{t('Listeners')}</div>
-                          <Popover
-                            bodyContent={t(
-                              'Listeners define how the Gateway accepts traffic. Each listener specifies a protocol, port, and hostname to match incoming requests.',
-                            )}
-                            aria-label={t('Listeners help')}
-                          >
-                            <Button variant="plain" aria-label={t('Listeners help')}>
-                              <HelpIcon />
-                            </Button>
-                          </Popover>
-                        </div>
-                        <Button
-                          variant="secondary"
-                          icon={<PlusCircleIcon />}
-                          onClick={handleAddListener}
-                        >
-                          {t('Add listener')}
-                        </Button>
-                      </div>
-                    }
-                    fieldId="listeners"
-                  >
-                    {listeners.length === 0 && (
-                      <Alert
-                        variant="warning"
-                        title={t('At least one listener is required to create a Gateway.')}
-                      />
-                    )}
-                    {listeners.length > 0 && (
-                      <div style={{ marginBottom: '16px' }}>
-                        <Table aria-label={t('Listeners table')} variant="compact">
-                          <Thead>
-                            <Tr>
-                              <Th>{t('Name')}</Th>
-                              <Th>{t('Protocol')}</Th>
-                              <Th>{t('Port')}</Th>
-                              <Th>{t('Hostname')}</Th>
-                              <Th>{t('TLS Mode')}</Th>
-                              <Th>{t('Actions')}</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {listeners.map((listener, index) => (
-                              <Tr key={index}>
-                                <Td dataLabel={t('Name')}>{listener.name || t('Unnamed')}</Td>
-                                <Td dataLabel={t('Protocol')}>{listener.protocol}</Td>
-                                <Td dataLabel={t('Port')}>{listener.port}</Td>
-                                <Td dataLabel={t('Hostname')}>
-                                  {listener.hostname || t('All hostnames')}
-                                </Td>
-                                <Td dataLabel={t('TLS Mode')}>
-                                  {listener.protocol === 'HTTPS' || listener.protocol === 'TLS'
-                                    ? listener.tlsMode
-                                    : t('N/A')}
-                                </Td>
-                                <Td dataLabel={t('Actions')}>
-                                  <div style={{ display: 'flex', gap: '8px' }}>
-                                    <Button
-                                      variant="plain"
-                                      aria-label={t('Edit listener')}
-                                      onClick={() => handleEditListener(index)}
-                                    >
-                                      <EditIcon />
-                                    </Button>
-                                    <Button
-                                      variant="plain"
-                                      aria-label={t('Remove listener')}
-                                      onClick={() => handleRemoveListener(index)}
-                                      isDanger
-                                    >
-                                      <TrashIcon />
-                                    </Button>
-                                  </div>
-                                </Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </div>
-                    )}
-                  </FormGroup>
-
-                  <FormGroup
-                    label={
+                <FormGroup
+                  label={
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '100%',
+                      }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Button
-                          variant="plain"
-                          onClick={() => setIsAddressesExpanded(!isAddressesExpanded)}
-                          style={{
-                            padding: 0,
-                            fontSize: 'inherit',
-                            fontWeight: 'inherit',
-                            color: 'inherit',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                        >
-                          {isAddressesExpanded ? <AngleDownIcon /> : <AngleRightIcon />}
-                          <span>{t('Addresses (Optional)')}</span>
-                        </Button>
+                        <div>{t('Listeners')}</div>
                         <Popover
                           bodyContent={t(
-                            'Request a specific static IP address or hostname for the Gateway. This is optional and used to specify where the Gateway should be accessible.',
+                            'Listeners define how the Gateway accepts traffic. Each listener specifies a protocol, port, and hostname to match incoming requests.',
                           )}
-                          aria-label={t('Addresses help')}
+                          aria-label={t('Listeners help')}
                         >
-                          <Button variant="plain" aria-label={t('Addresses help')}>
+                          <Button variant="plain" aria-label={t('Listeners help')}>
                             <HelpIcon />
                           </Button>
                         </Popover>
                       </div>
-                    }
-                    fieldId="addresses"
-                  >
-                    {isAddressesExpanded && (
-                      <div>
-                        {addresses.length > 0 && (
-                          <div style={{ marginBottom: '16px' }}>
-                            <Table aria-label={t('Addresses table')} variant="compact">
-                              <Thead>
-                                <Tr>
-                                  <Th>{t('Type')}</Th>
-                                  <Th>{t('Value')}</Th>
-                                  <Th>{t('Actions')}</Th>
-                                </Tr>
-                              </Thead>
-                              <Tbody>
-                                {addresses.map((address) => (
-                                  <Tr key={address.id}>
-                                    <Td dataLabel={t('Type')}>
-                                      <FormSelect
-                                        value={address.type}
-                                        onChange={(_event, value) =>
-                                          handleAddressChange(address.id, 'type', value)
-                                        }
-                                        aria-label={t('Select Address Type')}
-                                      >
-                                        <FormSelectOption value="IPAddress" label="IPAddress" />
-                                        <FormSelectOption value="Hostname" label="Hostname" />
-                                      </FormSelect>
-                                    </Td>
-                                    <Td dataLabel={t('Value')}>
-                                      <TextInput
-                                        type="text"
-                                        value={address.value}
-                                        onChange={(_event, value) =>
-                                          handleAddressChange(address.id, 'value', value)
-                                        }
-                                        placeholder={
-                                          address.type === 'IPAddress'
-                                            ? t('e.g., 192.168.1.100')
-                                            : t('e.g., gateway.example.com')
-                                        }
-                                        isRequired
-                                      />
-                                    </Td>
-                                    <Td dataLabel={t('Actions')}>
-                                      <Button
-                                        variant="plain"
-                                        aria-label={t('Remove address')}
-                                        onClick={() => handleRemoveAddress(address.id)}
-                                        isDanger
-                                      >
-                                        <TrashIcon />
-                                      </Button>
-                                    </Td>
-                                  </Tr>
-                                ))}
-                              </Tbody>
-                            </Table>
-                          </div>
+                      <Button
+                        variant="secondary"
+                        icon={<PlusCircleIcon />}
+                        onClick={handleAddListener}
+                      >
+                        {t('Add listener')}
+                      </Button>
+                    </div>
+                  }
+                  fieldId="listeners"
+                >
+                  {listeners.length === 0 && (
+                    <Alert
+                      variant="warning"
+                      title={t('At least one listener is required to create a Gateway.')}
+                    />
+                  )}
+                  {listeners.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <Table aria-label={t('Listeners table')} variant="compact">
+                        <Thead>
+                          <Tr>
+                            <Th>{t('Name')}</Th>
+                            <Th>{t('Protocol')}</Th>
+                            <Th>{t('Port')}</Th>
+                            <Th>{t('Hostname')}</Th>
+                            <Th>{t('TLS Mode')}</Th>
+                            <Th>{t('Actions')}</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          {listeners.map((listener, index) => (
+                            <Tr key={index}>
+                              <Td dataLabel={t('Name')}>{listener.name || t('Unnamed')}</Td>
+                              <Td dataLabel={t('Protocol')}>{listener.protocol}</Td>
+                              <Td dataLabel={t('Port')}>{listener.port}</Td>
+                              <Td dataLabel={t('Hostname')}>
+                                {listener.hostname || t('All hostnames')}
+                              </Td>
+                              <Td dataLabel={t('TLS Mode')}>
+                                {listener.protocol === 'HTTPS' || listener.protocol === 'TLS'
+                                  ? listener.tlsMode
+                                  : t('N/A')}
+                              </Td>
+                              <Td dataLabel={t('Actions')}>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <Button
+                                    variant="plain"
+                                    aria-label={t('Edit listener')}
+                                    onClick={() => handleEditListener(index)}
+                                  >
+                                    <EditIcon />
+                                  </Button>
+                                  <Button
+                                    variant="plain"
+                                    aria-label={t('Remove listener')}
+                                    onClick={() => handleRemoveListener(index)}
+                                    isDanger
+                                  >
+                                    <TrashIcon />
+                                  </Button>
+                                </div>
+                              </Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </div>
+                  )}
+                </FormGroup>
+
+                <FormGroup
+                  label={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Button
+                        variant="plain"
+                        onClick={() => setIsAddressesExpanded(!isAddressesExpanded)}
+                        style={{
+                          padding: 0,
+                          fontSize: 'inherit',
+                          fontWeight: 'inherit',
+                          color: 'inherit',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        {isAddressesExpanded ? <AngleDownIcon /> : <AngleRightIcon />}
+                        <span>{t('Addresses (Optional)')}</span>
+                      </Button>
+                      <Popover
+                        bodyContent={t(
+                          'Request a specific static IP address or hostname for the Gateway. This is optional and used to specify where the Gateway should be accessible.',
                         )}
-                        <Button
-                          variant="secondary"
-                          icon={<PlusCircleIcon />}
-                          onClick={handleAddAddress}
-                        >
-                          {t('Add address')}
+                        aria-label={t('Addresses help')}
+                      >
+                        <Button variant="plain" aria-label={t('Addresses help')}>
+                          <HelpIcon />
                         </Button>
-                        <FormHelperText>
-                          <HelperText>
-                            <HelperTextItem>
-                              {t(
-                                'Specify static IP addresses or hostnames where the Gateway should be accessible. This is optional and depends on your infrastructure setup.',
-                              )}
-                            </HelperTextItem>
-                          </HelperText>
-                        </FormHelperText>
-                      </div>
-                    )}
-                  </FormGroup>
-                </Form>
-                <ActionGroup className="pf-u-mt-0">
-                  <KuadrantCreateUpdate
-                    validation={formValidation()}
-                    model={gatewayModel}
-                    resource={gatewayObject}
-                    policyType="Gateway"
-                    navigate={navigate}
-                    redirectPath={`/k8s/ns/${selectedNamespace}/${gatewayModel?.apiGroup}~${gatewayModel?.apiVersion}~${gatewayModel?.kind}/${gatewayName}`}
-                  />
-                  <Button variant="link" onClick={() => navigate(-1)}>
-                    {t('Cancel')}
-                  </Button>
-                </ActionGroup>
-              </PageSection>
-            </Tab>
-            <Tab eventKey="yaml" title={<TabTitleText>{t('YAML')}</TabTitleText>}>
-              <div className="kuadrant-gateway-yaml-editor">
-                {yamlError && (
-                  <Alert
-                    variant="warning"
-                    title={t('Error: YAML Validation')}
-                    isInline
-                    className="pf-v6-u-mt-md"
-                  >
+                      </Popover>
+                    </div>
+                  }
+                  fieldId="addresses"
+                >
+                  {isAddressesExpanded && (
+                    <div>
+                      {addresses.length > 0 && (
+                        <div style={{ marginBottom: '16px' }}>
+                          <Table aria-label={t('Addresses table')} variant="compact">
+                            <Thead>
+                              <Tr>
+                                <Th>{t('Type')}</Th>
+                                <Th>{t('Value')}</Th>
+                                <Th>{t('Actions')}</Th>
+                              </Tr>
+                            </Thead>
+                            <Tbody>
+                              {addresses.map((address) => (
+                                <Tr key={address.id}>
+                                  <Td dataLabel={t('Type')}>
+                                    <FormSelect
+                                      value={address.type}
+                                      onChange={(_event, value) =>
+                                        handleAddressChange(address.id, 'type', value)
+                                      }
+                                      aria-label={t('Select Address Type')}
+                                    >
+                                      <FormSelectOption value="IPAddress" label="IPAddress" />
+                                      <FormSelectOption value="Hostname" label="Hostname" />
+                                    </FormSelect>
+                                  </Td>
+                                  <Td dataLabel={t('Value')}>
+                                    <TextInput
+                                      type="text"
+                                      value={address.value}
+                                      onChange={(_event, value) =>
+                                        handleAddressChange(address.id, 'value', value)
+                                      }
+                                      placeholder={
+                                        address.type === 'IPAddress'
+                                          ? t('e.g., 192.168.1.100')
+                                          : t('e.g., gateway.example.com')
+                                      }
+                                      isRequired
+                                    />
+                                  </Td>
+                                  <Td dataLabel={t('Actions')}>
+                                    <Button
+                                      variant="plain"
+                                      aria-label={t('Remove address')}
+                                      onClick={() => handleRemoveAddress(address.id)}
+                                      isDanger
+                                    >
+                                      <TrashIcon />
+                                    </Button>
+                                  </Td>
+                                </Tr>
+                              ))}
+                            </Tbody>
+                          </Table>
+                        </div>
+                      )}
+                      <Button
+                        variant="secondary"
+                        icon={<PlusCircleIcon />}
+                        onClick={handleAddAddress}
+                      >
+                        {t('Add address')}
+                      </Button>
+                      <FormHelperText>
+                        <HelperText>
+                          <HelperTextItem>
+                            {t(
+                              'Specify static IP addresses or hostnames where the Gateway should be accessible. This is optional and depends on your infrastructure setup.',
+                            )}
+                          </HelperTextItem>
+                        </HelperText>
+                      </FormHelperText>
+                    </div>
+                  )}
+                </FormGroup>
+              </Form>
+            </PageSection>
+          ) : (
+            <>
+              {yamlError && (
+                <PageSection>
+                  <Alert variant="warning" title={t('Error: YAML Validation')} isInline>
                     {yamlError}
                   </Alert>
-                )}
-                {createView === 'yaml' && (
-                  <React.Suspense fallback={<div>{t('Loading YAML editor...')}</div>}>
-                    <ResourceYAMLEditor
-                      initialResource={yamlContent}
-                      onChange={handleYamlChange}
-                      create={create}
-                    />
-                  </React.Suspense>
-                )}
-              </div>
-            </Tab>
-          </Tabs>
-        )}
-      </PageSection>
+                </PageSection>
+              )}
+              <React.Suspense fallback={<div>{t('Loading YAML editor...')}</div>}>
+                <ResourceYAMLEditor
+                  initialResource={yamlContent}
+                  onChange={handleYamlChange}
+                  create={create}
+                />
+              </React.Suspense>
+            </>
+          )}
+          {!isLoading && createView === 'form' && (
+            <PageSection hasBodyWrapper={false} stickyOnBreakpoint={{ default: 'bottom' }}>
+              <ActionGroup className="pf-u-mt-0">
+                <KuadrantCreateUpdate
+                  validation={formValidation()}
+                  model={gatewayModel}
+                  resource={gatewayObject}
+                  policyType="Gateway"
+                  navigate={navigate}
+                  redirectPath={`/k8s/ns/${selectedNamespace}/${gatewayModel?.apiGroup}~${gatewayModel?.apiVersion}~${gatewayModel?.kind}/${gatewayName}`}
+                />
+                <Button variant="link" onClick={() => navigate(-1)} className="pf-v6-u-ml-md">
+                  {t('Cancel')}
+                </Button>
+              </ActionGroup>
+            </PageSection>
+          )}
+        </>
+      )}
 
-      <Modal
-        variant="large"
-        title={editingListenerIndex !== null ? t('Edit listener') : t('Add listener')}
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-      >
-        <Wizard onClose={handleModalClose} onSave={handleListenerSave} height="400px">
+      <Modal variant="large" isOpen={isModalOpen}>
+        <Wizard
+          header={
+            <WizardHeader
+              title={editingListenerIndex !== null ? t('Edit listener') : t('Add listener')}
+              closeButtonAriaLabel={t('Close wizard')}
+              onClose={handleModalClose}
+            />
+          }
+          onSave={handleListenerSave}
+          height="700px"
+        >
           {wizardSteps.map((step, index) => (
             <WizardStep
               key={index}
               name={step.name}
               id={`step-${index}`}
+              isDisabled={step.isDisabled}
               footer={{
                 nextButtonText:
                   index === wizardSteps.length - 1
@@ -1562,6 +1644,7 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
                       ? t('Update')
                       : t('Add')
                     : step.nextButtonText,
+                isNextDisabled: step.isNextDisabled,
               }}
             >
               {step.form}

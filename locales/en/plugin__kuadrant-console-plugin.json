@@ -197,6 +197,7 @@
   "Create ReferenceGrant": "Create ReferenceGrant",
   "Create TLS Policy": "Create TLS Policy",
   "Create TokenRateLimit Policy": "Create TokenRateLimit Policy",
+  "Create via:": "Create via:",
   "Created": "Created",
   "Created at": "Created at",
   "Creating and verifying your MCP infrastructure. You can navigate away at any time — resources that have been created will persist.": "Creating and verifying your MCP infrastructure. You can navigate away at any time — resources that have been created will persist.",
