@@ -52,6 +52,9 @@ const selectCheckboxFilter = async (
   return { toggle, value };
 };
 
+const toolbarChip = (page: Page, text: string) =>
+  page.locator(`.pf-v6-c-toolbar .pf-v6-c-label.pf-m-filled:has-text("${text}")`);
+
 test.describe('APIProduct List Page - Display and Filters', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
@@ -181,7 +184,7 @@ test.describe('APIProduct List Page - Status Filter', () => {
     await page.waitForTimeout(1000);
 
     // Verify filter label is shown
-    await expect(page.locator('.pf-v6-c-toolbar .pf-v6-c-label.pf-m-filled:has-text("Published")')).toBeVisible();
+    await expect(toolbarChip(page, 'Published')).toBeVisible();
 
     // Verify only Published products are shown
     await expect(page.locator('a:has-text("toystore-api")')).toBeVisible();
@@ -204,7 +207,7 @@ test.describe('APIProduct List Page - Status Filter', () => {
     await page.waitForTimeout(1000);
 
     // Verify filter label is shown
-    await expect(page.locator('.pf-v6-c-toolbar .pf-v6-c-label.pf-m-filled:has-text("Draft")')).toBeVisible();
+    await expect(toolbarChip(page, 'Draft')).toBeVisible();
 
     // Verify only Draft product is shown
     await expect(page.locator('a:has-text("draft-api")')).toBeVisible();
@@ -225,7 +228,7 @@ test.describe('APIProduct List Page - Status Filter', () => {
       await page.waitForTimeout(1000);
 
       // Verify filter is active
-      const filterLabel = page.locator('.pf-v6-c-toolbar .pf-v6-c-label.pf-m-filled:has-text("Published")');
+      const filterLabel = toolbarChip(page, 'Published');
       await expect(filterLabel).toBeVisible();
 
       // Verify Draft API is not shown
@@ -562,8 +565,8 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await page.waitForTimeout(1000);
 
     // Verify both filter labels are shown
-    await expect(page.locator('.pf-v6-c-toolbar .pf-v6-c-label.pf-m-filled:has-text("Published")')).toBeVisible();
-    await expect(page.locator('.pf-v6-c-toolbar .pf-v6-c-label.pf-m-filled:has-text("store")')).toBeVisible();
+    await expect(toolbarChip(page, 'Published')).toBeVisible();
+    await expect(toolbarChip(page, 'store')).toBeVisible();
 
     // Verify only Published products with "store" in name are shown
     await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible();
@@ -588,10 +591,8 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await page.waitForTimeout(1000);
 
     // Verify both filter labels are shown
-    await expect(page.locator('.pf-v6-c-toolbar .pf-v6-c-label.pf-m-filled:has-text("Published")')).toBeVisible();
-    await expect(
-      page.locator('.pf-v6-c-toolbar .pf-v6-c-label.pf-m-filled:has-text("kuadrant-test")'),
-    ).toBeVisible();
+    await expect(toolbarChip(page, 'Published')).toBeVisible();
+    await expect(toolbarChip(page, 'kuadrant-test')).toBeVisible();
 
     // Verify only Published products in kuadrant-test namespace are shown
     await expect(page.locator('a:has-text("gamestore-api")')).toBeVisible();
@@ -610,7 +611,7 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await page.waitForTimeout(1000);
 
     // Verify status filter label is shown
-    await expect(page.locator('.pf-v6-c-toolbar .pf-v6-c-label.pf-m-filled:has-text("Published")')).toBeVisible();
+    await expect(toolbarChip(page, 'Published')).toBeVisible();
 
     // Verify HTTPRoute filter badge is shown
     const badge = selectToggle.locator('.pf-v6-c-badge');
@@ -651,8 +652,8 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await page.waitForTimeout(500);
 
     // Verify both filter chips are shown
-    await expect(page.locator('.pf-v6-c-toolbar .pf-v6-c-label.pf-m-filled:has-text("Published")')).toBeVisible();
-    await expect(page.locator('.pf-v6-c-toolbar .pf-v6-c-label.pf-m-filled:has-text("game")')).toBeVisible();
+    await expect(toolbarChip(page, 'Published')).toBeVisible();
+    await expect(toolbarChip(page, 'game')).toBeVisible();
 
     await page
       .locator('[data-ouia-component-id="APIProductsDataViewToolbar-clear-all-filters"]')
@@ -660,10 +661,8 @@ test.describe('APIProduct List Page - Combined Filters', () => {
     await page.waitForTimeout(1000);
 
     // Verify filter chips are gone
-    await expect(
-      page.locator('.pf-v6-c-toolbar .pf-v6-c-label.pf-m-filled:has-text("Published")'),
-    ).not.toBeVisible();
-    await expect(page.locator('.pf-v6-c-toolbar .pf-v6-c-label.pf-m-filled:has-text("game")')).not.toBeVisible();
+    await expect(toolbarChip(page, 'Published')).not.toBeVisible();
+    await expect(toolbarChip(page, 'game')).not.toBeVisible();
 
     // Verify full list restored (draft-api visible, paginating if needed)
     expect(await findRowWithPagination(page, 'draft-api')).toBe(true);
