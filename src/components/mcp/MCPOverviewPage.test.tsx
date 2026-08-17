@@ -26,8 +26,14 @@ jest.mock('@openshift-console/dynamic-plugin-sdk', () => ({
   useK8sWatchResource: () => [[], true, null],
   NamespaceBar: () => <div data-test="namespace-bar" />,
   ResourceLink: ({ name }: { name: string }) => <span>{name}</span>,
-  GreenCheckCircleIcon: () => <span />,
-  YellowExclamationTriangleIcon: () => <span />,
+  GreenCheckCircleIcon: () => <span>check</span>,
+  YellowExclamationTriangleIcon: () => <span>warning</span>,
+  k8sCreate: jest.fn(() => Promise.resolve({})),
+  useActiveNamespace: () => ['test-ns', jest.fn()],
+}));
+
+jest.mock('@patternfly/react-table', () => ({
+  sortable: jest.fn(),
 }));
 
 jest.mock('../../hooks/useKuadrantNamespaceChange', () => ({
@@ -40,6 +46,20 @@ jest.mock('../../hooks/useKuadrantNamespaceChange', () => ({
 jest.mock('../../utils/resourceRBAC', () => ({
   __esModule: true,
   default: () => ({ userRBAC: {}, loading: false }),
+}));
+
+jest.mock('../../utils/getModelFromResource', () => ({
+  getResourceNameFromKind: (kind: string) => kind.toLowerCase() + 's',
+}));
+
+jest.mock('../ResourceList', () => ({
+  __esModule: true,
+  default: () => <div data-test="resource-list">ResourceList</div>,
+}));
+
+jest.mock('./MCPRegistrationWizard', () => ({
+  __esModule: true,
+  default: () => null,
 }));
 
 import MCPOverviewPage from './MCPOverviewPage';

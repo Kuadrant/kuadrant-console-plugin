@@ -248,6 +248,25 @@
   position: relative;
 }
 
+/* MCP wizard YAML editor */
+.kuadrant-mcp-wizard__yaml-editor {
+  height: 600px;
+  display: flex;
+  flex-direction: column;
+}
+
+.kuadrant-mcp-wizard .kuadrant-mcp-wizard__yaml-editor .ocs-yaml-editor__buttons {
+  display: none;
+}
+
+.kuadrant-mcp-wizard .kuadrant-mcp-wizard__yaml-editor .yaml-editor__buttons {
+  display: none;
+}
+
+.kuadrant-mcp-wizard .kuadrant-mcp-wizard__yaml-editor .co-action-buttons {
+  display: none;
+}
+
 /* fix virtualized table cell alignment for kuadrant tables */
 .kuadrant-resource-list .ReactVirtualized__Table__rowColumn,
 .kuadrant-policy-list .ReactVirtualized__Table__rowColumn,

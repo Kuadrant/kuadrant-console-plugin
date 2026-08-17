@@ -20,13 +20,17 @@ import {
 import { HelpIcon } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
-import { useK8sWatchResource, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
+import {
+  K8sResourceCommon,
+  useK8sWatchResource,
+  useActiveNamespace,
+} from '@openshift-console/dynamic-plugin-sdk';
 import { RESOURCES } from '../../utils/resources';
 import { GatewayResource } from '../gateway/types';
 import { HTTPRouteResource } from '../httproute/types';
-import { MCPWizardFormState, initialFormState } from './types';
+import { MCPWizardFormState, MCPGatewayExtension, initialFormState } from './types';
 import MCPExtensionStep from './MCPExtensionStep';
-import MCPVerifyStep from './MCPVerifyStep';
+import MCPVerifyStep, { VerifyStepItem, WatchResourceConfig } from './MCPVerifyStep';
 import GatewayCreatePage from '../gateway/GatewayCreatePage';
 import HTTPRouteCreatePage from '../httproute/HTTPRouteCreatePage';
 import '../css/gateway-api-plugin.css';
@@ -89,6 +93,141 @@ const MCPSetupWizard: React.FC = () => {
     if (formState.gatewayMode !== 'existing' || !formState.selectedGatewayName) return undefined;
     return (gateways || []).find((gw) => gw.metadata?.name === formState.selectedGatewayName);
   }, [gateways, formState.gatewayMode, formState.selectedGatewayName]);
+
+  const extensionNamespace = formState.extensionNamespace || selectedNamespace;
+  const gatewayNamespace = formState.selectedGatewayNamespace || selectedNamespace;
+  const isCrossNamespace = extensionNamespace !== gatewayNamespace;
+
+  const verifyItems = React.useMemo<VerifyStepItem[]>(() => {
+    const result: VerifyStepItem[] = [];
+
+    if (formState.gatewayMode === 'new' && newGatewayResource) {
+      result.push({
+        type: 'create',
+        id: 'create-gateway',
+        label: t('Create Gateway'),
+        resource: newGatewayResource,
+        successMessage: t('Gateway created successfully'),
+      });
+    }
+
+    if (formState.routeMode === 'new' && newRouteResource) {
+      result.push({
+        type: 'create',
+        id: 'create-route',
+        label: t('Create HTTPRoute'),
+        resource: newRouteResource,
+        successMessage: t('HTTPRoute created successfully'),
+      });
+    }
+
+    if (isCrossNamespace) {
+      result.push({
+        type: 'create',
+        id: 'create-ref-grant',
+        label: t('Create ReferenceGrant'),
+        resource: {
+          apiVersion: 'gateway.networking.k8s.io/v1beta1',
+          kind: 'ReferenceGrant',
+          metadata: {
+            name: `${formState.extensionName}-ref-grant`,
+            namespace: gatewayNamespace,
+          },
+          spec: {
+            from: [
+              {
+                group: 'mcp.kuadrant.io',
+                kind: 'MCPGatewayExtension',
+                namespace: extensionNamespace,
+              },
+            ],
+            to: [
+              {
+                group: 'gateway.networking.k8s.io',
+                kind: 'Gateway',
+                name: formState.targetGateway,
+              },
+            ],
+          },
+        } as K8sResourceCommon,
+        successMessage: t('ReferenceGrant created successfully'),
+      });
+    } else {
+      result.push({
+        type: 'info',
+        id: 'ref-grant-check',
+        label: t('ReferenceGrant check'),
+        message: t('No reference grant needed'),
+      });
+    }
+
+    const mcpExtensionResource: MCPGatewayExtension = {
+      apiVersion: 'mcp.kuadrant.io/v1',
+      kind: 'MCPGatewayExtension',
+      metadata: {
+        name: formState.extensionName,
+        namespace: extensionNamespace,
+      },
+      spec: {
+        targetRef: {
+          group: 'gateway.networking.k8s.io',
+          kind: 'Gateway',
+          name: formState.targetGateway,
+          namespace: gatewayNamespace,
+          sectionName: formState.sectionName,
+        },
+        ...(formState.overrideHostnames && formState.publicHost
+          ? { publicHost: formState.publicHost }
+          : {}),
+        ...(formState.overrideHostnames && formState.privateHost
+          ? { privateHost: formState.privateHost }
+          : {}),
+        ...(formState.sessionStorageEnabled && formState.sessionStoreSecretName
+          ? { sessionStore: { secretName: formState.sessionStoreSecretName } }
+          : {}),
+        ...(formState.oauthEnabled && formState.oauthAuthorizationServers
+          ? {
+              oauthProtectedResource: {
+                authorizationServers: formState.oauthAuthorizationServers
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+                ...(formState.oauthResourceName
+                  ? { resourceName: formState.oauthResourceName }
+                  : {}),
+              },
+            }
+          : {}),
+      },
+    };
+
+    result.push({
+      type: 'create',
+      id: 'create-extension',
+      label: t('Create MCPGatewayExtension'),
+      resource: mcpExtensionResource,
+      successMessage: t('MCPGatewayExtension created successfully'),
+    });
+
+    return result;
+  }, [
+    formState,
+    newGatewayResource,
+    newRouteResource,
+    isCrossNamespace,
+    extensionNamespace,
+    gatewayNamespace,
+    t,
+  ]);
+
+  const verifyWatchResource = React.useMemo<WatchResourceConfig>(
+    () => ({
+      gvk: RESOURCES.MCPGatewayExtension.gvk,
+      name: formState.extensionName,
+      namespace: extensionNamespace,
+    }),
+    [formState.extensionName, extensionNamespace],
+  );
 
   const handleCancel = () => {
     navigate(`/kuadrant/mcp/overview/ns/${selectedNamespace}`);
@@ -389,10 +528,16 @@ const MCPSetupWizard: React.FC = () => {
             }}
           >
             <MCPVerifyStep
-              formState={formState}
+              items={verifyItems}
+              watchResource={verifyWatchResource}
               selectedNamespace={selectedNamespace}
-              newGatewayResource={newGatewayResource}
-              newRouteResource={newRouteResource}
+              title={t('Verify configuration')}
+              description={t(
+                'Creating and verifying your MCP infrastructure. You can navigate away at any time — resources that have been created will persist.',
+              )}
+              watchLabel={t('MCP Extension is ready')}
+              watchSuccessMessage={t('MCP Extension is running and healthy')}
+              showOverviewLink
             />
           </WizardStep>
         </Wizard>

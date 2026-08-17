@@ -124,7 +124,8 @@ test.describe('HTTPRoute CRUD', () => {
       timeout: 15_000,
     });
 
-    await expect(page.locator('#create-type-radio-form')).toBeChecked();
+    // Form tab should be active by default
+    await expect(page.getByRole('tab', { name: 'Form' })).toHaveAttribute('aria-selected', 'true');
 
     // Fill route name
     await page.locator('#httproute-name').fill(routeName);
@@ -297,14 +298,14 @@ spec:
     await expect(page.getByText('/test')).toBeVisible({ timeout: 5_000 });
 
     // Switch to YAML and verify data is synced
-    await page.locator('#create-type-radio-yaml').click();
+    await page.getByRole('tab', { name: 'YAML' }).click();
     await expectEditorContains(page, '/test');
 
     await expectEditorContains(page, routeName);
     await expectEditorContains(page, gateway);
 
     // Switch back to form
-    await page.locator('#create-type-radio-form').click();
+    await page.getByRole('tab', { name: 'Form' }).click();
 
     await expect(page.locator('#httproute-name')).toHaveValue(routeName);
     await expect(page.locator('#parent-gateway-0')).toHaveValue(gateway);
