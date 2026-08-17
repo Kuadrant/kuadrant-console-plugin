@@ -329,6 +329,7 @@ export const RESOURCES = {
     isGatewayAPI: false,
     showInTopologyByDefault: false,
     isKuadrantInternal: false,
+    createPath: 'MCPGatewayExtensionCreatePage',
   },
   MCPServerRegistration: {
     gvk: { group: 'mcp.kuadrant.io', version: 'v1', kind: 'MCPServerRegistration' },
@@ -337,6 +338,7 @@ export const RESOURCES = {
     isGatewayAPI: false,
     showInTopologyByDefault: false,
     isKuadrantInternal: false,
+    createPath: 'MCPServerRegistrationCreatePage',
   },
 
   // developer portal resources

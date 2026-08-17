@@ -334,6 +334,22 @@
     }
   },
   {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/ns/:ns/mcpgatewayextension/name/:name/edit",
+      "component": { "$codeRef": "MCPGatewayExtensionCreatePage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/k8s/ns/:ns/mcpserverregistration/name/:name/edit",
+      "component": { "$codeRef": "MCPServerRegistrationCreatePage" }
+    }
+  },
+  {
     "type": "console.resource/create",
     "properties": {
       "model": {
@@ -408,6 +424,28 @@
         "kind": "AuthPolicy"
       },
       "component": { "$codeRef": "KuadrantAuthPolicyCreatePage" }
+    }
+  },
+  {
+    "type": "console.resource/create",
+    "properties": {
+      "model": {
+        "group": "mcp.kuadrant.io",
+        "version": "v1",
+        "kind": "MCPGatewayExtension"
+      },
+      "component": { "$codeRef": "MCPGatewayExtensionCreatePage" }
+    }
+  },
+  {
+    "type": "console.resource/create",
+    "properties": {
+      "model": {
+        "group": "mcp.kuadrant.io",
+        "version": "v1",
+        "kind": "MCPServerRegistration"
+      },
+      "component": { "$codeRef": "MCPServerRegistrationCreatePage" }
     }
   },
   {

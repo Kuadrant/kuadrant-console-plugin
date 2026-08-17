@@ -123,7 +123,9 @@
       "GatewaySingleOverview": "./components/gateway/GatewaySingleOverview",
       "HTTPRouteSingleOverview": "./components/httproute/HTTPRouteSingleOverview",
       "MCPOverviewPage": "./components/mcp/MCPOverviewPage",
-      "MCPSetupWizard": "./components/mcp/MCPSetupWizard"
+      "MCPSetupWizard": "./components/mcp/MCPSetupWizard",
+      "MCPGatewayExtensionCreatePage": "./components/mcp/MCPGatewayExtensionCreatePage",
+      "MCPServerRegistrationCreatePage": "./components/mcp/MCPServerRegistrationCreatePage"
     },
     "dependencies": {
       "@console/pluginAPI": ">=4.22.0-0"
