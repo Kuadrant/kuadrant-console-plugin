@@ -321,6 +321,14 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
+      "path": "/k8s/ns/:ns/ratelimitpolicy/name/:name/edit",
+      "component": { "$codeRef": "KuadrantRateLimitPolicyCreatePage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
       "path": "/k8s/ns/:ns/planpolicy/name/:name/edit",
       "component": { "$codeRef": "KuadrantPlanPolicyCreatePage" }
     }

@@ -1,4 +1,4 @@
-import { FormGroup, Title, Button, Label, LabelGroup, Modal } from '@patternfly/react-core';
+import { FormGroup, Title, Button, Label, LabelGroup } from '@patternfly/react-core';
 import * as React from 'react';
 import AddLimitModal from './AddLimitModal';
 import { LimitConfig } from './types';
@@ -9,17 +9,33 @@ interface LimitSelectProps {
   setLimits: React.Dispatch<React.SetStateAction<Record<string, LimitConfig>>>;
 }
 
+const emptyLimit = (): LimitConfig => ({
+  rates: [],
+  counters: [],
+  when: [],
+});
+
+const formatLimitLabel = (limitConfig: LimitConfig): string => {
+  const rateText = (limitConfig.rates || []).map((r) => `${r.limit}/${r.window}`).join(', ');
+  const counterText =
+    limitConfig.counters && limitConfig.counters.length > 0
+      ? ` · counters: ${limitConfig.counters.map((c) => c.expression).join(', ')}`
+      : '';
+  const whenText =
+    limitConfig.when && limitConfig.when.length > 0
+      ? ` · when: ${limitConfig.when.map((w) => w.predicate).join(', ')}`
+      : '';
+  return `${rateText}${counterText}${whenText}`;
+};
+
 const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [isAddLimitModalOpen, setIsAddLimitModalOpen] = React.useState(false);
-  const [isLimitNameAlertModalOpen, setIsLimitNameAlertModalOpen] = React.useState(false);
-  const [newLimit, setNewLimit] = React.useState<LimitConfig>({
-    rates: [{ duration: 60, limit: 100, unit: 'minute' }],
-  });
+  const [newLimit, setNewLimit] = React.useState<LimitConfig>(emptyLimit());
   const [rateName, setRateName] = React.useState<string>('');
 
   const handleOpenModal = () => {
-    setNewLimit({ rates: [{ duration: 60, limit: 100, unit: 'minute' }] });
+    setNewLimit(emptyLimit());
     setRateName('');
     setIsAddLimitModalOpen(true);
   };
@@ -27,14 +43,22 @@ const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
   const handleCloseModal = () => setIsAddLimitModalOpen(false);
 
   const onAddLimit = () => {
-    if (!rateName) {
-      setIsLimitNameAlertModalOpen(true);
+    if (!rateName || !newLimit.rates || newLimit.rates.length === 0) {
+      return;
+    }
+    if (limits[rateName]) {
       return;
     }
 
+    const cleaned: LimitConfig = {
+      rates: newLimit.rates,
+      ...(newLimit.counters && newLimit.counters.length > 0 ? { counters: newLimit.counters } : {}),
+      ...(newLimit.when && newLimit.when.length > 0 ? { when: newLimit.when } : {}),
+    };
+
     setLimits((prevLimits) => ({
       ...prevLimits,
-      [rateName]: newLimit,
+      [rateName]: cleaned,
     }));
 
     handleCloseModal();
@@ -58,12 +82,7 @@ const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
           {Object.keys(limits).length > 0 ? (
             Object.entries(limits).map(([name, limitConfig], index) => (
               <Label key={index} color="blue" onClose={() => handleRemoveLimit(name)}>
-                <strong>{name}</strong>:{' '}
-                {t('{{limit}} requests per {{duration}} {{unit}}(s)', {
-                  limit: limitConfig.rates?.[0]?.limit,
-                  duration: limitConfig.rates?.[0]?.duration,
-                  unit: limitConfig.rates?.[0]?.unit,
-                })}
+                <strong>{name}</strong>: {formatLimitLabel(limitConfig)}
               </Label>
             ))
           ) : (
@@ -74,7 +93,6 @@ const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
           {t('Add Limit')}
         </Button>
       </FormGroup>
-      {/* Modal to add a new limit */}
       <AddLimitModal
         isOpen={isAddLimitModalOpen}
         onClose={handleCloseModal}
@@ -83,19 +101,8 @@ const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
         rateName={rateName}
         setRateName={setRateName}
         handleSave={onAddLimit}
+        existingLimitNames={Object.keys(limits)}
       />
-      <Modal
-        title={t('Validation Error')}
-        isOpen={isLimitNameAlertModalOpen}
-        onClose={() => setIsLimitNameAlertModalOpen(false)}
-        variant="small"
-        aria-label={t('Rate Name is required error')}
-      >
-        <p>{t('Limit Name is required!')}</p>
-        <Button variant="primary" onClick={() => setIsLimitNameAlertModalOpen(false)}>
-          {t('OK')}
-        </Button>
-      </Modal>
     </>
   );
 };
