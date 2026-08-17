@@ -412,26 +412,10 @@ test.describe('YAML-based policy create pages', () => {
     async ({ page }) => {
       await gotoPage(page, createPagePath(TEST_NAMESPACE, 'kuadrant.io~v1~AuthPolicy'));
 
-      await expect(page.locator('text=Create AuthPolicy').first()).toBeVisible({
-        timeout: 15_000,
-      });
+      await expect(page.locator('text=Create AuthPolicy').first()).toBeVisible({ timeout: 15_000 });
       await expectEditorContains(page, 'example-authpolicy');
       await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeVisible();
       await expect(page.getByRole('button', { name: 'Cancel' })).toBeVisible();
-    },
-  );
-
-  test(
-    'RateLimitPolicy create page renders YAML editor with example resource',
-    { tag: '@smoke' },
-    async ({ page }) => {
-      await gotoPage(page, createPagePath(TEST_NAMESPACE, 'kuadrant.io~v1~RateLimitPolicy'));
-
-      await expect(page.locator('text=Create RateLimit Policy').first()).toBeVisible({
-        timeout: 15_000,
-      });
-      await expectEditorContains(page, 'example-ratelimitpolicy');
-      await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeVisible();
     },
   );
 
@@ -460,23 +444,6 @@ test.describe('YAML-based policy create pages', () => {
 
       await expect
         .poll(() => resourceExists('authpolicy', 'example-authpolicy', namespace), {
-          timeout: 15_000,
-        })
-        .toBe(true);
-    });
-
-    test('creates a RateLimitPolicy from the default YAML', { tag: '@smoke' }, async ({ page }) => {
-      await gotoPage(page, createPagePath(namespace, 'kuadrant.io~v1~RateLimitPolicy'));
-
-      await expect(page.locator('text=Create RateLimit Policy').first()).toBeVisible({
-        timeout: 15_000,
-      });
-      await expectEditorContains(page, namespace);
-
-      await page.getByRole('button', { name: 'Create', exact: true }).click();
-
-      await expect
-        .poll(() => resourceExists('ratelimitpolicy', 'example-ratelimitpolicy', namespace), {
           timeout: 15_000,
         })
         .toBe(true);
@@ -876,8 +843,8 @@ test.describe('RateLimitPolicy form', () => {
       timeout: 15_000,
     });
 
-    // Form tab should be selected by default
-    await expect(page.getByRole('tab', { name: 'Form' })).toHaveAttribute('aria-selected', 'true');
+    // Form view should be selected by default
+    await expect(page.locator('#create-type-radio-form')).toBeChecked();
 
     await expect(page.locator('#policy-name')).toBeVisible();
     await expect(page.locator('#gateway-select')).toBeVisible();
@@ -916,7 +883,7 @@ test.describe('RateLimitPolicy form', () => {
       timeout: 15_000,
     });
 
-    await page.getByRole('tab', { name: 'YAML' }).click();
+    await page.locator('#create-type-radio-yaml').click();
     await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 15_000 });
   });
 

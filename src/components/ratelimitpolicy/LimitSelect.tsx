@@ -15,24 +15,31 @@ const emptyLimit = (): LimitConfig => ({
   when: [],
 });
 
-const formatLimitLabel = (limitConfig: LimitConfig): string => {
-  const rateText = (limitConfig.rates || []).map((r) => `${r.limit}/${r.window}`).join(', ');
-  const counterText =
-    limitConfig.counters && limitConfig.counters.length > 0
-      ? ` · counters: ${limitConfig.counters.map((c) => c.expression).join(', ')}`
-      : '';
-  const whenText =
-    limitConfig.when && limitConfig.when.length > 0
-      ? ` · when: ${limitConfig.when.map((w) => w.predicate).join(', ')}`
-      : '';
-  return `${rateText}${counterText}${whenText}`;
-};
-
 const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [isAddLimitModalOpen, setIsAddLimitModalOpen] = React.useState(false);
   const [newLimit, setNewLimit] = React.useState<LimitConfig>(emptyLimit());
   const [rateName, setRateName] = React.useState<string>('');
+
+  const formatLimitLabel = React.useCallback(
+    (limitConfig: LimitConfig): string => {
+      const rateText = (limitConfig.rates || []).map((r) => `${r.limit}/${r.window}`).join(', ');
+      const counterText =
+        limitConfig.counters && limitConfig.counters.length > 0
+          ? ` · ${t('counters: {{expressions}}', {
+              expressions: limitConfig.counters.map((c) => c.expression).join(', '),
+            })}`
+          : '';
+      const whenText =
+        limitConfig.when && limitConfig.when.length > 0
+          ? ` · ${t('when: {{predicates}}', {
+              predicates: limitConfig.when.map((w) => w.predicate).join(', '),
+            })}`
+          : '';
+      return `${rateText}${counterText}${whenText}`;
+    },
+    [t],
+  );
 
   const handleOpenModal = () => {
     setNewLimit(emptyLimit());

@@ -202,7 +202,12 @@ const AddLimitModal: React.FC<{
           <Button
             variant="secondary"
             onClick={handleAddRate}
-            isDisabled={newLimitValue === '' || !newLimitWindow || !isValidWindow}
+            isDisabled={
+              newLimitValue === '' ||
+              Number(newLimitValue) <= 0 ||
+              !newLimitWindow ||
+              !isValidWindow
+            }
           >
             {t('Add Rate')}
           </Button>

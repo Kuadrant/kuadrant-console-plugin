@@ -27,7 +27,7 @@ import { useNavigate, useLocation } from 'react-router';
 import { GatewayResource } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
 import LimitSelect from './ratelimitpolicy/LimitSelect';
-import { LimitConfig } from './ratelimitpolicy/types';
+import { LimitConfig, TargetRef } from './ratelimitpolicy/types';
 import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
@@ -42,6 +42,11 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
     {} as GatewayResource,
   );
   const [limits, setLimits] = React.useState<Record<string, LimitConfig>>({});
+  const [targetRef, setTargetRef] = React.useState<TargetRef>({
+    group: 'gateway.networking.k8s.io',
+    kind: 'Gateway',
+    name: '',
+  });
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
   const [resourceVersion, setResourceVersion] = React.useState('');
   const [formDisabled, setFormDisabled] = React.useState(false);
@@ -62,8 +67,8 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
       },
       spec: {
         targetRef: {
-          group: 'gateway.networking.k8s.io',
-          kind: 'Gateway',
+          group: targetRef.group,
+          kind: targetRef.kind,
           name: selectedGateway.metadata?.name ?? '',
         },
         limits,
@@ -127,6 +132,11 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
             namespace: rlPolicyUpdate.metadata?.namespace || '',
           },
         } as GatewayResource);
+        setTargetRef({
+          group: rlPolicyUpdate.spec?.targetRef?.group || 'gateway.networking.k8s.io',
+          kind: (rlPolicyUpdate.spec?.targetRef?.kind as TargetRef['kind']) || 'Gateway',
+          name: rlPolicyUpdate.spec?.targetRef?.name || '',
+        });
         setLimits(rlPolicyUpdate.spec?.limits || {});
       }
     } else if (rlError) {
@@ -145,6 +155,11 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
           namespace: parsedYaml.metadata?.namespace || '',
         },
       } as GatewayResource);
+      setTargetRef({
+        group: parsedYaml.spec?.targetRef?.group || 'gateway.networking.k8s.io',
+        kind: (parsedYaml.spec?.targetRef?.kind as TargetRef['kind']) || 'Gateway',
+        name: parsedYaml.spec?.targetRef?.name || '',
+      });
       setLimits(parsedYaml.spec?.limits || {});
     } catch (e) {
       console.error(t('Error parsing YAML:'), e);
@@ -153,7 +168,15 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
 
   React.useEffect(() => {
     setYamlInput(rateLimitPolicy);
-  }, [policyName, selectedNamespace, selectedGateway, limits, creationTimestamp, resourceVersion]);
+  }, [
+    policyName,
+    selectedNamespace,
+    selectedGateway,
+    limits,
+    targetRef,
+    creationTimestamp,
+    resourceVersion,
+  ]);
 
   const handlePolicyChange = (_event, policy: string) => {
     setPolicyName(policy);
