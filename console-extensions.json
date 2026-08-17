@@ -701,5 +701,13 @@
       "path": "/kuadrant/mcp/setup-wizard",
       "component": { "$codeRef": "MCPSetupWizard" }
     }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
+      "path": "/mcp-inspector",
+      "component": { "$codeRef": "MCPInspectorPage" }
+    }
   }
 ]
