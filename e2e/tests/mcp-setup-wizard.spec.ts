@@ -1,6 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import { execFileSync } from 'child_process';
-import { dismissConsoleTour, spaNavigate } from './helpers';
+import { dismissConsoleTour, spaNavigate, TEST_NAMESPACE } from './helpers';
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -130,6 +130,8 @@ test.describe('MCP Management', () => {
     });
 
     test('next is disabled until a gateway is selected', { tag: '@nightly' }, async ({ page }) => {
+      await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
+      await page.waitForLoadState('networkidle');
       await spaNavigate(page, '/kuadrant/mcp/setup-wizard');
 
       await expect(page.locator('[data-test="mcp-gateway-select"]')).toBeVisible({ timeout: 15_000 });

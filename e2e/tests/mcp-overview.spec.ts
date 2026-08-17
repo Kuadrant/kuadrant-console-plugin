@@ -141,11 +141,11 @@ test.describe('MCP Overview dashboard', () => {
 
     const filterToggle = extensionsCard.locator('.pf-v6-c-menu-toggle').first();
     await filterToggle.click();
-    await page.getByRole('option', { name: 'Gateway name' }).click();
+    await page.getByRole('menuitem', { name: 'Gateway name' }).click();
 
     const filterSelect = extensionsCard.locator('.pf-v6-c-menu-toggle').nth(1);
     await filterSelect.click();
-    await page.getByRole('option', { name: 'mcp-gateway' }).click();
+    await page.getByRole('menuitem', { name: 'mcp-gateway' }).click();
 
     await expect(page.locator('text=mcp-gateway-extension').first()).toBeVisible();
   });
@@ -162,11 +162,11 @@ test.describe('MCP Overview dashboard', () => {
     const toolbar = serversCard.locator('.pf-v6-c-toolbar');
     const filterToggle = toolbar.locator('.pf-v6-c-menu-toggle').first();
     await filterToggle.click();
-    await page.getByRole('option', { name: 'Status' }).click();
+    await page.getByRole('menuitem', { name: 'Status' }).click();
 
     const filterSelect = toolbar.locator('.pf-v6-c-menu-toggle').nth(1);
     await filterSelect.click();
-    await page.getByRole('option', { name: 'Offline' }).click();
+    await page.getByRole('menuitem', { name: 'Offline' }).click();
 
     await expect(serversCard.locator('text=test-mcp-server').first()).toBeVisible();
   });
