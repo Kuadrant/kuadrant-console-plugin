@@ -68,17 +68,43 @@ async function expectEditorContains(page: Page, text: string): Promise<void> {
   );
 }
 
+async function setupCreateRouteWithParent(
+  page: Page,
+  routeName: string,
+  gateway: string,
+): Promise<void> {
+  await page.locator('#httproute-name').fill(routeName);
+
+  // Add parent reference
+  await page.getByRole('button', { name: 'Add parent reference' }).click();
+
+  const gatewayOption = page.locator(`#parent-gateway-0 option[value="${gateway}"]`);
+  await expect(gatewayOption).toBeAttached({ timeout: 15_000 });
+  await expect(gatewayOption).not.toBeDisabled({ timeout: 15_000 });
+  await page.locator('#parent-gateway-0').selectOption(gateway);
+
+  const sectionOption = page.locator('#parent-section-0 option[value="http"]');
+  await expect(sectionOption).toBeAttached({ timeout: 15_000 });
+  await page.locator('#parent-section-0').selectOption('http');
+}
+
 async function addRuleViaWizard(
   page: Page,
-  opts: { pathValue: string; serviceName: string; servicePort?: string; isEdit?: boolean },
+  opts: {
+    pathValue: string;
+    serviceName: string;
+    servicePort?: string;
+    isEdit?: boolean;
+    method?: string;
+  },
 ): Promise<void> {
-  const { pathValue, serviceName, servicePort = '8080', isEdit = false } = opts;
+  const { pathValue, serviceName, servicePort = '8080', isEdit = false, method = 'GET' } = opts;
 
   // Step 1: Matches — add a match
   await page.getByRole('button', { name: 'Add match' }).click();
   await page.locator('#path-type-0').selectOption('PathPrefix');
   await page.locator('#path-value-0').fill(pathValue);
-  await page.locator('#http-method-0').selectOption('GET');
+  await page.locator('#http-method-0').selectOption(method);
 
   // Next → Filters (skip)
   await page.getByRole('button', { name: 'Next' }).click();
@@ -311,4 +337,325 @@ spec:
     // Rule data is shown in the table, not as inputs
     await expect(page.getByText('/test')).toBeVisible();
   });
+
+  test('all 9 HTTP methods available in method dropdown', { tag: '@nightly' }, async ({ page }) => {
+    const routeName = `e2e-httproute-${uid()}`;
+    await gotoPage(page, `/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~HTTPRoute/~new`);
+
+    await expect(page.getByRole('heading', { name: 'Create HTTPRoute' })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await setupCreateRouteWithParent(page, routeName, gateway);
+
+    // Open rule wizard to check method dropdown
+    await page.getByRole('button', { name: 'Add rule' }).click();
+    await page.getByRole('button', { name: 'Add match' }).click();
+
+    const methodSelect = page.locator('#http-method-0');
+    await expect(methodSelect).toBeVisible({ timeout: 5_000 });
+
+    const expectedMethods = [
+      'GET',
+      'HEAD',
+      'POST',
+      'PUT',
+      'DELETE',
+      'CONNECT',
+      'OPTIONS',
+      'TRACE',
+      'PATCH',
+    ];
+
+    for (const method of expectedMethods) {
+      await expect(methodSelect.locator(`option[value="${method}"]`)).toBeAttached();
+    }
+
+    // Cancel wizard and use helper to create rule with OPTIONS method
+    await page.locator('.pf-v6-c-modal-box').getByRole('button', { name: 'Cancel' }).click();
+    await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 5_000 });
+
+    await page.getByRole('button', { name: 'Add rule' }).click();
+    await addRuleViaWizard(page, {
+      pathValue: '/options-test',
+      serviceName: 'example-svc',
+      method: 'OPTIONS',
+    });
+
+    // Submit the form
+    const createButton = page.getByRole('button', { name: 'Create', exact: true });
+    await expect(createButton).toBeEnabled();
+    await createButton.click();
+
+    await expect(page).toHaveURL(
+      new RegExp(`/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~HTTPRoute/${routeName}`),
+      { timeout: 15_000 },
+    );
+
+    expect(resourceExists('httproute', routeName, namespace)).toBe(true);
+
+    expect(
+      kubectl([
+        'get',
+        'httproute',
+        routeName,
+        '-n',
+        namespace,
+        '-o',
+        'jsonpath={.spec.rules[0].matches[0].method}',
+      ]),
+    ).toBe('OPTIONS');
+  });
+
+  test('creates HTTPRoute with request header filter', { tag: '@nightly' }, async ({ page }) => {
+    const routeName = `e2e-httproute-${uid()}`;
+    await gotoPage(page, `/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~HTTPRoute/~new`);
+
+    await expect(page.getByRole('heading', { name: 'Create HTTPRoute' })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    await setupCreateRouteWithParent(page, routeName, gateway);
+
+    // Open rule wizard
+    await page.getByRole('button', { name: 'Add rule' }).click();
+
+    // Step 1: Matches
+    await page.getByRole('button', { name: 'Add match' }).click();
+    await page.locator('#path-type-0').selectOption('PathPrefix');
+    await page.locator('#path-value-0').fill('/headers');
+    await page.locator('#http-method-0').selectOption('GET');
+
+    // Next → Filters
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Add a RequestHeaderModifier filter
+    await page.getByRole('button', { name: 'Add filter' }).click();
+
+    // Fill header name and value
+    await page.locator('#hdr-name-0').fill('X-Custom-Header');
+    await page.locator('#hdr-value-0').fill('test-value');
+
+    // Next → Backend Services
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    await page.locator('#service-name').fill('example-svc');
+    await page.locator('#service-port').clear();
+    await page.locator('#service-port').fill('8080');
+
+    // Next → Review
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    // Create rule
+    const wizardButton = page.locator('.pf-v6-c-modal-box').getByRole('button', { name: 'Create' });
+    await wizardButton.click();
+    await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 5_000 });
+
+    // Submit the form
+    const createButton = page.getByRole('button', { name: 'Create', exact: true });
+    await expect(createButton).toBeEnabled();
+    await createButton.click();
+
+    await expect(page).toHaveURL(
+      new RegExp(`/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~HTTPRoute/${routeName}`),
+      { timeout: 15_000 },
+    );
+
+    expect(resourceExists('httproute', routeName, namespace)).toBe(true);
+
+    const filterJson = kubectl([
+      'get',
+      'httproute',
+      routeName,
+      '-n',
+      namespace,
+      '-o',
+      'jsonpath={.spec.rules[0].filters[0]}',
+    ]);
+    const filter = JSON.parse(filterJson);
+    expect(filter.type).toBe('RequestHeaderModifier');
+    expect(filter.requestHeaderModifier.add).toEqual([
+      { name: 'X-Custom-Header', value: 'test-value' },
+    ]);
+  });
+
+  test('preserves parentRef without sectionName on edit', { tag: '@nightly' }, async ({ page }) => {
+    const routeName = `e2e-httproute-${uid()}`;
+    applyResource(`
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${routeName}
+  namespace: ${namespace}
+spec:
+  parentRefs:
+  - name: ${gateway}
+    namespace: ${gatewayNamespace}
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /no-section
+      method: GET
+    backendRefs:
+    - name: example-svc
+      port: 8080
+`);
+
+    // Verify no sectionName before edit
+    const beforeSection = kubectl([
+      'get',
+      'httproute',
+      routeName,
+      '-n',
+      namespace,
+      '-o',
+      'jsonpath={.spec.parentRefs[0].sectionName}',
+    ]);
+    expect(beforeSection).toBe('');
+
+    await gotoPage(
+      page,
+      `/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~HTTPRoute/${routeName}/edit`,
+    );
+
+    await expect(page.getByRole('heading', { name: 'Edit HTTPRoute' })).toBeVisible({
+      timeout: 15_000,
+    });
+
+    // Verify form loads with the route name
+    await expect(page.locator('#httproute-name')).toHaveValue(routeName, { timeout: 15_000 });
+
+    // Edit rule path to force a change
+    await page.getByRole('button', { name: 'Edit rule' }).click();
+    await expect(page.locator('#path-value-0')).toHaveValue('/no-section', { timeout: 15_000 });
+    await page.locator('#path-value-0').fill('/no-section-edited');
+
+    // Navigate through wizard to save
+    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
+    await page.getByRole('button', { name: 'Next' }).click();
+
+    const wizardSaveButton = page
+      .locator('.pf-v6-c-modal-box')
+      .getByRole('button', { name: 'Save' });
+    await wizardSaveButton.click();
+    await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 5_000 });
+
+    // Save the form
+    const saveButton = page.getByRole('button', { name: 'Save', exact: true });
+    await expect(saveButton).toBeEnabled();
+    await saveButton.click();
+
+    await expect(page).toHaveURL(
+      new RegExp(`/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~HTTPRoute/${routeName}`),
+      { timeout: 15_000 },
+    );
+
+    // Verify sectionName was NOT added during edit
+    const afterSection = kubectl([
+      'get',
+      'httproute',
+      routeName,
+      '-n',
+      namespace,
+      '-o',
+      'jsonpath={.spec.parentRefs[0].sectionName}',
+    ]);
+    expect(afterSection).toBe('');
+
+    // Verify the edit was applied
+    expect(
+      kubectl([
+        'get',
+        'httproute',
+        routeName,
+        '-n',
+        namespace,
+        '-o',
+        'jsonpath={.spec.rules[0].matches[0].path.value}',
+      ]),
+    ).toBe('/no-section-edited');
+  });
+
+  test(
+    'port validation accepts valid port in mirror filter',
+    { tag: '@nightly' },
+    async ({ page }) => {
+      const routeName = `e2e-httproute-${uid()}`;
+      await gotoPage(page, `/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~HTTPRoute/~new`);
+
+      await expect(page.getByRole('heading', { name: 'Create HTTPRoute' })).toBeVisible({
+        timeout: 15_000,
+      });
+
+      await setupCreateRouteWithParent(page, routeName, gateway);
+
+      // Open rule wizard
+      await page.getByRole('button', { name: 'Add rule' }).click();
+
+      // Step 1: Matches
+      await page.getByRole('button', { name: 'Add match' }).click();
+      await page.locator('#path-type-0').selectOption('PathPrefix');
+      await page.locator('#path-value-0').fill('/port-test');
+      await page.locator('#http-method-0').selectOption('GET');
+
+      // Next → Filters
+      await page.getByRole('button', { name: 'Next' }).click();
+
+      // Add a RequestMirror filter with a valid port
+      await page.getByRole('button', { name: 'Add filter' }).click();
+
+      // Change filter type to RequestMirror
+      await page.locator('#filter-type').click();
+      await page.getByRole('option', { name: 'Request Mirror' }).click();
+
+      // Fill mirror backend name and port
+      await page.locator('#rm-name').fill('mirror-svc');
+      await page.locator('#rm-port').fill('9090');
+
+      // Next → Backend Services
+      await page.getByRole('button', { name: 'Next' }).click();
+
+      await page.locator('#service-name').fill('example-svc');
+      await page.locator('#service-port').clear();
+      await page.locator('#service-port').fill('8080');
+
+      // Next → Review
+      await page.getByRole('button', { name: 'Next' }).click();
+
+      // Create rule
+      const wizardButton = page
+        .locator('.pf-v6-c-modal-box')
+        .getByRole('button', { name: 'Create' });
+      await wizardButton.click();
+      await expect(page.locator('.pf-v6-c-modal-box')).not.toBeVisible({ timeout: 5_000 });
+
+      // Submit the form
+      const createButton = page.getByRole('button', { name: 'Create', exact: true });
+      await expect(createButton).toBeEnabled();
+      await createButton.click();
+
+      await expect(page).toHaveURL(
+        new RegExp(`/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~HTTPRoute/${routeName}`),
+        { timeout: 15_000 },
+      );
+
+      expect(resourceExists('httproute', routeName, namespace)).toBe(true);
+
+      const filterJson = kubectl([
+        'get',
+        'httproute',
+        routeName,
+        '-n',
+        namespace,
+        '-o',
+        'jsonpath={.spec.rules[0].filters[0]}',
+      ]);
+      const filter = JSON.parse(filterJson);
+      expect(filter.type).toBe('RequestMirror');
+      expect(filter.requestMirror.backendRef.name).toBe('mirror-svc');
+      expect(filter.requestMirror.backendRef.port).toBe(9090);
+    },
+  );
 });
