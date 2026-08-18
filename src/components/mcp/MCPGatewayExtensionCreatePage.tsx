@@ -126,6 +126,14 @@ const MCPGatewayExtensionCreatePage: React.FC = () => {
     [formState, selectedNamespace, originalMetadata],
   );
 
+  // YAML tab: existing resource for edit (once loaded), form-built resource for create.
+  // On edit, formState is populated by an effect that runs after existingLoaded flips
+  // true, so snapshot the loaded resource directly to avoid an empty first mount.
+  const yamlResource = React.useMemo(
+    () => (isEdit && existingLoaded && existingData ? existingData : extensionResource),
+    [isEdit, existingLoaded, existingData, extensionResource],
+  );
+
   // Build the K8s model synchronously from the resource (matches the wizard and
   // policy pages). useK8sModel returns undefined for this plugin-declared CRD.
   const extensionModel = React.useMemo(
@@ -196,40 +204,36 @@ const MCPGatewayExtensionCreatePage: React.FC = () => {
             </Button>
           </ActionGroup>
         </PageSection>
+      ) : isEdit && existingError ? (
+        // Watch failed: show only the error, never mount the editor on an empty resource.
+        <PageSection hasBodyWrapper={false}>
+          <Alert
+            variant={AlertVariant.danger}
+            title={t('Error loading MCPGatewayExtension')}
+            isInline
+            data-test="mcp-extension-load-error"
+          >
+            {existingError instanceof Error ? existingError.message : String(existingError)}
+          </Alert>
+        </PageSection>
+      ) : isEdit && !existingLoaded ? (
+        <div className="kuadrant-mcp-standalone-yaml-editor" style={{ minHeight: '400px' }}>
+          {t('Loading YAML editor...')}
+        </div>
       ) : (
-        <>
-          {isEdit && existingError && (
-            <PageSection hasBodyWrapper={false}>
-              <Alert
-                variant={AlertVariant.danger}
-                title={t('Error loading MCPGatewayExtension')}
-                isInline
-                data-test="mcp-extension-load-error"
-              >
-                {existingError instanceof Error ? existingError.message : String(existingError)}
-              </Alert>
-            </PageSection>
-          )}
-          {isEdit && !existingLoaded && !existingError ? (
-            <div className="kuadrant-mcp-yaml-editor" style={{ minHeight: '400px' }}>
-              {t('Loading YAML editor...')}
-            </div>
-          ) : (
-            // On the edit path, only render the editor once the watch resolves so it
-            // snapshots the real resource rather than the blank template (the editor
-            // snapshots initialResource at mount and only remounts when its key changes).
-            // Tying the key to existingLoaded guarantees a remount when the watch resolves.
-            <div
-              className="kuadrant-mcp-yaml-editor"
-              style={{ minHeight: '400px' }}
-              key={`${yamlKey}-${existingLoaded}`}
-            >
-              <React.Suspense fallback={<div>{t('Loading YAML editor...')}</div>}>
-                <ResourceYAMLEditor initialResource={extensionResource} create={!isEdit} />
-              </React.Suspense>
-            </div>
-          )}
-        </>
+        // On the edit path, only render the editor once the watch resolves so it
+        // snapshots the real resource rather than the blank template (the editor
+        // snapshots initialResource at mount and only remounts when its key changes).
+        // Tying the key to existingLoaded guarantees a remount when the watch resolves.
+        <div
+          className="kuadrant-mcp-standalone-yaml-editor"
+          style={{ minHeight: '400px' }}
+          key={`${yamlKey}-${existingLoaded}`}
+        >
+          <React.Suspense fallback={<div>{t('Loading YAML editor...')}</div>}>
+            <ResourceYAMLEditor initialResource={yamlResource} create={!isEdit} />
+          </React.Suspense>
+        </div>
       )}
     </>
   );

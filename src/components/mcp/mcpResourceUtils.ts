@@ -2,7 +2,12 @@
 // and the standalone create/edit pages.
 
 import { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
-import { MCPWizardFormState, MCPGatewayExtension, MCPServerRegistration } from './types';
+import {
+  MCPWizardFormState,
+  MCPGatewayExtension,
+  MCPServerRegistration,
+  MCPServerFormState,
+} from './types';
 
 // Build an MCPGatewayExtension resource from wizard/page form state.
 // When originalMetadata is provided (edit mode) it is preserved so that
@@ -86,6 +91,52 @@ export const isMCPGatewayExtensionValid = (formState: MCPWizardFormState): boole
   !!formState.extensionName.trim() &&
   !!formState.targetGateway.trim() &&
   !!formState.sectionName.trim();
+
+// Build an MCPServerRegistration resource from wizard/page form state.
+// When originalMetadata is provided (edit mode) it is preserved so that
+// k8sUpdate keeps the resourceVersion and other server-managed fields.
+export const buildMCPServerRegistration = (
+  formState: MCPServerFormState,
+  namespace: string,
+  originalMetadata?: MCPServerRegistration['metadata'] | null,
+): MCPServerRegistration => ({
+  apiVersion: 'mcp.kuadrant.io/v1',
+  kind: 'MCPServerRegistration',
+  metadata: originalMetadata
+    ? { ...originalMetadata, name: formState.registrationName }
+    : { name: formState.registrationName, namespace: formState.namespace || namespace },
+  spec: {
+    targetRef: {
+      group: 'gateway.networking.k8s.io',
+      kind: 'HTTPRoute',
+      name: formState.targetHTTPRouteName,
+    },
+    prefix: formState.toolPrefix,
+  },
+});
+
+// Reverse of buildMCPServerRegistration — populate form state from an existing resource.
+export const mcpServerToFormState = (
+  resource: MCPServerRegistration,
+  namespace: string,
+): MCPServerFormState => {
+  const spec = resource.spec || ({} as MCPServerRegistration['spec']);
+  return {
+    registrationName: resource.metadata?.name || '',
+    namespace: resource.metadata?.namespace || namespace,
+    targetHTTPRouteName: spec.targetRef?.name || '',
+    toolPrefix: spec.prefix || '',
+  };
+};
+
+// Validation shared by the registration wizard step and the standalone create/edit page.
+// Mirrors the required-field markings in the form (name, namespace, target HTTPRoute
+// and tool prefix — the HTTPRoute target is required for a valid registration).
+export const isMCPServerRegistrationValid = (formState: MCPServerFormState): boolean =>
+  !!formState.registrationName.trim() &&
+  !!formState.namespace.trim() &&
+  !!formState.targetHTTPRouteName.trim() &&
+  !!formState.toolPrefix.trim();
 
 // Pre-populated MCPServerRegistration template for the YAML editor on the
 // standalone create page.

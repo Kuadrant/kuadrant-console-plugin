@@ -1,30 +1,11 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Alert,
-  Form,
-  FormGroup,
-  Grid,
-  TextInput,
-  FormHelperText,
-  HelperText,
-  HelperTextItem,
-  Popover,
-  FormSelect,
-  FormSelectOption,
-  Tabs,
-  Tab,
-  TabTitleText,
-} from '@patternfly/react-core';
-import { HelpIcon } from '@patternfly/react-icons';
-import {
-  K8sResourceCommon,
-  ResourceYAMLEditor,
-  useK8sWatchResource,
-} from '@openshift-console/dynamic-plugin-sdk';
+import { Alert, Tabs, Tab, TabTitleText } from '@patternfly/react-core';
+import { K8sResourceCommon, ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
 import { MCPServerFormState } from '../types';
 import { RESOURCES } from '../../../utils/resources';
+import MCPServerRegistrationFormFields from '../MCPServerRegistrationFormFields';
 
 interface RegisterServerStepProps {
   formState: MCPServerFormState;
@@ -69,19 +50,6 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
       onChange({ ...formState, targetHTTPRouteName: routeName });
     }
   }, [routeName]); // eslint-disable-line -- only sync on initial population; re-running on formState/onChange would overwrite user edits
-
-  const [namespaces] = useK8sWatchResource<K8sResourceCommon[]>({
-    groupVersionKind: { group: '', version: 'v1', kind: 'Namespace' },
-    isList: true,
-  });
-
-  const namespaceOptions = React.useMemo(() => {
-    if (!namespaces) return [];
-    return namespaces
-      .map((ns) => ns.metadata?.name || '')
-      .filter(Boolean)
-      .sort();
-  }, [namespaces]);
 
   const handleChange = (field: keyof MCPServerFormState, value: string) => {
     onChange({ ...formState, [field]: value });
@@ -149,154 +117,11 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
     >
       <Tab eventKey="form" title={<TabTitleText>{t('Form')}</TabTitleText>}>
         <br />
-        <Form>
-          <Grid hasGutter md={6}>
-            <FormGroup
-              label={t('Registration name')}
-              isRequired
-              fieldId="registration-name"
-              labelHelp={
-                <Popover
-                  bodyContent={t('A unique lowercase name for the MCP server registration.')}
-                >
-                  <button
-                    type="button"
-                    aria-label={t('More info for registration name')}
-                    className="pf-v6-c-form__group-label-help"
-                  >
-                    <HelpIcon />
-                  </button>
-                </Popover>
-              }
-            >
-              <TextInput
-                id="registration-name"
-                value={formState.registrationName}
-                onChange={(_e, val) => handleChange('registrationName', val)}
-                placeholder={t('my-mcp-server-name')}
-              />
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>
-                    {t('A unique lowercase name for the MCP server registration.')}
-                  </HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-
-            <FormGroup
-              label={t('Namespace')}
-              isRequired
-              fieldId="server-namespace"
-              labelHelp={
-                <Popover
-                  bodyContent={t(
-                    'The Kubernetes namespace where the gateway infrastructure will be deployed.',
-                  )}
-                >
-                  <button
-                    type="button"
-                    aria-label={t('More info for namespace')}
-                    className="pf-v6-c-form__group-label-help"
-                  >
-                    <HelpIcon />
-                  </button>
-                </Popover>
-              }
-            >
-              <FormSelect
-                id="server-namespace"
-                value={formState.namespace}
-                onChange={(_e, val) => handleChange('namespace', val)}
-                aria-label={t('Select namespace')}
-              >
-                <FormSelectOption value="" label={t('None selected')} />
-                {namespaceOptions.map((ns) => (
-                  <FormSelectOption key={ns} value={ns} label={ns} />
-                ))}
-              </FormSelect>
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>
-                    {t(
-                      'The Kubernetes namespace where the gateway infrastructure will be deployed.',
-                    )}
-                  </HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-          </Grid>
-
-          <Grid hasGutter md={6}>
-            <FormGroup
-              label={t('Target HTTPRoute name')}
-              fieldId="target-httproute"
-              labelHelp={
-                <Popover
-                  bodyContent={t('The HTTPRoute that this MCP server registration targets.')}
-                >
-                  <button
-                    type="button"
-                    aria-label={t('More info for target HTTPRoute')}
-                    className="pf-v6-c-form__group-label-help"
-                  >
-                    <HelpIcon />
-                  </button>
-                </Popover>
-              }
-            >
-              <FormSelect
-                id="target-httproute"
-                value={formState.targetHTTPRouteName}
-                onChange={(_e, val) => handleChange('targetHTTPRouteName', val)}
-                aria-label={t('Select target HTTPRoute')}
-              >
-                <FormSelectOption value="" label={t('Select...')} />
-                {routeName && <FormSelectOption value={routeName} label={routeName} />}
-              </FormSelect>
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>
-                    {t('The HTTPRoute that this MCP server registration targets.')}
-                  </HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-
-            <FormGroup
-              label={t('Tool prefix')}
-              isRequired
-              fieldId="tool-prefix"
-              labelHelp={
-                <Popover
-                  bodyContent={t('A prefix applied to all tools exposed by this MCP server.')}
-                >
-                  <button
-                    type="button"
-                    aria-label={t('More info for tool prefix')}
-                    className="pf-v6-c-form__group-label-help"
-                  >
-                    <HelpIcon />
-                  </button>
-                </Popover>
-              }
-            >
-              <TextInput
-                id="tool-prefix"
-                value={formState.toolPrefix}
-                onChange={(_e, val) => handleChange('toolPrefix', val)}
-                placeholder={t('mcp')}
-              />
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>
-                    {t('A prefix applied to all tools exposed by this MCP server.')}
-                  </HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-          </Grid>
-        </Form>
+        <MCPServerRegistrationFormFields
+          formState={formState}
+          onChange={handleChange}
+          httpRouteNames={routeName ? [routeName] : []}
+        />
       </Tab>
 
       <Tab eventKey="yaml" title={<TabTitleText>{t('YAML')}</TabTitleText>}>

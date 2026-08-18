@@ -2,9 +2,28 @@ import {
   buildMCPGatewayExtension,
   mcpExtensionToFormState,
   isMCPGatewayExtensionValid,
+  buildMCPServerRegistration,
+  mcpServerToFormState,
+  isMCPServerRegistrationValid,
   buildMCPServerRegistrationTemplate,
 } from './mcpResourceUtils';
-import { MCPWizardFormState, initialFormState, MCPGatewayExtension } from './types';
+import {
+  MCPWizardFormState,
+  initialFormState,
+  MCPGatewayExtension,
+  MCPServerFormState,
+  MCPServerRegistration,
+  initialServerFormState,
+} from './types';
+
+const baseServerFormState = (overrides: Partial<MCPServerFormState> = {}): MCPServerFormState => ({
+  ...initialServerFormState,
+  registrationName: 'my-reg',
+  namespace: 'reg-ns',
+  targetHTTPRouteName: 'my-route',
+  toolPrefix: '/mcp',
+  ...overrides,
+});
 
 const baseFormState = (overrides: Partial<MCPWizardFormState> = {}): MCPWizardFormState => ({
   ...initialFormState,
@@ -187,6 +206,93 @@ describe('isMCPGatewayExtensionValid', () => {
     ['sectionName', { sectionName: '' }],
   ])('returns false when %s is missing', (_label, overrides) => {
     expect(isMCPGatewayExtensionValid(baseFormState(overrides))).toBe(false);
+  });
+});
+
+describe('buildMCPServerRegistration', () => {
+  it('builds a minimal resource with the correct apiVersion, kind and targetRef', () => {
+    const resource = buildMCPServerRegistration(baseServerFormState(), 'default');
+
+    expect(resource.apiVersion).toBe('mcp.kuadrant.io/v1');
+    expect(resource.kind).toBe('MCPServerRegistration');
+    expect(resource.metadata).toEqual({ name: 'my-reg', namespace: 'reg-ns' });
+    expect(resource.spec.targetRef).toEqual({
+      group: 'gateway.networking.k8s.io',
+      kind: 'HTTPRoute',
+      name: 'my-route',
+    });
+    expect(resource.spec.prefix).toBe('/mcp');
+  });
+
+  it('falls back to the provided namespace when the form namespace is empty', () => {
+    const resource = buildMCPServerRegistration(
+      baseServerFormState({ namespace: '' }),
+      'fallback-ns',
+    );
+
+    expect(resource.metadata?.namespace).toBe('fallback-ns');
+  });
+
+  it('preserves original metadata (e.g. resourceVersion) in edit mode', () => {
+    const originalMetadata: MCPServerRegistration['metadata'] = {
+      name: 'my-reg',
+      namespace: 'reg-ns',
+      resourceVersion: '98765',
+      uid: 'reg-uid',
+    };
+
+    const resource = buildMCPServerRegistration(baseServerFormState(), 'default', originalMetadata);
+
+    expect(resource.metadata?.resourceVersion).toBe('98765');
+    expect(resource.metadata?.uid).toBe('reg-uid');
+    expect(resource.metadata?.name).toBe('my-reg');
+  });
+});
+
+describe('mcpServerToFormState', () => {
+  it('is the inverse of buildMCPServerRegistration for a populated resource', () => {
+    const resource = buildMCPServerRegistration(baseServerFormState(), 'default');
+    const roundTripped = mcpServerToFormState(resource, 'default');
+
+    expect(roundTripped).toEqual({
+      registrationName: 'my-reg',
+      namespace: 'reg-ns',
+      targetHTTPRouteName: 'my-route',
+      toolPrefix: '/mcp',
+    });
+  });
+
+  it('defaults optional fields to empty strings when absent', () => {
+    const resource: MCPServerRegistration = {
+      apiVersion: 'mcp.kuadrant.io/v1',
+      kind: 'MCPServerRegistration',
+      metadata: { name: 'n', namespace: 'ns' },
+      spec: { targetRef: { name: '' } },
+    };
+
+    expect(mcpServerToFormState(resource, 'ns')).toEqual({
+      registrationName: 'n',
+      namespace: 'ns',
+      targetHTTPRouteName: '',
+      toolPrefix: '',
+    });
+  });
+});
+
+describe('isMCPServerRegistrationValid', () => {
+  it('returns true when name, namespace, target HTTPRoute and tool prefix are all set', () => {
+    expect(isMCPServerRegistrationValid(baseServerFormState())).toBe(true);
+  });
+
+  it.each([
+    ['registrationName', { registrationName: '' }],
+    ['registrationName (whitespace only)', { registrationName: '   ' }],
+    ['namespace', { namespace: '' }],
+    ['targetHTTPRouteName', { targetHTTPRouteName: '' }],
+    ['targetHTTPRouteName (whitespace only)', { targetHTTPRouteName: '   ' }],
+    ['toolPrefix', { toolPrefix: '' }],
+  ])('returns false when %s is missing', (_label, overrides) => {
+    expect(isMCPServerRegistrationValid(baseServerFormState(overrides))).toBe(false);
   });
 });
 

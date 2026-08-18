@@ -18,6 +18,14 @@
   min-height: 400px;
 }
 
+/* Standalone MCP create/edit pages reuse the editor sizing but, unlike the
+   wizard, must keep the editor's Save/Create buttons visible (the wizard hides
+   them because it drives creation from its own footer). */
+.kuadrant-mcp-standalone-yaml-editor .yaml-editor,
+.kuadrant-mcp-standalone-yaml-editor .react-monaco-editor-container {
+  min-height: 400px;
+}
+
 /* YAML editor wrapper */
 .kuadrant-httproute-yaml-editor,
 .kuadrant-gateway-yaml-editor,

@@ -314,24 +314,61 @@ test.describe('MCP resource pages', () => {
       deleteNamespace(namespace);
     });
 
-    // The Form tab is a placeholder until the server-registration wizard (#738) lands.
-    // This verifies the page shell renders with both tabs and the placeholder guidance.
-    test('create page renders tabs and form placeholder', { tag: '@nightly' }, async ({ page }) => {
-      await spaNavigate(page, `/k8s/ns/${namespace}/mcp.kuadrant.io~v1~MCPServerRegistration/~new`);
+    test(
+      'creates an MCPServerRegistration from the form page',
+      { tag: '@smoke' },
+      async ({ page }) => {
+        const regName = `e2e-reg-form-${uid()}`;
 
-      await expect(page.getByRole('heading', { name: 'Create MCPServerRegistration' })).toBeVisible(
-        {
+        await spaNavigate(
+          page,
+          `/k8s/ns/${namespace}/mcp.kuadrant.io~v1~MCPServerRegistration/~new`,
+        );
+
+        await expect(
+          page.getByRole('heading', { name: 'Create MCPServerRegistration' }),
+        ).toBeVisible({ timeout: 15_000 });
+
+        await expect(page.getByRole('tab', { name: 'Form' })).toBeVisible();
+        await expect(page.getByRole('tab', { name: 'YAML' })).toBeVisible();
+
+        // Defaults to YAML; switch to the Form tab.
+        await page.getByRole('tab', { name: 'Form' }).click();
+
+        await page.locator('[data-test="mcp-registration-name"]').fill(regName);
+
+        // The Target HTTPRoute dropdown populates from HTTPRoutes watched in the
+        // namespace; select the route created in beforeAll.
+        const routeSelect = page.locator('[data-test="mcp-registration-httproute"]');
+        await expect(routeSelect).toBeVisible({ timeout: 15_000 });
+        await routeSelect.selectOption(routeName);
+
+        await page.locator('[data-test="mcp-registration-prefix"]').fill('e2e_form');
+
+        await page.getByRole('button', { name: 'Create', exact: true }).click();
+
+        await expect(page).toHaveURL(new RegExp(`/kuadrant/mcp/overview/ns/${namespace}`), {
           timeout: 15_000,
-        },
-      );
+        });
 
-      await expect(page.getByRole('tab', { name: 'Form' })).toBeVisible();
-      await expect(page.getByRole('tab', { name: 'YAML' })).toBeVisible();
+        await expect(() => {
+          expect(resourceExists('mcpserverregistration', regName, namespace)).toBe(true);
+        }).toPass({ timeout: 15_000 });
 
-      // Defaults to YAML; switch to Form to see the placeholder
-      await page.getByRole('tab', { name: 'Form' }).click();
-      await expect(page.locator('[data-test="mcp-registration-form-placeholder"]')).toBeVisible();
-    });
+        const route = kubectl([
+          'get',
+          'mcpserverregistration',
+          regName,
+          '-n',
+          namespace,
+          '-o',
+          'jsonpath={.spec.targetRef.name}',
+        ]);
+        expect(route).toBe(routeName);
+
+        deleteResource('mcpserverregistration', regName, namespace);
+      },
+    );
 
     test(
       'creates an MCPServerRegistration from the YAML tab',
@@ -361,7 +398,7 @@ spec:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: ${routeName}
-  prefix: /e2e-create
+  prefix: e2e_create
 `,
         );
 
@@ -386,7 +423,7 @@ spec:
       { tag: '@smoke' },
       async ({ page }) => {
         const regName = `e2e-reg-edit-${uid()}`;
-        applyRegistration(regName, namespace, routeName, '/e2e-real-prefix');
+        applyRegistration(regName, namespace, routeName, 'e2e_real_prefix');
 
         await spaNavigate(page, `/k8s/ns/${namespace}/mcpserverregistration/name/${regName}/edit`);
 
@@ -398,7 +435,7 @@ spec:
 
         // The editor must contain the real resource, not the blank template.
         await expectEditorContains(page, regName);
-        await expectEditorContains(page, '/e2e-real-prefix');
+        await expectEditorContains(page, 'e2e_real_prefix');
 
         deleteResource('mcpserverregistration', regName, namespace);
       },
@@ -416,7 +453,7 @@ spec:
         const extName = `e2e-reg-del-ext-${uid()}`;
         const regName = `e2e-reg-del-${uid()}`;
         applyExtension(extName, namespace, gatewayName);
-        applyRegistration(regName, namespace, routeName, '/e2e-del');
+        applyRegistration(regName, namespace, routeName, 'e2e_del');
 
         await spaNavigate(page, `/kuadrant/mcp/overview/ns/${namespace}`);
 
