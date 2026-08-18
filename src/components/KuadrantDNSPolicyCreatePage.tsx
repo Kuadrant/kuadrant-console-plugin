@@ -9,13 +9,16 @@ import {
   HelperText,
   HelperTextItem,
   Form,
-  Radio,
+  Tabs,
+  Tab,
+  TabTitleText,
   Button,
   ExpandableSection,
   ActionGroup,
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
+import './css/gateway-api-plugin.css';
 import {
   ResourceYAMLEditor,
   getGroupVersionKindForResource,
@@ -179,42 +182,50 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
 
   const [dnsData, dnsLoaded, dnsError] = useK8sWatchResource(dnsResource);
 
+  const hasInitializedFromResource = React.useRef(false);
+
   React.useEffect(() => {
     if (dnsLoaded && !dnsError && dnsData) {
       if (!Array.isArray(dnsData)) {
         const dnsPolicyUpdate = dnsData as dnsPolicyEdit;
+        // Always keep resourceVersion/creationTimestamp current so Save doesn't
+        // send a stale resourceVersion and hit a 409 conflict once the
+        // controller writes status back to the resource.
         setCreationTimestamp(dnsPolicyUpdate.metadata?.creationTimestamp || '');
         setResourceVersion(dnsPolicyUpdate.metadata?.resourceVersion || '');
-        setFormDisabled(true);
-        setCreate(false);
-        setPolicyName(dnsPolicyUpdate.metadata?.name || '');
-        setSelectedGateway({
-          metadata: {
-            name: dnsPolicyUpdate.spec?.targetRef?.name || '',
-            namespace: dnsPolicyUpdate.metadata?.namespace ?? '',
-          },
-        } as GatewayResource);
-        setHealthCheck({
-          path: dnsPolicyUpdate.spec?.healthCheck?.path || '',
-          failureThreshold: dnsPolicyUpdate.spec?.healthCheck?.failureThreshold,
-          port: dnsPolicyUpdate.spec?.healthCheck?.port || null,
-          protocol: dnsPolicyUpdate.spec?.healthCheck?.protocol || 'HTTP',
-        });
-        const providerRef =
-          Array.isArray(dnsPolicyUpdate.spec?.providerRefs) &&
-          dnsPolicyUpdate.spec.providerRefs.length > 0
-            ? dnsPolicyUpdate.spec.providerRefs[0]
-            : { name: '' };
+        if (!hasInitializedFromResource.current) {
+          setFormDisabled(true);
+          setCreate(false);
+          setPolicyName(dnsPolicyUpdate.metadata?.name || '');
+          setSelectedGateway({
+            metadata: {
+              name: dnsPolicyUpdate.spec?.targetRef?.name || '',
+              namespace: dnsPolicyUpdate.metadata?.namespace ?? '',
+            },
+          } as GatewayResource);
+          setHealthCheck({
+            path: dnsPolicyUpdate.spec?.healthCheck?.path || '',
+            failureThreshold: dnsPolicyUpdate.spec?.healthCheck?.failureThreshold,
+            port: dnsPolicyUpdate.spec?.healthCheck?.port || null,
+            protocol: dnsPolicyUpdate.spec?.healthCheck?.protocol || 'HTTP',
+          });
+          const providerRef =
+            Array.isArray(dnsPolicyUpdate.spec?.providerRefs) &&
+            dnsPolicyUpdate.spec.providerRefs.length > 0
+              ? dnsPolicyUpdate.spec.providerRefs[0]
+              : { name: '' };
 
-        setProviderRefs([providerRef]);
-        setLoadBalancing({
-          geo: dnsPolicyUpdate.spec?.loadBalancing?.geo || '',
-          weight: dnsPolicyUpdate.spec?.loadBalancing?.weight ?? DEFAULT_LOAD_BALANCING_WEIGHT,
-          defaultGeo:
-            dnsPolicyUpdate.spec?.loadBalancing?.defaultGeo !== undefined
-              ? dnsPolicyUpdate.spec.loadBalancing?.defaultGeo
-              : false, // Default to false if not present
-        });
+          setProviderRefs([providerRef]);
+          setLoadBalancing({
+            geo: dnsPolicyUpdate.spec?.loadBalancing?.geo || '',
+            weight: dnsPolicyUpdate.spec?.loadBalancing?.weight ?? DEFAULT_LOAD_BALANCING_WEIGHT,
+            defaultGeo:
+              dnsPolicyUpdate.spec?.loadBalancing?.defaultGeo !== undefined
+                ? dnsPolicyUpdate.spec.loadBalancing?.defaultGeo
+                : false, // Default to false if not present
+          });
+          hasInitializedFromResource.current = true;
+        }
       }
     } else if (dnsError) {
       console.error('Failed to fetch the resource:', dnsError);
@@ -306,113 +317,98 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
             )}
           </p>
         </div>
-        <FormGroup
-          className="kuadrant-editor-toggle"
-          role="radiogroup"
-          isInline
-          fieldId="create-type-radio-group"
-          label={t('Configure via')}
-        >
-          <Radio
-            name="create-type-radio"
-            label={t('Form View')}
-            id="create-type-radio-form"
-            isChecked={createView === 'form'}
-            onChange={() => setCreateView('form')}
-          />
-          <Radio
-            name="create-type-radio"
-            label={t('YAML View')}
-            id="create-type-radio-yaml"
-            isChecked={createView === 'yaml'}
-            onChange={() => setCreateView('yaml')}
-          />
-        </FormGroup>
+        <Tabs activeKey={createView} onSelect={(_e, key) => setCreateView(key as 'form' | 'yaml')}>
+          <Tab eventKey="form" title={<TabTitleText>{t('Form')}</TabTitleText>}>
+            <PageSection hasBodyWrapper={false}>
+              <Form className="co-m-pane__form">
+                <FormGroup label={t('Policy name')} isRequired fieldId="policy-name">
+                  <TextInput
+                    isRequired
+                    type="text"
+                    id="policy-name"
+                    name="policy-name"
+                    value={policyName}
+                    onChange={handlePolicyChange}
+                    isDisabled={formDisabled}
+                    placeholder={t('Policy name')}
+                  />
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>{t('Unique name of the DNS Policy')}</HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
+                <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
+                <FormGroup label={t('Provider Ref')} isRequired fieldId="Provider-ref">
+                  <TextInput
+                    isRequired
+                    type="text"
+                    id="provider-ref"
+                    name="provider-ref"
+                    value={providerRefs.length > 0 ? providerRefs[0].name : ''}
+                    onChange={handleProviderRefs}
+                    placeholder={t('Provider Ref')}
+                  />
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>
+                        {t(
+                          'Reference to an existing secret resource containing DNS provider credentials and configuration',
+                        )}
+                      </HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
+                <ExpandableSection
+                  toggleText={t('LoadBalancing')}
+                  className="pf-u-mb-0"
+                  isExpanded={loadBalancingExpanded}
+                  onToggle={() => setLoadBalancingExpanded(!loadBalancingExpanded)}
+                >
+                  <LoadBalancingField
+                    loadBalancing={loadBalancing}
+                    onChange={setLoadBalancing}
+                    formDisabled={formDisabled}
+                  />
+                </ExpandableSection>
+                <ExpandableSection
+                  toggleText={t('Health Check')}
+                  className="pf-u-mt-0"
+                  isExpanded={healthExpanded}
+                  onToggle={() => setHealthExpanded(!healthExpanded)}
+                >
+                  <HealthCheckField healthCheck={healthCheck} onChange={setHealthCheck} />
+                </ExpandableSection>
+                <ActionGroup className="pf-u-mt-0">
+                  <KuadrantCreateUpdate
+                    model={dnsPolicyModel}
+                    resource={dnsPolicy}
+                    policyType="dns"
+                    navigate={navigate}
+                    validation={formValidation()}
+                  />
+                  <Button variant="link" onClick={handleCancelResource}>
+                    {t('Cancel')}
+                  </Button>
+                </ActionGroup>
+              </Form>
+            </PageSection>
+          </Tab>
+          <Tab eventKey="yaml" title={<TabTitleText>{t('YAML')}</TabTitleText>}>
+            <div className="kuadrant-dnspolicy-yaml-editor">
+              {createView === 'yaml' && (
+                <React.Suspense fallback={<div>{t('Loading...')}</div>}>
+                  <ResourceYAMLEditor
+                    initialResource={yamlInput}
+                    create={create}
+                    onChange={handleYAMLChange}
+                  />
+                </React.Suspense>
+              )}
+            </div>
+          </Tab>
+        </Tabs>
       </PageSection>
-      {createView === 'form' ? (
-        <PageSection hasBodyWrapper={false}>
-          <Form className="co-m-pane__form">
-            <FormGroup label={t('Policy name')} isRequired fieldId="policy-name">
-              <TextInput
-                isRequired
-                type="text"
-                id="policy-name"
-                name="policy-name"
-                value={policyName}
-                onChange={handlePolicyChange}
-                isDisabled={formDisabled}
-                placeholder={t('Policy name')}
-              />
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>{t('Unique name of the DNS Policy')}</HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-            <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
-            <FormGroup label={t('Provider Ref')} isRequired fieldId="Provider-ref">
-              <TextInput
-                isRequired
-                type="text"
-                id="provider-ref"
-                name="provider-ref"
-                value={providerRefs.length > 0 ? providerRefs[0].name : ''}
-                onChange={handleProviderRefs}
-                placeholder={t('Provider Ref')}
-              />
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>
-                    {t(
-                      'Reference to an existing secret resource containing DNS provider credentials and configuration',
-                    )}
-                  </HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-            <ExpandableSection
-              toggleText={t('LoadBalancing')}
-              className="pf-u-mb-0"
-              isExpanded={loadBalancingExpanded}
-              onToggle={() => setLoadBalancingExpanded(!loadBalancingExpanded)}
-            >
-              <LoadBalancingField
-                loadBalancing={loadBalancing}
-                onChange={setLoadBalancing}
-                formDisabled={formDisabled}
-              />
-            </ExpandableSection>
-            <ExpandableSection
-              toggleText={t('Health Check')}
-              className="pf-u-mt-0"
-              isExpanded={healthExpanded}
-              onToggle={() => setHealthExpanded(!healthExpanded)}
-            >
-              <HealthCheckField healthCheck={healthCheck} onChange={setHealthCheck} />
-            </ExpandableSection>
-            <ActionGroup className="pf-u-mt-0">
-              <KuadrantCreateUpdate
-                model={dnsPolicyModel}
-                resource={dnsPolicy}
-                policyType="dns"
-                navigate={navigate}
-                validation={formValidation()}
-              />
-              <Button variant="link" onClick={handleCancelResource}>
-                {t('Cancel')}
-              </Button>
-            </ActionGroup>
-          </Form>
-        </PageSection>
-      ) : (
-        <React.Suspense fallback={<div>{t('Loading...')}</div>}>
-          <ResourceYAMLEditor
-            initialResource={yamlInput}
-            create={create}
-            onChange={handleYAMLChange}
-          ></ResourceYAMLEditor>
-        </React.Suspense>
-      )}
     </>
   );
 };

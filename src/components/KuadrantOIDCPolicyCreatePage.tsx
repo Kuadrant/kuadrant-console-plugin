@@ -9,12 +9,15 @@ import {
   HelperText,
   HelperTextItem,
   Form,
-  Radio,
+  Tabs,
+  Tab,
+  TabTitleText,
   Button,
   ActionGroup,
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
+import './css/gateway-api-plugin.css';
 import {
   ResourceYAMLEditor,
   getGroupVersionKindForResource,
@@ -116,23 +119,31 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
     ? useK8sWatchResource(oidcResource)
     : [null, false, null];
 
+  const hasInitializedFromResource = React.useRef(false);
+
   React.useEffect(() => {
     if (oidcLoaded && !oidcError && oidcData) {
       if (!Array.isArray(oidcData)) {
         const oidcPolicyUpdate = oidcData as OIDCPolicyEdit;
+        // Always keep resourceVersion/creationTimestamp current so Save doesn't
+        // send a stale resourceVersion and hit a 409 conflict once the
+        // controller writes status back to the resource.
         setCreationTimestamp(oidcPolicyUpdate.metadata?.creationTimestamp || '');
         setResourceVersion(oidcPolicyUpdate.metadata?.resourceVersion || '');
-        setFormDisabled(true);
-        setCreate(false);
-        setPolicyName(oidcPolicyUpdate.metadata?.name || '');
-        setSelectedGateway({
-          metadata: {
-            name: oidcPolicyUpdate.spec?.targetRef?.name || '',
-            namespace: oidcPolicyUpdate.metadata?.namespace ?? '',
-          },
-        } as GatewayResource);
-        setClientID(oidcPolicyUpdate.spec?.provider?.clientID || '');
-        setIssuerURL(oidcPolicyUpdate.spec?.provider?.issuerURL || '');
+        if (!hasInitializedFromResource.current) {
+          setFormDisabled(true);
+          setCreate(false);
+          setPolicyName(oidcPolicyUpdate.metadata?.name || '');
+          setSelectedGateway({
+            metadata: {
+              name: oidcPolicyUpdate.spec?.targetRef?.name || '',
+              namespace: oidcPolicyUpdate.metadata?.namespace ?? '',
+            },
+          } as GatewayResource);
+          setClientID(oidcPolicyUpdate.spec?.provider?.clientID || '');
+          setIssuerURL(oidcPolicyUpdate.spec?.provider?.issuerURL || '');
+          hasInitializedFromResource.current = true;
+        }
       }
     } else if (oidcError) {
       console.error('Failed to fetch the resource:', oidcError);
@@ -196,109 +207,94 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
             {t('OIDCPolicy configures OIDC authentication for your gateway')}
           </p>
         </div>
-        <FormGroup
-          className="kuadrant-editor-toggle"
-          role="radiogroup"
-          isInline
-          fieldId="create-type-radio-group"
-          label={t('Configure via')}
-        >
-          <Radio
-            name="create-type-radio"
-            label={t('Form View')}
-            id="create-type-radio-form"
-            isChecked={createView === 'form'}
-            onChange={() => setCreateView('form')}
-          />
-          <Radio
-            name="create-type-radio"
-            label={t('YAML View')}
-            id="create-type-radio-yaml"
-            isChecked={createView === 'yaml'}
-            onChange={() => setCreateView('yaml')}
-          />
-        </FormGroup>
+        <Tabs activeKey={createView} onSelect={(_e, key) => setCreateView(key as 'form' | 'yaml')}>
+          <Tab eventKey="form" title={<TabTitleText>{t('Form')}</TabTitleText>}>
+            <PageSection hasBodyWrapper={false}>
+              <Form className="co-m-pane__form">
+                <FormGroup label={t('Policy name')} isRequired fieldId="policy-name">
+                  <TextInput
+                    isRequired
+                    type="text"
+                    id="policy-name"
+                    name="policy-name"
+                    value={policyName}
+                    onChange={(_event, val) => setPolicyName(val)}
+                    isDisabled={formDisabled}
+                    placeholder={t('Policy name')}
+                  />
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>{t('Unique name of the OIDC Policy')}</HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
+                <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
+                <FormGroup label={t('Client ID')} isRequired fieldId="client-id">
+                  <TextInput
+                    isRequired
+                    type="text"
+                    id="client-id"
+                    name="client-id"
+                    value={clientID}
+                    onChange={(_event, val) => setClientID(val)}
+                    placeholder={t('my-client-id')}
+                  />
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>
+                        {t('The client ID registered with the OIDC provider')}
+                      </HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
+                <FormGroup label={t('Issuer URL')} isRequired fieldId="issuer-url">
+                  <TextInput
+                    isRequired
+                    type="url"
+                    id="issuer-url"
+                    name="issuer-url"
+                    value={issuerURL}
+                    onChange={(_event, val) => setIssuerURL(val)}
+                    placeholder={t('https://auth.example.com')}
+                  />
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>
+                        {t('The base URL of the OIDC provider (e.g. https://auth.example.com)')}
+                      </HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
+                <ActionGroup className="pf-u-mt-0">
+                  <KuadrantCreateUpdate
+                    model={oidcPolicyModel}
+                    resource={oidcPolicy}
+                    policyType="oidc"
+                    navigate={navigate}
+                    validation={isFormValid}
+                  />
+                  <Button variant="link" onClick={handleCancelResource}>
+                    {t('Cancel')}
+                  </Button>
+                </ActionGroup>
+              </Form>
+            </PageSection>
+          </Tab>
+          <Tab eventKey="yaml" title={<TabTitleText>{t('YAML')}</TabTitleText>}>
+            <div className="kuadrant-oidcpolicy-yaml-editor">
+              {createView === 'yaml' && (
+                <React.Suspense fallback={<div>{t('Loading...')}</div>}>
+                  <ResourceYAMLEditor
+                    initialResource={yamlInput}
+                    create={create}
+                    onChange={handleYAMLChange}
+                  />
+                </React.Suspense>
+              )}
+            </div>
+          </Tab>
+        </Tabs>
       </PageSection>
-      {createView === 'form' ? (
-        <PageSection hasBodyWrapper={false}>
-          <Form className="co-m-pane__form">
-            <FormGroup label={t('Policy name')} isRequired fieldId="policy-name">
-              <TextInput
-                isRequired
-                type="text"
-                id="policy-name"
-                name="policy-name"
-                value={policyName}
-                onChange={(_event, val) => setPolicyName(val)}
-                isDisabled={formDisabled}
-                placeholder={t('Policy name')}
-              />
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>{t('Unique name of the OIDC Policy')}</HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-            <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
-            <FormGroup label={t('Client ID')} isRequired fieldId="client-id">
-              <TextInput
-                isRequired
-                type="text"
-                id="client-id"
-                name="client-id"
-                value={clientID}
-                onChange={(_event, val) => setClientID(val)}
-                placeholder={t('my-client-id')}
-              />
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>
-                    {t('The client ID registered with the OIDC provider')}
-                  </HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-            <FormGroup label={t('Issuer URL')} isRequired fieldId="issuer-url">
-              <TextInput
-                isRequired
-                type="url"
-                id="issuer-url"
-                name="issuer-url"
-                value={issuerURL}
-                onChange={(_event, val) => setIssuerURL(val)}
-                placeholder={t('https://auth.example.com')}
-              />
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>
-                    {t('The base URL of the OIDC provider (e.g. https://auth.example.com)')}
-                  </HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-            <ActionGroup className="pf-u-mt-0">
-              <KuadrantCreateUpdate
-                model={oidcPolicyModel}
-                resource={oidcPolicy}
-                policyType="oidc"
-                navigate={navigate}
-                validation={isFormValid}
-              />
-              <Button variant="link" onClick={handleCancelResource}>
-                {t('Cancel')}
-              </Button>
-            </ActionGroup>
-          </Form>
-        </PageSection>
-      ) : (
-        <React.Suspense fallback={<div>{t('Loading...')}</div>}>
-          <ResourceYAMLEditor
-            initialResource={yamlInput}
-            create={create}
-            onChange={handleYAMLChange}
-          />
-        </React.Suspense>
-      )}
     </>
   );
 };

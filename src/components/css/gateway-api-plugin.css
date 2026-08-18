@@ -18,16 +18,37 @@
   min-height: 400px;
 }
 
-/* HTTPRouteCreatePage YAML tab styling */
-.kuadrant-httproute-yaml-editor {
+/* YAML editor wrapper */
+.kuadrant-httproute-yaml-editor,
+.kuadrant-gateway-yaml-editor,
+.kuadrant-dnspolicy-yaml-editor,
+.kuadrant-oidcpolicy-yaml-editor,
+.kuadrant-planpolicy-yaml-editor,
+.kuadrant-tokenratelimitpolicy-yaml-editor,
+.kuadrant-tlspolicy-yaml-editor {
   padding: var(--pf-t--global--spacer--md) 0;
+
+  /* Negative margin offsets PatternFly Tab bar height to align YAML editor with form content */
+  margin-top: -40px;
   min-height: 600px;
 }
 
-.kuadrant-httproute-yaml-editor .react-monaco-editor-container {
+.kuadrant-httproute-yaml-editor .react-monaco-editor-container,
+.kuadrant-gateway-yaml-editor .react-monaco-editor-container,
+.kuadrant-dnspolicy-yaml-editor .react-monaco-editor-container,
+.kuadrant-oidcpolicy-yaml-editor .react-monaco-editor-container,
+.kuadrant-planpolicy-yaml-editor .react-monaco-editor-container,
+.kuadrant-tokenratelimitpolicy-yaml-editor .react-monaco-editor-container,
+.kuadrant-tlspolicy-yaml-editor .react-monaco-editor-container {
   min-height: 550px;
 }
 
-.kuadrant-httproute-yaml-editor .yaml-editor {
+.kuadrant-httproute-yaml-editor .yaml-editor,
+.kuadrant-gateway-yaml-editor .yaml-editor,
+.kuadrant-dnspolicy-yaml-editor .yaml-editor,
+.kuadrant-oidcpolicy-yaml-editor .yaml-editor,
+.kuadrant-planpolicy-yaml-editor .yaml-editor,
+.kuadrant-tokenratelimitpolicy-yaml-editor .yaml-editor,
+.kuadrant-tlspolicy-yaml-editor .yaml-editor {
   min-height: 550px;
 }

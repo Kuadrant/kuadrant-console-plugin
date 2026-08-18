@@ -11,6 +11,9 @@ import {
   PageSection,
   Title,
   Radio,
+  Tabs,
+  Tab,
+  TabTitleText,
 } from '@patternfly/react-core';
 import Helmet from 'react-helmet';
 import {
@@ -21,6 +24,7 @@ import {
   useActiveNamespace,
 } from '@openshift-console/dynamic-plugin-sdk';
 import './kuadrant.css';
+import './css/gateway-api-plugin.css';
 import { handleCancel } from '../utils/cancel';
 import { useNavigate, useLocation } from 'react-router';
 import * as yaml from 'js-yaml';
@@ -128,31 +132,39 @@ const KuadrantTLSCreatePage: React.FC = () => {
 
   const [tlsData, tlsLoaded, tlsError] = useK8sWatchResource(tlsResource);
 
+  const hasInitializedFromResource = React.useRef(false);
+
   // When a resource is being updated setting the form from the yaml it gets from useK8sWatchResource
   React.useEffect(() => {
     if (tlsLoaded && !tlsError && tlsData) {
       if (!Array.isArray(tlsData)) {
         const tlsPolicyUpdate = tlsData as TLSPolicyEdit;
+        // Always keep resourceVersion/creationTimestamp current so Save doesn't
+        // send a stale resourceVersion and hit a 409 conflict once the
+        // controller writes status back to the resource.
         setCreationTimestamp(tlsPolicyUpdate.metadata?.creationTimestamp || '');
         setResourceVersion(tlsPolicyUpdate.metadata?.resourceVersion || '');
-        setFormDisabled(true);
-        setCreate(false);
-        setPolicyName(tlsPolicyUpdate.metadata?.name || '');
-        setSelectedGateway({
-          metadata: {
-            name: tlsPolicyUpdate.spec?.targetRef?.name || '',
-            namespace: tlsPolicyUpdate.metadata?.namespace ?? '',
-          },
-        } as GatewayResource);
-        if (tlsPolicyUpdate.spec?.issuerRef?.kind === 'ClusterIssuer') {
-          setCertIssuerType('clusterissuer');
-          setSelectedClusterIssuers({ name: tlsPolicyUpdate.spec?.issuerRef?.name || '' });
-        } else if (tlsPolicyUpdate.spec?.issuerRef?.kind === 'Issuer') {
-          setCertIssuerType('issuer');
-          setSelectedIssuers({
-            name: tlsPolicyUpdate.spec?.issuerRef?.name || '',
-            namespace: tlsPolicyUpdate.metadata?.namespace || '',
-          });
+        if (!hasInitializedFromResource.current) {
+          setFormDisabled(true);
+          setCreate(false);
+          setPolicyName(tlsPolicyUpdate.metadata?.name || '');
+          setSelectedGateway({
+            metadata: {
+              name: tlsPolicyUpdate.spec?.targetRef?.name || '',
+              namespace: tlsPolicyUpdate.metadata?.namespace ?? '',
+            },
+          } as GatewayResource);
+          if (tlsPolicyUpdate.spec?.issuerRef?.kind === 'ClusterIssuer') {
+            setCertIssuerType('clusterissuer');
+            setSelectedClusterIssuers({ name: tlsPolicyUpdate.spec?.issuerRef?.name || '' });
+          } else if (tlsPolicyUpdate.spec?.issuerRef?.kind === 'Issuer') {
+            setCertIssuerType('issuer');
+            setSelectedIssuers({
+              name: tlsPolicyUpdate.spec?.issuerRef?.name || '',
+              namespace: tlsPolicyUpdate.metadata?.namespace || '',
+            });
+          }
+          hasInitializedFromResource.current = true;
         }
       }
     } else if (tlsError) {
@@ -237,109 +249,94 @@ const KuadrantTLSCreatePage: React.FC = () => {
             )}
           </p>
         </div>
-        <FormGroup
-          className="kuadrant-editor-toggle"
-          role="radiogroup"
-          isInline
-          fieldId="create-type-radio-group"
-          label={t('Configure via')}
-        >
-          <Radio
-            label={t('Form View')}
-            isChecked={view === 'form'}
-            onChange={() => setView('form')}
-            id="form-view"
-            name="view-toggle"
-          />
-          <Radio
-            label={t('YAML View')}
-            isChecked={view === 'yaml'}
-            onChange={() => setView('yaml')}
-            id="yaml-view"
-            name="view-toggle"
-          />
-        </FormGroup>
+        <Tabs activeKey={view} onSelect={(_e, key) => setView(key as 'form' | 'yaml')}>
+          <Tab eventKey="form" title={<TabTitleText>{t('Form')}</TabTitleText>}>
+            <PageSection hasBodyWrapper={false}>
+              <Form className="co-m-pane__form">
+                <FormGroup label={t('Policy name')} isRequired fieldId="simple-form-policy-name-01">
+                  <TextInput
+                    isRequired
+                    type="text"
+                    id="simple-form-policy-name-01"
+                    name="simple-form-policy-name-01"
+                    aria-describedby="simple-form-policy-name-01-helper"
+                    value={policyName}
+                    onChange={handleNameChange}
+                    isDisabled={formDisabled}
+                    placeholder={t('Policy name')}
+                  />
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>{t('Unique name of the TLSPolicy.')}</HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
+                <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
+                <FormGroup
+                  role="radiogroup"
+                  isInline
+                  fieldId="cert-manager-issuer"
+                  label={t('Cert manager issuer type')}
+                  isRequired
+                  aria-labelledby="issuer-label"
+                >
+                  <Radio
+                    label={t('Cluster issuer')}
+                    isChecked={certIssuerType === 'clusterissuer'}
+                    onChange={() => {
+                      setCertIssuerType('clusterissuer');
+                    }}
+                    id="cluster-issuer"
+                    name="issuer"
+                  />
+                  <Radio
+                    label={t('Issuer')}
+                    isChecked={certIssuerType === 'issuer'}
+                    onChange={() => {
+                      setCertIssuerType('issuer');
+                    }}
+                    id="issuer"
+                    name="issuer"
+                  />
+                </FormGroup>
+                {certIssuerType === 'clusterissuer' ? (
+                  <ClusterIssuerSelect
+                    selectedClusterIssuer={selectedClusterIssuers}
+                    onChange={setSelectedClusterIssuers}
+                  />
+                ) : (
+                  <IssuerSelect selectedIssuer={selectedIssuer} onChange={setSelectedIssuers} />
+                )}
+                <ActionGroup className="pf-u-mt-0">
+                  <KuadrantCreateUpdate
+                    model={tlsPolicyModel}
+                    resource={tlsPolicy}
+                    policyType="tls"
+                    navigate={navigate}
+                    validation={isFormValid}
+                  />
+                  <Button variant="link" onClick={handleCancelResource}>
+                    {t('Cancel')}
+                  </Button>
+                </ActionGroup>
+              </Form>
+            </PageSection>
+          </Tab>
+          <Tab eventKey="yaml" title={<TabTitleText>{t('YAML')}</TabTitleText>}>
+            <div className="kuadrant-tlspolicy-yaml-editor">
+              {view === 'yaml' && (
+                <React.Suspense fallback={<div>{t('Loading...')}</div>}>
+                  <ResourceYAMLEditor
+                    initialResource={yamlInput}
+                    create={create}
+                    onChange={handleYAMLChange}
+                  />
+                </React.Suspense>
+              )}
+            </div>
+          </Tab>
+        </Tabs>
       </PageSection>
-      {view === 'form' ? (
-        <PageSection hasBodyWrapper={false}>
-          <Form className="co-m-pane__form">
-            <FormGroup label={t('Policy name')} isRequired fieldId="simple-form-policy-name-01">
-              <TextInput
-                isRequired
-                type="text"
-                id="simple-form-policy-name-01"
-                name="simple-form-policy-name-01"
-                aria-describedby="simple-form-policy-name-01-helper"
-                value={policyName}
-                onChange={handleNameChange}
-                isDisabled={formDisabled}
-                placeholder={t('Policy name')}
-              />
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>{t('Unique name of the TLSPolicy.')}</HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-            <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
-            <FormGroup
-              role="radiogroup"
-              isInline
-              fieldId="cert-manager-issuer"
-              label={t('Cert manager issuer type')}
-              isRequired
-              aria-labelledby="issuer-label"
-            >
-              <Radio
-                label={t('Cluster issuer')}
-                isChecked={certIssuerType === 'clusterissuer'}
-                onChange={() => {
-                  setCertIssuerType('clusterissuer');
-                }}
-                id="cluster-issuer"
-                name="issuer"
-              />
-              <Radio
-                label={t('Issuer')}
-                isChecked={certIssuerType === 'issuer'}
-                onChange={() => {
-                  setCertIssuerType('issuer');
-                }}
-                id="issuer"
-                name="issuer"
-              />
-            </FormGroup>
-            {certIssuerType === 'clusterissuer' ? (
-              <ClusterIssuerSelect
-                selectedClusterIssuer={selectedClusterIssuers}
-                onChange={setSelectedClusterIssuers}
-              />
-            ) : (
-              <IssuerSelect selectedIssuer={selectedIssuer} onChange={setSelectedIssuers} />
-            )}
-            <ActionGroup className="pf-u-mt-0">
-              <KuadrantCreateUpdate
-                model={tlsPolicyModel}
-                resource={tlsPolicy}
-                policyType="tls"
-                navigate={navigate}
-                validation={isFormValid}
-              />
-              <Button variant="link" onClick={handleCancelResource}>
-                {t('Cancel')}
-              </Button>
-            </ActionGroup>
-          </Form>
-        </PageSection>
-      ) : (
-        <React.Suspense fallback={<div>{t('Loading...')}</div>}>
-          <ResourceYAMLEditor
-            initialResource={yamlInput}
-            create={create}
-            onChange={handleYAMLChange}
-          ></ResourceYAMLEditor>
-        </React.Suspense>
-      )}
     </>
   );
 };
