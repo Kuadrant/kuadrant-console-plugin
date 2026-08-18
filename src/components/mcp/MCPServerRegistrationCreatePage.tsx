@@ -58,7 +58,7 @@ const MCPServerRegistrationCreatePage: React.FC = () => {
     !activeNamespaceRaw || activeNamespaceRaw === '#ALL_NS#' ? 'default' : activeNamespaceRaw;
   const selectedNamespace = namespaceFromUrl || activeNamespace;
 
-  const [createView, setCreateView] = React.useState<'form' | 'yaml'>('yaml');
+  const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [yamlKey, setYamlKey] = React.useState(0);
   const [formState, setFormState] = React.useState<MCPServerFormState>({
     ...initialServerFormState,
@@ -73,6 +73,15 @@ const MCPServerRegistrationCreatePage: React.FC = () => {
   const handleChange = React.useCallback((field: keyof MCPServerFormState, value: string) => {
     setFormState((prev) => ({ ...prev, [field]: value }));
   }, []);
+
+  // The Namespace field is hidden on this standalone page (namespace comes from the
+  // console's namespace picker instead), so keep formState.namespace in sync with it
+  // rather than letting it go stale from the initial mount value.
+  React.useEffect(() => {
+    if (!isEdit) {
+      setFormState((prev) => ({ ...prev, namespace: selectedNamespace }));
+    }
+  }, [isEdit, selectedNamespace]);
 
   const watchResource = React.useMemo(
     () =>
@@ -107,6 +116,8 @@ const MCPServerRegistrationCreatePage: React.FC = () => {
   }, [watchResource, existingLoaded, existingError, existingData, selectedNamespace]);
 
   // Watch HTTPRoutes so the Target HTTPRoute dropdown can populate from the namespace.
+  // Namespace is not form-selectable on this page — it follows the console's
+  // namespace picker (selectedNamespace) so switching it re-fetches routes.
   const [httpRoutes] = useK8sWatchResource<K8sResourceCommon[]>({
     groupVersionKind: RESOURCES.HTTPRoute.gvk,
     isList: true,

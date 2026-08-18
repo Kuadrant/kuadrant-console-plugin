@@ -32,7 +32,7 @@ import { getModelFromResource } from '../../utils/getModelFromResource';
 import { handleCancel } from '../../utils/cancel';
 import '../css/gateway-api-plugin.css';
 
-// Standalone create/edit/delete page for MCPGatewayExtension resources.
+// Standalone create/edit page for MCPGatewayExtension resources.
 // Reuses the extension form fields shared with the MCP setup wizard (step 3).
 const MCPGatewayExtensionCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -70,6 +70,15 @@ const MCPGatewayExtensionCreatePage: React.FC = () => {
   const updateFormState = React.useCallback((updates: Partial<MCPWizardFormState>) => {
     setFormState((prev) => ({ ...prev, ...updates }));
   }, []);
+
+  // The Namespace field is hidden on this standalone page (namespace comes from the
+  // console's namespace picker instead), so keep formState.extensionNamespace in sync
+  // with it rather than letting it go stale from the initial mount value.
+  React.useEffect(() => {
+    if (!isEditRoute) {
+      updateFormState({ extensionNamespace: selectedNamespace });
+    }
+  }, [isEditRoute, selectedNamespace, updateFormState]);
 
   // In edit mode, watch the existing resource and populate the form once.
   const watchResource = React.useMemo(
@@ -119,6 +128,14 @@ const MCPGatewayExtensionCreatePage: React.FC = () => {
   const selectedGateway = React.useMemo(
     () => (gateways || []).find((gw) => gw.metadata?.name === formState.targetGateway),
     [gateways, formState.targetGateway],
+  );
+  const gatewayNames = React.useMemo(
+    () =>
+      (gateways || [])
+        .map((gw) => gw.metadata?.name || '')
+        .filter(Boolean)
+        .sort(),
+    [gateways],
   );
 
   const extensionResource = React.useMemo(
@@ -188,6 +205,8 @@ const MCPGatewayExtensionCreatePage: React.FC = () => {
             selectedGateway={selectedGateway}
             selectedNamespace={selectedNamespace}
             disableIdentity={isEdit}
+            gatewayNames={gatewayNames}
+            showNamespaceField={false}
           />
           <ActionGroup>
             <KuadrantCreateUpdate

@@ -102,7 +102,9 @@ spec:
   );
 }
 
-// Wait for the Monaco YAML editor to initialise and assert its content contains `text`.
+// The SDK's <ResourceYAMLEditor> renders a Monaco editor (via react-monaco-editor),
+// which loads asynchronously and exposes a global `window.monaco`. Wait for it to
+// initialise, then assert its content contains `text`.
 // Mirrors expectEditorContains in gateway-crud.spec.ts.
 async function expectEditorContains(
   page: import('@playwright/test').Page,
@@ -137,7 +139,8 @@ async function expectEditorContains(
   );
 }
 
-// Set the Monaco editor content via its model API (triggers onChange like real typing).
+// <ResourceYAMLEditor> is a Monaco editor, so it can't be filled like a plain input.
+// Set its content through Monaco's model API, which triggers onChange like real typing.
 async function setEditorValue(page: import('@playwright/test').Page, yaml: string): Promise<void> {
   await page.waitForFunction(
     () => {
@@ -160,8 +163,8 @@ async function setEditorValue(page: import('@playwright/test').Page, yaml: strin
 }
 
 // Delete a resource from the MCP overview page's ResourceList via the kebab menu
-// (DropdownWithKebab), following the kebab pattern in rbac.spec.ts. This is the
-// delete flow that replaced the page-level Delete button on the create/edit pages.
+// (DropdownWithKebab), following the kebab pattern in rbac.spec.ts. The MCP
+// create/edit pages have no page-level Delete button, matching the policy pages.
 async function deleteViaKebab(page: import('@playwright/test').Page, name: string): Promise<void> {
   const row = page.locator(`tr:has-text("${name}")`);
   await expect(row).toBeVisible({ timeout: 15_000 });
@@ -224,7 +227,7 @@ test.describe('MCP resource pages', () => {
         );
 
         await page.locator('[data-test="mcp-extension-name"]').fill(extName);
-        await page.locator('[data-test="mcp-target-gateway"]').fill(gatewayName);
+        await page.locator('[data-test="mcp-target-gateway-select"]').selectOption(gatewayName);
         await fillListener(page, 'http');
 
         await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -277,9 +280,9 @@ test.describe('MCP resource pages', () => {
       deleteResource('mcpgatewayextension', extName, namespace);
     });
 
-    // Deletion is no longer offered on the create/edit page (matching the policy
-    // create/edit pages). It is handled from the overview ResourceList kebab menu
-    // (DropdownWithKebab).
+    // The create/edit page has no page-level Delete button (matching the policy
+    // create/edit pages). Deletion is handled from the overview ResourceList kebab
+    // menu (DropdownWithKebab).
     test(
       'deletes an MCPGatewayExtension via the overview kebab menu',
       { tag: '@smoke' },
@@ -332,9 +335,6 @@ test.describe('MCP resource pages', () => {
         await expect(page.getByRole('tab', { name: 'Form' })).toBeVisible();
         await expect(page.getByRole('tab', { name: 'YAML' })).toBeVisible();
 
-        // Defaults to YAML; switch to the Form tab.
-        await page.getByRole('tab', { name: 'Form' }).click();
-
         await page.locator('[data-test="mcp-registration-name"]').fill(regName);
 
         // The Target HTTPRoute dropdown populates from HTTPRoutes watched in the
@@ -385,7 +385,9 @@ test.describe('MCP resource pages', () => {
           page.getByRole('heading', { name: 'Create MCPServerRegistration' }),
         ).toBeVisible({ timeout: 15_000 });
 
-        // YAML tab is the default view; set the full resource content in the editor.
+        // Form is the default view; switch to the YAML tab and set the full
+        // resource content in the editor.
+        await page.getByRole('tab', { name: 'YAML' }).click();
         await setEditorValue(
           page,
           `apiVersion: mcp.kuadrant.io/v1
@@ -441,9 +443,9 @@ spec:
       },
     );
 
-    // Deletion is no longer offered on the create/edit page (matching the policy
-    // create/edit pages). It is handled from the overview ResourceList kebab menu
-    // (DropdownWithKebab).
+    // The create/edit page has no page-level Delete button (matching the policy
+    // create/edit pages). Deletion is handled from the overview ResourceList kebab
+    // menu (DropdownWithKebab).
     test(
       'deletes an MCPServerRegistration via the overview kebab menu',
       { tag: '@smoke' },

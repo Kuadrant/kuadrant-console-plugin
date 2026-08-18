@@ -22,6 +22,17 @@ interface MCPExtensionFormFieldsProps {
   selectedNamespace: string;
   // When true, the name and namespace inputs are disabled (edit mode — identity is immutable).
   disableIdentity?: boolean;
+  // Gateway names offered in the Target Gateway dropdown. In the wizard step this is
+  // left undefined — the gateway was already chosen in an earlier step, so the field
+  // stays free-text there. On the standalone page this is the list of Gateways
+  // watched in the selected namespace. When empty, the field falls back to a
+  // free-text input (mirroring the Target HTTPRoute field in
+  // MCPServerRegistrationFormFields).
+  gatewayNames?: string[];
+  // Whether to render the Namespace field. The wizard step keeps it (namespace
+  // isn't otherwise selectable there); the standalone page hides it and uses the
+  // console's namespace picker instead.
+  showNamespaceField?: boolean;
 }
 
 // The MCPGatewayExtension form body, shared between the setup wizard step and the
@@ -32,6 +43,8 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
   selectedGateway,
   selectedNamespace,
   disableIdentity = false,
+  gatewayNames = [],
+  showNamespaceField = true,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
@@ -63,37 +76,54 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
         </FormHelperText>
       </FormGroup>
 
-      <FormGroup label={t('Namespace')} fieldId="extension-namespace">
-        <TextInput
-          type="text"
-          id="extension-namespace"
-          value={formState.extensionNamespace}
-          onChange={(_event, value) => updateFormState({ extensionNamespace: value })}
-          isDisabled={disableIdentity}
-          placeholder={selectedNamespace}
-          data-test="mcp-extension-namespace"
-        />
-        <FormHelperText>
-          <HelperText>
-            <HelperTextItem>
-              {t(
-                'The namespace for the extension. If different from the gateway namespace, a ReferenceGrant will be created.',
-              )}
-            </HelperTextItem>
-          </HelperText>
-        </FormHelperText>
-      </FormGroup>
+      {showNamespaceField && (
+        <FormGroup label={t('Namespace')} fieldId="extension-namespace">
+          <TextInput
+            type="text"
+            id="extension-namespace"
+            value={formState.extensionNamespace}
+            onChange={(_event, value) => updateFormState({ extensionNamespace: value })}
+            isDisabled={disableIdentity}
+            placeholder={selectedNamespace}
+            data-test="mcp-extension-namespace"
+          />
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem>
+                {t(
+                  'The namespace for the extension. If different from the gateway namespace, a ReferenceGrant will be created.',
+                )}
+              </HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        </FormGroup>
+      )}
 
       <FormGroup label={t('Target Gateway')} isRequired fieldId="target-gateway">
-        <TextInput
-          type="text"
-          id="target-gateway"
-          value={formState.targetGateway}
-          onChange={(_event, value) => updateFormState({ targetGateway: value })}
-          isRequired
-          placeholder={t('Enter target gateway name')}
-          data-test="mcp-target-gateway"
-        />
+        {gatewayNames.length > 0 ? (
+          <FormSelect
+            id="target-gateway"
+            value={formState.targetGateway}
+            onChange={(_event, value) => updateFormState({ targetGateway: value })}
+            aria-label={t('Select a gateway')}
+            data-test="mcp-target-gateway-select"
+          >
+            <FormSelectOption value="" label={t('Select a gateway...')} isPlaceholder />
+            {gatewayNames.map((name) => (
+              <FormSelectOption key={name} value={name} label={name} />
+            ))}
+          </FormSelect>
+        ) : (
+          <TextInput
+            type="text"
+            id="target-gateway"
+            value={formState.targetGateway}
+            onChange={(_event, value) => updateFormState({ targetGateway: value })}
+            isRequired
+            placeholder={t('Enter target gateway name')}
+            data-test="mcp-target-gateway"
+          />
+        )}
         <FormHelperText>
           <HelperText>
             <HelperTextItem>{t('The name of the gateway this extension targets.')}</HelperTextItem>

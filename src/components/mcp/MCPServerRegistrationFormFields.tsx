@@ -12,7 +12,6 @@ import {
   Popover,
 } from '@patternfly/react-core';
 import { HelpIcon } from '@patternfly/react-icons';
-import { K8sResourceCommon, useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import { MCPServerFormState } from './types';
 
@@ -37,19 +36,6 @@ const MCPServerRegistrationFormFields: React.FC<MCPServerRegistrationFormFieldsP
   disableIdentity = false,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
-
-  const [namespaces] = useK8sWatchResource<K8sResourceCommon[]>({
-    groupVersionKind: { group: '', version: 'v1', kind: 'Namespace' },
-    isList: true,
-  });
-
-  const namespaceOptions = React.useMemo(() => {
-    if (!namespaces) return [];
-    return namespaces
-      .map((ns) => ns.metadata?.name || '')
-      .filter(Boolean)
-      .sort();
-  }, [namespaces]);
 
   return (
     <Form>
@@ -82,48 +68,6 @@ const MCPServerRegistrationFormFields: React.FC<MCPServerRegistrationFormFieldsP
             <HelperText>
               <HelperTextItem>
                 {t('A unique lowercase name for the MCP server registration.')}
-              </HelperTextItem>
-            </HelperText>
-          </FormHelperText>
-        </FormGroup>
-
-        <FormGroup
-          label={t('Namespace')}
-          isRequired
-          fieldId="server-namespace"
-          labelHelp={
-            <Popover
-              bodyContent={t(
-                'The Kubernetes namespace where the gateway infrastructure will be deployed.',
-              )}
-            >
-              <button
-                type="button"
-                aria-label={t('More info for namespace')}
-                className="pf-v6-c-form__group-label-help"
-              >
-                <HelpIcon />
-              </button>
-            </Popover>
-          }
-        >
-          <FormSelect
-            id="server-namespace"
-            value={formState.namespace}
-            onChange={(_e, val) => onChange('namespace', val)}
-            isDisabled={disableIdentity}
-            aria-label={t('Select namespace')}
-            data-test="mcp-registration-namespace"
-          >
-            <FormSelectOption value="" label={t('None selected')} />
-            {namespaceOptions.map((ns) => (
-              <FormSelectOption key={ns} value={ns} label={ns} />
-            ))}
-          </FormSelect>
-          <FormHelperText>
-            <HelperText>
-              <HelperTextItem>
-                {t('The Kubernetes namespace where the gateway infrastructure will be deployed.')}
               </HelperTextItem>
             </HelperText>
           </FormHelperText>
