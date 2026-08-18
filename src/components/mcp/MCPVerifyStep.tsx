@@ -5,14 +5,12 @@ import { useTranslation } from 'react-i18next';
 import {
   K8sResourceCommon,
   k8sCreate,
+  k8sDelete,
   useK8sWatchResource,
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useNavigate } from 'react-router';
 import { getModelFromResource } from '../../utils/getModelFromResource';
-import { RESOURCES } from '../../utils/resources';
-import { MCPWizardFormState, MCPGatewayExtension } from './types';
-import { GatewayResource } from '../gateway/types';
-import { HTTPRouteResource } from '../httproute/types';
+import { Condition } from '../../utils/resources';
 
 type CheckStatus = 'pending' | 'in-progress' | 'success' | 'error';
 
@@ -23,66 +21,101 @@ interface VerifyCheck {
   message?: string;
 }
 
+export interface ResourceCreateItem {
+  type: 'create';
+  id: string;
+  label: string;
+  resource: K8sResourceCommon;
+  successMessage: string;
+}
+
+export interface InfoCheckItem {
+  type: 'info';
+  id: string;
+  label: string;
+  message: string;
+}
+
+export type VerifyStepItem = ResourceCreateItem | InfoCheckItem;
+
+export interface WatchResourceConfig {
+  gvk: { group: string; version: string; kind: string };
+  name: string;
+  namespace: string;
+}
+
+interface WatchedResource extends K8sResourceCommon {
+  status?: {
+    conditions?: Condition[];
+  };
+}
+
 interface MCPVerifyStepProps {
-  formState: MCPWizardFormState;
+  items: VerifyStepItem[];
+  watchResource: WatchResourceConfig;
   selectedNamespace: string;
-  newGatewayResource?: GatewayResource | null;
-  newRouteResource?: HTTPRouteResource | null;
+  title?: string;
+  description?: string;
+  watchLabel?: string;
+  watchSuccessMessage?: string;
+  rollbackOnFailure?: boolean;
+  onAllCreated?: () => void;
+  showOverviewLink?: boolean;
 }
 
 const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
-  formState,
+  items,
+  watchResource,
   selectedNamespace,
-  newGatewayResource,
-  newRouteResource,
+  title,
+  description,
+  watchLabel,
+  watchSuccessMessage,
+  rollbackOnFailure = false,
+  onAllCreated,
+  showOverviewLink = false,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const navigate = useNavigate();
 
   const [checks, setChecks] = React.useState<VerifyCheck[]>([]);
   const creationStartedRef = React.useRef(false);
-  const [extensionCreated, setExtensionCreated] = React.useState(false);
+  const [watchStarted, setWatchStarted] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Determine if cross-namespace (extension namespace vs gateway namespace)
-  const extensionNamespace = formState.extensionNamespace || selectedNamespace;
-  const gatewayNamespace = formState.selectedGatewayNamespace || selectedNamespace;
-  const isCrossNamespace = extensionNamespace !== gatewayNamespace;
+  const watchReadyId = 'watch-ready';
 
-  // Watch the MCPGatewayExtension after creation for Ready condition
-  const extensionWatchResource = React.useMemo(
-    () =>
-      extensionCreated
-        ? {
-            groupVersionKind: RESOURCES.MCPGatewayExtension.gvk,
-            name: formState.extensionName,
-            namespace: extensionNamespace,
-            isList: false,
-          }
-        : null,
-    [extensionCreated, formState.extensionName, extensionNamespace],
+  const [watchedData, watchedLoaded] = useK8sWatchResource<WatchedResource>(
+    watchStarted
+      ? {
+          groupVersionKind: watchResource.gvk,
+          name: watchResource.name,
+          namespace: watchResource.namespace,
+          isList: false,
+        }
+      : null,
   );
 
-  const [extensionData, extensionLoaded] =
-    useK8sWatchResource<MCPGatewayExtension>(extensionWatchResource);
-
-  // Check Ready condition on the watched MCPGatewayExtension
   React.useEffect(() => {
-    if (!extensionCreated || !extensionLoaded || !extensionData) return;
+    if (!watchStarted || !watchedLoaded || !watchedData) return;
 
-    const conditions = extensionData.status?.conditions || [];
+    const conditions = watchedData.status?.conditions || [];
     const readyCondition = conditions.find((c) => c.type === 'Ready');
 
     if (readyCondition?.status === 'True') {
-      updateCheckById('extension-ready', 'success', t('MCP Extension is running and healthy'));
+      updateCheckById(
+        watchReadyId,
+        'success',
+        watchSuccessMessage || t('Resource is running and healthy'),
+      );
     } else if (readyCondition?.status === 'False') {
       updateCheckById(
-        'extension-ready',
+        watchReadyId,
         'error',
-        readyCondition.message || readyCondition.reason || t('Extension is not ready'),
+        readyCondition.message || readyCondition.reason || t('Resource is not ready'),
       );
     }
-  }, [extensionData, extensionLoaded, extensionCreated, t]);
+  }, [watchedData, watchedLoaded, watchStarted, watchSuccessMessage, t]);
 
   const updateCheckById = React.useCallback((id: string, status: CheckStatus, message?: string) => {
     setChecks((prev) =>
@@ -90,195 +123,71 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
     );
   }, []);
 
-  // Build and create resources sequentially
   const createResources = React.useCallback(async () => {
     if (creationStartedRef.current) return;
     creationStartedRef.current = true;
     setError(null);
 
-    // Build the check list based on what will be created
-    const initialChecks: VerifyCheck[] = [];
-
-    if (formState.gatewayMode === 'new') {
-      initialChecks.push({ id: 'create-gateway', label: t('Create Gateway'), status: 'pending' });
-    }
-    if (formState.routeMode === 'new') {
-      initialChecks.push({
-        id: 'create-route',
-        label: t('Create HTTPRoute'),
-        status: 'pending',
-      });
-    }
-
-    // Namespace check
-    if (isCrossNamespace) {
-      initialChecks.push({
-        id: 'create-ref-grant',
-        label: t('Create ReferenceGrant'),
-        status: 'pending',
-      });
-    } else {
-      initialChecks.push({
-        id: 'ref-grant-check',
-        label: t('ReferenceGrant check'),
-        status: 'success',
-        message: t('No reference grant needed'),
-      });
-    }
+    const initialChecks: VerifyCheck[] = items.map((item) =>
+      item.type === 'info'
+        ? {
+            id: item.id,
+            label: item.label,
+            status: 'success' as CheckStatus,
+            message: item.message,
+          }
+        : { id: item.id, label: item.label, status: 'pending' as CheckStatus },
+    );
 
     initialChecks.push({
-      id: 'create-extension',
-      label: t('Create MCPGatewayExtension'),
-      status: 'pending',
-    });
-    initialChecks.push({
-      id: 'extension-ready',
-      label: t('MCP Extension is ready'),
+      id: watchReadyId,
+      label: watchLabel || t('Resource is ready'),
       status: 'pending',
     });
 
     setChecks(initialChecks);
 
-    const createOrSkipExisting = async (
-      model: ReturnType<typeof getModelFromResource>,
-      data: K8sResourceCommon,
-      checkId: string,
-      successMsg: string,
-    ) => {
-      updateCheckById(checkId, 'in-progress');
-      try {
-        await k8sCreate({ model, data });
-        updateCheckById(checkId, 'success', successMsg);
-      } catch (err: unknown) {
-        const errStatus =
-          (err as { code?: number })?.code ?? (err as { json?: { code?: number } })?.json?.code;
-        if (errStatus === 409) {
-          updateCheckById(checkId, 'success', t('Already exists'));
-        } else {
-          throw err;
-        }
-      }
-    };
+    const createItems = items.filter((item): item is ResourceCreateItem => item.type === 'create');
+    const createdResources: K8sResourceCommon[] = [];
 
     try {
-      // 1. Create Gateway if new
-      if (formState.gatewayMode === 'new' && newGatewayResource) {
-        const model = getModelFromResource(newGatewayResource);
-        await createOrSkipExisting(
-          model,
-          newGatewayResource,
-          'create-gateway',
-          t('Gateway created successfully'),
-        );
-      }
-
-      // 2. Create HTTPRoute if new
-      if (formState.routeMode === 'new' && newRouteResource) {
-        const model = getModelFromResource(newRouteResource);
-        await createOrSkipExisting(
-          model,
-          newRouteResource,
-          'create-route',
-          t('HTTPRoute created successfully'),
-        );
-      }
-
-      // 3. Create ReferenceGrant if cross-namespace
-      if (isCrossNamespace) {
-        const refGrantResource = {
-          apiVersion: 'gateway.networking.k8s.io/v1beta1',
-          kind: 'ReferenceGrant',
-          metadata: {
-            name: `${formState.extensionName}-ref-grant`,
-            namespace: gatewayNamespace,
-          },
-          spec: {
-            from: [
-              {
-                group: 'mcp.kuadrant.io',
-                kind: 'MCPGatewayExtension',
-                namespace: extensionNamespace,
-              },
-            ],
-            to: [
-              {
-                group: 'gateway.networking.k8s.io',
-                kind: 'Gateway',
-                name: formState.targetGateway,
-              },
-            ],
-          },
-        } as K8sResourceCommon;
-        const model = getModelFromResource(refGrantResource);
-        await createOrSkipExisting(
-          model,
-          refGrantResource,
-          'create-ref-grant',
-          t('ReferenceGrant created successfully'),
-        );
-      }
-
-      // 4. Create MCPGatewayExtension
-      const mcpExtensionResource: MCPGatewayExtension = {
-        apiVersion: 'mcp.kuadrant.io/v1',
-        kind: 'MCPGatewayExtension',
-        metadata: {
-          name: formState.extensionName,
-          namespace: extensionNamespace,
-        },
-        spec: {
-          targetRef: {
-            group: 'gateway.networking.k8s.io',
-            kind: 'Gateway',
-            name: formState.targetGateway,
-            namespace: gatewayNamespace,
-            sectionName: formState.sectionName,
-          },
-          ...(formState.overrideHostnames && formState.publicHost
-            ? { publicHost: formState.publicHost }
-            : {}),
-          ...(formState.overrideHostnames && formState.privateHost
-            ? { privateHost: formState.privateHost }
-            : {}),
-          ...(formState.sessionStorageEnabled && formState.sessionStoreSecretName
-            ? { sessionStore: { secretName: formState.sessionStoreSecretName } }
-            : {}),
-          ...(formState.oauthEnabled && formState.oauthAuthorizationServers
-            ? {
-                oauthProtectedResource: {
-                  authorizationServers: formState.oauthAuthorizationServers
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean),
-                  ...(formState.oauthResourceName
-                    ? { resourceName: formState.oauthResourceName }
-                    : {}),
-                },
+      for (const item of createItems) {
+        updateCheckById(item.id, 'in-progress');
+        try {
+          const model = getModelFromResource(item.resource);
+          await k8sCreate({ model, data: item.resource });
+          createdResources.push(item.resource);
+          updateCheckById(item.id, 'success', item.successMessage);
+        } catch (err: unknown) {
+          const errStatus =
+            (err as { code?: number })?.code ?? (err as { json?: { code?: number } })?.json?.code;
+          if (errStatus === 409) {
+            updateCheckById(item.id, 'success', t('Already exists'));
+          } else {
+            if (rollbackOnFailure) {
+              for (const created of [...createdResources].reverse()) {
+                try {
+                  await k8sDelete({
+                    model: getModelFromResource(created),
+                    resource: created,
+                  });
+                } catch (rollbackErr) {
+                  console.error('Failed to roll back resource:', rollbackErr);
+                }
               }
-            : {}),
-        },
-      };
+            }
+            throw err;
+          }
+        }
+      }
 
-      const extensionModel = getModelFromResource(mcpExtensionResource);
-      await createOrSkipExisting(
-        extensionModel,
-        mcpExtensionResource,
-        'create-extension',
-        t('MCPGatewayExtension created successfully'),
-      );
-
-      // 5. Start watching for Ready condition
-      updateCheckById(
-        'extension-ready',
-        'in-progress',
-        t('Waiting for controller to reconcile...'),
-      );
-      setExtensionCreated(true);
+      updateCheckById(watchReadyId, 'in-progress', t('Waiting for controller to reconcile...'));
+      setWatchStarted(true);
+      onAllCreated?.();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
 
-      // Mark current in-progress check as error
       setChecks((prev) =>
         prev.map((check) =>
           check.status === 'in-progress'
@@ -287,19 +196,8 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
         ),
       );
     }
-  }, [
-    formState,
-    selectedNamespace,
-    extensionNamespace,
-    gatewayNamespace,
-    isCrossNamespace,
-    newGatewayResource,
-    newRouteResource,
-    updateCheckById,
-    t,
-  ]);
+  }, [items, watchLabel, rollbackOnFailure, onAllCreated, updateCheckById, t]);
 
-  // Auto-start creation when the step mounts
   React.useEffect(() => {
     createResources();
   }, [createResources]);
@@ -329,14 +227,16 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
 
   return (
     <>
-      <Title headingLevel="h2" style={{ marginBottom: '16px' }}>
-        {t('Verify configuration')}
-      </Title>
-      <Content component="p" style={{ marginBottom: '24px' }}>
-        {t(
-          'Creating and verifying your MCP infrastructure. You can navigate away at any time — resources that have been created will persist.',
-        )}
-      </Content>
+      {title && (
+        <Title headingLevel="h2" style={{ marginBottom: '16px' }}>
+          {title}
+        </Title>
+      )}
+      {description && (
+        <Content component="p" style={{ marginBottom: '24px' }}>
+          {description}
+        </Content>
+      )}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
         {checks.map((check) => (
@@ -371,24 +271,26 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
         </Alert>
       )}
 
-      {checks.some((c) => c.status === 'success' && c.id === 'extension-ready') && (
+      {checks.some((c) => c.status === 'success' && c.id === watchReadyId) && (
         <Alert
           variant="success"
-          title={t('MCP Extension is running and healthy')}
+          title={watchSuccessMessage || t('Resource is running and healthy')}
           isInline
           style={{ marginTop: '16px' }}
         />
       )}
 
-      <div style={{ marginTop: '24px', display: 'flex', gap: '8px' }}>
-        <Button
-          variant="primary"
-          onClick={() => navigate(`/kuadrant/mcp/overview/ns/${selectedNamespace}`)}
-          data-test="mcp-view-overview-button"
-        >
-          {t('View in overview')}
-        </Button>
-      </div>
+      {showOverviewLink && (
+        <div style={{ marginTop: '24px', display: 'flex', gap: '8px' }}>
+          <Button
+            variant="primary"
+            onClick={() => navigate(`/kuadrant/mcp/overview/ns/${selectedNamespace}`)}
+            data-test="mcp-view-overview-button"
+          >
+            {t('View in overview')}
+          </Button>
+        </div>
+      )}
     </>
   );
 };

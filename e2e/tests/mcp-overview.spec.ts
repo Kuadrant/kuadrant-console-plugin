@@ -48,42 +48,51 @@ test.describe('MCP Overview dashboard', () => {
     await expect(page.locator('text=allow-mcp-gateway').first()).toBeVisible();
   });
 
-  test('shows only policies targeting MCP gateways or servers', { tag: '@smoke' }, async ({ page }) => {
-    const policiesCard = page.locator('.pf-v6-c-card', {
-      has: page.getByRole('heading', { name: 'Policies attached to MCP gateways or servers' }),
-    });
-    await expect(policiesCard).toBeVisible({ timeout: 15_000 });
+  test(
+    'shows only policies targeting MCP gateways or servers',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      const policiesCard = page.locator('.pf-v6-c-card', {
+        has: page.getByRole('heading', { name: 'Policies attached to MCP gateways or servers' }),
+      });
+      await expect(policiesCard).toBeVisible({ timeout: 15_000 });
 
-    await expect(policiesCard.locator('text=mcp-gateway-auth').first()).toBeVisible({
-      timeout: 15_000,
-    });
-  });
+      await expect(policiesCard.locator('text=mcp-gateway-auth').first()).toBeVisible({
+        timeout: 15_000,
+      });
+    },
+  );
 
-  test('Create extension button navigates to YAML creation', { tag: '@smoke' }, async ({ page }) => {
-    const btn = page.getByRole('button', { name: 'Create MCPGatewayExtension' });
-    await expect(btn).toBeVisible({ timeout: 15_000 });
-    await btn.click();
+  test(
+    'Create extension button navigates to YAML creation',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      const btn = page.getByRole('button', { name: 'Create MCPGatewayExtension' });
+      await expect(btn).toBeVisible({ timeout: 15_000 });
+      await btn.click();
 
-    await expect(page).toHaveURL(
-      /\/k8s\/ns\/kuadrant-test\/mcp\.kuadrant\.io~v1~MCPGatewayExtension\/~new/,
-      { timeout: 15_000 },
-    );
-  });
+      await expect(page).toHaveURL(
+        /\/k8s\/ns\/kuadrant-test\/mcp\.kuadrant\.io~v1~MCPGatewayExtension\/~new/,
+        { timeout: 15_000 },
+      );
+    },
+  );
 
-  test('Register MCP Server dropdown navigates Internal to YAML', { tag: '@smoke' }, async ({ page }) => {
-    const toggle = page.getByRole('button', { name: 'Register MCP Server' });
-    await expect(toggle).toBeVisible({ timeout: 15_000 });
-    await toggle.click();
+  test(
+    'Register MCP Server dropdown opens registration wizard',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      const toggle = page.getByRole('button', { name: 'Register MCP Server' });
+      await expect(toggle).toBeVisible({ timeout: 15_000 });
+      await toggle.click();
 
-    const internalItem = page.getByRole('menuitem', { name: 'Internal' });
-    await expect(internalItem).toBeVisible();
-    await internalItem.click();
+      const internalItem = page.getByRole('menuitem', { name: 'Internal' });
+      await expect(internalItem).toBeVisible();
+      await internalItem.click();
 
-    await expect(page).toHaveURL(
-      /\/k8s\/ns\/kuadrant-test\/mcp\.kuadrant\.io~v1~MCPServerRegistration\/~new/,
-      { timeout: 15_000 },
-    );
-  });
+      await expect(page.getByText('Setup MCP server')).toBeVisible({ timeout: 15_000 });
+    },
+  );
 
   test('Create policy dropdown shows all policy types', { tag: '@smoke' }, async ({ page }) => {
     const toggle = page.getByRole('button', { name: 'Create Policy' });
@@ -95,16 +104,20 @@ test.describe('MCP Overview dashboard', () => {
     }
   });
 
-  test('Create reference grant button navigates to YAML creation', { tag: '@smoke' }, async ({ page }) => {
-    const btn = page.getByRole('button', { name: 'Create ReferenceGrant' });
-    await expect(btn).toBeVisible({ timeout: 15_000 });
-    await btn.click();
+  test(
+    'Create reference grant button navigates to YAML creation',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      const btn = page.getByRole('button', { name: 'Create ReferenceGrant' });
+      await expect(btn).toBeVisible({ timeout: 15_000 });
+      await btn.click();
 
-    await expect(page).toHaveURL(
-      /\/k8s\/ns\/kuadrant-test\/gateway\.networking\.k8s\.io~v1beta1~ReferenceGrant\/~new/,
-      { timeout: 15_000 },
-    );
-  });
+      await expect(page).toHaveURL(
+        /\/k8s\/ns\/kuadrant-test\/gateway\.networking\.k8s\.io~v1beta1~ReferenceGrant\/~new/,
+        { timeout: 15_000 },
+      );
+    },
+  );
 
   // --- @nightly: additional checks ---
 

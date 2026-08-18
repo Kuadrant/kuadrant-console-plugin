@@ -76,7 +76,7 @@ export interface MCPServerRegistration extends K8sResourceCommon {
   };
 }
 
-// Wizard form state for Steps 1-3, consumed in Step 4 for resource creation
+// Setup wizard form state for Steps 1-3, consumed in Step 4 for resource creation
 export interface MCPWizardFormState {
   // Step 1: Gateway
   gatewayMode: 'existing' | 'new';
@@ -131,4 +131,23 @@ export const initialFormState: MCPWizardFormState = {
   oauthEnabled: false,
   oauthAuthorizationServers: '',
   oauthResourceName: '',
+};
+
+// Registration wizard form state
+export interface MCPServerFormState {
+  registrationName: string;
+  namespace: string;
+  targetHTTPRouteName: string;
+  toolPrefix: string;
+}
+
+export interface MCPRegistrationFormState {
+  server: MCPServerFormState;
+}
+
+export const initialServerFormState: MCPServerFormState = {
+  registrationName: '',
+  namespace: '',
+  targetHTTPRouteName: '',
+  toolPrefix: '',
 };

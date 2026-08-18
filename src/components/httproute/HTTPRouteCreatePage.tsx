@@ -9,13 +9,15 @@ import {
   HelperText,
   HelperTextItem,
   Form,
-  Radio,
   Button,
   ButtonVariant,
   ActionGroup,
   Alert,
   Modal,
   AlertVariant,
+  Tabs,
+  Tab,
+  TabTitleText,
 } from '@patternfly/react-core';
 import { PlusCircleIcon, MinusCircleIcon, TrashIcon, EditIcon } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
@@ -305,11 +307,8 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
         );
       }
     } else if (newView === 'yaml' && createView === 'form') {
-      try {
-        setYamlContent(httpRouteObject);
-      } catch (error) {
-        console.error('Error setting YAML content:', error);
-      }
+      setYamlContent(httpRouteObject);
+      setYamlError(null);
     }
     setCreateView(newView);
   };
@@ -401,235 +400,229 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
             {t('HTTPRoute provides a way to route HTTP requests to backends.')}
           </p>
         </div>
-        <div className="kuadrant-gateway-editor-toggle">
-          <span>{t('Create via:')}</span>
-          <Radio
-            name="create-type-radio"
-            label={t('Form')}
-            id="create-type-radio-form"
-            isChecked={createView === 'form'}
-            onChange={() => handleViewSwitch('form')}
-          />
-          <Radio
-            name="create-type-radio"
-            label={t('YAML')}
-            id="create-type-radio-yaml"
-            isChecked={createView === 'yaml'}
-            onChange={() => handleViewSwitch('yaml')}
-          />
-        </div>
-      </PageSection>
-
-      {createView === 'form' ? (
-        <PageSection hasBodyWrapper={false}>
-          <Form className="co-m-pane__form">
-            <FormGroup label={t('HTTPRoute Name')} isRequired fieldId="httproute-name">
-              <TextInput
-                isRequired
-                type="text"
-                id="httproute-name"
-                name="httproute-name"
-                value={routeName}
-                onChange={handleRouteNameChange}
-                isDisabled={isEdit}
-                placeholder={t('HTTPRoute Name')}
-              />
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>{t('Unique name of the HTTPRoute')}</HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-
-            <ParentReferencesSelect parentRefs={parentRefs} onChange={setParentRefs} />
-
-            <FormGroup
-              label={t('Hostnames')}
-              fieldId={hostnames[0] !== undefined ? `hostname-0` : 'hostnames'}
-            >
-              {hostnames.map((hostname, index) => (
-                <div
-                  key={index}
-                  className="pf-v6-c-form__group-control"
-                  style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}
-                >
+        <Tabs
+          activeKey={createView}
+          onSelect={(_e, key) => handleViewSwitch(key as 'form' | 'yaml')}
+        >
+          <Tab eventKey="form" title={<TabTitleText>{t('Form')}</TabTitleText>}>
+            <br />
+            <PageSection hasBodyWrapper={false}>
+              <Form className="co-m-pane__form">
+                <FormGroup label={t('HTTPRoute Name')} isRequired fieldId="httproute-name">
                   <TextInput
+                    isRequired
                     type="text"
-                    id={`hostname-${index}`}
-                    value={hostname}
-                    onChange={(_, value) => updateHostname(value, index)}
-                    placeholder={t('example.com')}
+                    id="httproute-name"
+                    name="httproute-name"
+                    value={routeName}
+                    onChange={handleRouteNameChange}
+                    isDisabled={isEdit}
+                    placeholder={t('HTTPRoute Name')}
                   />
-                  {hostnames.length > 0 && (
-                    <Button
-                      variant={ButtonVariant.plain}
-                      onClick={() => removeHostnameField(index)}
-                      aria-label="Remove hostname"
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>{t('Unique name of the HTTPRoute')}</HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
+
+                <ParentReferencesSelect parentRefs={parentRefs} onChange={setParentRefs} />
+
+                <FormGroup
+                  label={t('Hostnames')}
+                  fieldId={hostnames[0] !== undefined ? `hostname-0` : 'hostnames'}
+                >
+                  {hostnames.map((hostname, index) => (
+                    <div
+                      key={index}
+                      className="pf-v6-c-form__group-control"
+                      style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}
                     >
-                      <MinusCircleIcon />
+                      <TextInput
+                        type="text"
+                        id={`hostname-${index}`}
+                        value={hostname}
+                        onChange={(_, value) => updateHostname(value, index)}
+                        placeholder={t('example.com')}
+                      />
+                      {hostnames.length > 0 && (
+                        <Button
+                          variant={ButtonVariant.plain}
+                          onClick={() => removeHostnameField(index)}
+                          aria-label="Remove hostname"
+                        >
+                          <MinusCircleIcon />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  {
+                    <Button
+                      variant={ButtonVariant.link}
+                      icon={<PlusCircleIcon />}
+                      onClick={addHostnameField}
+                      isInline
+                    >
+                      {t('Add hostname')}
                     </Button>
+                  }
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>{t('Hostnames for this HTTPRoute')}</HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
+                <FormGroup
+                  label={
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '100%',
+                      }}
+                    >
+                      <div>{t('Rules')}</div>
+                      <Button variant="secondary" icon={<PlusCircleIcon />} onClick={handleAddRule}>
+                        {t('Add rule')}
+                      </Button>
+                    </div>
+                  }
+                  fieldId="rules"
+                >
+                  {rules.length === 0 && (
+                    <Alert
+                      variant={AlertVariant.warning}
+                      isInline
+                      title={t('No rules defined. HTTPRoute will use default routing.')}
+                    />
                   )}
-                </div>
-              ))}
-              {
-                <Button
-                  variant={ButtonVariant.link}
-                  icon={<PlusCircleIcon />}
-                  onClick={addHostnameField}
-                  isInline
-                >
-                  {t('Add hostname')}
-                </Button>
-              }
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>{t('Hostnames for this HTTPRoute')}</HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-            <FormGroup
-              label={
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                  }}
-                >
-                  <div>{t('Rules')}</div>
-                  <Button variant="secondary" icon={<PlusCircleIcon />} onClick={handleAddRule}>
-                    {t('Add rule')}
+
+                  {rules.length > 0 && !isRuleModalOpen && (
+                    <Table aria-label={t('Rules table')} variant="compact" borders={false}>
+                      <Thead>
+                        <Tr>
+                          <Th width={15}>{t('Rule ID')}</Th>
+                          <Th width={25}>{t('Matches')}</Th>
+                          <Th width={20}>{t('Filters')}</Th>
+                          <Th width={30}>{t('Backend references')}</Th>
+                          <Th width={10}>{t('Actions')}</Th>
+                        </Tr>
+                      </Thead>
+                      <Tbody>
+                        {rules.map((rule, index) => (
+                          <Tr key={rule.id || index}>
+                            <Td dataLabel={t('Rule ID')}>
+                              <strong>{rule.id}</strong>
+                            </Td>
+                            <Td dataLabel={t('Matches')}>
+                              <span
+                                style={{
+                                  color:
+                                    rule.matches?.length > 0
+                                      ? 'inherit'
+                                      : 'var(--pf-v6-global--Color--200)',
+                                }}
+                              >
+                                {formatMatchesForDisplay(rule.matches)}
+                              </span>
+                            </Td>
+                            <Td dataLabel={t('Filters')}>
+                              {rule.filters && rule.filters.length > 0 ? (
+                                <div>
+                                  {rule.filters.map((filter, idx: number) => (
+                                    <div key={idx}>{getFilterSummary(filter, t)}</div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span style={{ color: 'var(--pf-v6-global--Color--200)' }}>—</span>
+                              )}
+                            </Td>
+                            <Td dataLabel={t('Backend references')}>
+                              {rule.serviceName ? (
+                                <div>
+                                  <strong>{rule.serviceName}:</strong> {rule.servicePort}
+                                </div>
+                              ) : (
+                                <span style={{ color: 'var(--pf-v6-global--Color--200)' }}>—</span>
+                              )}
+                            </Td>
+                            <Td dataLabel={t('Actions')}>
+                              <div style={{ display: 'flex', gap: '4px' }}>
+                                <Button
+                                  variant="plain"
+                                  onClick={() => handleEditRule(index)}
+                                  aria-label={t('Edit rule')}
+                                >
+                                  <EditIcon />
+                                </Button>
+                                <Button
+                                  variant="plain"
+                                  onClick={() => handleRemoveRule(index)}
+                                  isDanger
+                                  aria-label={t('Delete rule')}
+                                >
+                                  <TrashIcon />
+                                </Button>
+                              </div>
+                            </Td>
+                          </Tr>
+                        ))}
+                      </Tbody>
+                    </Table>
+                  )}
+
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>
+                        {t('Rules define how to route HTTP requests to backend services')}
+                      </HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
+
+                <ActionGroup>
+                  <KuadrantCreateUpdate
+                    validation={formValidation()}
+                    model={httpRouteModel}
+                    resource={httpRouteObject}
+                    policyType="HTTPRoute"
+                    navigate={navigate}
+                    redirectPath={redirectPath}
+                    update={isEdit}
+                  />
+                  <Button variant="link" onClick={() => handleCancel(navigate)}>
+                    {t('Cancel')}
                   </Button>
-                </div>
-              }
-              fieldId="rules"
-            >
-              {rules.length === 0 && (
-                <Alert
-                  variant={AlertVariant.warning}
-                  isInline
-                  title={t('No rules defined. HTTPRoute will use default routing.')}
-                />
-              )}
-
-              {rules.length > 0 && !isRuleModalOpen && (
-                <Table aria-label={t('Rules table')} variant="compact" borders={false}>
-                  <Thead>
-                    <Tr>
-                      <Th width={15}>{t('Rule ID')}</Th>
-                      <Th width={25}>{t('Matches')}</Th>
-                      <Th width={20}>{t('Filters')}</Th>
-                      <Th width={30}>{t('Backend references')}</Th>
-                      <Th width={10}>{t('Actions')}</Th>
-                    </Tr>
-                  </Thead>
-                  <Tbody>
-                    {rules.map((rule, index) => (
-                      <Tr key={rule.id || index}>
-                        <Td dataLabel={t('Rule ID')}>
-                          <strong>{rule.id}</strong>
-                        </Td>
-                        <Td dataLabel={t('Matches')}>
-                          <span
-                            style={{
-                              color:
-                                rule.matches?.length > 0
-                                  ? 'inherit'
-                                  : 'var(--pf-v6-global--Color--200)',
-                            }}
-                          >
-                            {formatMatchesForDisplay(rule.matches)}
-                          </span>
-                        </Td>
-                        <Td dataLabel={t('Filters')}>
-                          {rule.filters && rule.filters.length > 0 ? (
-                            <div>
-                              {rule.filters.map((filter, idx: number) => (
-                                <div key={idx}>{getFilterSummary(filter, t)}</div>
-                              ))}
-                            </div>
-                          ) : (
-                            <span style={{ color: 'var(--pf-v6-global--Color--200)' }}>—</span>
-                          )}
-                        </Td>
-                        <Td dataLabel={t('Backend references')}>
-                          {rule.serviceName ? (
-                            <div>
-                              <strong>{rule.serviceName}:</strong> {rule.servicePort}
-                            </div>
-                          ) : (
-                            <span style={{ color: 'var(--pf-v6-global--Color--200)' }}>—</span>
-                          )}
-                        </Td>
-                        <Td dataLabel={t('Actions')}>
-                          <div style={{ display: 'flex', gap: '4px' }}>
-                            <Button
-                              variant="plain"
-                              onClick={() => handleEditRule(index)}
-                              aria-label={t('Edit rule')}
-                            >
-                              <EditIcon />
-                            </Button>
-                            <Button
-                              variant="plain"
-                              onClick={() => handleRemoveRule(index)}
-                              isDanger
-                              aria-label={t('Delete rule')}
-                            >
-                              <TrashIcon />
-                            </Button>
-                          </div>
-                        </Td>
-                      </Tr>
-                    ))}
-                  </Tbody>
-                </Table>
-              )}
-
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>
-                    {t('Rules define how to route HTTP requests to backend services')}
-                  </HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-
-            <ActionGroup>
-              <KuadrantCreateUpdate
-                validation={formValidation()}
-                model={httpRouteModel}
-                resource={httpRouteObject}
-                policyType="HTTPRoute"
-                navigate={navigate}
-                redirectPath={redirectPath}
-                update={isEdit}
-              />
-              <Button variant="link" onClick={() => handleCancel(navigate)}>
-                {t('Cancel')}
-              </Button>
-            </ActionGroup>
-          </Form>
-        </PageSection>
-      ) : (
-        <>
-          {yamlError && (
-            <PageSection>
-              <Alert variant="warning" title={t('Error: YAML Validation')} isInline>
-                {yamlError}
-              </Alert>
+                </ActionGroup>
+              </Form>
             </PageSection>
-          )}
-          <React.Suspense fallback={<div>{t('Loading YAML editor...')}</div>}>
-            <ResourceYAMLEditor
-              initialResource={yamlContent}
-              onChange={handleYAMLChange}
-              create={!isEdit}
-            />
-          </React.Suspense>
-        </>
-      )}
+          </Tab>
+          <Tab eventKey="yaml" title={<TabTitleText>{t('YAML')}</TabTitleText>}>
+            <div className="kuadrant-httproute-yaml-editor">
+              {yamlError && (
+                <Alert
+                  variant="warning"
+                  title={t('Error: YAML Validation')}
+                  isInline
+                  className="pf-v6-u-mt-md"
+                >
+                  {yamlError}
+                </Alert>
+              )}
+              {createView === 'yaml' && (
+                <React.Suspense fallback={<div>{t('Loading YAML editor...')}</div>}>
+                  <ResourceYAMLEditor
+                    initialResource={yamlContent}
+                    onChange={handleYAMLChange}
+                    create={!isEdit}
+                  />
+                </React.Suspense>
+              )}
+            </div>
+          </Tab>
+        </Tabs>
+      </PageSection>
       <Modal
         variant="large"
         title={editingRuleIndex !== null ? t('Edit rule') : t('Add rule')}

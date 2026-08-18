@@ -52,6 +52,7 @@ import useAccessReviews from '../../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../../utils/getModelFromResource';
 import { GatewayResource } from '../gateway/types';
 import { MCPGatewayExtension, MCPServerRegistration } from './types';
+import MCPRegistrationWizard from './MCPRegistrationWizard';
 
 const mcpResources = [
   {
@@ -100,6 +101,7 @@ const MCPOverviewPage: React.FC = () => {
   const { handleNamespaceChange, activeNamespace } = useKuadrantNamespaceChange('/mcp/overview');
 
   const [isRegisterServerOpen, setIsRegisterServerOpen] = React.useState(false);
+  const [isWizardOpen, setIsWizardOpen] = React.useState(false);
   const [isPolicyCreateOpen, setIsPolicyCreateOpen] = React.useState(false);
   const [isGettingStartedMenuOpen, setIsGettingStartedMenuOpen] = React.useState(false);
   const [hideCard, setHideCard] = React.useState(
@@ -767,7 +769,10 @@ const MCPOverviewPage: React.FC = () => {
                       ) : (
                         <DropdownItem
                           key="internal"
-                          onClick={() => handleCreateResource('MCPServerRegistration')}
+                          onClick={() => {
+                            setIsRegisterServerOpen(false);
+                            setIsWizardOpen(true);
+                          }}
                         >
                           {t('Internal')}
                         </DropdownItem>
@@ -995,6 +1000,7 @@ const MCPOverviewPage: React.FC = () => {
           )}
         </Grid>
       </PageSection>
+      <MCPRegistrationWizard isOpen={isWizardOpen} onClose={() => setIsWizardOpen(false)} />
     </>
   );
 };
