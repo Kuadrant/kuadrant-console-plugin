@@ -16,6 +16,7 @@ RUN yarn config set --home enableGlobalCache true
 WORKDIR /usr/src/app
 
 COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn .yarn
 RUN YARN_ENABLE_SCRIPTS=false yarn install --immutable
 
 COPY . .
