@@ -91,6 +91,7 @@ npx playwright test --config=e2e/playwright.config.ts
 - `e2e/tests/httproute-crud.spec.ts` - HTTPRoute create, edit, and delete operations
 - `e2e/tests/mcp-overview.spec.ts` - MCP Overview dashboard
 - `e2e/tests/mcp-setup-wizard.spec.ts` - MCP Management setup wizard
+- `e2e/tests/mcp-wizard.spec.ts` - MCP server registration wizard
 - `e2e/tests/overview.spec.ts` - Overview dashboard cards, stats, and navigation
 - `e2e/tests/policy-forms.spec.ts` - Policy creation forms (DNS, TLS, Auth, RateLimit, etc.)
 - `e2e/tests/rbac.spec.ts` - RBAC permission tests
@@ -204,6 +205,7 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
   | `src/components/(KuadrantOverview\|KuadrantPolicies\|ResourceList\|DropdownWithKebab)` | `overview`, `rbac` |
   | `src/components/(dnspolicy\|tlspolicy\|ratelimitpolicy\|authpolicy)/` | `policy-forms`, `rbac` |
   | `src/components/(httproute\|issuer)/` | `rbac`, `httproute-crud` |
+  | `src/components/mcp/` | `mcp-setup-wizard`, `mcp-overview`, `mcp-wizard` |
   | `src/components/(AttachedResources\|gateway/GatewaySingleOverview\|httproute/HTTPRouteSingleOverview\|grpcroute/)` | `attached-tab` |
   | `src/components/NoPermissionsView` | `apiproduct-rbac`, `rbac` |
 
@@ -297,3 +299,4 @@ oinc destroy
 6. CI may run the full smoke suite when:
   - The changed files do not match any `component-to-spec` mapping, which triggers the full smoke fallback
   - Modifications to shared modules (`src/utils/`, `src/hooks/`, `src/constants/`, etc.) trigger the full smoke fallback
+  
