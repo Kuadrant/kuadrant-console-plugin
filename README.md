@@ -7,6 +7,7 @@ Based on https://github.com/openshift/console-plugin-template
 ## Screenshots
 
 ![Overview](docs/images/overview.gif)
+
 ## Running
 
 - Target a running OCP with `oc login`
@@ -101,6 +102,9 @@ Two easy ways to deploy.
 
 ### Via `kubectl` or `oc`
 
+`install.yaml` uses the 4.22+ `latest` image. For OCP 4.21 and earlier, replace
+it with `quay.io/kuadrant/console-plugin:v0.6.0` before applying the manifest.
+
 `oc apply -f install.yaml`
 
 or
@@ -176,15 +180,23 @@ Update `settings.json` (File > Preferences > Settings):
 ```json
 "editor.formatOnSave": true
 ```
+
 ## Version matrix
 
-| kuadrant-console-plugin version | PatternFly version | Openshift console version | Dynamic Plugin SDK |
-|---------------------------------|--------------------|---------------------------|--------------------|
-|         v0.0.3 - v0.0.18        |          5         |          v4.17.x          |       v1.6.0       |
-|                TBD              |          5         |          v4.18.x          |       v1.8.0       |
-|                TBD              |          6         |          v4.19.x          |         TBD        |
+| OpenShift console | Image    | Branch        |
+| ----------------- | -------- | ------------- |
+| 4.21 and earlier  | `v0.6.0` | `release-0.x` |
+| 4.22 and later    | `latest` | `main`        |
 
-Openshift console is configured to share modules with its dynamic plugins (console plugins). For more information on versions and changes to the shared modules, please see the shared modules [documentation](https://www.npmjs.com/package/@openshift-console/dynamic-plugin-sdk?activeTab=readme)
+`v0.6.0` declares `latestSupportedOpenshiftVersion: "4.19"`, but is supported
+through 4.21. The `release-0.x` branch corrects the metadata and receives
+backports.
+
+`latest` is the unreleased 4.22 build from `main`. Choose the image by OpenShift
+version, not by which tag looks newest.
+
+See [Versioning and OpenShift compatibility](docs/versioning.md) for runtime
+versions and loading rules.
 
 ## Maintenance
 
@@ -236,4 +248,3 @@ Deletions are confirmed interactively in batches of 25.
 ## Troubleshooting
 
 For troubleshooting common issues, please see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
-
