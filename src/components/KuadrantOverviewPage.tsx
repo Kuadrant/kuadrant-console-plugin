@@ -69,6 +69,13 @@ import {
 import { fetchConfig, KuadrantConfig } from '../utils/configLoader';
 import { GatewayResource } from './gateway/types';
 import { getStatusSortRank } from '../utils/statusLabel';
+import {
+  GatewayTrafficMetrics,
+  getTotalRequests as getTotalRequestsFor,
+  getSuccessfulRequests as getSuccessfulRequestsFor,
+  getErrorRateValue as getErrorRateValueFor,
+  formatErrorRate as formatErrorRateFor,
+} from '../utils/gatewayTraffic';
 
 export type MenuToggleElement = HTMLDivElement | HTMLButtonElement;
 
@@ -94,13 +101,7 @@ export const resources: Resource[] = [
 ];
 
 interface TotalRequestsByGatewayResource {
-  [gatewayName: string]: {
-    total?: number;
-    errors?: number;
-    codes?: {
-      [responseCode: string]: number;
-    };
-  };
+  [gatewayName: string]: GatewayTrafficMetrics;
 }
 
 type ComputedSortValue = number | string | null | undefined;
@@ -528,26 +529,14 @@ const KuadrantOverviewPage: React.FC = () => {
   // Helper functions to pull out metric values in correct format, given a gateway object
   const getGatewayMetricKey = (obj: K8sResourceCommon): string =>
     buildGatewayKey(obj.metadata.namespace || '', obj.metadata.name, metricsWorkloadSuffix);
-  const getTotalRequests = (obj: K8sResourceCommon): number => {
-    const key = getGatewayMetricKey(obj);
-    const total = totalRequestsByGatewayResource[key]?.total;
-    return Number.isFinite(total) ? Math.round(total) : 0;
-  };
-  const getSuccessfulRequests = (obj: K8sResourceCommon): number => {
-    const key = getGatewayMetricKey(obj);
-    const success =
-      totalRequestsByGatewayResource[key]?.total - totalRequestsByGatewayResource[key]?.errors;
-    return Number.isFinite(success) ? Math.round(success) : 0;
-  };
-  const getErrorRateValue = (obj: K8sResourceCommon): number | null => {
-    const key = getGatewayMetricKey(obj);
-    const rate =
-      (totalRequestsByGatewayResource[key]?.errors / totalRequestsByGatewayResource[key]?.total) *
-      100;
-    return Number.isFinite(rate) ? rate : null;
-  };
+  const getTotalRequests = (obj: K8sResourceCommon): number =>
+    getTotalRequestsFor(totalRequestsByGatewayResource[getGatewayMetricKey(obj)]);
+  const getSuccessfulRequests = (obj: K8sResourceCommon): number | null =>
+    getSuccessfulRequestsFor(totalRequestsByGatewayResource[getGatewayMetricKey(obj)]);
+  const getErrorRateValue = (obj: K8sResourceCommon): number | null =>
+    getErrorRateValueFor(totalRequestsByGatewayResource[getGatewayMetricKey(obj)]);
   const getErrorRate = (obj: K8sResourceCommon): string =>
-    getErrorRateValue(obj)?.toFixed(1) ?? '-';
+    formatErrorRateFor(totalRequestsByGatewayResource[getGatewayMetricKey(obj)]);
   const getErrorCodes = (obj: K8sResourceCommon): Set<string> => {
     const codes = new Set<string>();
     const key = getGatewayMetricKey(obj);
@@ -595,8 +584,13 @@ const KuadrantOverviewPage: React.FC = () => {
   };
   const gatewayTrafficRenders = {
     totalRequests: (_column, obj) => getTotalRequests(obj) || '-',
-    successfulRequests: (_column, obj) => getSuccessfulRequests(obj) || '-',
-    errorRate: (_column, obj) => `${getErrorRate(obj) || '-'}%`,
+    successfulRequests: (_column, obj) => {
+      // Use an explicit null check: 0 successful requests is a valid value and
+      // must not be rendered as '-' (which a falsy `||` check would do).
+      const success = getSuccessfulRequests(obj);
+      return success !== null ? success : '-';
+    },
+    errorRate: (_column, obj) => `${getErrorRate(obj)}%`,
     errorCodes: (_column, obj) => {
       const errorCodes = [...getErrorCodes(obj)];
       return (
