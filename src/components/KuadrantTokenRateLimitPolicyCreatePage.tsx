@@ -9,7 +9,9 @@ import {
   HelperText,
   HelperTextItem,
   Form,
-  Radio,
+  Tabs,
+  Tab,
+  TabTitleText,
   Button,
   ActionGroup,
   Modal,
@@ -20,6 +22,7 @@ import {
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
+import './css/gateway-api-plugin.css';
 import {
   ResourceYAMLEditor,
   getGroupVersionKindForResource,
@@ -141,22 +144,30 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
     ? useK8sWatchResource(tokenRateLimitResource)
     : [null, false, null]; //Syntax allows for tokenRateLimitResource to be null in the case of a create
 
+  const hasInitializedFromResource = React.useRef(false);
+
   React.useEffect(() => {
     if (trlLoaded && !trlError) {
-      if (!Array.isArray(trlData)) {
+      if (!Array.isArray(trlData) && trlData) {
         const trlPolicyUpdate = trlData as TokenRateLimitPolicyEdit;
-        setCreationTimestamp(trlPolicyUpdate.metadata.creationTimestamp);
-        setResourceVersion(trlPolicyUpdate.metadata.resourceVersion);
-        setFormDisabled(true);
-        setCreate(false);
-        setPolicyName(trlPolicyUpdate.metadata?.name || '');
-        setSelectedGateway({
-          metadata: {
-            name: trlPolicyUpdate.spec?.targetRef?.name || '',
-            namespace: trlPolicyUpdate.metadata?.namespace || '',
-          },
-        } as GatewayResource);
-        setLimits(trlPolicyUpdate.spec?.limits || {});
+        // Always keep resourceVersion/creationTimestamp current so Save doesn't
+        // send a stale resourceVersion and hit a 409 conflict once the
+        // controller writes status back to the resource.
+        setCreationTimestamp(trlPolicyUpdate.metadata?.creationTimestamp || '');
+        setResourceVersion(trlPolicyUpdate.metadata?.resourceVersion || '');
+        if (!hasInitializedFromResource.current) {
+          setFormDisabled(true);
+          setCreate(false);
+          setPolicyName(trlPolicyUpdate.metadata?.name || '');
+          setSelectedGateway({
+            metadata: {
+              name: trlPolicyUpdate.spec?.targetRef?.name || '',
+              namespace: trlPolicyUpdate.metadata?.namespace || '',
+            },
+          } as GatewayResource);
+          setLimits(trlPolicyUpdate.spec?.limits || {});
+          hasInitializedFromResource.current = true;
+        }
       }
     } else if (trlError) {
       console.error('Failed to fetch the resource:', trlError);
@@ -250,102 +261,89 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
             {t('TokenRateLimitPolicy configures token-based rate limiting for your gateway')}
           </p>
         </div>
-        <FormGroup
-          className="kuadrant-editor-toggle"
-          role="radiogroup"
-          isInline
-          fieldId="create-type-radio-group"
-          label={t('Configure via')}
-        >
-          <Radio
-            name="create-type-radio"
-            label={t('Form View')}
-            id="create-type-radio-form"
-            isChecked={createView === 'form'}
-            onChange={() => setCreateView('form')}
-          />
-          <Radio
-            name="create-type-radio"
-            label={t('YAML View')}
-            id="create-type-radio-yaml"
-            isChecked={createView === 'yaml'}
-            onChange={() => setCreateView('yaml')}
-          />
-        </FormGroup>
+        <Tabs activeKey={createView} onSelect={(_e, key) => setCreateView(key as 'form' | 'yaml')}>
+          <Tab eventKey="form" title={<TabTitleText>{t('Form')}</TabTitleText>}>
+            <PageSection hasBodyWrapper={false}>
+              <Form className="co-m-pane__form">
+                <FormGroup label={t('Policy name')} isRequired fieldId="policy-name">
+                  <TextInput
+                    isRequired
+                    type="text"
+                    id="policy-name"
+                    name="policy-name"
+                    value={policyName}
+                    onChange={handlePolicyChange}
+                    isDisabled={formDisabled}
+                    placeholder={t('Policy name')}
+                  />
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>
+                        {t('Unique name of the TokenRateLimit Policy')}
+                      </HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
+                <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
+                <FormGroup>
+                  <Title headingLevel="h2" size="lg" className="kuadrant-limits-header">
+                    {t('Configured Limits')}
+                  </Title>
+                  <LabelGroup numLabels={5}>
+                    {Object.keys(limits).length > 0 ? (
+                      Object.entries(limits).map(([name, limitConfig], index) => (
+                        <Label key={index} color="blue" onClose={() => handleRemoveLimit(name)}>
+                          <strong>{name}</strong>:{' '}
+                          {limitConfig.rates.map((r, i) => (
+                            <span key={i}>
+                              {i > 0 ? ', ' : ''}
+                              {t('{{limit}} per {{window}}', { limit: r.limit, window: r.window })}
+                            </span>
+                          ))}
+                        </Label>
+                      ))
+                    ) : (
+                      <p>{t('No limits configured yet')}</p>
+                    )}
+                  </LabelGroup>
+                  <Button
+                    variant="primary"
+                    onClick={handleOpenAddLimit}
+                    className="kuadrant-limits-button"
+                  >
+                    {t('Add Limit')}
+                  </Button>
+                </FormGroup>
+                <ActionGroup className="pf-u-mt-0">
+                  <KuadrantCreateUpdate
+                    model={tokenRateLimitPolicyModel}
+                    resource={tokenRateLimitPolicy}
+                    policyType="tokenratelimit"
+                    navigate={navigate}
+                    validation={isFormValid}
+                  />
+                  <Button variant="link" onClick={handleCancelResource}>
+                    {t('Cancel')}
+                  </Button>
+                </ActionGroup>
+              </Form>
+            </PageSection>
+          </Tab>
+          <Tab eventKey="yaml" title={<TabTitleText>{t('YAML')}</TabTitleText>}>
+            <div className="kuadrant-tokenratelimitpolicy-yaml-editor">
+              {createView === 'yaml' && (
+                <React.Suspense fallback={<div>{t('Loading...')}</div>}>
+                  <ResourceYAMLEditor
+                    initialResource={yamlInput}
+                    create={create}
+                    onChange={handleYAMLChange}
+                  />
+                </React.Suspense>
+              )}
+            </div>
+          </Tab>
+        </Tabs>
       </PageSection>
-      {createView === 'form' ? (
-        <PageSection hasBodyWrapper={false}>
-          <Form className="co-m-pane__form">
-            <FormGroup label={t('Policy name')} isRequired fieldId="policy-name">
-              <TextInput
-                isRequired
-                type="text"
-                id="policy-name"
-                name="policy-name"
-                value={policyName}
-                onChange={handlePolicyChange}
-                isDisabled={formDisabled}
-                placeholder={t('Policy name')}
-              />
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>{t('Unique name of the TokenRateLimit Policy')}</HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-            <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
-            <FormGroup>
-              <Title headingLevel="h2" size="lg" className="kuadrant-limits-header">
-                {t('Configured Limits')}
-              </Title>
-              <LabelGroup numLabels={5}>
-                {Object.keys(limits).length > 0 ? (
-                  Object.entries(limits).map(([name, limitConfig], index) => (
-                    <Label key={index} color="blue" onClose={() => handleRemoveLimit(name)}>
-                      <strong>{name}</strong>:{' '}
-                      {limitConfig.rates.map((r, i) => (
-                        <span key={i}>
-                          {i > 0 ? ', ' : ''}
-                          {t('{{limit}} per {{window}}', { limit: r.limit, window: r.window })}
-                        </span>
-                      ))}
-                    </Label>
-                  ))
-                ) : (
-                  <p>{t('No limits configured yet')}</p>
-                )}
-              </LabelGroup>
-              <Button
-                variant="primary"
-                onClick={handleOpenAddLimit}
-                className="kuadrant-limits-button"
-              >
-                {t('Add Limit')}
-              </Button>
-            </FormGroup>
-            <ActionGroup className="pf-u-mt-0">
-              <KuadrantCreateUpdate
-                model={tokenRateLimitPolicyModel}
-                resource={tokenRateLimitPolicy}
-                policyType="tokenratelimit"
-                navigate={navigate}
-                validation={isFormValid}
-              />
-              <Button variant="link" onClick={handleCancelResource}>
-                {t('Cancel')}
-              </Button>
-            </ActionGroup>
-          </Form>
-        </PageSection>
-      ) : (
-        <React.Suspense fallback={<div>{t('Loading...')}</div>}>
-          <ResourceYAMLEditor
-            initialResource={yamlInput}
-            create={create}
-            onChange={handleYAMLChange}
-          ></ResourceYAMLEditor>
-        </React.Suspense>
-      )}
       {/* Modal to add a new token rate limit */}
       <Modal
         title={t('Add Limit')}

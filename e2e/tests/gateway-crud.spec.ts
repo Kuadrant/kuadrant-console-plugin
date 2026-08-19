@@ -125,7 +125,8 @@ test.describe('Gateway CRUD', () => {
       timeout: 15_000,
     });
 
-    await expect(page.locator('#create-type-radio-form')).toBeChecked();
+    // Form tab should be selected by default
+    await expect(page.getByRole('tab', { name: 'Form' })).toHaveAttribute('aria-selected', 'true');
 
     await page.locator('#gateway-name').fill(gatewayName);
     await expect(page.locator('#gateway-class')).toHaveValue('istio');
@@ -278,14 +279,14 @@ spec:
     // Switch to YAML and verify the listener is reflected in the editor before proceeding.
     // This acts as a deterministic sync point: the editor only contains 'https' once
     // the yamlContent useEffect has re-run with the updated gatewayObject.
-    await page.locator('#create-type-radio-yaml').click();
+    await page.getByRole('tab', { name: 'YAML' }).click();
     await expectEditorContains(page, 'https');
 
     // Switch back to form, then to YAML for the full assertion pass
-    await page.locator('#create-type-radio-form').click();
+    await page.getByRole('tab', { name: 'Form' }).click();
 
     // Switch to YAML
-    await page.locator('#create-type-radio-yaml').click();
+    await page.getByRole('tab', { name: 'YAML' }).click();
 
     await expectEditorContains(page, gatewayName);
     await expectEditorContains(page, 'istio');
@@ -294,7 +295,7 @@ spec:
     await expectEditorContains(page, 'HTTPS');
 
     // Switch back to form
-    await page.locator('#create-type-radio-form').click();
+    await page.getByRole('tab', { name: 'Form' }).click();
 
     await expect(page.locator('#gateway-name')).toHaveValue(gatewayName);
     await expect(page.locator('#gateway-class')).toHaveValue('istio');

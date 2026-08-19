@@ -281,7 +281,7 @@ const MCPSetupWizard: React.FC = () => {
                 <Radio
                   id="gateway-mode-existing"
                   name="gateway-mode"
-                  label={t('Choose a Gateway')}
+                  label={t('Choose an existing Gateway')}
                   isChecked={formState.gatewayMode === 'existing'}
                   onChange={() => updateFormState({ gatewayMode: 'existing' })}
                 />
@@ -401,7 +401,7 @@ const MCPSetupWizard: React.FC = () => {
                 <Radio
                   id="route-mode-existing"
                   name="route-mode"
-                  label={t('Choose a Route')}
+                  label={t('Choose an existing HTTPRoute')}
                   isChecked={formState.routeMode === 'existing'}
                   onChange={() => updateFormState({ routeMode: 'existing' })}
                 />

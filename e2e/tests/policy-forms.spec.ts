@@ -16,6 +16,12 @@ function applyManifest(manifest: string): void {
   kubectl(['apply', '-f', '-'], manifest);
 }
 
+// Wait for the controller to write status before editing, otherwise its
+// resourceVersion bump can race the form's watch and the Save PUT 409s.
+function waitForAccepted(kind: string, name: string, namespace: string): void {
+  kubectl(['wait', kind, name, '-n', namespace, '--for=condition=Accepted=true', '--timeout=15s']);
+}
+
 function resourceExists(kind: string, name: string, namespace: string): boolean {
   return kubectl(['get', kind, name, '-n', namespace, '--ignore-not-found', '-o', 'name']) !== '';
 }
@@ -67,7 +73,8 @@ test.describe('DNSPolicy form', () => {
     });
 
     // form view is the default
-    await expect(page.locator('#create-type-radio-form')).toBeChecked();
+    // Form tab should be selected by default
+    await expect(page.getByRole('tab', { name: 'Form' })).toHaveAttribute('aria-selected', 'true');
 
     await expect(page.locator('#policy-name')).toBeVisible();
     await expect(page.locator('#gateway-select')).toBeVisible();
@@ -173,6 +180,7 @@ spec:
   providerRefs:
   - name: e2e-provider-a
 `);
+        waitForAccepted('dnspolicy', policyName, namespace);
 
         await gotoPage(page, `/k8s/ns/${namespace}/dnspolicy/name/${policyName}/edit`);
 
@@ -336,6 +344,7 @@ spec:
     name: test-selfsigned
     kind: ClusterIssuer
 `);
+        waitForAccepted('tlspolicy', policyName, namespace);
 
         await gotoPage(page, `/k8s/ns/${namespace}/tlspolicy/name/${policyName}/edit`);
 
@@ -502,7 +511,11 @@ test.describe('other policy create pages render', () => {
         timeout: 15_000,
       });
 
-      await expect(page.locator('#create-type-radio-form')).toBeChecked();
+      // Form tab should be selected by default
+      await expect(page.getByRole('tab', { name: 'Form' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
       await expect(page.locator('#policy-name')).toBeVisible();
       await expect(page.locator('#plan-tier-0')).toBeVisible();
       await expect(page.locator('#plan-predicate-0')).toBeVisible();
@@ -526,7 +539,11 @@ test.describe('other policy create pages render', () => {
         },
       );
 
-      await expect(page.locator('#create-type-radio-form')).toBeChecked();
+      // Form tab should be selected by default
+      await expect(page.getByRole('tab', { name: 'Form' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
       await expect(page.locator('#policy-name')).toBeVisible();
       await expect(page.locator('#gateway-select')).toBeVisible();
       await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeDisabled();
@@ -549,7 +566,7 @@ test.describe('other policy create pages render', () => {
         },
       );
 
-      await page.locator('#create-type-radio-yaml').click();
+      await page.getByRole('tab', { name: 'YAML' }).click();
       await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 15_000 });
     },
   );
@@ -657,6 +674,7 @@ spec:
     clientID: original-client-id
     issuerURL: https://auth.example.com
 `);
+        waitForAccepted('oidcpolicy', policyName, namespace);
 
         await gotoPage(page, `/k8s/ns/${namespace}/oidcpolicy/name/${policyName}/edit`);
 
@@ -800,6 +818,7 @@ spec:
       - limit: 100
         window: 1m
 `);
+        waitForAccepted('tokenratelimitpolicy', policyName, namespace);
 
         await gotoPage(page, `/k8s/ns/${namespace}/tokenratelimitpolicy/name/${policyName}/edit`);
 

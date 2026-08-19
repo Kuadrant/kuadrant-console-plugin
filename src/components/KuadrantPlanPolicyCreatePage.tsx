@@ -9,7 +9,9 @@ import {
   HelperText,
   HelperTextItem,
   Form,
-  Radio,
+  Tabs,
+  Tab,
+  TabTitleText,
   Button,
   ActionGroup,
   Card,
@@ -17,6 +19,7 @@ import {
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
+import './css/gateway-api-plugin.css';
 import {
   ResourceYAMLEditor,
   getGroupVersionKindForResource,
@@ -143,22 +146,30 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
 
   const [planData, planLoaded, planError] = useK8sWatchResource(planResource);
 
+  const hasInitializedFromResource = React.useRef(false);
+
   React.useEffect(() => {
     if (planLoaded && !planError && planData) {
       if (!Array.isArray(planData)) {
         const planPolicyUpdate = planData as PlanPolicyEdit;
+        // Always keep resourceVersion/creationTimestamp current so Save doesn't
+        // send a stale resourceVersion and hit a 409 conflict once the
+        // controller writes status back to the resource.
         setCreationTimestamp(planPolicyUpdate.metadata?.creationTimestamp || '');
         setResourceVersion(planPolicyUpdate.metadata?.resourceVersion || '');
-        setFormDisabled(true);
-        setCreate(false);
-        setPolicyName(planPolicyUpdate.metadata?.name || '');
-        setSelectedRoute({
-          name: planPolicyUpdate.spec?.targetRef?.name || '',
-          namespace: planPolicyUpdate.metadata?.namespace || '',
-        });
-        setPlans(
-          planPolicyUpdate.spec?.plans || [{ tier: '', predicate: '', limits: { daily: null } }],
-        );
+        if (!hasInitializedFromResource.current) {
+          setFormDisabled(true);
+          setCreate(false);
+          setPolicyName(planPolicyUpdate.metadata?.name || '');
+          setSelectedRoute({
+            name: planPolicyUpdate.spec?.targetRef?.name || '',
+            namespace: planPolicyUpdate.metadata?.namespace || '',
+          });
+          setPlans(
+            planPolicyUpdate.spec?.plans || [{ tier: '', predicate: '', limits: { daily: null } }],
+          );
+          hasInitializedFromResource.current = true;
+        }
       }
     } else if (planError) {
       console.error('Failed to fetch the resource:', planError);
@@ -227,315 +238,306 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
             {t('PlanPolicy configures plan-based rate limiting for your HTTPRoute')}
           </p>
         </div>
-        <FormGroup
-          className="kuadrant-editor-toggle"
-          role="radiogroup"
-          isInline
-          fieldId="create-type-radio-group"
-          label={t('Configure via')}
-        >
-          <Radio
-            name="create-type-radio"
-            label={t('Form View')}
-            id="create-type-radio-form"
-            isChecked={createView === 'form'}
-            onChange={() => setCreateView('form')}
-          />
-          <Radio
-            name="create-type-radio"
-            label={t('YAML View')}
-            id="create-type-radio-yaml"
-            isChecked={createView === 'yaml'}
-            onChange={() => setCreateView('yaml')}
-          />
-        </FormGroup>
-      </PageSection>
-      {createView === 'form' ? (
-        <PageSection hasBodyWrapper={false}>
-          <Form className="co-m-pane__form">
-            <FormGroup label={t('Policy Name')} isRequired fieldId="policy-name">
-              <TextInput
-                isRequired
-                type="text"
-                id="policy-name"
-                name="policy-name"
-                value={policyName}
-                onChange={(_event, val) => setPolicyName(val)}
-                isDisabled={formDisabled}
-                placeholder={t('Policy name')}
-              />
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>{t('Unique name of the Plan Policy')}</HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
+        <Tabs activeKey={createView} onSelect={(_e, key) => setCreateView(key as 'form' | 'yaml')}>
+          <Tab eventKey="form" title={<TabTitleText>{t('Form')}</TabTitleText>}>
+            <PageSection hasBodyWrapper={false}>
+              <Form className="co-m-pane__form">
+                <FormGroup label={t('Policy Name')} isRequired fieldId="policy-name">
+                  <TextInput
+                    isRequired
+                    type="text"
+                    id="policy-name"
+                    name="policy-name"
+                    value={policyName}
+                    onChange={(_event, val) => setPolicyName(val)}
+                    isDisabled={formDisabled}
+                    placeholder={t('Policy name')}
+                  />
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>{t('Unique name of the Plan Policy')}</HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
 
-            <FormGroup label={t('Target HTTPRoute')} isRequired fieldId="target-route">
-              <HTTPRouteSelect
-                selectedRoute={selectedRoute}
-                onChange={setSelectedRoute}
-                isDisabled={formDisabled}
-              />
-            </FormGroup>
+                <FormGroup label={t('Target HTTPRoute')} isRequired fieldId="target-route">
+                  <HTTPRouteSelect
+                    selectedRoute={selectedRoute}
+                    onChange={setSelectedRoute}
+                    isDisabled={formDisabled}
+                  />
+                </FormGroup>
 
-            <FormGroup label={t('Plans')} fieldId="plans">
-              {plans.map((plan, i) => (
-                <Card key={i} className="pf-u-mb-sm pf-u-p-md" isPlain>
-                  <CardBody>
-                    <Title headingLevel="h3" size="md" className="pf-u-mb-md">
-                      {t('Plan')} {i + 1}
-                    </Title>
-                    <FormGroup label={t('Tier')} isRequired fieldId={`plan-tier-${i}`}>
-                      <TextInput
-                        isRequired
-                        type="text"
-                        id={`plan-tier-${i}`}
-                        value={plan.tier}
-                        onChange={(_event, val) => updatePlan(i, 'tier', val)}
-                        placeholder="e.g. gold, silver, free"
-                      />
-                    </FormGroup>
-                    <FormGroup
-                      label={t('Predicate')}
-                      isRequired
-                      fieldId={`plan-predicate-${i}`}
-                      className="pf-u-mt-md"
-                    >
-                      <TextInput
-                        isRequired
-                        type="text"
-                        id={`plan-predicate-${i}`}
-                        value={plan.predicate}
-                        onChange={(_event, val) => updatePlan(i, 'predicate', val)}
-                        placeholder='e.g. auth.identity.tier == "gold"'
-                      />
-                      <FormHelperText>
-                        <HelperText>
-                          <HelperTextItem>
-                            {t("CEL expression to match this plan's subscribers")}
-                          </HelperTextItem>
-                        </HelperText>
-                      </FormHelperText>
-                    </FormGroup>
-                    <FormGroup
-                      label={t('Daily Limit')}
-                      fieldId={`plan-daily-${i}`}
-                      className="pf-u-mt-md"
-                    >
-                      <TextInput
-                        type="text"
-                        id={`plan-daily-${i}`}
-                        value={plan.limits.daily ?? ''}
-                        onChange={(_event, val) => {
-                          if (val === '' || /^\d+$/.test(val)) {
-                            updatePlan(i, 'limits', {
-                              ...plan.limits,
-                              daily: val === '' ? null : Number(val),
-                            });
-                          }
-                        }}
-                        placeholder="e.g. 1000"
-                      />
-                      <FormHelperText>
-                        <HelperText>
-                          <HelperTextItem>
-                            {t('Maximum requests per day (optional)')}
-                          </HelperTextItem>
-                        </HelperText>
-                      </FormHelperText>
-                    </FormGroup>
-                    <FormGroup
-                      label={t('Weekly Limit')}
-                      fieldId={`plan-weekly-${i}`}
-                      className="pf-u-mt-md"
-                    >
-                      <TextInput
-                        type="text"
-                        id={`plan-weekly-${i}`}
-                        value={plan.limits.weekly ?? ''}
-                        onChange={(_event, val) => {
-                          if (val === '' || /^\d+$/.test(val)) {
-                            updatePlan(i, 'limits', {
-                              ...plan.limits,
-                              weekly: val === '' ? null : Number(val),
-                            });
-                          }
-                        }}
-                        placeholder="e.g. 5000"
-                      />
-                      <FormHelperText>
-                        <HelperText>
-                          <HelperTextItem>
-                            {t('Maximum requests per week (optional)')}
-                          </HelperTextItem>
-                        </HelperText>
-                      </FormHelperText>
-                    </FormGroup>
-                    <FormGroup
-                      label={t('Monthly Limit')}
-                      fieldId={`plan-monthly-${i}`}
-                      className="pf-u-mt-md"
-                    >
-                      <TextInput
-                        type="text"
-                        id={`plan-monthly-${i}`}
-                        value={plan.limits.monthly ?? ''}
-                        onChange={(_event, val) => {
-                          if (val === '' || /^\d+$/.test(val)) {
-                            updatePlan(i, 'limits', {
-                              ...plan.limits,
-                              monthly: val === '' ? null : Number(val),
-                            });
-                          }
-                        }}
-                        placeholder="e.g. 20000"
-                      />
-                      <FormHelperText>
-                        <HelperText>
-                          <HelperTextItem>
-                            {t('Maximum requests per month (optional)')}
-                          </HelperTextItem>
-                        </HelperText>
-                      </FormHelperText>
-                    </FormGroup>
-                    <FormGroup
-                      label={t('Yearly Limit')}
-                      fieldId={`plan-yearly-${i}`}
-                      className="pf-u-mt-md"
-                    >
-                      <TextInput
-                        type="text"
-                        id={`plan-yearly-${i}`}
-                        value={plan.limits.yearly ?? ''}
-                        onChange={(_event, val) => {
-                          if (val === '' || /^\d+$/.test(val)) {
-                            updatePlan(i, 'limits', {
-                              ...plan.limits,
-                              yearly: val === '' ? null : Number(val),
-                            });
-                          }
-                        }}
-                        placeholder="e.g. 100000"
-                      />
-                      <FormHelperText>
-                        <HelperText>
-                          <HelperTextItem>
-                            {t('Maximum requests per year (optional)')}
-                          </HelperTextItem>
-                        </HelperText>
-                      </FormHelperText>
-                    </FormGroup>
-                    <FormGroup
-                      label={t('Custom Limits')}
-                      fieldId={`plan-custom-${i}`}
-                      className="pf-u-mt-md"
-                    >
-                      <FormHelperText>
-                        <HelperText>
-                          <HelperTextItem>
-                            {t('Custom rate limits (limit + time window, e.g. 500 per 1h)')}
-                          </HelperTextItem>
-                        </HelperText>
-                      </FormHelperText>
-                      {(plan.limits.custom || []).map((entry, j) => (
-                        <div
-                          key={j}
-                          className="pf-u-display-flex pf-u-align-items-center pf-u-mt-sm"
+                <FormGroup label={t('Plans')} fieldId="plans">
+                  {plans.map((plan, i) => (
+                    <Card key={i} className="pf-u-mb-sm pf-u-p-md" isPlain>
+                      <CardBody>
+                        <Title headingLevel="h3" size="md" className="pf-u-mb-md">
+                          {t('Plan')} {i + 1}
+                        </Title>
+                        <FormGroup label={t('Tier')} isRequired fieldId={`plan-tier-${i}`}>
+                          <TextInput
+                            isRequired
+                            type="text"
+                            id={`plan-tier-${i}`}
+                            value={plan.tier}
+                            onChange={(_event, val) => updatePlan(i, 'tier', val)}
+                            placeholder="e.g. gold, silver, free"
+                          />
+                        </FormGroup>
+                        <FormGroup
+                          label={t('Predicate')}
+                          isRequired
+                          fieldId={`plan-predicate-${i}`}
+                          className="pf-u-mt-md"
+                        >
+                          <TextInput
+                            isRequired
+                            type="text"
+                            id={`plan-predicate-${i}`}
+                            value={plan.predicate}
+                            onChange={(_event, val) => updatePlan(i, 'predicate', val)}
+                            placeholder='e.g. auth.identity.tier == "gold"'
+                          />
+                          <FormHelperText>
+                            <HelperText>
+                              <HelperTextItem>
+                                {t("CEL expression to match this plan's subscribers")}
+                              </HelperTextItem>
+                            </HelperText>
+                          </FormHelperText>
+                        </FormGroup>
+                        <FormGroup
+                          label={t('Daily Limit')}
+                          fieldId={`plan-daily-${i}`}
+                          className="pf-u-mt-md"
                         >
                           <TextInput
                             type="text"
-                            id={`plan-custom-limit-${i}-${j}`}
-                            value={entry.limit}
+                            id={`plan-daily-${i}`}
+                            value={plan.limits.daily ?? ''}
                             onChange={(_event, val) => {
                               if (val === '' || /^\d+$/.test(val)) {
-                                const updated = [...(plan.limits.custom || [])];
-                                updated[j] = { ...updated[j], limit: val === '' ? 0 : Number(val) };
-                                updatePlan(i, 'limits', { ...plan.limits, custom: updated });
+                                updatePlan(i, 'limits', {
+                                  ...plan.limits,
+                                  daily: val === '' ? null : Number(val),
+                                });
                               }
                             }}
-                            placeholder={t('Limit')}
-                            style={{ width: '120px', marginRight: '8px' }}
+                            placeholder="e.g. 1000"
                           />
+                          <FormHelperText>
+                            <HelperText>
+                              <HelperTextItem>
+                                {t('Maximum requests per day (optional)')}
+                              </HelperTextItem>
+                            </HelperText>
+                          </FormHelperText>
+                        </FormGroup>
+                        <FormGroup
+                          label={t('Weekly Limit')}
+                          fieldId={`plan-weekly-${i}`}
+                          className="pf-u-mt-md"
+                        >
                           <TextInput
                             type="text"
-                            id={`plan-custom-window-${i}-${j}`}
-                            value={entry.window}
+                            id={`plan-weekly-${i}`}
+                            value={plan.limits.weekly ?? ''}
                             onChange={(_event, val) => {
-                              const updated = [...(plan.limits.custom || [])];
-                              updated[j] = { ...updated[j], window: val };
-                              updatePlan(i, 'limits', { ...plan.limits, custom: updated });
+                              if (val === '' || /^\d+$/.test(val)) {
+                                updatePlan(i, 'limits', {
+                                  ...plan.limits,
+                                  weekly: val === '' ? null : Number(val),
+                                });
+                              }
                             }}
-                            placeholder="e.g. 1h, 60s"
-                            style={{ width: '120px', marginRight: '8px' }}
+                            placeholder="e.g. 5000"
                           />
+                          <FormHelperText>
+                            <HelperText>
+                              <HelperTextItem>
+                                {t('Maximum requests per week (optional)')}
+                              </HelperTextItem>
+                            </HelperText>
+                          </FormHelperText>
+                        </FormGroup>
+                        <FormGroup
+                          label={t('Monthly Limit')}
+                          fieldId={`plan-monthly-${i}`}
+                          className="pf-u-mt-md"
+                        >
+                          <TextInput
+                            type="text"
+                            id={`plan-monthly-${i}`}
+                            value={plan.limits.monthly ?? ''}
+                            onChange={(_event, val) => {
+                              if (val === '' || /^\d+$/.test(val)) {
+                                updatePlan(i, 'limits', {
+                                  ...plan.limits,
+                                  monthly: val === '' ? null : Number(val),
+                                });
+                              }
+                            }}
+                            placeholder="e.g. 20000"
+                          />
+                          <FormHelperText>
+                            <HelperText>
+                              <HelperTextItem>
+                                {t('Maximum requests per month (optional)')}
+                              </HelperTextItem>
+                            </HelperText>
+                          </FormHelperText>
+                        </FormGroup>
+                        <FormGroup
+                          label={t('Yearly Limit')}
+                          fieldId={`plan-yearly-${i}`}
+                          className="pf-u-mt-md"
+                        >
+                          <TextInput
+                            type="text"
+                            id={`plan-yearly-${i}`}
+                            value={plan.limits.yearly ?? ''}
+                            onChange={(_event, val) => {
+                              if (val === '' || /^\d+$/.test(val)) {
+                                updatePlan(i, 'limits', {
+                                  ...plan.limits,
+                                  yearly: val === '' ? null : Number(val),
+                                });
+                              }
+                            }}
+                            placeholder="e.g. 100000"
+                          />
+                          <FormHelperText>
+                            <HelperText>
+                              <HelperTextItem>
+                                {t('Maximum requests per year (optional)')}
+                              </HelperTextItem>
+                            </HelperText>
+                          </FormHelperText>
+                        </FormGroup>
+                        <FormGroup
+                          label={t('Custom Limits')}
+                          fieldId={`plan-custom-${i}`}
+                          className="pf-u-mt-md"
+                        >
+                          <FormHelperText>
+                            <HelperText>
+                              <HelperTextItem>
+                                {t('Custom rate limits (limit + time window, e.g. 500 per 1h)')}
+                              </HelperTextItem>
+                            </HelperText>
+                          </FormHelperText>
+                          {(plan.limits.custom || []).map((entry, j) => (
+                            <div
+                              key={j}
+                              className="pf-u-display-flex pf-u-align-items-center pf-u-mt-sm"
+                            >
+                              <TextInput
+                                type="text"
+                                id={`plan-custom-limit-${i}-${j}`}
+                                value={entry.limit}
+                                onChange={(_event, val) => {
+                                  if (val === '' || /^\d+$/.test(val)) {
+                                    const updated = [...(plan.limits.custom || [])];
+                                    updated[j] = {
+                                      ...updated[j],
+                                      limit: val === '' ? 0 : Number(val),
+                                    };
+                                    updatePlan(i, 'limits', { ...plan.limits, custom: updated });
+                                  }
+                                }}
+                                placeholder={t('Limit')}
+                                style={{ width: '120px', marginRight: '8px' }}
+                              />
+                              <TextInput
+                                type="text"
+                                id={`plan-custom-window-${i}-${j}`}
+                                value={entry.window}
+                                onChange={(_event, val) => {
+                                  const updated = [...(plan.limits.custom || [])];
+                                  updated[j] = { ...updated[j], window: val };
+                                  updatePlan(i, 'limits', { ...plan.limits, custom: updated });
+                                }}
+                                placeholder="e.g. 1h, 60s"
+                                style={{ width: '120px', marginRight: '8px' }}
+                              />
+                              <Button
+                                variant="plain"
+                                aria-label={t('Remove custom limit')}
+                                onClick={() => {
+                                  const updated = (plan.limits.custom || []).filter(
+                                    (_, idx) => idx !== j,
+                                  );
+                                  updatePlan(i, 'limits', { ...plan.limits, custom: updated });
+                                }}
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          ))}
                           <Button
-                            variant="plain"
-                            aria-label={t('Remove custom limit')}
+                            variant="link"
+                            className="pf-u-mt-sm"
                             onClick={() => {
-                              const updated = (plan.limits.custom || []).filter(
-                                (_, idx) => idx !== j,
-                              );
+                              const updated = [
+                                ...(plan.limits.custom || []),
+                                { limit: 0, window: '' },
+                              ];
                               updatePlan(i, 'limits', { ...plan.limits, custom: updated });
                             }}
                           >
-                            ✕
+                            {t('Add Custom Limit')}
+                          </Button>
+                        </FormGroup>
+                        <div className="pf-u-mt-md">
+                          <Button
+                            variant="danger"
+                            onClick={() => removePlan(i)}
+                            isDisabled={plans.length === 1}
+                          >
+                            {t('Remove Plan')}
                           </Button>
                         </div>
-                      ))}
-                      <Button
-                        variant="link"
-                        className="pf-u-mt-sm"
-                        onClick={() => {
-                          const updated = [...(plan.limits.custom || []), { limit: 0, window: '' }];
-                          updatePlan(i, 'limits', { ...plan.limits, custom: updated });
-                        }}
-                      >
-                        {t('Add Custom Limit')}
-                      </Button>
-                    </FormGroup>
-                    <div className="pf-u-mt-md">
-                      <Button
-                        variant="danger"
-                        onClick={() => removePlan(i)}
-                        isDisabled={plans.length === 1}
-                      >
-                        {t('Remove Plan')}
-                      </Button>
-                    </div>
-                  </CardBody>
-                </Card>
-              ))}
-              <div className="pf-u-mt-md">
-                <Button variant="secondary" onClick={addPlan}>
-                  {t('Add Plan')}
-                </Button>
-              </div>
-            </FormGroup>
+                      </CardBody>
+                    </Card>
+                  ))}
+                  <div className="pf-u-mt-md">
+                    <Button variant="secondary" onClick={addPlan}>
+                      {t('Add Plan')}
+                    </Button>
+                  </div>
+                </FormGroup>
 
-            <ActionGroup className="pf-u-mt-0">
-              <KuadrantCreateUpdate
-                model={planPolicyModel}
-                resource={planPolicy}
-                policyType="plan"
-                navigate={navigate}
-                validation={isFormValid}
-              />
-              <Button variant="link" onClick={handleCancelResource}>
-                {t('Cancel')}
-              </Button>
-            </ActionGroup>
-          </Form>
-        </PageSection>
-      ) : (
-        <React.Suspense fallback={<div>{t('Loading...')}</div>}>
-          <ResourceYAMLEditor
-            initialResource={yamlInput}
-            create={create}
-            onChange={handleYAMLChange}
-          />
-        </React.Suspense>
-      )}
+                <ActionGroup className="pf-u-mt-0">
+                  <KuadrantCreateUpdate
+                    model={planPolicyModel}
+                    resource={planPolicy}
+                    policyType="plan"
+                    navigate={navigate}
+                    validation={isFormValid}
+                  />
+                  <Button variant="link" onClick={handleCancelResource}>
+                    {t('Cancel')}
+                  </Button>
+                </ActionGroup>
+              </Form>
+            </PageSection>
+          </Tab>
+          <Tab eventKey="yaml" title={<TabTitleText>{t('YAML')}</TabTitleText>}>
+            <div className="kuadrant-planpolicy-yaml-editor">
+              {createView === 'yaml' && (
+                <React.Suspense fallback={<div>{t('Loading...')}</div>}>
+                  <ResourceYAMLEditor
+                    initialResource={yamlInput}
+                    create={create}
+                    onChange={handleYAMLChange}
+                  />
+                </React.Suspense>
+              )}
+            </div>
+          </Tab>
+        </Tabs>
+      </PageSection>
     </>
   );
 };
