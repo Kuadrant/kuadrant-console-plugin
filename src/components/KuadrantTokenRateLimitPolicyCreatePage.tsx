@@ -153,8 +153,8 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
         // Always keep resourceVersion/creationTimestamp current so Save doesn't
         // send a stale resourceVersion and hit a 409 conflict once the
         // controller writes status back to the resource.
-        setCreationTimestamp(trlPolicyUpdate.metadata.creationTimestamp);
-        setResourceVersion(trlPolicyUpdate.metadata.resourceVersion);
+        setCreationTimestamp(trlPolicyUpdate.metadata?.creationTimestamp || '');
+        setResourceVersion(trlPolicyUpdate.metadata?.resourceVersion || '');
         if (!hasInitializedFromResource.current) {
           setFormDisabled(true);
           setCreate(false);

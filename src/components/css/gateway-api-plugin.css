@@ -28,7 +28,7 @@
 .kuadrant-tlspolicy-yaml-editor {
   padding: var(--pf-t--global--spacer--md) 0;
 
-  /* Negative margin offsets PatternFly Tab bar height to align YAML editor with form content */
+  /* Negative margin offsets PatternFly Tab bar height (40px) to align YAML editor with form content */
   margin-top: -40px;
   min-height: 600px;
 }
