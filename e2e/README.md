@@ -194,15 +194,16 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
 
   | Changed path | Spec files triggered |
   |---|---|
-  | `src/components/apikey/` | `apikey-lifecycle`, `apikey-approvals`, `apiproduct-apikeys-tab` |
+  | `src/components/apikey/` | `apikey-lifecycle`, `apikey-approvals`, `apiproduct-apikeys-tab`, `data-view-regressions` |
   | `src/components/apiproduct/APIProductsListPage` | `api-product-list` |
-  | `src/components/apiproduct/APIProductAPIKeysTab` | `apiproduct-apikeys-tab` |
+  | `src/components/apiproduct/APIProductAPIKeysTab` | `apiproduct-apikeys-tab`, `data-view-regressions` |
   | `src/components/apiproduct/APIProductDefinitionTab` or `APIProductPoliciesTab` | `apiproduct-details-tabs` |
   | `src/components/apiproduct/APIProductOverviewTab`, `ContactInfoEdit`, etc. | `apiproduct-overview-tab` |
   | `src/components/apiproduct/` (catch-all) | `apiproduct-crud`, `apiproduct-overview-tab`, `api-product-list`, `apiproduct-rbac` |
   | `src/components/topology/` | `topology`, `rbac` |
-  | `src/components/gateway/` | `gateway-crud`, `overview`, `rbac` |
-  | `src/components/(KuadrantOverview\|KuadrantPolicies\|ResourceList\|DropdownWithKebab)` | `overview`, `rbac` |
+  | `src/components/gateway/` | `gateway-crud`, `overview`, `rbac`, `data-view-regressions` |
+  | `src/components/(KuadrantOverview\|KuadrantPolicies\|ResourceList\|DropdownWithKebab)` | `overview`, `rbac`, `data-view-regressions` |
+  | `src/components/KuadrantDataView` | `data-view-regressions` |
   | `src/components/(dnspolicy\|tlspolicy\|ratelimitpolicy\|authpolicy)/` | `policy-forms`, `rbac` |
   | `src/components/(httproute\|issuer)/` | `rbac`, `httproute-crud` |
   | `src/components/mcp/` | `mcp-setup-wizard`, `mcp-overview`, `mcp-wizard` |
