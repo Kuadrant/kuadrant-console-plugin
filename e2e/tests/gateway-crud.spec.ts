@@ -88,6 +88,12 @@ async function addListenerViaWizard(
   // Step 2: Protocol
   await page.locator('#listener-protocol').selectOption(protocol);
 
+  // HTTPS/TLS with default Terminate mode requires at least one certificate ref
+  if (protocol === 'HTTPS' || protocol === 'TLS') {
+    await page.getByRole('button', { name: 'Add certificate reference' }).click();
+    await page.locator('[id^="cert-name-"]').first().fill('test-cert');
+  }
+
   // Next → Allowed Routes
   await page.getByRole('button', { name: 'Next' }).click();
 
@@ -125,8 +131,8 @@ test.describe('Gateway CRUD', () => {
       timeout: 15_000,
     });
 
-    // Form tab should be selected by default
-    await expect(page.getByRole('tab', { name: 'Form' })).toHaveAttribute('aria-selected', 'true');
+    // Form radio should be selected by default
+    await expect(page.getByRole('radio', { name: 'Form' })).toBeChecked();
 
     await page.locator('#gateway-name').fill(gatewayName);
     await expect(page.locator('#gateway-class')).toHaveValue('istio');
@@ -279,14 +285,14 @@ spec:
     // Switch to YAML and verify the listener is reflected in the editor before proceeding.
     // This acts as a deterministic sync point: the editor only contains 'https' once
     // the yamlContent useEffect has re-run with the updated gatewayObject.
-    await page.getByRole('tab', { name: 'YAML' }).click();
+    await page.getByRole('radio', { name: 'YAML' }).click();
     await expectEditorContains(page, 'https');
 
     // Switch back to form, then to YAML for the full assertion pass
-    await page.getByRole('tab', { name: 'Form' }).click();
+    await page.getByRole('radio', { name: 'Form' }).click();
 
     // Switch to YAML
-    await page.getByRole('tab', { name: 'YAML' }).click();
+    await page.getByRole('radio', { name: 'YAML' }).click();
 
     await expectEditorContains(page, gatewayName);
     await expectEditorContains(page, 'istio');
@@ -295,7 +301,7 @@ spec:
     await expectEditorContains(page, 'HTTPS');
 
     // Switch back to form
-    await page.getByRole('tab', { name: 'Form' }).click();
+    await page.getByRole('radio', { name: 'Form' }).click();
 
     await expect(page.locator('#gateway-name')).toHaveValue(gatewayName);
     await expect(page.locator('#gateway-class')).toHaveValue('istio');

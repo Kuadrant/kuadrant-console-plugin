@@ -17,9 +17,8 @@ import {
   Modal,
   Wizard,
   WizardStep,
-  Tabs,
-  Tab,
-  TabTitleText,
+  WizardHeader,
+  Radio,
   Alert,
   Spinner,
 } from '@patternfly/react-core';
@@ -629,7 +628,10 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
   }, [gatewayObject]);
 
   const onFormChangeRef = React.useRef(onFormChange);
-  onFormChangeRef.current = onFormChange;
+
+  React.useEffect(() => {
+    onFormChangeRef.current = onFormChange;
+  }, [onFormChange]);
 
   React.useEffect(() => {
     if (onFormChangeRef.current) {
@@ -656,40 +658,63 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
     }
   };
 
-  const formValidation = () => {
-    let isFormValid = false;
+  const SECTION_NAME_RE = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
 
-    if (
+  const isListenerConfigValid = (l: ListenerUI) =>
+    l.name.trim() !== '' &&
+    l.name.length <= 253 &&
+    SECTION_NAME_RE.test(l.name) &&
+    Number.isInteger(l.port) &&
+    l.port > 0 &&
+    l.port <= 65535;
+
+  const isListenerProtocolValid = (l: ListenerUI) =>
+    (l.protocol !== 'HTTPS' && l.protocol !== 'TLS') ||
+    l.tlsMode !== 'Terminate' ||
+    (l.certificateRefs.length > 0 &&
+      l.certificateRefs.every((ref) => ref.name.trim() !== '') &&
+      l.tlsOptions.every((opt) => opt.key.trim() !== '' && opt.value.trim() !== ''));
+
+  const isListenerAllowedRoutesValid = (l: ListenerUI) =>
+    l.allowedRoutes.kinds.every((k) => k.kind.trim() !== '' && k.group.trim() !== '');
+
+  const formValidation = () => {
+    const listenerNames = listeners.map((l) => l.name);
+    const hasDuplicateNames = new Set(listenerNames).size !== listenerNames.length;
+
+    return (
       gatewayName &&
       gatewayName.trim() !== '' &&
       gatewayClassName &&
       gatewayClassName !== '' &&
       listeners &&
       listeners.length > 0 &&
+      !hasDuplicateNames &&
       listeners.every(
         (listener) =>
-          listener.name &&
-          listener.name.trim() !== '' &&
-          listener.port > 0 &&
-          listener.certificateRefs.every((ref) => ref.name !== '') &&
-          listener.port <= 65535 &&
-          (!(listener.protocol === 'HTTPS' || listener.protocol === 'TLS') ||
-            listener.tlsMode !== 'Terminate' ||
-            listener.certificateRefs.length > 0),
+          isListenerConfigValid(listener) &&
+          isListenerProtocolValid(listener) &&
+          isListenerAllowedRoutesValid(listener),
       ) &&
       (!addresses ||
         addresses.length === 0 ||
         addresses.every((address) => address.value && address.value.trim() !== ''))
-    ) {
-      isFormValid = true;
-    }
-    return isFormValid;
+    );
   };
+
+  const isConfigStepValid =
+    isListenerConfigValid(currentListener) &&
+    !listeners.some((l, i) => i !== editingListenerIndex && l.name === currentListener.name);
+
+  const isProtocolStepValid = isListenerProtocolValid(currentListener);
+
+  const isAllowedRoutesStepValid = isListenerAllowedRoutesValid(currentListener);
 
   const wizardSteps = [
     {
       name: t('Configuration'),
       nextButtonText: t('Next'),
+      isNextDisabled: !isConfigStepValid,
       form: (
         <Form>
           <FormGroup label={t('Listener Name')} isRequired fieldId="listener-name">
@@ -758,6 +783,8 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
     {
       name: t('Protocol'),
       nextButtonText: t('Next'),
+      isNextDisabled: !isProtocolStepValid,
+      isDisabled: !isConfigStepValid,
       form: (
         <Form>
           <FormGroup label={t('Protocol')} isRequired fieldId="listener-protocol">
@@ -1004,6 +1031,8 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
     {
       name: t('Allowed Routes'),
       nextButtonText: t('Next'),
+      isNextDisabled: !isAllowedRoutesStepValid,
+      isDisabled: !isConfigStepValid || !isProtocolStepValid,
       form: (
         <Form>
           <FormGroup label={t('Allowed Namespaces')} fieldId="allowed-namespaces">
@@ -1164,6 +1193,8 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
     {
       name: t('Review & Create'),
       nextButtonText: t('Create'),
+      isNextDisabled: !isConfigStepValid || !isProtocolStepValid || !isAllowedRoutesStepValid,
+      isDisabled: !isConfigStepValid || !isProtocolStepValid || !isAllowedRoutesStepValid,
       form: (
         <div>
           <h1>{t('Listener Summary')}</h1>
@@ -1233,328 +1264,346 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
             )}
           </p>
         </div>
-        {/* Loading state */}
-        {isLoading ? (
+        <div className="kuadrant-gateway-editor-toggle">
+          <span>{t('Create via:')}</span>
+          <Radio
+            name="create-type-radio"
+            label={t('Form')}
+            id="create-type-radio-form"
+            isChecked={createView === 'form'}
+            onChange={() => setCreateView('form')}
+          />
+          <Radio
+            name="create-type-radio"
+            label={t('YAML')}
+            id="create-type-radio-yaml"
+            isChecked={createView === 'yaml'}
+            onChange={() => setCreateView('yaml')}
+          />
+        </div>
+      </PageSection>
+
+      {/* Loading state */}
+      {isLoading ? (
+        <PageSection hasBodyWrapper={false}>
           <div
             style={{
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
               height: '200px',
-              marginTop: '20px',
             }}
           >
             <Spinner size="lg" />
             <span style={{ marginLeft: '16px' }}>{t('Loading gateway...')}</span>
           </div>
-        ) : (
-          <Tabs
-            activeKey={createView}
-            onSelect={(_e, key) => {
-              setYamlError(null);
-              setCreateView(key as 'form' | 'yaml');
-            }}
-          >
-            <Tab eventKey="form" title={<TabTitleText>{t('Form')}</TabTitleText>}>
-              <PageSection hasBodyWrapper={false}>
-                <Form className="co-m-pane__form">
-                  <FormGroup label={t('Gateway name')} isRequired fieldId="gateway-name">
-                    <TextInput
-                      type="text"
-                      id="gateway-name"
-                      name="gateway-name"
-                      value={gatewayName}
-                      onChange={(_event, value) => setGatewayName(value)}
-                      isRequired
-                      isDisabled={!create} // Disable during edit as names are immutable
-                      placeholder={t('Enter gateway name')}
-                    />
-                    <FormHelperText>
-                      <HelperText>
-                        <HelperTextItem>
-                          {!create
-                            ? t('Gateway names cannot be changed after creation.')
-                            : t('A unique name for the gateway within the namespace.')}
-                        </HelperTextItem>
-                      </HelperText>
-                    </FormHelperText>
-                  </FormGroup>
+        </PageSection>
+      ) : (
+        <>
+          {/* Conditional rendering based on current view */}
+          {createView === 'form' ? (
+            <PageSection hasBodyWrapper={false}>
+              <Form className="co-m-pane__form">
+                <FormGroup label={t('Gateway name')} isRequired fieldId="gateway-name">
+                  <TextInput
+                    type="text"
+                    id="gateway-name"
+                    name="gateway-name"
+                    value={gatewayName}
+                    onChange={(_event, value) => setGatewayName(value)}
+                    isRequired
+                    isDisabled={!create} // Disable during edit as names are immutable
+                    placeholder={t('Enter gateway name')}
+                  />
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>
+                        {!create
+                          ? t('Gateway names cannot be changed after creation.')
+                          : t('A unique name for the gateway within the namespace.')}
+                      </HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
 
-                  <FormGroup label={t('Gateway Class Name')} isRequired fieldId="gateway-class">
-                    <TextInput
-                      id="gateway-class"
-                      value={gatewayClassName}
-                      isDisabled
-                      aria-label={t('Gateway Class Name')}
-                    />
-                    <FormHelperText>
-                      <HelperText>
-                        <HelperTextItem>
-                          {t('The gateway class used for this Gateway.')}
-                        </HelperTextItem>
-                      </HelperText>
-                    </FormHelperText>
-                  </FormGroup>
+                <FormGroup label={t('Gateway Class Name')} isRequired fieldId="gateway-class">
+                  <TextInput
+                    id="gateway-class"
+                    value={gatewayClassName}
+                    isDisabled
+                    aria-label={t('Gateway Class Name')}
+                  />
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>
+                        {t('The gateway class used for this Gateway.')}
+                      </HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
 
-                  <FormGroup
-                    label={
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'space-between',
-                          width: '100%',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div>{t('Listeners')}</div>
-                          <Popover
-                            bodyContent={t(
-                              'Listeners define how the Gateway accepts traffic. Each listener specifies a protocol, port, and hostname to match incoming requests.',
-                            )}
-                            aria-label={t('Listeners help')}
-                          >
-                            <Button variant="plain" aria-label={t('Listeners help')}>
-                              <HelpIcon />
-                            </Button>
-                          </Popover>
-                        </div>
-                        <Button
-                          variant="secondary"
-                          icon={<PlusCircleIcon />}
-                          onClick={handleAddListener}
-                        >
-                          {t('Add listener')}
-                        </Button>
-                      </div>
-                    }
-                    fieldId="listeners"
-                  >
-                    {listeners.length === 0 && (
-                      <Alert
-                        variant="warning"
-                        title={t('At least one listener is required to create a Gateway.')}
-                      />
-                    )}
-                    {listeners.length > 0 && (
-                      <div style={{ marginBottom: '16px' }}>
-                        <Table aria-label={t('Listeners table')} variant="compact">
-                          <Thead>
-                            <Tr>
-                              <Th>{t('Name')}</Th>
-                              <Th>{t('Protocol')}</Th>
-                              <Th>{t('Port')}</Th>
-                              <Th>{t('Hostname')}</Th>
-                              <Th>{t('TLS Mode')}</Th>
-                              <Th>{t('Actions')}</Th>
-                            </Tr>
-                          </Thead>
-                          <Tbody>
-                            {listeners.map((listener, index) => (
-                              <Tr key={index}>
-                                <Td dataLabel={t('Name')}>{listener.name || t('Unnamed')}</Td>
-                                <Td dataLabel={t('Protocol')}>{listener.protocol}</Td>
-                                <Td dataLabel={t('Port')}>{listener.port}</Td>
-                                <Td dataLabel={t('Hostname')}>
-                                  {listener.hostname || t('All hostnames')}
-                                </Td>
-                                <Td dataLabel={t('TLS Mode')}>
-                                  {listener.protocol === 'HTTPS' || listener.protocol === 'TLS'
-                                    ? listener.tlsMode
-                                    : t('N/A')}
-                                </Td>
-                                <Td dataLabel={t('Actions')}>
-                                  <div style={{ display: 'flex', gap: '8px' }}>
-                                    <Button
-                                      variant="plain"
-                                      aria-label={t('Edit listener')}
-                                      onClick={() => handleEditListener(index)}
-                                    >
-                                      <EditIcon />
-                                    </Button>
-                                    <Button
-                                      variant="plain"
-                                      aria-label={t('Remove listener')}
-                                      onClick={() => handleRemoveListener(index)}
-                                      isDanger
-                                    >
-                                      <TrashIcon />
-                                    </Button>
-                                  </div>
-                                </Td>
-                              </Tr>
-                            ))}
-                          </Tbody>
-                        </Table>
-                      </div>
-                    )}
-                  </FormGroup>
-
-                  <FormGroup
-                    label={
+                <FormGroup
+                  label={
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '100%',
+                      }}
+                    >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <Button
-                          variant="plain"
-                          onClick={() => setIsAddressesExpanded(!isAddressesExpanded)}
-                          style={{
-                            padding: 0,
-                            fontSize: 'inherit',
-                            fontWeight: 'inherit',
-                            color: 'inherit',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px',
-                          }}
-                        >
-                          {isAddressesExpanded ? <AngleDownIcon /> : <AngleRightIcon />}
-                          <span>{t('Addresses (Optional)')}</span>
-                        </Button>
+                        <div>{t('Listeners')}</div>
                         <Popover
                           bodyContent={t(
-                            'Request a specific static IP address or hostname for the Gateway. This is optional and used to specify where the Gateway should be accessible.',
+                            'Listeners define how the Gateway accepts traffic. Each listener specifies a protocol, port, and hostname to match incoming requests.',
                           )}
-                          aria-label={t('Addresses help')}
+                          aria-label={t('Listeners help')}
                         >
-                          <Button variant="plain" aria-label={t('Addresses help')}>
+                          <Button variant="plain" aria-label={t('Listeners help')}>
                             <HelpIcon />
                           </Button>
                         </Popover>
                       </div>
-                    }
-                    fieldId="addresses"
-                  >
-                    {isAddressesExpanded && (
-                      <div>
-                        {addresses.length > 0 && (
-                          <div style={{ marginBottom: '16px' }}>
-                            <Table aria-label={t('Addresses table')} variant="compact">
-                              <Thead>
-                                <Tr>
-                                  <Th>{t('Type')}</Th>
-                                  <Th>{t('Value')}</Th>
-                                  <Th>{t('Actions')}</Th>
-                                </Tr>
-                              </Thead>
-                              <Tbody>
-                                {addresses.map((address) => (
-                                  <Tr key={address.id}>
-                                    <Td dataLabel={t('Type')}>
-                                      <FormSelect
-                                        value={address.type}
-                                        onChange={(_event, value) =>
-                                          handleAddressChange(address.id, 'type', value)
-                                        }
-                                        aria-label={t('Select Address Type')}
-                                      >
-                                        <FormSelectOption value="IPAddress" label="IPAddress" />
-                                        <FormSelectOption value="Hostname" label="Hostname" />
-                                      </FormSelect>
-                                    </Td>
-                                    <Td dataLabel={t('Value')}>
-                                      <TextInput
-                                        type="text"
-                                        value={address.value}
-                                        onChange={(_event, value) =>
-                                          handleAddressChange(address.id, 'value', value)
-                                        }
-                                        placeholder={
-                                          address.type === 'IPAddress'
-                                            ? t('e.g., 192.168.1.100')
-                                            : t('e.g., gateway.example.com')
-                                        }
-                                        isRequired
-                                      />
-                                    </Td>
-                                    <Td dataLabel={t('Actions')}>
-                                      <Button
-                                        variant="plain"
-                                        aria-label={t('Remove address')}
-                                        onClick={() => handleRemoveAddress(address.id)}
-                                        isDanger
-                                      >
-                                        <TrashIcon />
-                                      </Button>
-                                    </Td>
-                                  </Tr>
-                                ))}
-                              </Tbody>
-                            </Table>
-                          </div>
+                      <Button
+                        variant="secondary"
+                        icon={<PlusCircleIcon />}
+                        onClick={handleAddListener}
+                      >
+                        {t('Add listener')}
+                      </Button>
+                    </div>
+                  }
+                  fieldId="listeners"
+                >
+                  {listeners.length === 0 && (
+                    <Alert
+                      variant="warning"
+                      title={t('At least one listener is required to create a Gateway.')}
+                    />
+                  )}
+                  {listeners.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <Table aria-label={t('Listeners table')} variant="compact">
+                        <Thead>
+                          <Tr>
+                            <Th>{t('Name')}</Th>
+                            <Th>{t('Protocol')}</Th>
+                            <Th>{t('Port')}</Th>
+                            <Th>{t('Hostname')}</Th>
+                            <Th>{t('TLS Mode')}</Th>
+                            <Th>{t('Actions')}</Th>
+                          </Tr>
+                        </Thead>
+                        <Tbody>
+                          {listeners.map((listener, index) => (
+                            <Tr key={index}>
+                              <Td dataLabel={t('Name')}>{listener.name || t('Unnamed')}</Td>
+                              <Td dataLabel={t('Protocol')}>{listener.protocol}</Td>
+                              <Td dataLabel={t('Port')}>{listener.port}</Td>
+                              <Td dataLabel={t('Hostname')}>
+                                {listener.hostname || t('All hostnames')}
+                              </Td>
+                              <Td dataLabel={t('TLS Mode')}>
+                                {listener.protocol === 'HTTPS' || listener.protocol === 'TLS'
+                                  ? listener.tlsMode
+                                  : t('N/A')}
+                              </Td>
+                              <Td dataLabel={t('Actions')}>
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                  <Button
+                                    variant="plain"
+                                    aria-label={t('Edit listener')}
+                                    onClick={() => handleEditListener(index)}
+                                  >
+                                    <EditIcon />
+                                  </Button>
+                                  <Button
+                                    variant="plain"
+                                    aria-label={t('Remove listener')}
+                                    onClick={() => handleRemoveListener(index)}
+                                    isDanger
+                                  >
+                                    <TrashIcon />
+                                  </Button>
+                                </div>
+                              </Td>
+                            </Tr>
+                          ))}
+                        </Tbody>
+                      </Table>
+                    </div>
+                  )}
+                </FormGroup>
+
+                <FormGroup
+                  label={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <Button
+                        variant="plain"
+                        onClick={() => setIsAddressesExpanded(!isAddressesExpanded)}
+                        style={{
+                          padding: 0,
+                          fontSize: 'inherit',
+                          fontWeight: 'inherit',
+                          color: 'inherit',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                        }}
+                      >
+                        {isAddressesExpanded ? <AngleDownIcon /> : <AngleRightIcon />}
+                        <span>{t('Addresses (Optional)')}</span>
+                      </Button>
+                      <Popover
+                        bodyContent={t(
+                          'Request a specific static IP address or hostname for the Gateway. This is optional and used to specify where the Gateway should be accessible.',
                         )}
-                        <Button
-                          variant="secondary"
-                          icon={<PlusCircleIcon />}
-                          onClick={handleAddAddress}
-                        >
-                          {t('Add address')}
+                        aria-label={t('Addresses help')}
+                      >
+                        <Button variant="plain" aria-label={t('Addresses help')}>
+                          <HelpIcon />
                         </Button>
-                        <FormHelperText>
-                          <HelperText>
-                            <HelperTextItem>
-                              {t(
-                                'Specify static IP addresses or hostnames where the Gateway should be accessible. This is optional and depends on your infrastructure setup.',
-                              )}
-                            </HelperTextItem>
-                          </HelperText>
-                        </FormHelperText>
-                      </div>
-                    )}
-                  </FormGroup>
-                </Form>
-                <ActionGroup className="pf-u-mt-0">
-                  <KuadrantCreateUpdate
-                    validation={formValidation()}
-                    model={gatewayModel}
-                    resource={gatewayObject}
-                    policyType="Gateway"
-                    navigate={navigate}
-                    redirectPath={`/k8s/ns/${selectedNamespace}/${gatewayModel?.apiGroup}~${gatewayModel?.apiVersion}~${gatewayModel?.kind}/${gatewayName}`}
-                  />
-                  <Button variant="link" onClick={() => navigate(-1)}>
-                    {t('Cancel')}
-                  </Button>
-                </ActionGroup>
-              </PageSection>
-            </Tab>
-            <Tab eventKey="yaml" title={<TabTitleText>{t('YAML')}</TabTitleText>}>
-              <div className="kuadrant-gateway-yaml-editor">
-                {yamlError && (
-                  <Alert
-                    variant="warning"
-                    title={t('Error: YAML Validation')}
-                    isInline
-                    className="pf-v6-u-mt-md"
-                  >
+                      </Popover>
+                    </div>
+                  }
+                  fieldId="addresses"
+                >
+                  {isAddressesExpanded && (
+                    <div>
+                      {addresses.length > 0 && (
+                        <div style={{ marginBottom: '16px' }}>
+                          <Table aria-label={t('Addresses table')} variant="compact">
+                            <Thead>
+                              <Tr>
+                                <Th>{t('Type')}</Th>
+                                <Th>{t('Value')}</Th>
+                                <Th>{t('Actions')}</Th>
+                              </Tr>
+                            </Thead>
+                            <Tbody>
+                              {addresses.map((address) => (
+                                <Tr key={address.id}>
+                                  <Td dataLabel={t('Type')}>
+                                    <FormSelect
+                                      value={address.type}
+                                      onChange={(_event, value) =>
+                                        handleAddressChange(address.id, 'type', value)
+                                      }
+                                      aria-label={t('Select Address Type')}
+                                    >
+                                      <FormSelectOption value="IPAddress" label="IPAddress" />
+                                      <FormSelectOption value="Hostname" label="Hostname" />
+                                    </FormSelect>
+                                  </Td>
+                                  <Td dataLabel={t('Value')}>
+                                    <TextInput
+                                      type="text"
+                                      value={address.value}
+                                      onChange={(_event, value) =>
+                                        handleAddressChange(address.id, 'value', value)
+                                      }
+                                      placeholder={
+                                        address.type === 'IPAddress'
+                                          ? t('e.g., 192.168.1.100')
+                                          : t('e.g., gateway.example.com')
+                                      }
+                                      isRequired
+                                    />
+                                  </Td>
+                                  <Td dataLabel={t('Actions')}>
+                                    <Button
+                                      variant="plain"
+                                      aria-label={t('Remove address')}
+                                      onClick={() => handleRemoveAddress(address.id)}
+                                      isDanger
+                                    >
+                                      <TrashIcon />
+                                    </Button>
+                                  </Td>
+                                </Tr>
+                              ))}
+                            </Tbody>
+                          </Table>
+                        </div>
+                      )}
+                      <Button
+                        variant="secondary"
+                        icon={<PlusCircleIcon />}
+                        onClick={handleAddAddress}
+                      >
+                        {t('Add address')}
+                      </Button>
+                      <FormHelperText>
+                        <HelperText>
+                          <HelperTextItem>
+                            {t(
+                              'Specify static IP addresses or hostnames where the Gateway should be accessible. This is optional and depends on your infrastructure setup.',
+                            )}
+                          </HelperTextItem>
+                        </HelperText>
+                      </FormHelperText>
+                    </div>
+                  )}
+                </FormGroup>
+              </Form>
+            </PageSection>
+          ) : (
+            <>
+              {yamlError && (
+                <PageSection>
+                  <Alert variant="warning" title={t('Error: YAML Validation')} isInline>
                     {yamlError}
                   </Alert>
-                )}
-                {createView === 'yaml' && (
-                  <React.Suspense fallback={<div>{t('Loading YAML editor...')}</div>}>
-                    <ResourceYAMLEditor
-                      initialResource={yamlContent}
-                      onChange={handleYamlChange}
-                      create={create}
-                    />
-                  </React.Suspense>
-                )}
-              </div>
-            </Tab>
-          </Tabs>
-        )}
-      </PageSection>
+                </PageSection>
+              )}
+              <React.Suspense fallback={<div>{t('Loading YAML editor...')}</div>}>
+                <ResourceYAMLEditor
+                  initialResource={yamlContent}
+                  onChange={handleYamlChange}
+                  create={create}
+                />
+              </React.Suspense>
+            </>
+          )}
+          {!isLoading && createView === 'form' && (
+            <PageSection hasBodyWrapper={false} stickyOnBreakpoint={{ default: 'bottom' }}>
+              <ActionGroup className="pf-u-mt-0">
+                <KuadrantCreateUpdate
+                  validation={formValidation()}
+                  model={gatewayModel}
+                  resource={gatewayObject}
+                  policyType="Gateway"
+                  navigate={navigate}
+                  redirectPath={`/k8s/ns/${selectedNamespace}/${gatewayModel?.apiGroup}~${gatewayModel?.apiVersion}~${gatewayModel?.kind}/${gatewayName}`}
+                />
+                <Button variant="link" onClick={() => navigate(-1)} className="pf-v6-u-ml-md">
+                  {t('Cancel')}
+                </Button>
+              </ActionGroup>
+            </PageSection>
+          )}
+        </>
+      )}
 
-      <Modal
-        variant="large"
-        title={editingListenerIndex !== null ? t('Edit listener') : t('Add listener')}
-        isOpen={isModalOpen}
-        onClose={handleModalClose}
-      >
-        <Wizard onClose={handleModalClose} onSave={handleListenerSave} height="400px">
+      <Modal variant="large" isOpen={isModalOpen} onEscapePress={handleModalClose}>
+        <Wizard
+          header={
+            <WizardHeader
+              title={editingListenerIndex !== null ? t('Edit listener') : t('Add listener')}
+              closeButtonAriaLabel={t('Close wizard')}
+              onClose={handleModalClose}
+            />
+          }
+          onSave={handleListenerSave}
+          height="700px"
+        >
           {wizardSteps.map((step, index) => (
             <WizardStep
               key={index}
               name={step.name}
               id={`step-${index}`}
+              isDisabled={step.isDisabled}
               footer={{
                 nextButtonText:
                   index === wizardSteps.length - 1
@@ -1562,6 +1611,7 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
                       ? t('Update')
                       : t('Add')
                     : step.nextButtonText,
+                isNextDisabled: step.isNextDisabled,
               }}
             >
               {step.form}
