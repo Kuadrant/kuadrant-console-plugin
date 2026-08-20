@@ -9,6 +9,9 @@
 ## Installation
 
 ### Install oinc
+
+> **Note:** Replace `oinc-linux-amd64` with your platform (e.g., `oinc-darwin-arm64` for Apple Silicon).
+
 ```bash
 OINC_VERSION="v0.4.3"
 curl -fL -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
@@ -111,10 +114,11 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
   | Tag | When it runs | What to tag |
   |---|---|---|
   | `@smoke` | Every PR (via suite router) | Critical-path flows that are fast and reliable |
-  | `@nightly` | Daily at 02:00 UTC (full suite) | Edge cases, validation, slower flows, duplicate coverage, UI |
+  | `@nightly` | Daily at 02:00 UTC (full suite, all tags) | Edge cases, validation, slower flows, duplicate coverage, UI |
 
   **Rules:**
-  - Every test must have exactly one tag — untagged tests are skipped during smoke runs
+  - Every test must have exactly one tag — untagged tests are skipped during smoke runs but run in nightly
+  - Directly-edited test files (in `test_specs`) run with all tags, including untagged tests
   - Default to `@nightly` when adding a new test; only use `@smoke` for critical, reliable flows
 
 ## CI Pipeline
@@ -165,7 +169,7 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
 ### Paths Filter (build, lint, i18n)
 
   `build.yaml`, `lint.yaml`, and `i18n.yaml` each have a `changes` job that skips
-  the check for **docs-only PRs.** If every changed file matches a docs-only pattern
+  the check for **non-code PRs.** If every changed file matches a skip pattern
   (`.md`, `docs/`, `.github/`, `charts/`, `config/`, `kuadrant-dev-setup/`,
   `.devcontainer/`, `LICENSE`), the build/lint/i18n jobs are skipped entirely.
   Non-PR events (`merge_group`, `workflow_dispatch`) always run.
@@ -232,10 +236,10 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
 
   Prevents new spec files from silently dodging the suite router.
 
-### Adding new components
+### Adding new tests
 
   - Tag the test with exactly one of `@smoke` or `@nightly` (default to `@nightly`)
-  - Add an `if` block in `build/suite-router.sh` mapping the relevant component
+  - Add or update an `if` block in `build/suite-router.sh` mapping the relevant component
   - Run `yarn check:spec-map` to verify that the spec is referenced by `suite-router.sh`
   - Verify separately that the new component path matches the intended router mapping
   - Add the file to the [Test Files](#test-files) list above
