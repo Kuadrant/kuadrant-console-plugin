@@ -10,19 +10,23 @@ import {
 } from '@patternfly/react-core';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router';
-import { RESOURCES } from '../../utils/resources';
+import { useNavigate } from 'react-router-dom-v5-compat';
+import { RESOURCES, ResourceKind } from '../../utils/resources';
+
+export type RouteKind = 'HTTPRoute' | 'GRPCRoute';
 
 interface HTTPRouteSelectProps {
   selectedRoute: { name: string; namespace: string };
   onChange: (route: { name: string; namespace: string }) => void;
   isDisabled?: boolean;
+  kind?: RouteKind;
 }
 
 const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
   selectedRoute,
   onChange,
   isDisabled = false,
+  kind = 'HTTPRoute',
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const navigate = useNavigate();
@@ -31,7 +35,8 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
   const [activeNamespace] = useActiveNamespace();
   const toggleRef = React.useRef<HTMLButtonElement>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
-  const gvk = RESOURCES.HTTPRoute.gvk;
+  const resourceKey = kind as ResourceKind;
+  const gvk = RESOURCES[resourceKey].gvk;
 
   // Map #ALL_NS# sentinel to undefined for cluster-wide watch
   const resolvedNamespace = activeNamespace === '#ALL_NS#' ? undefined : activeNamespace;
@@ -75,10 +80,17 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
     setIsOpen(false);
   };
 
+  const selectId = `${kind.toLowerCase()}-select`;
+  const selectLabel = kind === 'GRPCRoute' ? t('Select a GRPCRoute') : t('Select an HTTPRoute');
+  const emptyLabel =
+    kind === 'GRPCRoute' ? t('No GRPCRoutes available') : t('No HTTPRoutes available');
+  const createNewLabel =
+    kind === 'GRPCRoute' ? t('Create new GRPCRoute') : t('Create new HTTPRoute');
+
   const selectedLabel =
     selectedRoute.name && selectedRoute.namespace
       ? `${selectedRoute.namespace}/${selectedRoute.name}`
-      : t('Select an HTTPRoute');
+      : selectLabel;
 
   return (
     <MenuContainer
@@ -89,7 +101,7 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
       toggle={
         <MenuToggle
           ref={toggleRef}
-          id="httproute-select"
+          id={selectId}
           onClick={handleToggle}
           isExpanded={isOpen}
           isDisabled={isDisabled}
@@ -107,7 +119,7 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
           <MenuContent>
             <MenuList>
               {routes.length === 0 ? (
-                <MenuItem isDisabled>{t('No HTTPRoutes available')}</MenuItem>
+                <MenuItem isDisabled>{emptyLabel}</MenuItem>
               ) : (
                 routes.map((route) => (
                   <MenuItem
@@ -125,13 +137,13 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
                 onClick={() => {
                   if (!resolvedNamespace) return;
                   navigate(
-                    `/k8s/ns/${resolvedNamespace}/gateway.networking.k8s.io~v1~HTTPRoute/~new`,
+                    `/k8s/ns/${resolvedNamespace}/${gvk.group}~${gvk.version}~${gvk.kind}/~new`,
                   );
                   setIsOpen(false);
                 }}
                 description={!resolvedNamespace ? t('Select a namespace first') : undefined}
               >
-                {t('Create new HTTPRoute')}
+                {createNewLabel}
               </MenuItem>
             </MenuList>
           </MenuContent>

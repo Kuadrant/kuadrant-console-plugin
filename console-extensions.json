@@ -482,6 +482,17 @@
     "type": "console.action/resource-provider",
     "properties": {
       "model": {
+        "group": "kuadrant.io",
+        "version": "v1",
+        "kind": "RateLimitPolicy"
+      },
+      "provider": { "$codeRef": "useRateLimitPolicyActions" }
+    }
+  },
+  {
+    "type": "console.action/resource-provider",
+    "properties": {
+      "model": {
         "group": "devportal.kuadrant.io",
         "version": "v1alpha1",
         "kind": "APIProduct"

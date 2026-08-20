@@ -26,6 +26,7 @@ import {
 import { useNavigate, useLocation } from 'react-router';
 import { GatewayResource } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
+import HTTPRouteSelect, { RouteKind } from './httproute/HTTPRouteSelect';
 import LimitSelect from './ratelimitpolicy/LimitSelect';
 import { LimitConfig, TargetRef } from './ratelimitpolicy/types';
 import * as yaml from 'js-yaml';
@@ -33,17 +34,21 @@ import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
 import { resourceGVKMapping } from '../utils/resources';
 
+const GATEWAY_API_GROUP = 'gateway.networking.k8s.io';
+
 const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>(
-    {} as GatewayResource,
-  );
   const [limits, setLimits] = React.useState<Record<string, LimitConfig>>({});
+  // targetRef is the single source of truth for the selected target resource
+  // (group/kind/name). The target type radio and resource selectors all derive
+  // from and update this state atomically — name and kind are never set
+  // through separate setters, which prevents saving a Gateway name under an
+  // HTTPRoute/GRPCRoute kind (or vice versa).
   const [targetRef, setTargetRef] = React.useState<TargetRef>({
-    group: 'gateway.networking.k8s.io',
+    group: GATEWAY_API_GROUP,
     kind: 'Gateway',
     name: '',
   });
@@ -69,7 +74,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
         targetRef: {
           group: targetRef.group,
           kind: targetRef.kind,
-          name: selectedGateway.metadata?.name ?? '',
+          name: targetRef.name,
         },
         limits,
       },
@@ -126,16 +131,18 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
         setFormDisabled(true);
         setCreate(false);
         setPolicyName(rlPolicyUpdate.metadata?.name || '');
-        setSelectedGateway({
-          metadata: {
-            name: rlPolicyUpdate.spec?.targetRef?.name || '',
-            namespace: rlPolicyUpdate.metadata?.namespace || '',
-          },
-        } as GatewayResource);
+        // Set targetRef atomically from the loaded resource so kind and name
+        // always stay in sync. The target type radio derives from
+        // targetRef.kind, so it follows automatically. Fall back to the policy
+        // namespace when the targetRef doesn't carry one (matches the resource
+        // selector value format used by the form).
+        const loadedTargetRef = rlPolicyUpdate.spec?.targetRef;
+        const fallbackNamespace = loadedTargetRef?.namespace || rlPolicyUpdate.metadata?.namespace;
         setTargetRef({
-          group: rlPolicyUpdate.spec?.targetRef?.group || 'gateway.networking.k8s.io',
-          kind: (rlPolicyUpdate.spec?.targetRef?.kind as TargetRef['kind']) || 'Gateway',
-          name: rlPolicyUpdate.spec?.targetRef?.name || '',
+          group: loadedTargetRef?.group || GATEWAY_API_GROUP,
+          kind: (loadedTargetRef?.kind as TargetRef['kind']) || 'Gateway',
+          name: loadedTargetRef?.name || '',
+          ...(fallbackNamespace ? { namespace: fallbackNamespace } : {}),
         });
         setLimits(rlPolicyUpdate.spec?.limits || {});
       }
@@ -149,16 +156,14 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedYaml = yaml.load(yamlInputStr) as Record<string, any>;
       setPolicyName(parsedYaml.metadata?.name || '');
-      setSelectedGateway({
-        metadata: {
-          name: parsedYaml.spec?.targetRef?.name || '',
-          namespace: parsedYaml.metadata?.namespace || '',
-        },
-      } as GatewayResource);
+      // Set targetRef atomically from parsed YAML so kind/name stay in sync.
       setTargetRef({
-        group: parsedYaml.spec?.targetRef?.group || 'gateway.networking.k8s.io',
+        group: parsedYaml.spec?.targetRef?.group || GATEWAY_API_GROUP,
         kind: (parsedYaml.spec?.targetRef?.kind as TargetRef['kind']) || 'Gateway',
         name: parsedYaml.spec?.targetRef?.name || '',
+        ...(parsedYaml.spec?.targetRef?.namespace
+          ? { namespace: parsedYaml.spec?.targetRef?.namespace }
+          : {}),
       });
       setLimits(parsedYaml.spec?.limits || {});
     } catch (e) {
@@ -168,25 +173,62 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
 
   React.useEffect(() => {
     setYamlInput(rateLimitPolicy);
-  }, [
-    policyName,
-    selectedNamespace,
-    selectedGateway,
-    limits,
-    targetRef,
-    creationTimestamp,
-    resourceVersion,
-  ]);
+  }, [policyName, selectedNamespace, targetRef, limits, creationTimestamp, resourceVersion]);
 
   const handlePolicyChange = (_event, policy: string) => {
     setPolicyName(policy);
+  };
+
+  const handleTargetTypeChange = (kind: TargetRef['kind']) => {
+    // Reset the selected resource and update kind/group atomically so a
+    // stale name from a different kind can never be persisted.
+    setTargetRef({ group: GATEWAY_API_GROUP, kind, name: '' });
+  };
+
+  const handleGatewayChange = (gw: GatewayResource) => {
+    setTargetRef({
+      group: GATEWAY_API_GROUP,
+      kind: 'Gateway',
+      name: gw.metadata?.name ?? '',
+      ...(gw.metadata?.namespace ? { namespace: gw.metadata.namespace } : {}),
+    });
+  };
+
+  const handleRouteChange = (kind: RouteKind) => (route: { name: string; namespace: string }) => {
+    setTargetRef({
+      group: GATEWAY_API_GROUP,
+      kind,
+      name: route.name ?? '',
+      ...(route.namespace ? { namespace: route.namespace } : {}),
+    });
   };
 
   const handleCancelResource = () => {
     handleCancel(navigate);
   };
 
-  const isFormValid = !!(policyName && (selectedGateway.metadata?.name ?? ''));
+  // Derive the prop shapes the selectors expect from the canonical targetRef
+  // state, so they can never drift independently.
+  const selectedGateway: GatewayResource = React.useMemo(
+    () =>
+      ({
+        metadata: {
+          name: targetRef.kind === 'Gateway' ? targetRef.name : '',
+          namespace: targetRef.kind === 'Gateway' ? targetRef.namespace ?? '' : '',
+        },
+      } as GatewayResource),
+    [targetRef],
+  );
+
+  const selectedRoute = React.useMemo(
+    () => ({
+      name: targetRef.kind === 'Gateway' ? '' : targetRef.name,
+      namespace: targetRef.kind === 'Gateway' ? '' : targetRef.namespace ?? '',
+    }),
+    [targetRef],
+  );
+
+  const isFormValid = !!(policyName && targetRef.name);
 
   return (
     <>
@@ -225,6 +267,11 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
             isChecked={createView === 'yaml'}
             onChange={() => setCreateView('yaml')}
           />
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem>{t('Use YAML view to apply advanced features')}</HelperTextItem>
+            </HelperText>
+          </FormHelperText>
         </FormGroup>
       </PageSection>
       {createView === 'form' ? (
@@ -247,7 +294,51 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
                 </HelperText>
               </FormHelperText>
             </FormGroup>
-            <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
+            <FormGroup
+              className="kuadrant-target-type-toggle"
+              role="radiogroup"
+              isInline
+              fieldId="target-type-radio-group"
+              label={t('Target Type')}
+            >
+              <Radio
+                name="target-type-radio"
+                label={t('Gateway')}
+                id="target-type-radio-gateway"
+                isChecked={targetRef.kind === 'Gateway'}
+                onChange={() => handleTargetTypeChange('Gateway')}
+              />
+              <Radio
+                name="target-type-radio"
+                label={t('HTTPRoute')}
+                id="target-type-radio-httproute"
+                isChecked={targetRef.kind === 'HTTPRoute'}
+                onChange={() => handleTargetTypeChange('HTTPRoute')}
+              />
+              <Radio
+                name="target-type-radio"
+                label={t('GRPCRoute')}
+                id="target-type-radio-grpcroute"
+                isChecked={targetRef.kind === 'GRPCRoute'}
+                onChange={() => handleTargetTypeChange('GRPCRoute')}
+              />
+            </FormGroup>
+            {targetRef.kind === 'Gateway' && (
+              <GatewaySelect selectedGateway={selectedGateway} onChange={handleGatewayChange} />
+            )}
+            {targetRef.kind === 'HTTPRoute' && (
+              <HTTPRouteSelect
+                selectedRoute={selectedRoute}
+                onChange={handleRouteChange('HTTPRoute')}
+              />
+            )}
+            {targetRef.kind === 'GRPCRoute' && (
+              <HTTPRouteSelect
+                kind="GRPCRoute"
+                selectedRoute={selectedRoute}
+                onChange={handleRouteChange('GRPCRoute')}
+              />
+            )}
             <LimitSelect limits={limits} setLimits={setLimits} />
             <ActionGroup className="pf-u-mt-0">
               <KuadrantCreateUpdate
