@@ -24,10 +24,10 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
   const [yamlError, setYamlError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    if (!formState.targetHTTPRouteName && routeName) {
+    if (routeName && formState.targetHTTPRouteName !== routeName) {
       onChange({ ...formState, targetHTTPRouteName: routeName });
     }
-  }, [routeName]); // eslint-disable-line -- only sync on initial population; re-running on formState/onChange would overwrite user edits
+  }, [routeName]); // eslint-disable-line -- only resync when routeName changes; re-running on formState/onChange would fight typing in other fields
 
   const handleChange = (field: keyof MCPServerFormState, value: string) => {
     onChange({ ...formState, [field]: value });

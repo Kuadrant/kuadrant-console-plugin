@@ -43,10 +43,14 @@ const MCPServerRegistrationFormFields: React.FC<MCPServerRegistrationFormFieldsP
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
 
-  const [namespaces] = useK8sWatchResource<K8sResourceCommon[]>({
-    groupVersionKind: { group: '', version: 'v1', kind: 'Namespace' },
-    isList: true,
-  });
+  const [namespaces] = useK8sWatchResource<K8sResourceCommon[]>(
+    showNamespaceField
+      ? {
+          groupVersionKind: { group: '', version: 'v1', kind: 'Namespace' },
+          isList: true,
+        }
+      : null,
+  );
 
   const namespaceOptions = React.useMemo(() => {
     if (!namespaces) return [];
