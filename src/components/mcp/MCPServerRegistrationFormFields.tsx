@@ -12,6 +12,7 @@ import {
   Popover,
 } from '@patternfly/react-core';
 import { HelpIcon } from '@patternfly/react-icons';
+import { K8sResourceCommon, useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import { MCPServerFormState } from './types';
 
@@ -25,6 +26,10 @@ interface MCPServerRegistrationFormFieldsProps {
   httpRouteNames?: string[];
   // When true, the name and namespace inputs are disabled (edit mode — identity is immutable).
   disableIdentity?: boolean;
+  // Whether to render the Namespace field. The wizard step keeps it (namespace isn't
+  // otherwise selectable there); the standalone page hides it and uses the console's
+  // namespace picker instead.
+  showNamespaceField?: boolean;
 }
 
 // The MCPServerRegistration form body, shared between the server registration wizard
@@ -34,8 +39,22 @@ const MCPServerRegistrationFormFields: React.FC<MCPServerRegistrationFormFieldsP
   onChange,
   httpRouteNames = [],
   disableIdentity = false,
+  showNamespaceField = true,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
+
+  const [namespaces] = useK8sWatchResource<K8sResourceCommon[]>({
+    groupVersionKind: { group: '', version: 'v1', kind: 'Namespace' },
+    isList: true,
+  });
+
+  const namespaceOptions = React.useMemo(() => {
+    if (!namespaces) return [];
+    return namespaces
+      .map((ns) => ns.metadata?.name || '')
+      .filter(Boolean)
+      .sort();
+  }, [namespaces]);
 
   return (
     <Form>
@@ -72,6 +91,50 @@ const MCPServerRegistrationFormFields: React.FC<MCPServerRegistrationFormFieldsP
             </HelperText>
           </FormHelperText>
         </FormGroup>
+
+        {showNamespaceField && (
+          <FormGroup
+            label={t('Namespace')}
+            isRequired
+            fieldId="server-namespace"
+            labelHelp={
+              <Popover
+                bodyContent={t(
+                  'The Kubernetes namespace where the gateway infrastructure will be deployed.',
+                )}
+              >
+                <button
+                  type="button"
+                  aria-label={t('More info for namespace')}
+                  className="pf-v6-c-form__group-label-help"
+                >
+                  <HelpIcon />
+                </button>
+              </Popover>
+            }
+          >
+            <FormSelect
+              id="server-namespace"
+              value={formState.namespace}
+              onChange={(_e, val) => onChange('namespace', val)}
+              isDisabled={disableIdentity}
+              aria-label={t('Select namespace')}
+              data-test="mcp-registration-namespace"
+            >
+              <FormSelectOption value="" label={t('None selected')} />
+              {namespaceOptions.map((ns) => (
+                <FormSelectOption key={ns} value={ns} label={ns} />
+              ))}
+            </FormSelect>
+            <FormHelperText>
+              <HelperText>
+                <HelperTextItem>
+                  {t('The Kubernetes namespace where the gateway infrastructure will be deployed.')}
+                </HelperTextItem>
+              </HelperText>
+            </FormHelperText>
+          </FormGroup>
+        )}
       </Grid>
 
       <Grid hasGutter md={6}>
@@ -98,7 +161,7 @@ const MCPServerRegistrationFormFields: React.FC<MCPServerRegistrationFormFieldsP
               aria-label={t('Select target HTTPRoute')}
               data-test="mcp-registration-httproute"
             >
-              <FormSelectOption value="" label={t('Select...')} />
+              <FormSelectOption value="" label={t('Select...')} isPlaceholder />
               {httpRouteNames.map((name) => (
                 <FormSelectOption key={name} value={name} label={name} />
               ))}

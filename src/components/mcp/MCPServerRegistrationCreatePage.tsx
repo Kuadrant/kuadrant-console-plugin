@@ -218,6 +218,7 @@ const MCPServerRegistrationCreatePage: React.FC = () => {
             onChange={handleChange}
             httpRouteNames={httpRouteNames}
             disableIdentity={isEdit}
+            showNamespaceField={false}
           />
           <ActionGroup>
             <KuadrantCreateUpdate

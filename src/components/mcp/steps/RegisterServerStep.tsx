@@ -1,39 +1,17 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Alert, Tabs, Tab, TabTitleText } from '@patternfly/react-core';
-import { K8sResourceCommon, ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
+import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
 import { MCPServerFormState } from '../types';
-import { RESOURCES } from '../../../utils/resources';
 import MCPServerRegistrationFormFields from '../MCPServerRegistrationFormFields';
+import { buildMCPServerRegistration } from '../mcpResourceUtils';
 
 interface RegisterServerStepProps {
   formState: MCPServerFormState;
   onChange: (state: MCPServerFormState) => void;
   routeName?: string;
 }
-
-export const buildMCPServerYAML = (
-  state: MCPServerFormState,
-  routeName?: string,
-): K8sResourceCommon => {
-  return {
-    apiVersion: `${RESOURCES.MCPServerRegistration.gvk.group}/${RESOURCES.MCPServerRegistration.gvk.version}`,
-    kind: RESOURCES.MCPServerRegistration.gvk.kind,
-    metadata: {
-      name: state.registrationName || '',
-      namespace: state.namespace || '',
-    },
-    spec: {
-      targetRef: {
-        group: 'gateway.networking.k8s.io',
-        kind: 'HTTPRoute',
-        name: state.targetHTTPRouteName || routeName || '',
-      },
-      prefix: state.toolPrefix || '',
-    },
-  } as K8sResourceCommon;
-};
 
 const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
   formState,
@@ -109,7 +87,9 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
             );
           }
         } else if (key === 'yaml' && activeTab === 'form') {
-          setYamlContent(buildMCPServerYAML(formState, routeName));
+          setYamlContent(
+            buildMCPServerRegistration(formState, formState.namespace, null, routeName),
+          );
           setYamlError(null);
         }
         setActiveTab(key as string);

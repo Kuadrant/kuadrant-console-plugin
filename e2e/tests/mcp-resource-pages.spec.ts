@@ -435,6 +435,9 @@ spec:
           },
         );
 
+        // Form is the default view; switch to the YAML tab to inspect the editor.
+        await page.getByRole('tab', { name: 'YAML' }).click();
+
         // The editor must contain the real resource, not the blank template.
         await expectEditorContains(page, regName);
         await expectEditorContains(page, 'e2e_real_prefix');

@@ -8,6 +8,7 @@ import {
   MCPServerRegistration,
   MCPServerFormState,
 } from './types';
+import { RESOURCES } from '../../utils/resources';
 
 // Build an MCPGatewayExtension resource from wizard/page form state.
 // When originalMetadata is provided (edit mode) it is preserved so that
@@ -97,13 +98,16 @@ export const isMCPGatewayExtensionValid = (formState: MCPWizardFormState): boole
 // Build an MCPServerRegistration resource from wizard/page form state.
 // When originalMetadata is provided (edit mode) it is preserved so that
 // k8sUpdate keeps the resourceVersion and other server-managed fields.
+// routeNameFallback covers the wizard's YAML preview, where the route chosen in an
+// earlier step may not yet be synced into formState.targetHTTPRouteName.
 export const buildMCPServerRegistration = (
   formState: MCPServerFormState,
   namespace: string,
   originalMetadata?: MCPServerRegistration['metadata'] | null,
+  routeNameFallback?: string,
 ): MCPServerRegistration => ({
-  apiVersion: 'mcp.kuadrant.io/v1',
-  kind: 'MCPServerRegistration',
+  apiVersion: `${RESOURCES.MCPServerRegistration.gvk.group}/${RESOURCES.MCPServerRegistration.gvk.version}`,
+  kind: RESOURCES.MCPServerRegistration.gvk.kind,
   metadata: originalMetadata
     ? { ...originalMetadata, name: formState.registrationName }
     : { name: formState.registrationName, namespace: formState.namespace || namespace },
@@ -111,7 +115,7 @@ export const buildMCPServerRegistration = (
     targetRef: {
       group: 'gateway.networking.k8s.io',
       kind: 'HTTPRoute',
-      name: formState.targetHTTPRouteName,
+      name: formState.targetHTTPRouteName || routeNameFallback || '',
     },
     prefix: formState.toolPrefix,
   },
