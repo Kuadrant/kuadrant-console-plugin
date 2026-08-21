@@ -77,11 +77,14 @@ describe('MCPExtensionStep', () => {
     expect(defaultProps.updateFormState).toHaveBeenCalledWith({ extensionNamespace: 'other-ns' });
   });
 
-  it('calls updateFormState when target gateway changes', () => {
+  it('calls updateFormState and clears the listener when target gateway changes', () => {
     render(<MCPExtensionStep {...defaultProps} />);
     const gwInput = screen.getByTestId('mcp-target-gateway');
     fireEvent.change(gwInput, { target: { value: 'my-gw' } });
-    expect(defaultProps.updateFormState).toHaveBeenCalledWith({ targetGateway: 'my-gw' });
+    expect(defaultProps.updateFormState).toHaveBeenCalledWith({
+      targetGateway: 'my-gw',
+      sectionName: '',
+    });
   });
 
   it('shows text input for listener name when no gateway is selected', () => {

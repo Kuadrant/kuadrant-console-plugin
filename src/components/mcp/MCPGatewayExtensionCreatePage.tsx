@@ -72,11 +72,18 @@ const MCPGatewayExtensionCreatePage: React.FC = () => {
   }, []);
 
   // The Namespace field is hidden on this standalone page (namespace comes from the
-  // console's namespace picker instead), so keep formState.extensionNamespace in sync
-  // with it rather than letting it go stale from the initial mount value.
+  // console's namespace picker instead), so keep formState.extensionNamespace and
+  // selectedGatewayNamespace in sync with it rather than letting them go stale from
+  // the initial mount value. Clear the previously selected gateway/listener too,
+  // since they belonged to the old namespace's Gateway list.
   React.useEffect(() => {
     if (!isEditRoute) {
-      updateFormState({ extensionNamespace: selectedNamespace });
+      updateFormState({
+        extensionNamespace: selectedNamespace,
+        selectedGatewayNamespace: selectedNamespace,
+        targetGateway: '',
+        sectionName: '',
+      });
     }
   }, [isEditRoute, selectedNamespace, updateFormState]);
 
@@ -194,7 +201,26 @@ const MCPGatewayExtensionCreatePage: React.FC = () => {
         </Tabs>
       </PageSection>
 
-      {createView === 'form' ? (
+      {isEdit && existingError ? (
+        // Watch failed: show only the error, on either tab, never uninitialised
+        // form fields or an editor mounted on an empty resource.
+        <PageSection hasBodyWrapper={false}>
+          <Alert
+            variant={AlertVariant.danger}
+            title={t('Error loading MCPGatewayExtension')}
+            isInline
+            data-test="mcp-extension-load-error"
+          >
+            {existingError instanceof Error ? existingError.message : String(existingError)}
+          </Alert>
+        </PageSection>
+      ) : isEdit && !existingLoaded ? (
+        // Gate both tabs on the watch resolving so neither the Form fields nor the
+        // YAML editor render from the blank initial form state.
+        <div className="kuadrant-mcp-standalone-yaml-editor" style={{ minHeight: '400px' }}>
+          {t('Loading...')}
+        </div>
+      ) : createView === 'form' ? (
         <PageSection hasBodyWrapper={false}>
           {/* MCPExtensionFormFields renders its own <Form> element, so we must not
               wrap it in another <Form> here (nested <form> is invalid HTML). The
@@ -223,22 +249,6 @@ const MCPGatewayExtensionCreatePage: React.FC = () => {
             </Button>
           </ActionGroup>
         </PageSection>
-      ) : isEdit && existingError ? (
-        // Watch failed: show only the error, never mount the editor on an empty resource.
-        <PageSection hasBodyWrapper={false}>
-          <Alert
-            variant={AlertVariant.danger}
-            title={t('Error loading MCPGatewayExtension')}
-            isInline
-            data-test="mcp-extension-load-error"
-          >
-            {existingError instanceof Error ? existingError.message : String(existingError)}
-          </Alert>
-        </PageSection>
-      ) : isEdit && !existingLoaded ? (
-        <div className="kuadrant-mcp-standalone-yaml-editor" style={{ minHeight: '400px' }}>
-          {t('Loading YAML editor...')}
-        </div>
       ) : (
         // On the edit path, only render the editor once the watch resolves so it
         // snapshots the real resource rather than the blank template (the editor

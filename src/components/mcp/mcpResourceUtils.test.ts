@@ -207,6 +207,41 @@ describe('isMCPGatewayExtensionValid', () => {
   ])('returns false when %s is missing', (_label, overrides) => {
     expect(isMCPGatewayExtensionValid(baseFormState(overrides))).toBe(false);
   });
+
+  it('returns false when session storage is enabled without a secret name', () => {
+    expect(
+      isMCPGatewayExtensionValid(
+        baseFormState({ sessionStorageEnabled: true, sessionStoreSecretName: '' }),
+      ),
+    ).toBe(false);
+  });
+
+  it('returns true when session storage is enabled with a secret name', () => {
+    expect(
+      isMCPGatewayExtensionValid(
+        baseFormState({ sessionStorageEnabled: true, sessionStoreSecretName: 'redis-secret' }),
+      ),
+    ).toBe(true);
+  });
+
+  it('returns false when OAuth is enabled without any authorization servers', () => {
+    expect(
+      isMCPGatewayExtensionValid(
+        baseFormState({ oauthEnabled: true, oauthAuthorizationServers: '' }),
+      ),
+    ).toBe(false);
+  });
+
+  it('returns true when OAuth is enabled with an authorization server', () => {
+    expect(
+      isMCPGatewayExtensionValid(
+        baseFormState({
+          oauthEnabled: true,
+          oauthAuthorizationServers: 'https://auth.example.com',
+        }),
+      ),
+    ).toBe(true);
+  });
 });
 
 describe('buildMCPServerRegistration', () => {

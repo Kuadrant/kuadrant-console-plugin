@@ -104,7 +104,7 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
           <FormSelect
             id="target-gateway"
             value={formState.targetGateway}
-            onChange={(_event, value) => updateFormState({ targetGateway: value })}
+            onChange={(_event, value) => updateFormState({ targetGateway: value, sectionName: '' })}
             aria-label={t('Select a gateway')}
             data-test="mcp-target-gateway-select"
           >
@@ -118,7 +118,7 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
             type="text"
             id="target-gateway"
             value={formState.targetGateway}
-            onChange={(_event, value) => updateFormState({ targetGateway: value })}
+            onChange={(_event, value) => updateFormState({ targetGateway: value, sectionName: '' })}
             isRequired
             placeholder={t('Enter target gateway name')}
             data-test="mcp-target-gateway"

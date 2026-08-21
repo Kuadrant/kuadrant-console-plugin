@@ -90,7 +90,9 @@ export const mcpExtensionToFormState = (
 export const isMCPGatewayExtensionValid = (formState: MCPWizardFormState): boolean =>
   !!formState.extensionName.trim() &&
   !!formState.targetGateway.trim() &&
-  !!formState.sectionName.trim();
+  !!formState.sectionName.trim() &&
+  (!formState.sessionStorageEnabled || !!formState.sessionStoreSecretName.trim()) &&
+  (!formState.oauthEnabled || !!formState.oauthAuthorizationServers.trim());
 
 // Build an MCPServerRegistration resource from wizard/page form state.
 // When originalMetadata is provided (edit mode) it is preserved so that
