@@ -10,6 +10,9 @@ import {
   HelperTextItem,
   Form,
   Radio,
+  Tabs,
+  Tab,
+  TabTitleText,
   Button,
   ActionGroup,
 } from '@patternfly/react-core';
@@ -246,123 +249,104 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
             {t('RateLimitPolicy configures rate limiting for your gateway')}
           </p>
         </div>
-        <FormGroup
-          className="kuadrant-editor-toggle"
-          role="radiogroup"
-          isInline
-          fieldId="create-type-radio-group"
-          label={t('Configure via')}
-        >
-          <Radio
-            name="create-type-radio"
-            label={t('Form View')}
-            id="create-type-radio-form"
-            isChecked={createView === 'form'}
-            onChange={() => setCreateView('form')}
-          />
-          <Radio
-            name="create-type-radio"
-            label={t('YAML View')}
-            id="create-type-radio-yaml"
-            isChecked={createView === 'yaml'}
-            onChange={() => setCreateView('yaml')}
-          />
-          <FormHelperText>
-            <HelperText>
-              <HelperTextItem>{t('Use YAML view to apply advanced features')}</HelperTextItem>
-            </HelperText>
-          </FormHelperText>
-        </FormGroup>
+        <p className="help-block">{t('Use YAML view to apply advanced features')}</p>
+        <Tabs activeKey={createView} onSelect={(_e, key) => setCreateView(key as 'form' | 'yaml')}>
+          <Tab eventKey="form" title={<TabTitleText>{t('Form')}</TabTitleText>}>
+            <PageSection hasBodyWrapper={false}>
+              <Form className="co-m-pane__form">
+                <FormGroup label={t('Policy name')} isRequired fieldId="policy-name">
+                  <TextInput
+                    isRequired
+                    type="text"
+                    id="policy-name"
+                    name="policy-name"
+                    value={policyName}
+                    onChange={handlePolicyChange}
+                    isDisabled={formDisabled}
+                    placeholder={t('Policy name')}
+                  />
+                  <FormHelperText>
+                    <HelperText>
+                      <HelperTextItem>{t('Unique name of the RateLimit Policy')}</HelperTextItem>
+                    </HelperText>
+                  </FormHelperText>
+                </FormGroup>
+                <FormGroup
+                  className="kuadrant-target-type-toggle"
+                  role="radiogroup"
+                  isInline
+                  fieldId="target-type-radio-group"
+                  label={t('Target Type')}
+                >
+                  <Radio
+                    name="target-type-radio"
+                    label={t('Gateway')}
+                    id="target-type-radio-gateway"
+                    isChecked={targetRef.kind === 'Gateway'}
+                    onChange={() => handleTargetTypeChange('Gateway')}
+                  />
+                  <Radio
+                    name="target-type-radio"
+                    label={t('HTTPRoute')}
+                    id="target-type-radio-httproute"
+                    isChecked={targetRef.kind === 'HTTPRoute'}
+                    onChange={() => handleTargetTypeChange('HTTPRoute')}
+                  />
+                  <Radio
+                    name="target-type-radio"
+                    label={t('GRPCRoute')}
+                    id="target-type-radio-grpcroute"
+                    isChecked={targetRef.kind === 'GRPCRoute'}
+                    onChange={() => handleTargetTypeChange('GRPCRoute')}
+                  />
+                </FormGroup>
+                {targetRef.kind === 'Gateway' && (
+                  <GatewaySelect selectedGateway={selectedGateway} onChange={handleGatewayChange} />
+                )}
+                {targetRef.kind === 'HTTPRoute' && (
+                  <HTTPRouteSelect
+                    selectedRoute={selectedRoute}
+                    onChange={handleRouteChange('HTTPRoute')}
+                  />
+                )}
+                {targetRef.kind === 'GRPCRoute' && (
+                  <HTTPRouteSelect
+                    kind="GRPCRoute"
+                    selectedRoute={selectedRoute}
+                    onChange={handleRouteChange('GRPCRoute')}
+                  />
+                )}
+                <LimitSelect limits={limits} setLimits={setLimits} />
+                <ActionGroup className="pf-u-mt-0">
+                  <KuadrantCreateUpdate
+                    model={rateLimitPolicyModel}
+                    resource={rateLimitPolicy}
+                    policyType="ratelimit"
+                    navigate={navigate}
+                    validation={isFormValid}
+                  />
+                  <Button variant="link" onClick={handleCancelResource}>
+                    {t('Cancel')}
+                  </Button>
+                </ActionGroup>
+              </Form>
+            </PageSection>
+          </Tab>
+          <Tab eventKey="yaml" title={<TabTitleText>{t('YAML')}</TabTitleText>}>
+            <div className="kuadrant-ratelimitpolicy-yaml-editor">
+              {createView === 'yaml' && (
+                <React.Suspense fallback={<div>{t('Loading...')}</div>}>
+                  <ResourceYAMLEditor
+                    initialResource={yamlInput}
+                    create={create}
+                    onChange={handleYAMLChange}
+                  />
+                </React.Suspense>
+              )}
+            </div>
+          </Tab>
+        </Tabs>
       </PageSection>
-      {createView === 'form' ? (
-        <PageSection hasBodyWrapper={false}>
-          <Form className="co-m-pane__form">
-            <FormGroup label={t('Policy name')} isRequired fieldId="policy-name">
-              <TextInput
-                isRequired
-                type="text"
-                id="policy-name"
-                name="policy-name"
-                value={policyName}
-                onChange={handlePolicyChange}
-                isDisabled={formDisabled}
-                placeholder={t('Policy name')}
-              />
-              <FormHelperText>
-                <HelperText>
-                  <HelperTextItem>{t('Unique name of the RateLimit Policy')}</HelperTextItem>
-                </HelperText>
-              </FormHelperText>
-            </FormGroup>
-            <FormGroup
-              className="kuadrant-target-type-toggle"
-              role="radiogroup"
-              isInline
-              fieldId="target-type-radio-group"
-              label={t('Target Type')}
-            >
-              <Radio
-                name="target-type-radio"
-                label={t('Gateway')}
-                id="target-type-radio-gateway"
-                isChecked={targetRef.kind === 'Gateway'}
-                onChange={() => handleTargetTypeChange('Gateway')}
-              />
-              <Radio
-                name="target-type-radio"
-                label={t('HTTPRoute')}
-                id="target-type-radio-httproute"
-                isChecked={targetRef.kind === 'HTTPRoute'}
-                onChange={() => handleTargetTypeChange('HTTPRoute')}
-              />
-              <Radio
-                name="target-type-radio"
-                label={t('GRPCRoute')}
-                id="target-type-radio-grpcroute"
-                isChecked={targetRef.kind === 'GRPCRoute'}
-                onChange={() => handleTargetTypeChange('GRPCRoute')}
-              />
-            </FormGroup>
-            {targetRef.kind === 'Gateway' && (
-              <GatewaySelect selectedGateway={selectedGateway} onChange={handleGatewayChange} />
-            )}
-            {targetRef.kind === 'HTTPRoute' && (
-              <HTTPRouteSelect
-                selectedRoute={selectedRoute}
-                onChange={handleRouteChange('HTTPRoute')}
-              />
-            )}
-            {targetRef.kind === 'GRPCRoute' && (
-              <HTTPRouteSelect
-                kind="GRPCRoute"
-                selectedRoute={selectedRoute}
-                onChange={handleRouteChange('GRPCRoute')}
-              />
-            )}
-            <LimitSelect limits={limits} setLimits={setLimits} />
-            <ActionGroup className="pf-u-mt-0">
-              <KuadrantCreateUpdate
-                model={rateLimitPolicyModel}
-                resource={rateLimitPolicy}
-                policyType="ratelimit"
-                navigate={navigate}
-                validation={isFormValid}
-              />
-              <Button variant="link" onClick={handleCancelResource}>
-                {t('Cancel')}
-              </Button>
-            </ActionGroup>
-          </Form>
-        </PageSection>
-      ) : (
-        <React.Suspense fallback={<div>{t('Loading...')}</div>}>
-          <ResourceYAMLEditor
-            initialResource={yamlInput}
-            create={create}
-            onChange={handleYAMLChange}
-          ></ResourceYAMLEditor>
-        </React.Suspense>
-      )}
     </>
   );
 };

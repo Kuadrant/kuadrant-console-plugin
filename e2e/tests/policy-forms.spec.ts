@@ -843,8 +843,11 @@ test.describe('RateLimitPolicy form', () => {
       timeout: 15_000,
     });
 
-    // Form view should be selected by default
-    await expect(page.locator('#create-type-radio-form')).toBeChecked();
+    // Form tab should be selected by default
+    await expect(page.getByRole('tab', { name: 'Form' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
 
     await expect(page.locator('#policy-name')).toBeVisible();
     await expect(page.locator('#gateway-select')).toBeVisible();
@@ -883,7 +886,7 @@ test.describe('RateLimitPolicy form', () => {
       timeout: 15_000,
     });
 
-    await page.locator('#create-type-radio-yaml').click();
+    await page.getByRole('tab', { name: 'YAML' }).click();
     await expect(page.locator('.monaco-editor').first()).toBeVisible({ timeout: 15_000 });
   });
 
