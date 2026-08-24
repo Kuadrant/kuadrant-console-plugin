@@ -25,8 +25,9 @@ import { MCPRegistrationFormState, initialServerFormState } from './types';
 import { RESOURCES } from '../../utils/resources';
 import HTTPRouteCreatePage from '../httproute/HTTPRouteCreatePage';
 import { HTTPRouteResource } from '../httproute/types';
-import RegisterServerStep, { buildMCPServerYAML } from './steps/RegisterServerStep';
+import RegisterServerStep from './steps/RegisterServerStep';
 import MCPVerifyStep, { VerifyStepItem, WatchResourceConfig } from './MCPVerifyStep';
+import { buildMCPServerRegistration } from './mcpResourceUtils';
 
 interface WizardErrorBoundaryProps {
   children: React.ReactNode;
@@ -112,7 +113,12 @@ const MCPRegistrationWizard: React.FC<MCPRegistrationWizardProps> = ({ isOpen, o
       routeMode === 'existing' ? selectedExistingRouteName : httpRouteResource?.metadata?.name;
     if (!routeName) return [];
 
-    const mcpServerResource = buildMCPServerYAML(formState.server, routeName);
+    const mcpServerResource = buildMCPServerRegistration(
+      formState.server,
+      formState.server.namespace,
+      null,
+      routeName,
+    );
 
     const items: VerifyStepItem[] = [];
 
