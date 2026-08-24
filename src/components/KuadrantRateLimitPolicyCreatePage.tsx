@@ -78,6 +78,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
           group: targetRef.group,
           kind: targetRef.kind,
           name: targetRef.name,
+          ...(targetRef.namespace ? { namespace: targetRef.namespace } : {}),
         },
         limits,
       },

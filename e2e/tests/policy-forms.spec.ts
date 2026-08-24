@@ -844,10 +844,7 @@ test.describe('RateLimitPolicy form', () => {
     });
 
     // Form tab should be selected by default
-    await expect(page.getByRole('tab', { name: 'Form' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    await expect(page.getByRole('tab', { name: 'Form' })).toHaveAttribute('aria-selected', 'true');
 
     await expect(page.locator('#policy-name')).toBeVisible();
     await expect(page.locator('#gateway-select')).toBeVisible();
