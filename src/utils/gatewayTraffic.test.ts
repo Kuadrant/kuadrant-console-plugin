@@ -11,9 +11,13 @@ describe('getTotalRequests', () => {
     expect(getTotalRequests({ total: 1000.4 })).toBe(1000);
   });
 
-  it('returns 0 when there are no metrics for the gateway', () => {
-    expect(getTotalRequests(undefined)).toBe(0);
-    expect(getTotalRequests({})).toBe(0);
+  it('returns 0 (not null) when the total is genuinely zero', () => {
+    expect(getTotalRequests({ total: 0 })).toBe(0);
+  });
+
+  it('returns null when there are no metrics for the gateway', () => {
+    expect(getTotalRequests(undefined)).toBeNull();
+    expect(getTotalRequests({})).toBeNull();
   });
 });
 

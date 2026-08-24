@@ -51,7 +51,6 @@ import {
   NamespaceBar,
   checkAccess,
 } from '@openshift-console/dynamic-plugin-sdk';
-import './kuadrant.css';
 import ResourceList from './ResourceList';
 import { sortable, SortByDirection } from '@patternfly/react-table';
 import { EXTERNAL_LINKS } from '../constants/links';
@@ -529,7 +528,7 @@ const KuadrantOverviewPage: React.FC = () => {
   // Helper functions to pull out metric values in correct format, given a gateway object
   const getGatewayMetricKey = (obj: K8sResourceCommon): string =>
     buildGatewayKey(obj.metadata.namespace || '', obj.metadata.name, metricsWorkloadSuffix);
-  const getTotalRequests = (obj: K8sResourceCommon): number =>
+  const getTotalRequests = (obj: K8sResourceCommon): number | null =>
     getTotalRequestsFor(totalRequestsByGatewayResource[getGatewayMetricKey(obj)]);
   const getSuccessfulRequests = (obj: K8sResourceCommon): number | null =>
     getSuccessfulRequestsFor(totalRequestsByGatewayResource[getGatewayMetricKey(obj)]);
@@ -583,7 +582,12 @@ const KuadrantOverviewPage: React.FC = () => {
     return sortedDistribution;
   };
   const gatewayTrafficRenders = {
-    totalRequests: (_column, obj) => getTotalRequests(obj) || '-',
+    totalRequests: (_column, obj) => {
+      // Use an explicit null check: 0 total requests is a valid value and
+      // must not be rendered as '-' (which a falsy `||` check would do).
+      const total = getTotalRequests(obj);
+      return total !== null ? total : '-';
+    },
     successfulRequests: (_column, obj) => {
       // Use an explicit null check: 0 successful requests is a valid value and
       // must not be rendered as '-' (which a falsy `||` check would do).

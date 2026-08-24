@@ -18,11 +18,13 @@ export interface GatewayTrafficMetrics {
 
 /**
  * Total request count for a gateway.
- * Returns 0 when there are no request metrics for the gateway.
+ *
+ * Returns null when there are no request metrics at all (nothing to show),
+ * so callers can distinguish "no data" from a genuine zero.
  */
-export const getTotalRequests = (metrics?: GatewayTrafficMetrics): number => {
+export const getTotalRequests = (metrics?: GatewayTrafficMetrics): number | null => {
   const total = metrics?.total;
-  return Number.isFinite(total) ? Math.round(total) : 0;
+  return Number.isFinite(total) ? Math.round(total) : null;
 };
 
 /**
