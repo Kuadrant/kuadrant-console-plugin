@@ -135,6 +135,14 @@
   margin: 1rem;
 }
 
+.kuadrant-rate-limit-label-group {
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+  margin: 1rem 0;
+}
+
 .kuadrant-resource-create-container {
   position: relative;
 }

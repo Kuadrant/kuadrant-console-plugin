@@ -1,0 +1,101 @@
+import * as React from 'react';
+import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
+import { ExtensionHookResult } from '@openshift-console/dynamic-plugin-sdk/lib/api/common-types';
+import { Action } from '@openshift-console/dynamic-plugin-sdk/lib/extensions/actions';
+import {
+  K8sResourceCommon,
+  useK8sModel,
+  getGroupVersionKindForResource,
+} from '@openshift-console/dynamic-plugin-sdk';
+import { AccessReviewResourceAttributes } from '@openshift-console/dynamic-plugin-sdk/lib/extensions/console-types';
+import {
+  useAnnotationsModal,
+  useDeleteModal,
+  useLabelsModal,
+} from '@openshift-console/dynamic-plugin-sdk';
+
+const useRateLimitPolicyActions = (obj: K8sResourceCommon): ExtensionHookResult<Action[]> => {
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
+  const navigate = useNavigate();
+  const gvk = obj ? getGroupVersionKindForResource(obj) : undefined;
+  const [rateLimitPolicyModel] = useK8sModel(
+    gvk
+      ? { group: gvk.group, version: gvk.version, kind: gvk.kind }
+      : { group: '', version: '', kind: '' },
+  );
+  const launchDeleteModal = useDeleteModal(obj);
+  const launchLabelsModal = useLabelsModal(obj);
+  const launchAnnotationsModal = useAnnotationsModal(obj);
+
+  const actions = React.useMemo<Action[]>(() => {
+    if (!obj || obj.kind !== 'RateLimitPolicy') return [];
+    const namespace = obj.metadata?.namespace || 'default';
+    const name = obj.metadata?.name || '';
+
+    const updateAccess: AccessReviewResourceAttributes | undefined = rateLimitPolicyModel
+      ? {
+          group: rateLimitPolicyModel.apiGroup,
+          resource: rateLimitPolicyModel.plural,
+          verb: 'update',
+          name,
+          namespace,
+        }
+      : undefined;
+    const deleteAccess: AccessReviewResourceAttributes | undefined = rateLimitPolicyModel
+      ? {
+          group: rateLimitPolicyModel.apiGroup,
+          resource: rateLimitPolicyModel.plural,
+          verb: 'delete',
+          name,
+          namespace,
+        }
+      : undefined;
+
+    const actionsList: Action[] = [
+      {
+        id: 'edit-labels-ratelimitpolicy',
+        label: t('Edit labels'),
+        cta: launchLabelsModal,
+        accessReview: updateAccess,
+      },
+      {
+        id: 'edit-annotations-ratelimitpolicy',
+        label: t('Edit annotations'),
+        cta: launchAnnotationsModal,
+        accessReview: updateAccess,
+      },
+      {
+        id: 'kuadrant-rate-limit-policy-edit-form',
+        label: t('Edit'),
+        description: t('Edit via form'),
+        cta: () =>
+          navigate({
+            pathname: `/k8s/ns/${namespace}/ratelimitpolicy/name/${name}/edit`,
+          }),
+        insertBefore: 'edit-yaml',
+        accessReview: updateAccess,
+      },
+      {
+        id: 'delete-ratelimitpolicy',
+        label: t('Delete'),
+        cta: launchDeleteModal,
+        accessReview: deleteAccess,
+      },
+    ];
+
+    return actionsList;
+  }, [
+    navigate,
+    obj,
+    rateLimitPolicyModel,
+    launchAnnotationsModal,
+    launchDeleteModal,
+    launchLabelsModal,
+    t,
+  ]);
+
+  return [actions, true, undefined];
+};
+
+export default useRateLimitPolicyActions;
