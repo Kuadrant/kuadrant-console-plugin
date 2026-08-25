@@ -32,6 +32,7 @@
 .kuadrant-dnspolicy-yaml-editor,
 .kuadrant-oidcpolicy-yaml-editor,
 .kuadrant-planpolicy-yaml-editor,
+.kuadrant-ratelimitpolicy-yaml-editor,
 .kuadrant-tokenratelimitpolicy-yaml-editor,
 .kuadrant-tlspolicy-yaml-editor {
   padding: var(--pf-t--global--spacer--md) 0;
@@ -46,6 +47,7 @@
 .kuadrant-dnspolicy-yaml-editor .react-monaco-editor-container,
 .kuadrant-oidcpolicy-yaml-editor .react-monaco-editor-container,
 .kuadrant-planpolicy-yaml-editor .react-monaco-editor-container,
+.kuadrant-ratelimitpolicy-yaml-editor .react-monaco-editor-container,
 .kuadrant-tokenratelimitpolicy-yaml-editor .react-monaco-editor-container,
 .kuadrant-tlspolicy-yaml-editor .react-monaco-editor-container {
   min-height: 550px;
@@ -56,6 +58,7 @@
 .kuadrant-dnspolicy-yaml-editor .yaml-editor,
 .kuadrant-oidcpolicy-yaml-editor .yaml-editor,
 .kuadrant-planpolicy-yaml-editor .yaml-editor,
+.kuadrant-ratelimitpolicy-yaml-editor .yaml-editor,
 .kuadrant-tokenratelimitpolicy-yaml-editor .yaml-editor,
 .kuadrant-tlspolicy-yaml-editor .yaml-editor {
   min-height: 550px;

@@ -392,6 +392,7 @@ const APIProductForm: React.FC<APIProductFormProps> = ({
                   <HTTPRouteSelect
                     selectedRoute={formData.httpRoute || { name: '', namespace }}
                     onChange={handleHTTPRouteChange}
+                    namespace={namespace}
                     hideLabel
                   />
                   <FormHelperText>

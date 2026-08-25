@@ -9,6 +9,7 @@ import {
   HelperText,
   HelperTextItem,
   Form,
+  Radio,
   Tabs,
   Tab,
   TabTitleText,
@@ -29,19 +30,36 @@ import {
 import { useNavigate, useLocation } from 'react-router';
 import { GatewayResource } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
+import HTTPRouteSelect, { RouteKind } from './httproute/HTTPRouteSelect';
 import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
-import { resourceGVKMapping } from '../utils/resources';
+import {
+  resourceGVKMapping,
+  RESOURCES,
+  getTargetKindsForPolicy,
+  isSupportedTargetRef,
+} from '../utils/resources';
+
+const GATEWAY_API_GROUP = RESOURCES.Gateway.gvk.group;
+const SUPPORTED_TARGET_KINDS = getTargetKindsForPolicy('OIDCPolicy');
+
+interface TargetRef {
+  group: string;
+  kind: 'Gateway' | 'HTTPRoute' | 'GRPCRoute';
+  name: string;
+}
 
 const KuadrantOIDCPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>(
-    {} as GatewayResource,
-  );
+  const [targetRef, setTargetRef] = React.useState<TargetRef>({
+    group: GATEWAY_API_GROUP,
+    kind: 'Gateway',
+    name: '',
+  });
   const [clientID, setClientID] = React.useState('');
   const [issuerURL, setIssuerURL] = React.useState('');
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
@@ -62,9 +80,9 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
       },
       spec: {
         targetRef: {
-          group: 'gateway.networking.k8s.io',
-          kind: 'Gateway',
-          name: selectedGateway.metadata?.name ?? '',
+          group: targetRef.group,
+          kind: targetRef.kind,
+          name: targetRef.name,
         },
         provider: { clientID, issuerURL },
       },
@@ -134,12 +152,11 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
           setFormDisabled(true);
           setCreate(false);
           setPolicyName(oidcPolicyUpdate.metadata?.name || '');
-          setSelectedGateway({
-            metadata: {
-              name: oidcPolicyUpdate.spec?.targetRef?.name || '',
-              namespace: oidcPolicyUpdate.metadata?.namespace ?? '',
-            },
-          } as GatewayResource);
+          setTargetRef({
+            group: oidcPolicyUpdate.spec?.targetRef?.group || GATEWAY_API_GROUP,
+            kind: (oidcPolicyUpdate.spec?.targetRef?.kind as TargetRef['kind']) || 'Gateway',
+            name: oidcPolicyUpdate.spec?.targetRef?.name || '',
+          });
           setClientID(oidcPolicyUpdate.spec?.provider?.clientID || '');
           setIssuerURL(oidcPolicyUpdate.spec?.provider?.issuerURL || '');
           hasInitializedFromResource.current = true;
@@ -155,12 +172,26 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
       setPolicyName(parsedYaml.metadata?.name || '');
-      setSelectedGateway({
-        metadata: {
-          name: parsedYaml.spec?.targetRef?.name || '',
-          namespace: parsedYaml.metadata?.namespace ?? '',
-        },
-      } as GatewayResource);
+      const parsedTargetRef = parsedYaml.spec?.targetRef;
+      if (
+        isSupportedTargetRef(
+          'OIDCPolicy',
+          parsedTargetRef?.group,
+          parsedTargetRef?.kind,
+          parsedTargetRef?.namespace,
+          selectedNamespace,
+        )
+      ) {
+        setTargetRef({
+          group: parsedTargetRef.group,
+          kind: parsedTargetRef.kind as TargetRef['kind'],
+          name: parsedTargetRef?.name || '',
+        });
+      } else {
+        // unsupported group/kind - keep the target empty so the form stays
+        // invalid rather than silently submitting a reference the CRD rejects
+        setTargetRef({ group: GATEWAY_API_GROUP, kind: 'Gateway', name: '' });
+      }
       setClientID(parsedYaml.spec?.provider?.clientID || '');
       setIssuerURL(parsedYaml.spec?.provider?.issuerURL || '');
     } catch (e) {
@@ -173,23 +204,49 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
   }, [
     policyName,
     selectedNamespace,
-    selectedGateway,
+    targetRef,
     clientID,
     issuerURL,
     creationTimestamp,
     resourceVersion,
   ]);
 
+  const handleTargetTypeChange = (kind: TargetRef['kind']) => {
+    setTargetRef({ group: GATEWAY_API_GROUP, kind, name: '' });
+  };
+
+  const handleGatewayChange = (gw: GatewayResource) => {
+    setTargetRef({ group: GATEWAY_API_GROUP, kind: 'Gateway', name: gw.metadata?.name ?? '' });
+  };
+
+  const handleRouteChange = (kind: RouteKind) => (route: { name: string; namespace: string }) => {
+    setTargetRef({ group: GATEWAY_API_GROUP, kind, name: route.name ?? '' });
+  };
+
+  const selectedGateway: GatewayResource = React.useMemo(
+    () =>
+      ({
+        metadata: {
+          name: targetRef.kind === 'Gateway' ? targetRef.name : '',
+          namespace: targetRef.kind === 'Gateway' ? selectedNamespace : '',
+        },
+      } as GatewayResource),
+    [targetRef, selectedNamespace],
+  );
+
+  const selectedRoute = React.useMemo(
+    () => ({
+      name: targetRef.kind === 'Gateway' ? '' : targetRef.name,
+      namespace: targetRef.kind === 'Gateway' ? '' : selectedNamespace,
+    }),
+    [targetRef, selectedNamespace],
+  );
+
   const handleCancelResource = () => {
     handleCancel(navigate);
   };
 
-  const isFormValid = !!(
-    policyName &&
-    (selectedGateway.metadata?.name ?? '') &&
-    clientID &&
-    issuerURL
-  );
+  const isFormValid = !!(policyName && targetRef.name && clientID && issuerURL);
 
   return (
     <>
@@ -228,7 +285,65 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
                     </HelperText>
                   </FormHelperText>
                 </FormGroup>
-                <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
+                <FormGroup
+                  className="kuadrant-target-type-toggle"
+                  role="radiogroup"
+                  isInline
+                  fieldId="target-type-radio-group"
+                  label={t('Target Type')}
+                >
+                  <Radio
+                    name="target-type-radio"
+                    label={t('Gateway')}
+                    id="target-type-radio-gateway"
+                    isChecked={targetRef.kind === 'Gateway'}
+                    onChange={() => handleTargetTypeChange('Gateway')}
+                    isDisabled={formDisabled}
+                  />
+                  <Radio
+                    name="target-type-radio"
+                    label={t('HTTPRoute')}
+                    id="target-type-radio-httproute"
+                    isChecked={targetRef.kind === 'HTTPRoute'}
+                    onChange={() => handleTargetTypeChange('HTTPRoute')}
+                    isDisabled={formDisabled}
+                  />
+                  {SUPPORTED_TARGET_KINDS.includes('GRPCRoute') && (
+                    <Radio
+                      name="target-type-radio"
+                      label={t('GRPCRoute')}
+                      id="target-type-radio-grpcroute"
+                      isChecked={targetRef.kind === 'GRPCRoute'}
+                      onChange={() => handleTargetTypeChange('GRPCRoute')}
+                      isDisabled={formDisabled}
+                    />
+                  )}
+                </FormGroup>
+                {targetRef.kind === 'Gateway' && (
+                  <GatewaySelect
+                    selectedGateway={selectedGateway}
+                    onChange={handleGatewayChange}
+                    namespace={selectedNamespace}
+                    isDisabled={formDisabled}
+                  />
+                )}
+                {targetRef.kind === 'HTTPRoute' && (
+                  <HTTPRouteSelect
+                    selectedRoute={selectedRoute}
+                    onChange={handleRouteChange('HTTPRoute')}
+                    namespace={selectedNamespace}
+                    isDisabled={formDisabled}
+                  />
+                )}
+                {targetRef.kind === 'GRPCRoute' && SUPPORTED_TARGET_KINDS.includes('GRPCRoute') && (
+                  <HTTPRouteSelect
+                    kind="GRPCRoute"
+                    selectedRoute={selectedRoute}
+                    onChange={handleRouteChange('GRPCRoute')}
+                    namespace={selectedNamespace}
+                    isDisabled={formDisabled}
+                  />
+                )}
                 <FormGroup label={t('Client ID')} isRequired fieldId="client-id">
                   <TextInput
                     isRequired

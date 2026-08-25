@@ -338,7 +338,11 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
                     </HelperText>
                   </FormHelperText>
                 </FormGroup>
-                <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
+                <GatewaySelect
+                  selectedGateway={selectedGateway}
+                  onChange={setSelectedGateway}
+                  namespace={selectedNamespace}
+                />
                 <FormGroup label={t('Provider Ref')} isRequired fieldId="Provider-ref">
                   <TextInput
                     isRequired

@@ -9,6 +9,7 @@ import {
   HelperText,
   HelperTextItem,
   Form,
+  Radio,
   Tabs,
   Tab,
   TabTitleText,
@@ -34,10 +35,25 @@ import {
 import { useNavigate, useLocation } from 'react-router';
 import { GatewayResource } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
+import HTTPRouteSelect, { RouteKind } from './httproute/HTTPRouteSelect';
 import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
-import { resourceGVKMapping } from '../utils/resources';
+import {
+  resourceGVKMapping,
+  RESOURCES,
+  getTargetKindsForPolicy,
+  isSupportedTargetRef,
+} from '../utils/resources';
+
+const GATEWAY_API_GROUP = RESOURCES.Gateway.gvk.group;
+const SUPPORTED_TARGET_KINDS = getTargetKindsForPolicy('TokenRateLimitPolicy');
+
+interface TargetRef {
+  group: string;
+  kind: 'Gateway' | 'HTTPRoute' | 'GRPCRoute';
+  name: string;
+}
 
 interface TokenRate {
   limit: number;
@@ -59,9 +75,11 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>(
-    {} as GatewayResource,
-  );
+  const [targetRef, setTargetRef] = React.useState<TargetRef>({
+    group: GATEWAY_API_GROUP,
+    kind: 'Gateway',
+    name: '',
+  });
   const [limits, setLimits] = React.useState<TokenLimitMap>({});
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
   const [resourceVersion, setResourceVersion] = React.useState('');
@@ -90,9 +108,9 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
       },
       spec: {
         targetRef: {
-          group: 'gateway.networking.k8s.io',
-          kind: 'Gateway',
-          name: selectedGateway.metadata?.name ?? '',
+          group: targetRef.group,
+          kind: targetRef.kind,
+          name: targetRef.name,
         },
         limits,
       },
@@ -159,12 +177,11 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
           setFormDisabled(true);
           setCreate(false);
           setPolicyName(trlPolicyUpdate.metadata?.name || '');
-          setSelectedGateway({
-            metadata: {
-              name: trlPolicyUpdate.spec?.targetRef?.name || '',
-              namespace: trlPolicyUpdate.metadata?.namespace || '',
-            },
-          } as GatewayResource);
+          setTargetRef({
+            group: trlPolicyUpdate.spec?.targetRef?.group || GATEWAY_API_GROUP,
+            kind: (trlPolicyUpdate.spec?.targetRef?.kind as TargetRef['kind']) || 'Gateway',
+            name: trlPolicyUpdate.spec?.targetRef?.name || '',
+          });
           setLimits(trlPolicyUpdate.spec?.limits || {});
           hasInitializedFromResource.current = true;
         }
@@ -179,12 +196,26 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
       setPolicyName(parsedYaml.metadata?.name || '');
-      setSelectedGateway({
-        metadata: {
-          name: parsedYaml.spec?.targetRef?.name || '',
-          namespace: parsedYaml.metadata?.namespace || '',
-        },
-      } as GatewayResource);
+      const parsedTargetRef = parsedYaml.spec?.targetRef;
+      if (
+        isSupportedTargetRef(
+          'TokenRateLimitPolicy',
+          parsedTargetRef?.group,
+          parsedTargetRef?.kind,
+          parsedTargetRef?.namespace,
+          selectedNamespace,
+        )
+      ) {
+        setTargetRef({
+          group: parsedTargetRef.group,
+          kind: parsedTargetRef.kind as TargetRef['kind'],
+          name: parsedTargetRef?.name || '',
+        });
+      } else {
+        // unsupported group/kind - keep the target empty so the form stays
+        // invalid rather than silently submitting a reference the CRD rejects
+        setTargetRef({ group: GATEWAY_API_GROUP, kind: 'Gateway', name: '' });
+      }
       setLimits(parsedYaml.spec?.limits || {});
     } catch (e) {
       console.error(t('Error parsing YAML:'), e);
@@ -193,11 +224,42 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
 
   React.useEffect(() => {
     setYamlInput(tokenRateLimitPolicy);
-  }, [policyName, selectedNamespace, selectedGateway, limits, creationTimestamp, resourceVersion]);
+  }, [policyName, selectedNamespace, targetRef, limits, creationTimestamp, resourceVersion]);
 
   const handlePolicyChange = (_event, policy: string) => {
     setPolicyName(policy);
   };
+
+  const handleTargetTypeChange = (kind: TargetRef['kind']) => {
+    setTargetRef({ group: GATEWAY_API_GROUP, kind, name: '' });
+  };
+
+  const handleGatewayChange = (gw: GatewayResource) => {
+    setTargetRef({ group: GATEWAY_API_GROUP, kind: 'Gateway', name: gw.metadata?.name ?? '' });
+  };
+
+  const handleRouteChange = (kind: RouteKind) => (route: { name: string; namespace: string }) => {
+    setTargetRef({ group: GATEWAY_API_GROUP, kind, name: route.name ?? '' });
+  };
+
+  const selectedGateway: GatewayResource = React.useMemo(
+    () =>
+      ({
+        metadata: {
+          name: targetRef.kind === 'Gateway' ? targetRef.name : '',
+          namespace: targetRef.kind === 'Gateway' ? selectedNamespace : '',
+        },
+      } as GatewayResource),
+    [targetRef, selectedNamespace],
+  );
+
+  const selectedRoute = React.useMemo(
+    () => ({
+      name: targetRef.kind === 'Gateway' ? '' : targetRef.name,
+      namespace: targetRef.kind === 'Gateway' ? '' : selectedNamespace,
+    }),
+    [targetRef, selectedNamespace],
+  );
 
   const handleCancelResource = () => {
     handleCancel(navigate);
@@ -243,7 +305,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
 
   const isAddLimitSaveDisabled = !newLimitName || modalRates.length === 0 || isDuplicateName;
 
-  const isFormValid = !!(policyName && (selectedGateway.metadata?.name ?? ''));
+  const isFormValid = !!(policyName && targetRef.name);
 
   return (
     <>
@@ -284,7 +346,65 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
                     </HelperText>
                   </FormHelperText>
                 </FormGroup>
-                <GatewaySelect selectedGateway={selectedGateway} onChange={setSelectedGateway} />
+                <FormGroup
+                  className="kuadrant-target-type-toggle"
+                  role="radiogroup"
+                  isInline
+                  fieldId="target-type-radio-group"
+                  label={t('Target Type')}
+                >
+                  <Radio
+                    name="target-type-radio"
+                    label={t('Gateway')}
+                    id="target-type-radio-gateway"
+                    isChecked={targetRef.kind === 'Gateway'}
+                    onChange={() => handleTargetTypeChange('Gateway')}
+                    isDisabled={formDisabled}
+                  />
+                  <Radio
+                    name="target-type-radio"
+                    label={t('HTTPRoute')}
+                    id="target-type-radio-httproute"
+                    isChecked={targetRef.kind === 'HTTPRoute'}
+                    onChange={() => handleTargetTypeChange('HTTPRoute')}
+                    isDisabled={formDisabled}
+                  />
+                  {SUPPORTED_TARGET_KINDS.includes('GRPCRoute') && (
+                    <Radio
+                      name="target-type-radio"
+                      label={t('GRPCRoute')}
+                      id="target-type-radio-grpcroute"
+                      isChecked={targetRef.kind === 'GRPCRoute'}
+                      onChange={() => handleTargetTypeChange('GRPCRoute')}
+                      isDisabled={formDisabled}
+                    />
+                  )}
+                </FormGroup>
+                {targetRef.kind === 'Gateway' && (
+                  <GatewaySelect
+                    selectedGateway={selectedGateway}
+                    onChange={handleGatewayChange}
+                    namespace={selectedNamespace}
+                    isDisabled={formDisabled}
+                  />
+                )}
+                {targetRef.kind === 'HTTPRoute' && (
+                  <HTTPRouteSelect
+                    selectedRoute={selectedRoute}
+                    onChange={handleRouteChange('HTTPRoute')}
+                    namespace={selectedNamespace}
+                    isDisabled={formDisabled}
+                  />
+                )}
+                {targetRef.kind === 'GRPCRoute' && SUPPORTED_TARGET_KINDS.includes('GRPCRoute') && (
+                  <HTTPRouteSelect
+                    kind="GRPCRoute"
+                    selectedRoute={selectedRoute}
+                    onChange={handleRouteChange('GRPCRoute')}
+                    namespace={selectedNamespace}
+                    isDisabled={formDisabled}
+                  />
+                )}
                 <FormGroup>
                   <Title headingLevel="h2" size="lg" className="kuadrant-limits-header">
                     {t('Configured Limits')}
