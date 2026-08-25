@@ -9,13 +9,26 @@ import {
   FormGroup,
   FormSelect,
   FormSelectOption,
-  TextInput,
-  TextArea,
   Button,
   Alert,
   Stack,
   StackItem,
   Divider,
+  EmptyState,
+  EmptyStateBody,
+  Tab,
+  Tabs,
+  TabTitleText,
+  Modal,
+  ModalBody,
+  ModalFooter,
+  ModalHeader,
+  ModalVariant,
+  TextInput,
+  Card,
+  CardBody,
+  Grid,
+  GridItem,
 } from '@patternfly/react-core';
 import {
   NamespaceBar,
@@ -27,23 +40,24 @@ import { MCPGatewayExtension } from './types';
 import {
   MCPClient,
   MCPSessionExpiredError,
+  MCPUnauthorizedError,
   MCPTool,
-  InitializeResult,
-  ToolsListResult,
   ToolsCallResult,
+  MCPCallExchange,
 } from '../../utils/mcp/client';
+import {
+  beginPkce,
+  clearPkceStorage,
+  completePkce,
+  peekOauthCallback,
+  stashOauthCallback,
+  takeOauthExchangeLock,
+} from '../../utils/mcp/oauth';
+import MCPToolWorkspace from './MCPToolWorkspace';
+import MCPInspectorOutput from './MCPInspectorOutput';
+import './MCPInspectorPage.css';
 
 const ALL_NS = '#ALL_NS#';
-
-const preStyle: React.CSSProperties = {
-  whiteSpace: 'pre-wrap',
-  wordBreak: 'break-word',
-  overflow: 'auto',
-  maxHeight: '20rem',
-  padding: 'var(--pf-t--global--spacer--md, 1rem)',
-  background: 'var(--pf-t--global--background--color--secondary--default, #f5f5f5)',
-  borderRadius: 'var(--pf-t--global--border--radius--small, 4px)',
-};
 
 const isReady = (ext: MCPGatewayExtension): boolean =>
   (ext.status?.conditions ?? []).some((c) => c.type === 'Ready' && c.status === 'True');
@@ -63,22 +77,34 @@ const MCPInspectorPage: React.FC = () => {
   });
 
   const [selectedKey, setSelectedKey] = React.useState('');
-  const [token, setToken] = React.useState('');
+  const [bearerToken, setBearerToken] = React.useState('');
+  const [authChallenge, setAuthChallenge] = React.useState<{
+    mcpEndpoint: string;
+    selectedKey: string;
+    wwwAuthenticate: string | null;
+  } | null>(null);
 
   // session id lives in react state and on the client instance only, never localStorage.
   const clientRef = React.useRef<MCPClient | null>(null);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
-
-  const [initResult, setInitResult] = React.useState<InitializeResult | null>(null);
-  const [toolsResult, setToolsResult] = React.useState<ToolsListResult | null>(null);
+  const [connected, setConnected] = React.useState(false);
+  const [authMode, setAuthMode] = React.useState<'none' | 'bearer' | 'oidc'>('none');
+  const [activeSection, setActiveSection] = React.useState<string | number>(0);
   const [tools, setTools] = React.useState<MCPTool[]>([]);
 
-  const [selectedTool, setSelectedTool] = React.useState('');
-  const [argsText, setArgsText] = React.useState('{}');
-  const [callResult, setCallResult] = React.useState<ToolsCallResult | null>(null);
+  const [callExchange, setCallExchange] = React.useState<MCPCallExchange<ToolsCallResult> | null>(
+    null,
+  );
+  const [stats, setStats] = React.useState({
+    calls: 0,
+    succeeded: 0,
+    failed: 0,
+    totalDurationMs: 0,
+  });
 
   const [connecting, setConnecting] = React.useState(false);
   const [calling, setCalling] = React.useState(false);
+  const [refreshingTools, setRefreshingTools] = React.useState(false);
   const [error, setError] = React.useState('');
   const [sessionExpired, setSessionExpired] = React.useState(false);
 
@@ -88,59 +114,171 @@ const MCPInspectorPage: React.FC = () => {
     [list, selectedKey],
   );
   const endpoint = selected?.status?.mcpEndpoint ?? '';
-  const origin = window.location.origin;
 
-  const handleConnect = async () => {
-    if (!endpoint) {
-      return;
-    }
+  const runSession = async (mcpEndpoint: string, bearer?: string) => {
     setError('');
     setSessionExpired(false);
-    setConnecting(true);
-    setInitResult(null);
-    setToolsResult(null);
     setTools([]);
-    setSelectedTool('');
-    setCallResult(null);
+    setCallExchange(null);
+    const client = new MCPClient(mcpEndpoint, { token: bearer || undefined });
+    const { sessionId: id } = await client.initialize();
+    await client.sendInitialized();
+    const listed = await client.toolsList();
+    clientRef.current = client;
+    setSessionId(id);
+    setConnected(true);
+    setTools(listed.tools ?? []);
+  };
+
+  const handleConnect = async (
+    mcpEndpoint = endpoint,
+    selectedExtensionKey = selectedKey,
+    bearer?: string,
+  ) => {
+    if (!mcpEndpoint) {
+      return;
+    }
+    setConnecting(true);
     try {
-      const client = new MCPClient(endpoint, { token: token || undefined });
-      const { result, sessionId: id } = await client.initialize();
-      await client.sendInitialized();
-      const listed = await client.toolsList();
-      clientRef.current = client;
-      setSessionId(id);
-      setInitResult(result);
-      setToolsResult(listed);
-      setTools(listed.tools ?? []);
+      await runSession(mcpEndpoint, bearer);
+      setAuthMode(bearer ? 'bearer' : 'none');
+      setAuthChallenge(null);
     } catch (err) {
       clientRef.current = null;
       setSessionId(null);
-      setError(err instanceof Error ? err.message : String(err));
+      setConnected(false);
+      if (err instanceof MCPUnauthorizedError && !bearer) {
+        setError('');
+        setAuthChallenge({
+          mcpEndpoint,
+          selectedKey: selectedExtensionKey,
+          wwwAuthenticate: err.wwwAuthenticate,
+        });
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
     } finally {
       setConnecting(false);
     }
   };
 
-  const handleCall = async () => {
-    const client = clientRef.current;
-    if (!client || !selectedTool) {
+  const handleGatewayChange = (_event: React.FormEvent<HTMLSelectElement>, value: string) => {
+    setSelectedKey(value);
+    clientRef.current = null;
+    setSessionId(null);
+    setConnected(false);
+    setAuthMode('none');
+    setActiveSection(0);
+    setTools([]);
+    setCallExchange(null);
+    setStats({ calls: 0, succeeded: 0, failed: 0, totalDurationMs: 0 });
+    setError('');
+    setSessionExpired(false);
+    setAuthChallenge(null);
+    setBearerToken('');
+    if (!value) {
       return;
     }
-    let parsedArgs: Record<string, unknown>;
+    const extension = list.find((item) => extKey(item) === value);
+    if (extension?.status?.mcpEndpoint && isReady(extension)) {
+      void handleConnect(extension.status.mcpEndpoint, value);
+    }
+  };
+
+  const handleOidcSignIn = async () => {
+    if (!authChallenge) {
+      return;
+    }
+    setConnecting(true);
+    setError('');
     try {
-      parsedArgs = argsText.trim() === '' ? {} : JSON.parse(argsText);
-    } catch {
-      setError(t('Arguments must be valid JSON'));
+      await beginPkce(authChallenge);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      setConnecting(false);
+    }
+  };
+
+  const handleBearerConnect = () => {
+    if (!authChallenge || !bearerToken.trim()) {
+      return;
+    }
+    void handleConnect(authChallenge.mcpEndpoint, authChallenge.selectedKey, bearerToken.trim());
+  };
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get('error');
+    if (oauthError) {
+      const description = params.get('error_description') || oauthError;
+      setError(description);
+      clearPkceStorage();
+      window.history.replaceState({}, '', window.location.pathname);
+      return;
+    }
+    const code = params.get('code');
+    const state = params.get('state');
+    if (code && state) {
+      stashOauthCallback(code, state);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    if (!peekOauthCallback()) {
+      return;
+    }
+    if (!takeOauthExchangeLock()) {
+      return;
+    }
+    setConnecting(true);
+    void (async () => {
+      try {
+        const result = await completePkce();
+        setSelectedKey(result.selectedKey);
+        await runSession(result.mcpEndpoint, result.accessToken);
+        setAuthMode('oidc');
+      } catch (err) {
+        clientRef.current = null;
+        setSessionId(null);
+        setConnected(false);
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setConnecting(false);
+      }
+    })();
+    // OAuth callback state is consumed only once when the inspector mounts.
+  }, []);
+
+  const handleCall = async (
+    toolName: string,
+    args: Record<string, unknown>,
+    metadata?: Record<string, unknown>,
+  ) => {
+    const client = clientRef.current;
+    if (!client) {
       return;
     }
     setError('');
     setSessionExpired(false);
     setCalling(true);
-    setCallResult(null);
+    setCallExchange(null);
+    const startedAt = Date.now();
     try {
-      const result = await client.toolsCall(selectedTool, parsedArgs);
-      setCallResult(result);
+      const exchange = metadata
+        ? await client.toolsCallWithDetails(toolName, args, metadata)
+        : await client.toolsCallWithDetails(toolName, args);
+      setCallExchange(exchange);
+      setStats((current) => ({
+        calls: current.calls + 1,
+        succeeded: current.succeeded + (exchange.result.isError ? 0 : 1),
+        failed: current.failed + (exchange.result.isError ? 1 : 0),
+        totalDurationMs: current.totalDurationMs + exchange.durationMs,
+      }));
     } catch (err) {
+      setStats((current) => ({
+        ...current,
+        calls: current.calls + 1,
+        failed: current.failed + 1,
+        totalDurationMs: current.totalDurationMs + (Date.now() - startedAt),
+      }));
       if (err instanceof MCPSessionExpiredError) {
         setSessionExpired(true);
       } else {
@@ -151,92 +289,144 @@ const MCPInspectorPage: React.FC = () => {
     }
   };
 
+  const handleRefreshTools = async () => {
+    const client = clientRef.current;
+    if (!client) {
+      return;
+    }
+    setRefreshingTools(true);
+    setError('');
+    setSessionExpired(false);
+    try {
+      const listed = await client.toolsList();
+      setTools(listed.tools ?? []);
+    } catch (err) {
+      if (err instanceof MCPSessionExpiredError) {
+        setSessionExpired(true);
+      } else {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    } finally {
+      setRefreshingTools(false);
+    }
+  };
+
   return (
     <>
       <Helmet>
         <title>{t('MCP Inspector')}</title>
       </Helmet>
       <NamespaceBar />
-      <PageSection>
+      <PageSection className="kuadrant-mcp-inspector-page">
         <Stack hasGutter>
           <StackItem>
             <Title headingLevel="h1">{t('MCP Inspector')}</Title>
-            <Content component="p">
-              {t(
-                'Throwaway proof-of-concept: the browser speaks MCP Streamable HTTP directly to a gateway endpoint. Calls are cross-origin.',
-              )}
-            </Content>
-            <Content component="small">
-              {t('Browser origin')}: <code>{origin}</code>
-            </Content>
           </StackItem>
 
           <StackItem>
-            <Form>
-              <FormGroup label={t('MCP gateway extension')} fieldId="mcp-inspector-extension">
-                <FormSelect
-                  id="mcp-inspector-extension"
-                  value={selectedKey}
-                  onChange={(_event, value) => setSelectedKey(value)}
-                  aria-label={t('Select an MCP gateway extension')}
-                  isDisabled={!extensionsLoaded}
-                >
-                  <FormSelectOption
-                    value=""
-                    label={
-                      !extensionsLoaded ? t('Loading extensions...') : t('Select an extension...')
-                    }
-                    isPlaceholder
-                  />
-                  {list.map((ext) => {
-                    const reachable = !!ext.status?.mcpEndpoint && isReady(ext);
-                    const name = `${ext.metadata?.name} (${ext.metadata?.namespace})`;
-                    return (
-                      <FormSelectOption
-                        key={extKey(ext)}
-                        value={extKey(ext)}
-                        label={reachable ? name : `${name} — ${t('not reachable')}`}
-                        isDisabled={!reachable}
+            <Card className="kuadrant-mcp-inspector-page__connection-card">
+              <CardBody>
+                <Grid>
+                  <GridItem md={4} className="kuadrant-mcp-inspector-page__connection-segment">
+                    <Form>
+                      <FormGroup label={t('Gateway')} fieldId="mcp-inspector-extension">
+                        <FormSelect
+                          id="mcp-inspector-extension"
+                          value={selectedKey}
+                          onChange={handleGatewayChange}
+                          aria-label={t('Select an MCP gateway extension')}
+                          isDisabled={!extensionsLoaded}
+                        >
+                          <FormSelectOption
+                            value=""
+                            label={
+                              !extensionsLoaded
+                                ? t('Loading extensions...')
+                                : t('Select an extension...')
+                            }
+                            isPlaceholder
+                          />
+                          {list.map((ext) => {
+                            const reachable = !!ext.status?.mcpEndpoint && isReady(ext);
+                            const name = `${ext.metadata?.name} (${ext.metadata?.namespace})`;
+                            return (
+                              <FormSelectOption
+                                key={extKey(ext)}
+                                value={extKey(ext)}
+                                label={reachable ? name : `${name} — ${t('not reachable')}`}
+                                isDisabled={!reachable}
+                              />
+                            );
+                          })}
+                        </FormSelect>
+                      </FormGroup>
+                    </Form>
+                    {endpoint && (
+                      <Content component="small" className="kuadrant-mcp-inspector-page__endpoint">
+                        {endpoint}
+                      </Content>
+                    )}
+                  </GridItem>
+                  <GridItem md={4} className="kuadrant-mcp-inspector-page__connection-segment">
+                    <Content component="p" className="kuadrant-mcp-inspector-page__segment-title">
+                      {t('Connection')}
+                    </Content>
+                    <div className="kuadrant-mcp-inspector-page__connection-status">
+                      <span
+                        className={`kuadrant-mcp-inspector-page__status-dot ${
+                          connected ? 'is-connected' : ''
+                        }`}
                       />
-                    );
-                  })}
-                </FormSelect>
-              </FormGroup>
-
-              <FormGroup label={t('Resolved endpoint')} fieldId="mcp-inspector-endpoint">
-                <Content component="small">
-                  <code>{endpoint || t('none')}</code>
-                </Content>
-              </FormGroup>
-
-              <FormGroup label={t('Bearer token (optional)')} fieldId="mcp-inspector-token">
-                <TextInput
-                  id="mcp-inspector-token"
-                  type="password"
-                  value={token}
-                  onChange={(_event, value) => setToken(value)}
-                  placeholder={t('Held in memory only')}
-                />
-              </FormGroup>
-
-              <StackItem>
-                <Button
-                  variant="primary"
-                  onClick={handleConnect}
-                  isDisabled={!endpoint || connecting}
-                  isLoading={connecting}
-                >
-                  {t('Connect + list tools')}
-                </Button>
-              </StackItem>
-            </Form>
+                      <span>
+                        {connecting
+                          ? t('Connecting...')
+                          : connected
+                          ? t('Connected')
+                          : t('No connection')}
+                      </span>
+                      {connected && (
+                        <span>
+                          {authMode === 'none' ? t('No authentication') : t('Authenticated')}
+                        </span>
+                      )}
+                    </div>
+                    {sessionId && (
+                      <Content
+                        component="small"
+                        className="kuadrant-mcp-inspector-page__session-id"
+                      >
+                        {t('Session ID')}: <code>{sessionId}</code>
+                      </Content>
+                    )}
+                  </GridItem>
+                  <GridItem md={4} className="kuadrant-mcp-inspector-page__connection-segment">
+                    <Content component="p" className="kuadrant-mcp-inspector-page__segment-title">
+                      {t('Status')}
+                    </Content>
+                    <div className="kuadrant-mcp-inspector-page__session-status">
+                      <span>
+                        {stats.calls} {stats.calls === 1 ? t('request') : t('requests')}
+                      </span>
+                      <span>
+                        {sessionExpired ? 1 : 0} {t('warnings')}
+                      </span>
+                      <span>
+                        {stats.failed} {t('errors')}
+                      </span>
+                    </div>
+                  </GridItem>
+                </Grid>
+              </CardBody>
+            </Card>
           </StackItem>
 
-          {sessionId && (
+          {!selectedKey && extensionsLoaded && (
             <StackItem>
-              <Content component="small">
-                {t('Session ID')}: <code>{sessionId}</code>
-              </Content>
+              <EmptyState headingLevel="h2" titleText={t('No connection')}>
+                <EmptyStateBody>
+                  {t('Connect to a Gateway to view the MCP server tools available.')}
+                </EmptyStateBody>
+              </EmptyState>
             </StackItem>
           )}
 
@@ -256,73 +446,114 @@ const MCPInspectorPage: React.FC = () => {
             </StackItem>
           )}
 
-          {initResult && (
+          {connected && (
             <StackItem>
-              <Title headingLevel="h2">{t('initialize')}</Title>
-              <pre style={preStyle}>{JSON.stringify(initResult, null, 2)}</pre>
-            </StackItem>
-          )}
-
-          {toolsResult && (
-            <StackItem>
-              <Title headingLevel="h2">{t('tools/list')}</Title>
-              <pre style={preStyle}>{JSON.stringify(toolsResult, null, 2)}</pre>
-            </StackItem>
-          )}
-
-          {tools.length > 0 && (
-            <>
-              <StackItem>
-                <Divider />
-              </StackItem>
-              <StackItem>
-                <Title headingLevel="h2">{t('Call a tool')}</Title>
-                <Form>
-                  <FormGroup label={t('Tool')} fieldId="mcp-inspector-tool">
-                    <FormSelect
-                      id="mcp-inspector-tool"
-                      value={selectedTool}
-                      onChange={(_event, value) => setSelectedTool(value)}
-                      aria-label={t('Select a tool')}
-                    >
-                      <FormSelectOption value="" label={t('Select a tool...')} isPlaceholder />
-                      {tools.map((tool) => (
-                        <FormSelectOption key={tool.name} value={tool.name} label={tool.name} />
-                      ))}
-                    </FormSelect>
-                  </FormGroup>
-                  <FormGroup label={t('Arguments (JSON)')} fieldId="mcp-inspector-args">
-                    <TextArea
-                      id="mcp-inspector-args"
-                      value={argsText}
-                      onChange={(_event, value) => setArgsText(value)}
-                      rows={6}
-                      aria-label={t('Tool call arguments as JSON')}
-                    />
-                  </FormGroup>
+              <Tabs
+                activeKey={activeSection}
+                onSelect={(_event, key) => setActiveSection(key)}
+                aria-label={t('MCP inspector sections')}
+              >
+                <Tab eventKey={0} title={<TabTitleText>{t('Tools')}</TabTitleText>} />
+                <Tab eventKey={1} title={<TabTitleText>{t('Prompts')}</TabTitleText>} />
+                <Tab eventKey={2} title={<TabTitleText>{t('Logs')}</TabTitleText>} />
+              </Tabs>
+              {activeSection === 0 && (
+                <Stack hasGutter className="kuadrant-mcp-inspector-page__section">
                   <StackItem>
-                    <Button
-                      variant="secondary"
-                      onClick={handleCall}
-                      isDisabled={!selectedTool || calling}
-                      isLoading={calling}
-                    >
-                      {t('Call')}
-                    </Button>
+                    <Alert
+                      variant="warning"
+                      isInline
+                      isPlain
+                      title={t(
+                        'Running tools executes live server-side code and can change your infrastructure.',
+                      )}
+                      className="kuadrant-mcp-inspector-page__tool-warning"
+                    />
                   </StackItem>
-                </Form>
-              </StackItem>
-            </>
-          )}
-
-          {callResult && (
-            <StackItem>
-              <Title headingLevel="h2">{t('tools/call result')}</Title>
-              <pre style={preStyle}>{JSON.stringify(callResult, null, 2)}</pre>
+                  <StackItem>
+                    <Grid hasGutter>
+                      <GridItem md={6}>
+                        <MCPToolWorkspace
+                          tools={tools}
+                          isRunning={calling}
+                          isRefreshing={refreshingTools}
+                          onRefresh={handleRefreshTools}
+                          onRun={handleCall}
+                        />
+                      </GridItem>
+                      <GridItem md={6}>
+                        <MCPInspectorOutput exchange={callExchange} />
+                      </GridItem>
+                    </Grid>
+                  </StackItem>
+                </Stack>
+              )}
+              {activeSection === 1 && (
+                <EmptyState headingLevel="h2" titleText={t('Prompts')}>
+                  <EmptyStateBody>{t('Prompt inspection is not available yet.')}</EmptyStateBody>
+                </EmptyState>
+              )}
+              {activeSection === 2 && (
+                <EmptyState headingLevel="h2" titleText={t('Logs')}>
+                  <EmptyStateBody>{t('Session logs are not available yet.')}</EmptyStateBody>
+                </EmptyState>
+              )}
             </StackItem>
           )}
         </Stack>
       </PageSection>
+      <Modal
+        isOpen={!!authChallenge}
+        onClose={() => setAuthChallenge(null)}
+        variant={ModalVariant.small}
+        aria-labelledby="mcp-inspector-auth-title"
+      >
+        <ModalHeader title={t('Authentication required')} labelId="mcp-inspector-auth-title" />
+        <ModalBody>
+          <Stack hasGutter>
+            <StackItem>
+              <Content component="p">
+                {t(
+                  'This MCP gateway requires authentication. Sign in with OIDC or provide a bearer token.',
+                )}
+              </Content>
+            </StackItem>
+            <StackItem>
+              <Button variant="primary" onClick={handleOidcSignIn} isLoading={connecting}>
+                {t('Sign in with OIDC')}
+              </Button>
+            </StackItem>
+            <StackItem>
+              <Divider />
+            </StackItem>
+            <StackItem>
+              <FormGroup label={t('Bearer token')} fieldId="mcp-inspector-bearer-token">
+                <TextInput
+                  id="mcp-inspector-bearer-token"
+                  type="password"
+                  value={bearerToken}
+                  onChange={(_event, value) => setBearerToken(value)}
+                  aria-label={t('Bearer token')}
+                  placeholder={t('Held in memory only')}
+                />
+              </FormGroup>
+            </StackItem>
+          </Stack>
+        </ModalBody>
+        <ModalFooter>
+          <Button
+            variant="secondary"
+            onClick={handleBearerConnect}
+            isDisabled={!bearerToken.trim() || connecting}
+            isLoading={connecting}
+          >
+            {t('Connect with bearer token')}
+          </Button>
+          <Button variant="link" onClick={() => setAuthChallenge(null)}>
+            {t('Cancel')}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </>
   );
 };

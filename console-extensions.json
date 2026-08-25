@@ -660,6 +660,16 @@
     }
   },
   {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "kuadrant-mcp-inspector-admin",
+      "name": "%plugin__kuadrant-console-plugin~MCP Inspector%",
+      "href": "/mcp-inspector",
+      "perspective": "admin",
+      "section": "kuadrant-mcp-section-admin"
+    }
+  },
+  {
     "type": "console.navigation/section",
     "properties": {
       "id": "kuadrant-mcp-section-dev",
@@ -674,6 +684,16 @@
       "name": "%plugin__kuadrant-console-plugin~Overview%",
       "href": "/kuadrant/mcp/overview",
       "namespaced": true,
+      "perspective": "dev",
+      "section": "kuadrant-mcp-section-dev"
+    }
+  },
+  {
+    "type": "console.navigation/href",
+    "properties": {
+      "id": "kuadrant-mcp-inspector-dev",
+      "name": "%plugin__kuadrant-console-plugin~MCP Inspector%",
+      "href": "/mcp-inspector",
       "perspective": "dev",
       "section": "kuadrant-mcp-section-dev"
     }

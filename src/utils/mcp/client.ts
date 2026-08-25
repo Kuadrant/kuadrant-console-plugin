@@ -1,8 +1,8 @@
-// tiny dependency-free mcp streamable http client (poc).
-// speaks json-rpc 2.0 over a single endpoint, handles json + sse responses,
-// and keeps the session id in memory only (caller holds it in react state).
+// Dependency-free MCP Streamable HTTP client. It speaks JSON-RPC 2.0 over a
+// single endpoint, handles JSON and SSE responses, and keeps the session ID in
+// memory only (the caller holds it in React state).
 
-const MCP_PROTOCOL_VERSION = '2025-03-26';
+export const MCP_PROTOCOL_VERSION = '2025-11-25';
 
 export interface JsonRpcError {
   code: number;
@@ -10,11 +10,18 @@ export interface JsonRpcError {
   data?: unknown;
 }
 
-interface JsonRpcResponse<T> {
+export interface JsonRpcResponse<T> {
   jsonrpc: '2.0';
   id: number | string | null;
   result?: T;
   error?: JsonRpcError;
+}
+
+export interface JsonRpcRequest extends Record<string, unknown> {
+  jsonrpc: '2.0';
+  id: number | string;
+  method: string;
+  params: Record<string, unknown>;
 }
 
 export interface InitializeResult {
@@ -29,6 +36,15 @@ export interface MCPTool {
   name: string;
   description?: string;
   inputSchema?: Record<string, unknown>;
+  annotations?: {
+    title?: string;
+    readOnlyHint?: boolean;
+    destructiveHint?: boolean;
+    idempotentHint?: boolean;
+    openWorldHint?: boolean;
+    [key: string]: unknown;
+  };
+  _meta?: Record<string, unknown>;
   [key: string]: unknown;
 }
 
@@ -42,6 +58,15 @@ export interface ToolsCallResult {
   content?: Array<{ type: string; text?: string; [key: string]: unknown }>;
   isError?: boolean;
   [key: string]: unknown;
+}
+
+export interface MCPCallExchange<T> {
+  result: T;
+  request: JsonRpcRequest;
+  response: JsonRpcResponse<T>;
+  status: number;
+  statusText: string;
+  durationMs: number;
 }
 
 // json-rpc level error (server returned an error object).
@@ -63,6 +88,16 @@ export class MCPHttpError extends Error {
     super(message);
     this.name = 'MCPHttpError';
     this.status = status;
+  }
+}
+
+// initialize 401: caller starts PKCE from WWW-Authenticate (RFC 9728).
+export class MCPUnauthorizedError extends MCPHttpError {
+  wwwAuthenticate: string | null;
+  constructor(wwwAuthenticate: string | null) {
+    super(401, 'initialize failed (http 401)');
+    this.name = 'MCPUnauthorizedError';
+    this.wwwAuthenticate = wwwAuthenticate;
   }
 }
 
@@ -106,6 +141,9 @@ export class MCPClient {
       },
     });
     if (!res.ok) {
+      if (res.status === 401) {
+        throw new MCPUnauthorizedError(res.headers.get('WWW-Authenticate'));
+      }
       throw new MCPHttpError(res.status, `initialize failed (http ${res.status})`);
     }
     const headerSession = res.headers.get('Mcp-Session-Id');
@@ -130,7 +168,40 @@ export class MCPClient {
   }
 
   async toolsCall(name: string, args: Record<string, unknown>): Promise<ToolsCallResult> {
-    return this.call<ToolsCallResult>('tools/call', { name, arguments: args });
+    return (await this.toolsCallWithDetails(name, args)).result;
+  }
+
+  async toolsCallWithDetails(
+    name: string,
+    args: Record<string, unknown>,
+    metadata?: Record<string, unknown>,
+  ): Promise<MCPCallExchange<ToolsCallResult>> {
+    const request: JsonRpcRequest = {
+      jsonrpc: '2.0',
+      id: this.nextId++,
+      method: 'tools/call',
+      params: {
+        name,
+        arguments: args,
+        ...(metadata && Object.keys(metadata).length > 0 ? { _meta: metadata } : {}),
+      },
+    };
+    const startedAt = Date.now();
+    const res = await this.post(request);
+    if (!res.ok) {
+      throw this.httpErrorFor(res.status, 'tools/call failed');
+    }
+    const response = await parseRpcMessage<ToolsCallResult>(res);
+    const durationMs = Date.now() - startedAt;
+    throwOnRpcError(response);
+    return {
+      result: response.result as ToolsCallResult,
+      request,
+      response,
+      status: res.status,
+      statusText: res.statusText,
+      durationMs,
+    };
   }
 
   private async call<T>(method: string, params: Record<string, unknown>): Promise<T> {
