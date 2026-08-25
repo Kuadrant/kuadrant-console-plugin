@@ -85,7 +85,7 @@ const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
         <Title headingLevel="h2" size="lg" className="kuadrant-limits-header">
           {t('Configured Limits')}
         </Title>
-        <LabelGroup numLabels={5}>
+        <LabelGroup numLabels={5} className="kuadrant-rate-limit-label-group">
           {Object.keys(limits).length > 0 ? (
             Object.entries(limits).map(([name, limitConfig], index) => (
               <Label key={index} color="blue" onClose={() => handleRemoveLimit(name)}>

@@ -1,5 +1,9 @@
 import { useK8sWatchResource, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
 import {
+  FormGroup,
+  FormHelperText,
+  HelperText,
+  HelperTextItem,
   MenuToggle,
   Menu,
   MenuContent,
@@ -10,7 +14,7 @@ import {
 } from '@patternfly/react-core';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom-v5-compat';
+import { useNavigate } from 'react-router';
 import { RESOURCES, ResourceKind } from '../../utils/resources';
 
 export type RouteKind = 'HTTPRoute' | 'GRPCRoute';
@@ -20,6 +24,7 @@ interface HTTPRouteSelectProps {
   onChange: (route: { name: string; namespace: string }) => void;
   isDisabled?: boolean;
   kind?: RouteKind;
+  hideLabel?: boolean;
 }
 
 const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
@@ -27,6 +32,7 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
   onChange,
   isDisabled = false,
   kind = 'HTTPRoute',
+  hideLabel = false,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const navigate = useNavigate();
@@ -92,7 +98,7 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
       ? `${selectedRoute.namespace}/${selectedRoute.name}`
       : selectLabel;
 
-  return (
+  const menuContainer = (
     <MenuContainer
       isOpen={isOpen}
       onOpenChange={(open) => setIsOpen(open)}
@@ -150,6 +156,31 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
         </Menu>
       }
     />
+  );
+
+  if (hideLabel) {
+    return menuContainer;
+  }
+
+  return (
+    <FormGroup
+      label={
+        kind === 'GRPCRoute' ? t('GRPC Route Target Reference') : t('HTTP Route Target Reference')
+      }
+      isRequired
+      fieldId={selectId}
+    >
+      {menuContainer}
+      <FormHelperText>
+        <HelperText>
+          <HelperTextItem>
+            {kind === 'GRPCRoute'
+              ? t('GRPCRoute: Reference to a Kubernetes resource that the policy attaches to.')
+              : t('HTTPRoute: Reference to a Kubernetes resource that the policy attaches to.')}
+          </HelperTextItem>
+        </HelperText>
+      </FormHelperText>
+    </FormGroup>
   );
 };
 

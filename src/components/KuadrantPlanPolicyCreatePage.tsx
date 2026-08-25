@@ -265,6 +265,7 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
                     selectedRoute={selectedRoute}
                     onChange={setSelectedRoute}
                     isDisabled={formDisabled}
+                    hideLabel
                   />
                 </FormGroup>
 
