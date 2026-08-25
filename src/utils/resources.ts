@@ -425,6 +425,31 @@ export const getPoliciesForResource = (resourceKind: ResourceKind): ResourceKind
   return RESOURCE_POLICY_MAP[resourceKind] || [];
 };
 
+// get target kinds (Gateway/HTTPRoute/GRPCRoute) a given policy kind is allowed to target
+export const getTargetKindsForPolicy = (policyKind: ResourceKind): ResourceKind[] => {
+  return (Object.keys(RESOURCE_POLICY_MAP) as ResourceKind[]).filter((targetKind) =>
+    RESOURCE_POLICY_MAP[targetKind]?.includes(policyKind),
+  );
+};
+
+// check whether a targetRef (as parsed from user-supplied YAML) is one this
+// policy kind's CRD actually accepts, so unsupported references never get
+// past form state into a save that the admission webhook will reject. The
+// Form has no way to represent a targetRef in a different namespace than the
+// policy itself, so a namespace that doesn't match is rejected too rather
+// than silently reinterpreted as a same-named local target.
+export const isSupportedTargetRef = (
+  policyKind: ResourceKind,
+  group?: string,
+  kind?: string,
+  targetNamespace?: string,
+  formNamespace?: string,
+): boolean => {
+  if (group !== RESOURCES.Gateway.gvk.group) return false;
+  if (targetNamespace && targetNamespace !== formNamespace) return false;
+  return getTargetKindsForPolicy(policyKind).includes(kind as ResourceKind);
+};
+
 export default resourceGVKMapping;
 
 export interface OpenshiftUser {

@@ -54,6 +54,33 @@ spec:
         from: Same
 `;
 
+const httprouteManifest = (name: string, namespace: string) => `
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ${name}
+  namespace: ${namespace}
+spec:
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+`;
+
+const grpcrouteManifest = (name: string, namespace: string) => `
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: ${name}
+  namespace: ${namespace}
+spec:
+  rules:
+  - matches:
+    - method:
+        service: echo.EchoService
+`;
+
 // full page navigation so the console derives the active namespace from the
 // URL (pushState does not update the console's namespace state)
 async function gotoPage(page: Page, path: string): Promise<void> {
@@ -63,6 +90,29 @@ async function gotoPage(page: Page, path: string): Promise<void> {
 }
 
 const createPagePath = (namespace: string, gvk: string) => `/k8s/ns/${namespace}/${gvk}/~new`;
+
+// <ResourceYAMLEditor> is a Monaco editor, so it can't be filled like a plain input.
+// Set its content through Monaco's model API, which triggers onChange like real typing.
+async function setEditorValue(page: Page, yaml: string): Promise<void> {
+  await page.waitForFunction(
+    () => {
+      const monaco = (
+        window as unknown as { monaco?: { editor?: { getModels?: () => unknown[] } } }
+      ).monaco;
+      return (monaco?.editor?.getModels?.()?.length ?? 0) > 0;
+    },
+    { timeout: 20_000 },
+  );
+  await page.evaluate((value) => {
+    const monaco = (
+      window as unknown as {
+        monaco?: { editor?: { getModels?: () => { setValue(v: string): void }[] } };
+      }
+    ).monaco;
+    monaco?.editor?.getModels?.()[0]?.setValue(value);
+  }, yaml);
+  await page.waitForTimeout(500);
+}
 
 test.describe('DNSPolicy form', () => {
   test('create form renders with required fields', { tag: '@smoke' }, async ({ page }) => {
@@ -578,17 +628,150 @@ test.describe('OIDCPolicy form', () => {
   test.describe('with seeded namespace', () => {
     let namespace = '';
     let gateway = '';
+    let httproute = '';
 
     test.beforeEach(async () => {
       namespace = `e2e-oidcp-${uid()}`;
       gateway = `e2e-gw-${uid()}`;
+      httproute = `e2e-route-${uid()}`;
       kubectl(['create', 'namespace', namespace]);
       applyManifest(gatewayManifest(gateway, namespace));
+      applyManifest(httprouteManifest(httproute, namespace));
     });
 
     test.afterEach(async () => {
       deleteNamespace(namespace);
     });
+
+    test(
+      'switching Target Type clears the previously selected target',
+      { tag: '@nightly' },
+      async ({ page }) => {
+        const foreignNamespace = `e2e-oidcp-foreign-${uid()}`;
+        const foreignGateway = `e2e-gw-foreign-${uid()}`;
+        kubectl(['create', 'namespace', foreignNamespace]);
+        applyManifest(gatewayManifest(foreignGateway, foreignNamespace));
+
+        try {
+          await gotoPage(
+            page,
+            createPagePath(namespace, 'extensions.kuadrant.io~v1alpha1~OIDCPolicy'),
+          );
+
+          await page.locator('#policy-name').fill(`e2e-oidc-${uid()}`);
+          await page.locator('#client-id').fill('my-client-id');
+          await page.locator('#issuer-url').fill('https://auth.example.com');
+
+          const gatewayOption = page.locator(
+            `#gateway-select option[value="${namespace}/${gateway}"]`,
+          );
+          await expect(gatewayOption).toBeAttached({ timeout: 15_000 });
+
+          // the Gateway selector is scoped to the policy's own namespace - a
+          // Gateway from a foreign namespace must never be selectable, since
+          // the targetRef has no namespace field and would silently attach
+          // to a same-named (or nonexistent) Gateway in this namespace
+          await expect(
+            page.locator(`#gateway-select option[value="${foreignNamespace}/${foreignGateway}"]`),
+          ).not.toBeAttached();
+
+          await page.locator('#gateway-select').selectOption(`${namespace}/${gateway}`);
+
+          const createButton = page.getByRole('button', { name: 'Create', exact: true });
+          await expect(createButton).toBeEnabled();
+
+          // switching kind must reset the previously selected name, not carry a
+          // Gateway name over into an HTTPRoute targetRef
+          await page.locator('#target-type-radio-httproute').click();
+          await expect(page.locator('#gateway-select')).not.toBeVisible();
+          await expect(page.locator('#httproute-select')).toBeVisible();
+          await expect(createButton).toBeDisabled();
+
+          await page.locator('#httproute-select').click();
+          await page.getByRole('menuitem', { name: `${namespace}/${httproute}` }).click();
+          await expect(createButton).toBeEnabled();
+        } finally {
+          deleteNamespace(foreignNamespace);
+        }
+      },
+    );
+
+    test(
+      'creates an OIDCPolicy targeting an HTTPRoute via the form',
+      { tag: '@smoke' },
+      async ({ page }) => {
+        const policyName = `e2e-oidc-${uid()}`;
+        await gotoPage(
+          page,
+          createPagePath(namespace, 'extensions.kuadrant.io~v1alpha1~OIDCPolicy'),
+        );
+
+        await page.locator('#policy-name').fill(policyName);
+
+        await page.locator('#target-type-radio-httproute').click();
+        await page.locator('#httproute-select').click();
+        await page.getByRole('menuitem', { name: `${namespace}/${httproute}` }).click();
+
+        await page.locator('#client-id').fill('my-client-id');
+        await page.locator('#issuer-url').fill('https://auth.example.com');
+
+        const createButton = page.getByRole('button', { name: 'Create', exact: true });
+        await expect(createButton).toBeEnabled();
+        await createButton.click();
+
+        await expect(page).toHaveURL(new RegExp(`/kuadrant/policies/ns/${namespace}/oidc`), {
+          timeout: 15_000,
+        });
+
+        expect(
+          kubectl([
+            'get',
+            'oidcpolicy',
+            policyName,
+            '-n',
+            namespace,
+            '-o',
+            'jsonpath={.spec.targetRef.kind}/{.spec.targetRef.name}',
+          ]),
+        ).toBe(`HTTPRoute/${httproute}`);
+      },
+    );
+
+    test(
+      'YAML target hydrates the Form Target Type and selector',
+      { tag: '@nightly' },
+      async ({ page }) => {
+        await gotoPage(
+          page,
+          createPagePath(namespace, 'extensions.kuadrant.io~v1alpha1~OIDCPolicy'),
+        );
+
+        await page.getByRole('tab', { name: 'YAML' }).click();
+        await setEditorValue(
+          page,
+          `apiVersion: extensions.kuadrant.io/v1alpha1
+kind: OIDCPolicy
+metadata:
+  name: yaml-hydrate-check
+  namespace: ${namespace}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: ${httproute}
+  provider:
+    clientID: my-client-id
+    issuerURL: https://auth.example.com
+`,
+        );
+
+        await page.getByRole('tab', { name: 'Form' }).click();
+
+        await expect(page.locator('#target-type-radio-httproute')).toBeChecked();
+        await expect(page.locator('#httproute-select')).toContainText(`${namespace}/${httproute}`);
+        await expect(page.locator('#client-id')).toHaveValue('my-client-id');
+      },
+    );
 
     test('creates an OIDCPolicy via the form', { tag: '@smoke' }, async ({ page }) => {
       const policyName = `e2e-oidc-${uid()}`;
@@ -714,17 +897,130 @@ test.describe('TokenRateLimitPolicy form', () => {
   test.describe('with seeded namespace', () => {
     let namespace = '';
     let gateway = '';
+    let httproute = '';
 
     test.beforeEach(async () => {
       namespace = `e2e-trlp-${uid()}`;
       gateway = `e2e-gw-${uid()}`;
+      httproute = `e2e-route-${uid()}`;
       kubectl(['create', 'namespace', namespace]);
       applyManifest(gatewayManifest(gateway, namespace));
+      applyManifest(httprouteManifest(httproute, namespace));
     });
 
     test.afterEach(async () => {
       deleteNamespace(namespace);
     });
+
+    test(
+      'creates a TokenRateLimitPolicy targeting an HTTPRoute via the form',
+      { tag: '@smoke' },
+      async ({ page }) => {
+        const policyName = `e2e-trl-${uid()}`;
+        await gotoPage(
+          page,
+          createPagePath(namespace, 'kuadrant.io~v1alpha1~TokenRateLimitPolicy'),
+        );
+
+        await page.locator('#policy-name').fill(policyName);
+
+        await page.locator('#target-type-radio-httproute').click();
+        await page.locator('#httproute-select').click();
+        await page.getByRole('menuitem', { name: `${namespace}/${httproute}` }).click();
+
+        // CRD requires at least one spec.limits entry
+        await page.getByRole('button', { name: 'Add Limit' }).click();
+        await page.locator('#new-limit-name').fill('default');
+        await page.locator('#new-limit-value').fill('100');
+        await page.locator('#new-limit-window').fill('1m');
+        await page.getByRole('button', { name: 'Add Rate' }).click();
+        await page.getByRole('button', { name: 'Save Limit' }).click();
+
+        const createButton = page.getByRole('button', { name: 'Create', exact: true });
+        await expect(createButton).toBeEnabled();
+        await createButton.click();
+
+        await expect(page).toHaveURL(
+          new RegExp(`/kuadrant/policies/ns/${namespace}/tokenratelimit`),
+          { timeout: 15_000 },
+        );
+
+        expect(
+          kubectl([
+            'get',
+            'tokenratelimitpolicy',
+            policyName,
+            '-n',
+            namespace,
+            '-o',
+            'jsonpath={.spec.targetRef.kind}/{.spec.targetRef.name}',
+          ]),
+        ).toBe(`HTTPRoute/${httproute}`);
+      },
+    );
+
+    test(
+      'YAML with an unsupported target kind does not populate the Form target',
+      { tag: '@nightly' },
+      async ({ page }) => {
+        await gotoPage(
+          page,
+          createPagePath(namespace, 'kuadrant.io~v1alpha1~TokenRateLimitPolicy'),
+        );
+
+        // establish a valid, Create-enabled target first so the later
+        // disabled result is caused by the guard rejecting the YAML, not by
+        // an untouched empty form that was never going to be valid anyway
+        await page.locator('#policy-name').fill(`e2e-trl-${uid()}`);
+        const gatewayOption = page.locator(
+          `#gateway-select option[value="${namespace}/${gateway}"]`,
+        );
+        await expect(gatewayOption).toBeAttached({ timeout: 15_000 });
+        await page.locator('#gateway-select').selectOption(`${namespace}/${gateway}`);
+        await page.getByRole('button', { name: 'Add Limit' }).click();
+        await page.locator('#new-limit-name').fill('default');
+        await page.locator('#new-limit-value').fill('100');
+        await page.locator('#new-limit-window').fill('1m');
+        await page.getByRole('button', { name: 'Add Rate' }).click();
+        await page.getByRole('button', { name: 'Save Limit' }).click();
+
+        const createButton = page.getByRole('button', { name: 'Create', exact: true });
+        await expect(createButton).toBeEnabled();
+
+        await page.getByRole('tab', { name: 'YAML' }).click();
+        await setEditorValue(
+          page,
+          `apiVersion: kuadrant.io/v1alpha1
+kind: TokenRateLimitPolicy
+metadata:
+  name: yaml-guard-check
+  namespace: ${namespace}
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: GRPCRoute
+    name: does-not-matter
+  limits:
+    yaml-limit:
+      rates:
+      - limit: 200
+        window: 1m
+`,
+        );
+
+        await page.getByRole('tab', { name: 'Form' }).click();
+
+        // name and limits hydrated from the YAML, proving the onChange
+        // callback actually fired for this edit...
+        await expect(page.locator('#policy-name')).toHaveValue('yaml-guard-check');
+        await expect(page.getByText('yaml-limit')).toBeVisible();
+        // ...but the unsupported GRPCRoute target was rejected rather than
+        // carried over, so Create stays disabled instead of persisting a
+        // reference the CRD would reject
+        await expect(page.locator('#gateway-select')).not.toHaveValue(`${namespace}/${gateway}`);
+        await expect(createButton).toBeDisabled();
+      },
+    );
 
     test('creates a TokenRateLimitPolicy via the form', { tag: '@smoke' }, async ({ page }) => {
       const policyName = `e2e-trl-${uid()}`;
@@ -1065,6 +1361,7 @@ test.describe('PlanPolicy form', () => {
       await page.locator('#plan-predicate-0').fill('auth.identity.tier == "gold"');
       await expect(createButton).toBeDisabled();
 
+      await page.locator('#target-type-radio-httproute').click();
       await page.locator('#httproute-select').click();
       await page.getByRole('menuitem', { name: `${TEST_NAMESPACE}/test-route` }).click();
       await expect(createButton).toBeEnabled();
@@ -1077,31 +1374,60 @@ test.describe('PlanPolicy form', () => {
   test.describe('with seeded namespace', () => {
     let namespace = '';
     let httproute = '';
-
-    const httprouteManifest = (name: string, ns: string) => `
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: ${name}
-  namespace: ${ns}
-spec:
-  rules:
-  - matches:
-    - path:
-        type: PathPrefix
-        value: /
-`;
+    let grpcroute = '';
 
     test.beforeEach(async () => {
       namespace = `e2e-planp-${uid()}`;
       httproute = `e2e-route-${uid()}`;
+      grpcroute = `e2e-grpc-${uid()}`;
       kubectl(['create', 'namespace', namespace]);
       applyManifest(httprouteManifest(httproute, namespace));
+      applyManifest(grpcrouteManifest(grpcroute, namespace));
     });
 
     test.afterEach(async () => {
       deleteNamespace(namespace);
     });
+
+    test(
+      'creates a PlanPolicy targeting a GRPCRoute via the form',
+      { tag: '@smoke' },
+      async ({ page }) => {
+        const policyName = `e2e-plan-${uid()}`;
+        await gotoPage(
+          page,
+          createPagePath(namespace, 'extensions.kuadrant.io~v1alpha1~PlanPolicy'),
+        );
+
+        await page.locator('#policy-name').fill(policyName);
+        await page.locator('#plan-tier-0').fill('gold');
+        await page.locator('#plan-predicate-0').fill('auth.identity.tier == "gold"');
+
+        await page.locator('#target-type-radio-grpcroute').click();
+        await page.locator('#grpcroute-select').click();
+        await page.getByRole('menuitem', { name: `${namespace}/${grpcroute}` }).click();
+
+        const createButton = page.getByRole('button', { name: 'Create', exact: true });
+        await expect(createButton).toBeEnabled();
+        await createButton.click();
+
+        await expect(page).toHaveURL(new RegExp(`/kuadrant/policies/ns/${namespace}/plan`), {
+          timeout: 15_000,
+        });
+
+        expect(
+          kubectl([
+            'get',
+            'planpolicy',
+            policyName,
+            '-n',
+            namespace,
+            '-o',
+            'jsonpath={.spec.targetRef.kind}/{.spec.targetRef.name}',
+          ]),
+        ).toBe(`GRPCRoute/${grpcroute}`);
+      },
+    );
 
     test('creates a PlanPolicy via the form', { tag: '@smoke' }, async ({ page }) => {
       const policyName = `e2e-plan-${uid()}`;
@@ -1120,6 +1446,7 @@ spec:
         );
       await page.locator('#plan-daily-0').fill('100');
 
+      await page.locator('#target-type-radio-httproute').click();
       await page.locator('#httproute-select').click();
       await page.getByRole('menuitem', { name: `${namespace}/${httproute}` }).click();
 
@@ -1169,6 +1496,12 @@ spec:
         await expect(page.locator('#plan-tier-0')).toHaveValue('gold');
         await expect(page.locator('#plan-predicate-0')).toHaveValue('auth.identity.tier == "gold"');
         await expect(page.locator('#plan-daily-0')).toHaveValue('100');
+
+        // target type must not be re-editable once a policy already targets a resource
+        await expect(page.locator('#target-type-radio-gateway')).toBeDisabled();
+        await expect(page.locator('#target-type-radio-httproute')).toBeDisabled();
+        await expect(page.locator('#target-type-radio-grpcroute')).toBeDisabled();
+        await expect(page.locator('#httproute-select')).toBeDisabled();
 
         await page.locator('#plan-daily-0').fill('200');
 

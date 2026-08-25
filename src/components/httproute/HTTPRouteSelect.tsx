@@ -1,4 +1,4 @@
-import { useK8sWatchResource, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
+import { useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import {
   FormGroup,
   FormHelperText,
@@ -22,6 +22,10 @@ export type RouteKind = 'HTTPRoute' | 'GRPCRoute';
 interface HTTPRouteSelectProps {
   selectedRoute: { name: string; namespace: string };
   onChange: (route: { name: string; namespace: string }) => void;
+  // policy's target namespace - a route from a different namespace can never
+  // be saved (targetRef has no namespace field), so the list must be scoped
+  // to this namespace rather than watching the whole cluster
+  namespace: string;
   isDisabled?: boolean;
   kind?: RouteKind;
   hideLabel?: boolean;
@@ -30,6 +34,7 @@ interface HTTPRouteSelectProps {
 const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
   selectedRoute,
   onChange,
+  namespace,
   isDisabled = false,
   kind = 'HTTPRoute',
   hideLabel = false,
@@ -38,20 +43,22 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
   const navigate = useNavigate();
   const [routes, setRoutes] = React.useState<Array<{ name: string; namespace: string }>>([]);
   const [isOpen, setIsOpen] = React.useState(false);
-  const [activeNamespace] = useActiveNamespace();
   const toggleRef = React.useRef<HTMLButtonElement>(null);
   const menuRef = React.useRef<HTMLDivElement>(null);
   const resourceKey = kind as ResourceKind;
   const gvk = RESOURCES[resourceKey].gvk;
+  const isAllNamespaces = !namespace || namespace === '#ALL_NS#';
 
   // Map #ALL_NS# sentinel to undefined for cluster-wide watch
-  const resolvedNamespace = activeNamespace === '#ALL_NS#' ? undefined : activeNamespace;
+  const resolvedNamespace = isAllNamespaces ? undefined : namespace;
 
-  const routeResource = {
-    groupVersionKind: gvk,
-    isList: true,
-    namespace: resolvedNamespace,
-  };
+  const routeResource = isAllNamespaces
+    ? null
+    : {
+        groupVersionKind: gvk,
+        isList: true,
+        namespace: resolvedNamespace,
+      };
 
   const [routeData, routeLoaded, routeError] = useK8sWatchResource(routeResource);
 
@@ -63,8 +70,24 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
           namespace: route.metadata.namespace,
         })),
       );
+    } else if (isAllNamespaces) {
+      setRoutes([]);
     }
-  }, [routeData, routeLoaded, routeError]);
+  }, [routeData, routeLoaded, routeError, isAllNamespaces]);
+
+  // A route selected in one namespace is never valid in another - the watch
+  // above re-scopes automatically, but the controlled selection must be
+  // cleared too or the old name gets silently resubmitted against the new
+  // namespace's route list.
+  const prevNamespaceRef = React.useRef(namespace);
+  React.useEffect(() => {
+    if (prevNamespaceRef.current !== namespace) {
+      prevNamespaceRef.current = namespace;
+      if (!isDisabled && selectedRoute.name) {
+        onChange({ name: '', namespace: '' });
+      }
+    }
+  }, [namespace]);
 
   const handleToggle = () => {
     setIsOpen(!isOpen);
@@ -110,7 +133,7 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
           id={selectId}
           onClick={handleToggle}
           isExpanded={isOpen}
-          isDisabled={isDisabled}
+          isDisabled={isDisabled || isAllNamespaces}
           style={{ width: '100%' }}
         >
           {selectedLabel}
@@ -173,8 +196,10 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
       {menuContainer}
       <FormHelperText>
         <HelperText>
-          <HelperTextItem>
-            {kind === 'GRPCRoute'
+          <HelperTextItem variant={isAllNamespaces ? 'warning' : 'default'}>
+            {isAllNamespaces
+              ? t('Select a specific namespace to choose a {{kind}}', { kind })
+              : kind === 'GRPCRoute'
               ? t('GRPCRoute: Reference to a Kubernetes resource that the policy attaches to.')
               : t('HTTPRoute: Reference to a Kubernetes resource that the policy attaches to.')}
           </HelperTextItem>

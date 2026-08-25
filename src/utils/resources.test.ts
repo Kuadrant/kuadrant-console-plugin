@@ -3,6 +3,8 @@ import {
   getPolicyKinds,
   getTopologyDefaultKinds,
   getPoliciesForResource,
+  getTargetKindsForPolicy,
+  isSupportedTargetRef,
   getGVK,
   getResourceMetadata,
 } from './resources';
@@ -83,6 +85,52 @@ describe('getPoliciesForResource', () => {
 
   it('returns an empty array for a kind with no policy mappings', () => {
     expect(getPoliciesForResource('APIKey')).toEqual([]);
+  });
+});
+
+// ── getTargetKindsForPolicy ───────────────────────────────────────────────────
+
+describe('getTargetKindsForPolicy', () => {
+  it('returns Gateway and HTTPRoute for OIDCPolicy but not GRPCRoute', () => {
+    const kinds = getTargetKindsForPolicy('OIDCPolicy');
+    expect(kinds).toEqual(expect.arrayContaining(['Gateway', 'HTTPRoute']));
+    expect(kinds).not.toContain('GRPCRoute');
+  });
+
+  it('returns Gateway, HTTPRoute and GRPCRoute for PlanPolicy', () => {
+    const kinds = getTargetKindsForPolicy('PlanPolicy');
+    expect(kinds).toEqual(expect.arrayContaining(['Gateway', 'HTTPRoute', 'GRPCRoute']));
+  });
+});
+
+// ── isSupportedTargetRef ──────────────────────────────────────────────────────
+
+describe('isSupportedTargetRef', () => {
+  const GROUP = 'gateway.networking.k8s.io';
+
+  it('accepts a Gateway target for OIDCPolicy', () => {
+    expect(isSupportedTargetRef('OIDCPolicy', GROUP, 'Gateway')).toBe(true);
+  });
+
+  it('rejects a GRPCRoute target for OIDCPolicy', () => {
+    expect(isSupportedTargetRef('OIDCPolicy', GROUP, 'GRPCRoute')).toBe(false);
+  });
+
+  it('accepts a GRPCRoute target for PlanPolicy', () => {
+    expect(isSupportedTargetRef('PlanPolicy', GROUP, 'GRPCRoute')).toBe(true);
+  });
+
+  it('rejects a target from an unsupported group', () => {
+    expect(isSupportedTargetRef('OIDCPolicy', 'example.com', 'Gateway')).toBe(false);
+  });
+
+  it('accepts a target with no namespace or a namespace matching the form', () => {
+    expect(isSupportedTargetRef('OIDCPolicy', GROUP, 'HTTPRoute', undefined, 'ns-a')).toBe(true);
+    expect(isSupportedTargetRef('OIDCPolicy', GROUP, 'HTTPRoute', 'ns-a', 'ns-a')).toBe(true);
+  });
+
+  it('rejects a targetRef namespace that differs from the form namespace', () => {
+    expect(isSupportedTargetRef('OIDCPolicy', GROUP, 'HTTPRoute', 'ns-a', 'ns-b')).toBe(false);
   });
 });
 

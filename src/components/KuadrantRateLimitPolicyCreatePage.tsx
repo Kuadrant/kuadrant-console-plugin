@@ -18,6 +18,7 @@ import {
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
+import './css/gateway-api-plugin.css';
 import {
   ResourceYAMLEditor,
   getGroupVersionKindForResource,
@@ -35,9 +36,9 @@ import { LimitConfig, TargetRef } from './ratelimitpolicy/types';
 import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
-import { resourceGVKMapping } from '../utils/resources';
+import { resourceGVKMapping, RESOURCES, isSupportedTargetRef } from '../utils/resources';
 
-const GATEWAY_API_GROUP = 'gateway.networking.k8s.io';
+const GATEWAY_API_GROUP = RESOURCES.Gateway.gvk.group;
 
 const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -78,7 +79,6 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
           group: targetRef.group,
           kind: targetRef.kind,
           name: targetRef.name,
-          ...(targetRef.namespace ? { namespace: targetRef.namespace } : {}),
         },
         limits,
       },
@@ -161,14 +161,27 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
       const parsedYaml = yaml.load(yamlInputStr) as Record<string, any>;
       setPolicyName(parsedYaml.metadata?.name || '');
       // Set targetRef atomically from parsed YAML so kind/name stay in sync.
-      setTargetRef({
-        group: parsedYaml.spec?.targetRef?.group || GATEWAY_API_GROUP,
-        kind: (parsedYaml.spec?.targetRef?.kind as TargetRef['kind']) || 'Gateway',
-        name: parsedYaml.spec?.targetRef?.name || '',
-        ...(parsedYaml.spec?.targetRef?.namespace
-          ? { namespace: parsedYaml.spec?.targetRef?.namespace }
-          : {}),
-      });
+      const parsedTargetRef = parsedYaml.spec?.targetRef;
+      if (
+        isSupportedTargetRef(
+          'RateLimitPolicy',
+          parsedTargetRef?.group,
+          parsedTargetRef?.kind,
+          parsedTargetRef?.namespace,
+          selectedNamespace,
+        )
+      ) {
+        setTargetRef({
+          group: parsedTargetRef.group,
+          kind: parsedTargetRef.kind as TargetRef['kind'],
+          name: parsedTargetRef?.name || '',
+          ...(parsedTargetRef?.namespace ? { namespace: parsedTargetRef.namespace } : {}),
+        });
+      } else {
+        // unsupported group/kind - keep the target empty so the form stays
+        // invalid rather than silently submitting a reference the CRD rejects
+        setTargetRef({ group: GATEWAY_API_GROUP, kind: 'Gateway', name: '' });
+      }
       setLimits(parsedYaml.spec?.limits || {});
     } catch (e) {
       console.error(t('Error parsing YAML:'), e);
@@ -285,6 +298,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
                     id="target-type-radio-gateway"
                     isChecked={targetRef.kind === 'Gateway'}
                     onChange={() => handleTargetTypeChange('Gateway')}
+                    isDisabled={formDisabled}
                   />
                   <Radio
                     name="target-type-radio"
@@ -292,6 +306,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
                     id="target-type-radio-httproute"
                     isChecked={targetRef.kind === 'HTTPRoute'}
                     onChange={() => handleTargetTypeChange('HTTPRoute')}
+                    isDisabled={formDisabled}
                   />
                   <Radio
                     name="target-type-radio"
@@ -299,15 +314,23 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
                     id="target-type-radio-grpcroute"
                     isChecked={targetRef.kind === 'GRPCRoute'}
                     onChange={() => handleTargetTypeChange('GRPCRoute')}
+                    isDisabled={formDisabled}
                   />
                 </FormGroup>
                 {targetRef.kind === 'Gateway' && (
-                  <GatewaySelect selectedGateway={selectedGateway} onChange={handleGatewayChange} />
+                  <GatewaySelect
+                    selectedGateway={selectedGateway}
+                    onChange={handleGatewayChange}
+                    namespace={selectedNamespace}
+                    isDisabled={formDisabled}
+                  />
                 )}
                 {targetRef.kind === 'HTTPRoute' && (
                   <HTTPRouteSelect
                     selectedRoute={selectedRoute}
                     onChange={handleRouteChange('HTTPRoute')}
+                    namespace={selectedNamespace}
+                    isDisabled={formDisabled}
                   />
                 )}
                 {targetRef.kind === 'GRPCRoute' && (
@@ -315,6 +338,8 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
                     kind="GRPCRoute"
                     selectedRoute={selectedRoute}
                     onChange={handleRouteChange('GRPCRoute')}
+                    namespace={selectedNamespace}
+                    isDisabled={formDisabled}
                   />
                 )}
                 <LimitSelect limits={limits} setLimits={setLimits} />
