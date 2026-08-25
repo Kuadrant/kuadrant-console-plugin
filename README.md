@@ -7,6 +7,7 @@ Based on https://github.com/openshift/console-plugin-template
 ## Screenshots
 
 ![Overview](docs/images/overview.gif)
+
 ## Running
 
 - Target a running OCP with `oc login`
@@ -46,10 +47,19 @@ Prerequisites: [oinc](https://github.com/jasonmadigan/oinc), [kubectl](https://k
 
 ```bash
 make oinc          # create cluster + start plugin dev server with hot reload
+make oinc-sync-plugin-proxy # sync an operator-reconciled backend proxy into dev Console
 make oinc-teardown # tear it all down
 ```
 
 Console runs at http://localhost:9000, plugin at http://localhost:9001. If the cluster already exists, `make oinc` skips setup and just starts the plugin server.
+
+OINC runs Console as a standalone development container, so it does not have
+the OpenShift Console operator to consume `ConsolePlugin.spec.proxy`. After a
+development Kuadrant Operator reconciles a plugin backend proxy, run
+`make oinc-sync-plugin-proxy` once (and again if the backend Service changes).
+This target is development glue only; the Kuadrant Operator remains the source
+of truth for production plugin resources. Set `OINC_BIN` if the development
+OINC binary is not on `PATH`.
 
 ### Option 3: Docker + VSCode Remote Container
 
@@ -88,8 +98,14 @@ docker buildx build --platform linux/amd64,linux/arm64 -t quay.io/kuadrant/conso
 2. Run the image:
 
 ```bash
-docker run -it --rm -d -p 9001:80 quay.io/kuadrant/console-plugin:latest
+docker run -it --rm -d -p 9001:9443 \
+  -e KUBERNETES_INSECURE_SKIP_TLS_VERIFY=true \
+  quay.io/kuadrant/console-plugin:latest
 ```
+
+The development flag lets the image serve its static assets outside a pod,
+where the Kubernetes service-account CA is not mounted. Do not use it for an
+in-cluster deployment.
 
 NOTE: If you have a Mac with Apple silicon, you will need to add the flag
 `--platform=linux/amd64` when building the image to target the correct platform
@@ -176,13 +192,14 @@ Update `settings.json` (File > Preferences > Settings):
 ```json
 "editor.formatOnSave": true
 ```
+
 ## Version matrix
 
 | kuadrant-console-plugin version | PatternFly version | Openshift console version | Dynamic Plugin SDK |
-|---------------------------------|--------------------|---------------------------|--------------------|
-|         v0.0.3 - v0.0.18        |          5         |          v4.17.x          |       v1.6.0       |
-|                TBD              |          5         |          v4.18.x          |       v1.8.0       |
-|                TBD              |          6         |          v4.19.x          |         TBD        |
+| ------------------------------- | ------------------ | ------------------------- | ------------------ |
+| v0.0.3 - v0.0.18                | 5                  | v4.17.x                   | v1.6.0             |
+| TBD                             | 5                  | v4.18.x                   | v1.8.0             |
+| TBD                             | 6                  | v4.19.x                   | TBD                |
 
 Openshift console is configured to share modules with its dynamic plugins (console plugins). For more information on versions and changes to the shared modules, please see the shared modules [documentation](https://www.npmjs.com/package/@openshift-console/dynamic-plugin-sdk?activeTab=readme)
 
@@ -236,4 +253,3 @@ Deletions are confirmed interactively in batches of 25.
 ## Troubleshooting
 
 For troubleshooting common issues, please see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
-

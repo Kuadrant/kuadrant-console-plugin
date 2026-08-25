@@ -33,6 +33,13 @@ test.describe('MCP Inspector', () => {
     expect(namespace).toBeTruthy();
     expect(extensionName).toBeTruthy();
 
+    const cspViolations: string[] = [];
+    page.on('console', (message) => {
+      if (message.text().includes('Content Security Policy violation')) {
+        cspViolations.push(message.text());
+      }
+    });
+
     await openInspector(page, namespace);
     await page
       .getByLabel('Select an MCP gateway extension')
@@ -62,5 +69,6 @@ test.describe('MCP Inspector', () => {
       1,
     );
     await expect(page.getByRole('heading', { name: 'JSON-RPC response' })).toBeVisible();
+    expect(cspViolations).toEqual([]);
   });
 });

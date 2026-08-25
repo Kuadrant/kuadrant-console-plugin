@@ -1,5 +1,7 @@
-// Dependency-free MCP Streamable HTTP client. It speaks JSON-RPC 2.0 over a
-// single endpoint, handles JSON and SSE responses, and keeps the session ID in
+import { consoleFetch, HttpError } from '@openshift-console/dynamic-plugin-sdk';
+
+// MCP Streamable HTTP client. It speaks JSON-RPC 2.0 through the Console
+// plugin proxy, handles JSON and SSE responses, and keeps the session ID in
 // memory only (the caller holds it in React state).
 
 export const MCP_PROTOCOL_VERSION = '2025-11-25';
@@ -222,7 +224,7 @@ export class MCPClient {
     return new MCPHttpError(status, `${context} (http ${status})`);
   }
 
-  private post(body: Record<string, unknown>): Promise<Response> {
+  private async post(body: Record<string, unknown>): Promise<Response> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       Accept: 'application/json, text/event-stream',
@@ -232,14 +234,27 @@ export class MCPClient {
       headers['Mcp-Session-Id'] = this.sessionId;
     }
     if (this.token) {
-      headers.Authorization = `Bearer ${this.token}`;
+      // Console owns the ordinary Authorization header and replaces it with
+      // the current OpenShift user token. The backend translates this explicit
+      // MCP credential to Authorization only for the selected MCP gateway.
+      headers['X-Kuadrant-MCP-Authorization'] = `Bearer ${this.token}`;
     }
-    return fetch(this.endpoint, {
-      method: 'POST',
-      credentials: 'omit',
-      headers,
-      body: JSON.stringify(body),
-    });
+    try {
+      return await consoleFetch(this.endpoint, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers,
+        body: JSON.stringify(body),
+      });
+    } catch (error) {
+      // The MCP handshake needs the upstream status and WWW-Authenticate
+      // header. consoleFetch deliberately throws on non-2xx responses, but its
+      // HttpError retains the original response for this purpose.
+      if (error instanceof HttpError && error.response) {
+        return error.response;
+      }
+      throw error;
+    }
   }
 }
 

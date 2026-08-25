@@ -9,6 +9,7 @@
 ## Installation
 
 ### Install oinc
+
 ```bash
 OINC_VERSION="v0.4.3"
 curl -fL -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
@@ -18,6 +19,7 @@ sudo mv oinc /usr/local/bin/
 ```
 
 ### Install Playwright browsers
+
 ```bash
 npx playwright install chromium --with-deps
 # If you get sudo errors, install without system deps:
@@ -56,7 +58,7 @@ npx playwright test e2e/tests/apikey-lifecycle.spec.ts --config=e2e/playwright.c
 
 ```bash
 # Check if cluster is running
-oinc list
+oinc status
 
 # Check if servers are running
 curl http://localhost:9000  # Console
@@ -79,6 +81,13 @@ npx playwright test --config=e2e/playwright.config.ts
 - `e2e/tests/apiproduct-overview-tab.spec.ts` - API product overview tab
 - `e2e/tests/apiproduct-rbac.spec.ts` - API product RBAC
 - `e2e/tests/api-product-list.spec.ts` - API product list page
+- `e2e/tests/attached-tab.spec.ts` - attached-policy tab behaviour
+- `e2e/tests/data-view-regressions.spec.ts` - shared data-view regressions
+- `e2e/tests/gateway-crud.spec.ts` - Gateway CRUD workflows
+- `e2e/tests/httproute-crud.spec.ts` - HTTPRoute CRUD workflows
+- `e2e/tests/mcp-inspector.spec.ts` - MCP Inspector smoke and live tool-call journeys
+- `e2e/tests/mcp-overview.spec.ts` - MCP management overview
+- `e2e/tests/mcp-setup-wizard.spec.ts` - MCP setup wizard
 - `e2e/tests/overview.spec.ts` - Overview dashboard cards, stats, and navigation
 - `e2e/tests/policy-forms.spec.ts` - Policy creation forms (DNS, TLS, Auth, RateLimit, etc.)
 - `e2e/tests/rbac.spec.ts` - RBAC permission tests
@@ -100,14 +109,17 @@ run executes every spec in `e2e/tests/`.
 ## Troubleshooting
 
 ### Tests fail with "Cannot navigate to invalid URL"
+
 - Make sure you use `--config=e2e/playwright.config.ts`
 - Check that console is running: `curl http://localhost:9000`
 
 ### Tests timeout looking for elements
+
 - Check that plugin dev server is running: `curl http://localhost:9001`
 - Check test screenshots in `test-results/` directory
 
 ### API key not approved automatically
+
 - Check if Kuadrant controller is running:
   ```bash
   kubectl get pods -n kuadrant-system
@@ -118,6 +130,7 @@ run executes every spec in `e2e/tests/`.
   ```
 
 ### View test results
+
 ```bash
 # Open HTML report
 npx playwright show-report
@@ -133,7 +146,7 @@ ls -la test-results/*/test-failed-*.png
 sudo ./e2e/teardown.sh
 
 # Or destroy entire oinc cluster
-oinc destroy
+oinc delete --force
 ```
 
 ## Important Notes

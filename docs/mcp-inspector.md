@@ -1,39 +1,31 @@
 # MCP Inspector
 
-The MCP Inspector lets an OpenShift Console user inspect and run tools exposed by an MCP Gateway. The browser connects directly to the endpoint reported in `MCPGatewayExtension.status.mcpEndpoint`; the console plugin does not proxy MCP traffic.
+The MCP Inspector lets an OpenShift Console user inspect and run tools exposed by an MCP Gateway. Browser requests remain on the OpenShift Console origin and pass through the Console plugin backend. The backend resolves the selected `MCPGatewayExtension.status.mcpEndpoint` for each request and relays the MCP exchange to that gateway.
 
 ## Prerequisites
 
 - The `MCPGatewayExtension` must have a `Ready=True` condition and a non-empty `status.mcpEndpoint`.
-- The gateway must allow the OpenShift Console origin through CORS, including the MCP protocol and session headers used by Streamable HTTP.
-- The plugin's `ConsolePlugin.spec.contentSecurityPolicy` must allow the MCP and OIDC origins with the `ConnectSrc` directive when Console CSP is enabled.
-- Production gateways should require authentication. An unauthenticated gateway reachable from a user's browser can be called by malicious websites if its CORS policy permits their origins.
+- The Kuadrant Operator must deploy the Console plugin backend and reconcile its `ConsolePlugin.spec.proxy` entry with `authorization: UserToken`.
+- The Console user must have Kubernetes `get` access to the selected `MCPGatewayExtension`.
+- A bearer token supplied for an MCP gateway is only forwarded over HTTPS. The insecure-auth override is for local development only.
 
-## Content Security Policy
+## Proxy and security model
 
-OpenShift Console reports a `connect-src` violation when the inspector connects to an origin that is not listed by an enabled `ConsolePlugin`. Current Console releases report these violations without blocking the request, but the required origins should still be declared so the inspector continues to work when CSP is enforced.
+The UI sends MCP JSON-RPC requests to the same-origin Console path:
 
-Add every MCP gateway origin and every OIDC origin used for discovery, client registration, or token exchange to the plugin resource. For example:
-
-```yaml
-spec:
-  contentSecurityPolicy:
-    - directive: ConnectSrc
-      values:
-        - https://mcp.example.com
-        - https://sso.example.com
+```text
+/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/gateways/<namespace>/<name>
 ```
 
-Console does not permit `*` as a CSP value, so deployments with gateway endpoints on different origins must maintain this allowlist as gateways are added or removed. The development Console accepts the equivalent bridge setting, for example `BRIDGE_CONTENT_SECURITY_POLICY="connect-src=ws://localhost:9001 http://mcp.127-0-0-1.sslip.io:8080"`.
+Console supplies the current OpenShift user token to the backend. The backend uses that token only for a fresh Kubernetes API lookup of the named `MCPGatewayExtension`; it is never sent to the MCP gateway. This makes endpoint selection subject to the user's Kubernetes RBAC and avoids maintaining a cluster-wide CSP or CORS allowlist for gateway hosts.
+
+The backend accepts only the Inspector's current MCP methods (`initialize`, `notifications/initialized`, `tools/list`, and `tools/call`), limits request size, rejects redirects, and relays only the protocol, session, content, and authentication-challenge headers needed by Streamable HTTP.
 
 ## Authentication
 
-The inspector first attempts an unauthenticated MCP `initialize` request. If the gateway returns a `401` challenge, the user can:
+The inspector first attempts an MCP `initialize` request without a gateway credential. If the gateway returns a `401` challenge, the user can paste a bearer token. The browser sends it to the plugin backend in a dedicated header, and the backend translates it to `Authorization: Bearer` only for the selected MCP gateway.
 
-- sign in with OIDC using authorization-server discovery, dynamic client registration, authorization code, and PKCE; or
-- paste a bearer token that is sent as an `Authorization: Bearer` header.
-
-Access tokens and MCP session IDs are held in memory only. Temporary PKCE callback state is held in `sessionStorage` and removed after the callback. Requests use `credentials: omit`; browser cookies are not sent to the MCP endpoint.
+Bearer tokens and MCP session IDs are held in memory only. OIDC sign-in is not currently supported by the Inspector.
 
 ## Using the inspector
 

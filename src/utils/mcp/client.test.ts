@@ -1,4 +1,10 @@
 import { MCPClient } from './client';
+import { consoleFetch } from '@openshift-console/dynamic-plugin-sdk';
+
+jest.mock('@openshift-console/dynamic-plugin-sdk', () => ({
+  consoleFetch: jest.fn(),
+  HttpError: class HttpError extends Error {},
+}));
 
 const jsonResponse = (body: unknown, status = 200, statusText = 'OK') =>
   ({
@@ -13,7 +19,7 @@ const jsonResponse = (body: unknown, status = 200, statusText = 'OK') =>
 
 describe('MCPClient', () => {
   beforeEach(() => {
-    global.fetch = jest.fn();
+    (consoleFetch as jest.Mock).mockReset();
   });
 
   afterEach(() => {
@@ -21,7 +27,7 @@ describe('MCPClient', () => {
   });
 
   it('returns request, response, HTTP status and duration for a tool call', async () => {
-    (global.fetch as jest.Mock).mockResolvedValue(
+    (consoleFetch as jest.Mock).mockResolvedValue(
       jsonResponse({
         jsonrpc: '2.0',
         id: 1,
@@ -29,7 +35,10 @@ describe('MCPClient', () => {
       }),
     );
     jest.spyOn(Date, 'now').mockReturnValueOnce(100).mockReturnValueOnce(145);
-    const client = new MCPClient('https://mcp.example.test/mcp', { token: 'test-token' });
+    const client = new MCPClient(
+      '/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/gateways/test-ns/test',
+      { token: 'test-token' },
+    );
 
     const exchange = await client.toolsCallWithDetails(
       'toystore_greet',
@@ -58,13 +67,13 @@ describe('MCPClient', () => {
       statusText: 'OK',
       durationMs: 45,
     });
-    expect(global.fetch).toHaveBeenCalledWith(
-      'https://mcp.example.test/mcp',
+    expect(consoleFetch).toHaveBeenCalledWith(
+      '/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/gateways/test-ns/test',
       expect.objectContaining({
         method: 'POST',
-        credentials: 'omit',
+        credentials: 'same-origin',
         headers: expect.objectContaining({
-          Authorization: 'Bearer test-token',
+          'X-Kuadrant-MCP-Authorization': 'Bearer test-token',
           'MCP-Protocol-Version': '2025-11-25',
         }),
       }),

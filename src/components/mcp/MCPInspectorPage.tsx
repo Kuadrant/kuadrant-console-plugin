@@ -13,7 +13,6 @@ import {
   Alert,
   Stack,
   StackItem,
-  Divider,
   EmptyState,
   EmptyStateBody,
   Tab,
@@ -45,14 +44,6 @@ import {
   ToolsCallResult,
   MCPCallExchange,
 } from '../../utils/mcp/client';
-import {
-  beginPkce,
-  clearPkceStorage,
-  completePkce,
-  peekOauthCallback,
-  stashOauthCallback,
-  takeOauthExchangeLock,
-} from '../../utils/mcp/oauth';
 import MCPToolWorkspace from './MCPToolWorkspace';
 import MCPInspectorOutput from './MCPInspectorOutput';
 import './MCPInspectorPage.css';
@@ -64,6 +55,11 @@ const isReady = (ext: MCPGatewayExtension): boolean =>
 
 const extKey = (ext: MCPGatewayExtension): string =>
   `${ext.metadata?.namespace}/${ext.metadata?.name}`;
+
+const proxyEndpoint = (ext: MCPGatewayExtension): string =>
+  `/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/gateways/${encodeURIComponent(
+    ext.metadata?.namespace ?? '',
+  )}/${encodeURIComponent(ext.metadata?.name ?? '')}`;
 
 const MCPInspectorPage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -79,7 +75,7 @@ const MCPInspectorPage: React.FC = () => {
   const [selectedKey, setSelectedKey] = React.useState('');
   const [bearerToken, setBearerToken] = React.useState('');
   const [authChallenge, setAuthChallenge] = React.useState<{
-    mcpEndpoint: string;
+    proxyEndpoint: string;
     selectedKey: string;
     wwwAuthenticate: string | null;
   } | null>(null);
@@ -88,7 +84,7 @@ const MCPInspectorPage: React.FC = () => {
   const clientRef = React.useRef<MCPClient | null>(null);
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [connected, setConnected] = React.useState(false);
-  const [authMode, setAuthMode] = React.useState<'none' | 'bearer' | 'oidc'>('none');
+  const [authMode, setAuthMode] = React.useState<'none' | 'bearer'>('none');
   const [activeSection, setActiveSection] = React.useState<string | number>(0);
   const [tools, setTools] = React.useState<MCPTool[]>([]);
 
@@ -115,12 +111,12 @@ const MCPInspectorPage: React.FC = () => {
   );
   const endpoint = selected?.status?.mcpEndpoint ?? '';
 
-  const runSession = async (mcpEndpoint: string, bearer?: string) => {
+  const runSession = async (inspectorEndpoint: string, bearer?: string) => {
     setError('');
     setSessionExpired(false);
     setTools([]);
     setCallExchange(null);
-    const client = new MCPClient(mcpEndpoint, { token: bearer || undefined });
+    const client = new MCPClient(inspectorEndpoint, { token: bearer || undefined });
     const { sessionId: id } = await client.initialize();
     await client.sendInitialized();
     const listed = await client.toolsList();
@@ -131,16 +127,16 @@ const MCPInspectorPage: React.FC = () => {
   };
 
   const handleConnect = async (
-    mcpEndpoint = endpoint,
+    inspectorEndpoint: string,
     selectedExtensionKey = selectedKey,
     bearer?: string,
   ) => {
-    if (!mcpEndpoint) {
+    if (!inspectorEndpoint) {
       return;
     }
     setConnecting(true);
     try {
-      await runSession(mcpEndpoint, bearer);
+      await runSession(inspectorEndpoint, bearer);
       setAuthMode(bearer ? 'bearer' : 'none');
       setAuthChallenge(null);
     } catch (err) {
@@ -150,7 +146,7 @@ const MCPInspectorPage: React.FC = () => {
       if (err instanceof MCPUnauthorizedError && !bearer) {
         setError('');
         setAuthChallenge({
-          mcpEndpoint,
+          proxyEndpoint: inspectorEndpoint,
           selectedKey: selectedExtensionKey,
           wwwAuthenticate: err.wwwAuthenticate,
         });
@@ -181,21 +177,7 @@ const MCPInspectorPage: React.FC = () => {
     }
     const extension = list.find((item) => extKey(item) === value);
     if (extension?.status?.mcpEndpoint && isReady(extension)) {
-      void handleConnect(extension.status.mcpEndpoint, value);
-    }
-  };
-
-  const handleOidcSignIn = async () => {
-    if (!authChallenge) {
-      return;
-    }
-    setConnecting(true);
-    setError('');
-    try {
-      await beginPkce(authChallenge);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setConnecting(false);
+      void handleConnect(proxyEndpoint(extension), value);
     }
   };
 
@@ -203,49 +185,8 @@ const MCPInspectorPage: React.FC = () => {
     if (!authChallenge || !bearerToken.trim()) {
       return;
     }
-    void handleConnect(authChallenge.mcpEndpoint, authChallenge.selectedKey, bearerToken.trim());
+    void handleConnect(authChallenge.proxyEndpoint, authChallenge.selectedKey, bearerToken.trim());
   };
-
-  React.useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const oauthError = params.get('error');
-    if (oauthError) {
-      const description = params.get('error_description') || oauthError;
-      setError(description);
-      clearPkceStorage();
-      window.history.replaceState({}, '', window.location.pathname);
-      return;
-    }
-    const code = params.get('code');
-    const state = params.get('state');
-    if (code && state) {
-      stashOauthCallback(code, state);
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-    if (!peekOauthCallback()) {
-      return;
-    }
-    if (!takeOauthExchangeLock()) {
-      return;
-    }
-    setConnecting(true);
-    void (async () => {
-      try {
-        const result = await completePkce();
-        setSelectedKey(result.selectedKey);
-        await runSession(result.mcpEndpoint, result.accessToken);
-        setAuthMode('oidc');
-      } catch (err) {
-        clientRef.current = null;
-        setSessionId(null);
-        setConnected(false);
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setConnecting(false);
-      }
-    })();
-    // OAuth callback state is consumed only once when the inspector mounts.
-  }, []);
 
   const handleCall = async (
     toolName: string,
@@ -514,17 +455,9 @@ const MCPInspectorPage: React.FC = () => {
             <StackItem>
               <Content component="p">
                 {t(
-                  'This MCP gateway requires authentication. Sign in with OIDC or provide a bearer token.',
+                  'This MCP gateway requires authentication. Provide a bearer token for the MCP gateway.',
                 )}
               </Content>
-            </StackItem>
-            <StackItem>
-              <Button variant="primary" onClick={handleOidcSignIn} isLoading={connecting}>
-                {t('Sign in with OIDC')}
-              </Button>
-            </StackItem>
-            <StackItem>
-              <Divider />
             </StackItem>
             <StackItem>
               <FormGroup label={t('Bearer token')} fieldId="mcp-inspector-bearer-token">

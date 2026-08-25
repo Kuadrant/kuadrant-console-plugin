@@ -35,8 +35,10 @@ PLUGIN_NAME=$(node -p "require('${SCRIPT_DIR}/package.json').consolePlugin.name"
 PLUGIN_URL="http://${HOST}:${PLUGIN_PORT}"
 
 console_has_plugin() {
-  "${RUNTIME}" inspect oinc-console --format '{{json .Config.Cmd}}' 2>/dev/null \
-    | grep -q "${PLUGIN_NAME}"
+  {
+    "${RUNTIME}" inspect oinc-console --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null
+    "${RUNTIME}" inspect oinc-console --format '{{json .Config.Cmd}}' 2>/dev/null
+  } | grep -q "${PLUGIN_NAME}"
 }
 
 restart_console_with_plugin() {

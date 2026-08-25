@@ -133,7 +133,7 @@ describe('MCPInspectorPage', () => {
     expect(screen.getByText('No results')).toBeInTheDocument();
   });
 
-  it('offers OIDC and an in-memory bearer token after an authentication challenge', async () => {
+  it('offers an in-memory bearer token after an authentication challenge', async () => {
     (MCPClient as jest.Mock).mockImplementationOnce(() => ({
       initialize: jest
         .fn()
@@ -152,15 +152,16 @@ describe('MCPInspectorPage', () => {
 
     const dialog = await screen.findByRole('dialog', { name: 'Authentication required' });
     expect(dialog).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Sign in with OIDC' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Sign in with OIDC' })).not.toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Bearer token'), { target: { value: 'test-token' } });
     fireEvent.click(screen.getByRole('button', { name: 'Connect with bearer token' }));
 
     await waitFor(() => expect(screen.getByText('Connected')).toBeInTheDocument());
-    expect(MCPClient).toHaveBeenLastCalledWith('https://mcp.example.test/mcp', {
-      token: 'test-token',
-    });
+    expect(MCPClient).toHaveBeenLastCalledWith(
+      '/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/gateways/test-ns/mcp-gateway',
+      { token: 'test-token' },
+    );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
