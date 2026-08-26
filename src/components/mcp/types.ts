@@ -39,7 +39,6 @@ export interface MCPGatewayExtension extends K8sResourceCommon {
   };
   status?: {
     conditions?: Condition[];
-    mcpEndpoint?: string;
   };
 }
 

@@ -57,7 +57,7 @@ const extKey = (ext: MCPGatewayExtension): string =>
   `${ext.metadata?.namespace}/${ext.metadata?.name}`;
 
 const proxyEndpoint = (ext: MCPGatewayExtension): string =>
-  `/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/gateways/${encodeURIComponent(
+  `/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/mcpgatewayextensions/${encodeURIComponent(
     ext.metadata?.namespace ?? '',
   )}/${encodeURIComponent(ext.metadata?.name ?? '')}`;
 
@@ -109,7 +109,7 @@ const MCPInspectorPage: React.FC = () => {
     () => list.find((ext) => extKey(ext) === selectedKey),
     [list, selectedKey],
   );
-  const endpoint = selected?.status?.mcpEndpoint ?? '';
+  const endpoint = selected?.spec.publicHost ?? '';
 
   const runSession = async (inspectorEndpoint: string, bearer?: string) => {
     setError('');
@@ -176,7 +176,7 @@ const MCPInspectorPage: React.FC = () => {
       return;
     }
     const extension = list.find((item) => extKey(item) === value);
-    if (extension?.status?.mcpEndpoint && isReady(extension)) {
+    if (extension && isReady(extension)) {
       void handleConnect(proxyEndpoint(extension), value);
     }
   };
@@ -288,7 +288,7 @@ const MCPInspectorPage: React.FC = () => {
                             isPlaceholder
                           />
                           {list.map((ext) => {
-                            const reachable = !!ext.status?.mcpEndpoint && isReady(ext);
+                            const reachable = isReady(ext);
                             const name = `${ext.metadata?.name} (${ext.metadata?.namespace})`;
                             return (
                               <FormSelectOption

@@ -36,7 +36,7 @@ describe('MCPClient', () => {
     );
     jest.spyOn(Date, 'now').mockReturnValueOnce(100).mockReturnValueOnce(145);
     const client = new MCPClient(
-      '/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/gateways/test-ns/test',
+      '/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/mcpgatewayextensions/test-ns/test',
       { token: 'test-token' },
     );
 
@@ -68,7 +68,7 @@ describe('MCPClient', () => {
       durationMs: 45,
     });
     expect(consoleFetch).toHaveBeenCalledWith(
-      '/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/gateways/test-ns/test',
+      '/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/mcpgatewayextensions/test-ns/test',
       expect.objectContaining({
         method: 'POST',
         credentials: 'same-origin',

@@ -1,12 +1,12 @@
 # MCP Inspector
 
-The MCP Inspector lets an OpenShift Console user inspect and run tools exposed by an MCP Gateway. Browser requests remain on the OpenShift Console origin and pass through the Console plugin backend. The backend resolves the selected `MCPGatewayExtension.status.mcpEndpoint` for each request and relays the MCP exchange to that gateway.
+The MCP Inspector lets an OpenShift Console user inspect and run tools exposed by an MCP Gateway. Browser requests remain on the OpenShift Console origin and pass through the Console plugin backend. For each request, the backend reads the selected `MCPGatewayExtension`, follows its `spec.targetRef` to the Gateway listener, derives the MCP URL, and relays the exchange to that gateway.
 
 ## Prerequisites
 
-- The `MCPGatewayExtension` must have a `Ready=True` condition and a non-empty `status.mcpEndpoint`.
+- The `MCPGatewayExtension` must have a current `Ready=True` condition.
 - The Kuadrant Operator must deploy the Console plugin backend and reconcile its `ConsolePlugin.spec.proxy` entry with `authorization: UserToken`.
-- The Console user must have Kubernetes `get` access to the selected `MCPGatewayExtension`.
+- The Console user must have Kubernetes `get` access to the selected `MCPGatewayExtension` and its referenced Gateway.
 - A bearer token supplied for an MCP gateway is only forwarded over HTTPS. The insecure-auth override is for local development only.
 
 ## Proxy and security model
@@ -14,10 +14,10 @@ The MCP Inspector lets an OpenShift Console user inspect and run tools exposed b
 The UI sends MCP JSON-RPC requests to the same-origin Console path:
 
 ```text
-/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/gateways/<namespace>/<name>
+/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/mcpgatewayextensions/<namespace>/<name>
 ```
 
-Console supplies the current OpenShift user token to the backend. The backend uses that token only for a fresh Kubernetes API lookup of the named `MCPGatewayExtension`; it is never sent to the MCP gateway. This makes endpoint selection subject to the user's Kubernetes RBAC and avoids maintaining a cluster-wide CSP or CORS allowlist for gateway hosts.
+Console supplies the current OpenShift user token to the backend. The backend uses that token only to read the named `MCPGatewayExtension` and its referenced Gateway. It is never sent to the MCP gateway. The backend takes the host from `spec.publicHost`, or from the listener hostname when no override is set. It takes the scheme and port from the referenced listener and uses `/mcp` as the path. This keeps endpoint selection subject to the user's Kubernetes RBAC and avoids maintaining a cluster-wide CSP or CORS allowlist for gateway hosts.
 
 The backend accepts only the Inspector's current MCP methods (`initialize`, `notifications/initialized`, `tools/list`, and `tools/call`), limits request size, rejects redirects, and relays only the protocol, session, content, and authentication-challenge headers needed by Streamable HTTP.
 

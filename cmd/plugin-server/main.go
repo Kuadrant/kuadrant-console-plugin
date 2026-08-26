@@ -15,13 +15,14 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 )
 
 const (
-	mcpProxyPrefix         = "/api/mcp/v1/gateways/"
+	mcpProxyPrefix         = "/api/mcp/v1/mcpgatewayextensions/"
 	mcpAuthorizationHeader = "X-Kuadrant-MCP-Authorization"
 	maxMCPRequestBytes     = 1024 * 1024
 )
@@ -52,13 +53,37 @@ type server struct {
 }
 
 type mcpGatewayExtension struct {
+	Metadata struct {
+		Generation int64 `json:"generation"`
+	} `json:"metadata"`
+	Spec struct {
+		PublicHost string `json:"publicHost"`
+		TargetRef  struct {
+			Name        string `json:"name"`
+			Namespace   string `json:"namespace"`
+			SectionName string `json:"sectionName"`
+		} `json:"targetRef"`
+	} `json:"spec"`
 	Status struct {
 		Conditions []struct {
-			Type   string `json:"type"`
-			Status string `json:"status"`
+			Type               string `json:"type"`
+			Status             string `json:"status"`
+			ObservedGeneration int64  `json:"observedGeneration"`
 		} `json:"conditions"`
-		MCPEndpoint string `json:"mcpEndpoint"`
 	} `json:"status"`
+}
+
+type gateway struct {
+	Spec struct {
+		Listeners []gatewayListener `json:"listeners"`
+	} `json:"spec"`
+}
+
+type gatewayListener struct {
+	Name     string `json:"name"`
+	Hostname string `json:"hostname"`
+	Protocol string `json:"protocol"`
+	Port     uint32 `json:"port"`
 }
 
 type kubernetesStatus struct {
@@ -294,7 +319,8 @@ func (s *server) resolveMCPEndpoint(ctx context.Context, namespace, name, author
 	if err != nil {
 		return "", http.StatusInternalServerError, errors.New("Kubernetes API URL is invalid")
 	}
-	baseURL.Path = filepath.ToSlash(filepath.Join(baseURL.Path, "apis/mcp.kuadrant.io/v1/namespaces", namespace, "mcpgatewayextensions", name))
+	apiBasePath := baseURL.Path
+	baseURL.Path = filepath.ToSlash(filepath.Join(apiBasePath, "apis/mcp.kuadrant.io/v1/namespaces", namespace, "mcpgatewayextensions", name))
 	lookup, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL.String(), nil)
 	if err != nil {
 		return "", http.StatusInternalServerError, errors.New("could not create Kubernetes API request")
@@ -324,15 +350,105 @@ func (s *server) resolveMCPEndpoint(ctx context.Context, namespace, name, author
 	}
 	ready := false
 	for _, condition := range extension.Status.Conditions {
-		if condition.Type == "Ready" && condition.Status == "True" {
+		if condition.Type == "Ready" && condition.Status == "True" && condition.ObservedGeneration == extension.Metadata.Generation {
 			ready = true
 			break
 		}
 	}
-	if !ready || extension.Status.MCPEndpoint == "" {
+	if !ready {
 		return "", http.StatusConflict, errors.New("MCPGatewayExtension is not ready")
 	}
-	return extension.Status.MCPEndpoint, http.StatusOK, nil
+
+	targetNamespace := extension.Spec.TargetRef.Namespace
+	if targetNamespace == "" {
+		targetNamespace = namespace
+	}
+	baseURL.Path = filepath.ToSlash(filepath.Join(
+		apiBasePath,
+		"apis/gateway.networking.k8s.io/v1/namespaces",
+		targetNamespace,
+		"gateways",
+		extension.Spec.TargetRef.Name,
+	))
+	lookup, err = http.NewRequestWithContext(ctx, http.MethodGet, baseURL.String(), nil)
+	if err != nil {
+		return "", http.StatusInternalServerError, errors.New("could not create Gateway API request")
+	}
+	lookup.Header.Set("Authorization", authorization)
+	lookup.Header.Set("Accept", "application/json")
+
+	response, err = s.kubernetesHTTP.Do(lookup)
+	if err != nil {
+		s.logger.Error("Gateway API lookup failed", "error", err)
+		return "", http.StatusBadGateway, errors.New("could not resolve MCP gateway listener")
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		var status kubernetesStatus
+		_ = json.NewDecoder(io.LimitReader(response.Body, 64*1024)).Decode(&status)
+		message := status.Message
+		if message == "" {
+			message = "could not access the MCP Gateway listener"
+		}
+		return "", response.StatusCode, errors.New(message)
+	}
+
+	var targetGateway gateway
+	if err := json.NewDecoder(io.LimitReader(response.Body, 1024*1024)).Decode(&targetGateway); err != nil {
+		return "", http.StatusBadGateway, errors.New("Kubernetes API returned an invalid Gateway")
+	}
+	endpoint, err := deriveMCPEndpoint(&extension, &targetGateway)
+	if err != nil {
+		return "", http.StatusBadGateway, err
+	}
+	return endpoint, http.StatusOK, nil
+}
+
+func deriveMCPEndpoint(extension *mcpGatewayExtension, targetGateway *gateway) (string, error) {
+	sectionName := extension.Spec.TargetRef.SectionName
+	for _, listener := range targetGateway.Spec.Listeners {
+		if listener.Name != sectionName {
+			continue
+		}
+
+		host := extension.Spec.PublicHost
+		if host == "" {
+			host = listener.Hostname
+			if strings.HasPrefix(host, "*.") {
+				host = "mcp" + host[1:]
+			}
+		}
+		if strings.Contains(host, "://") {
+			return "", errors.New("MCPGatewayExtension has an invalid public host")
+		}
+		if hostname, _, err := net.SplitHostPort(host); err == nil {
+			host = hostname
+		}
+		if host == "" || strings.ContainsAny(host, "/?#@") {
+			return "", errors.New("MCPGatewayExtension has an invalid public host")
+		}
+
+		scheme := "http"
+		defaultPort := uint32(80)
+		switch {
+		case strings.EqualFold(listener.Protocol, "HTTP"):
+		case strings.EqualFold(listener.Protocol, "HTTPS"):
+			scheme = "https"
+			defaultPort = 443
+		default:
+			return "", errors.New("MCP Gateway listener must use HTTP or HTTPS")
+		}
+		if listener.Port == 0 {
+			return "", errors.New("MCP Gateway listener has an invalid port")
+		}
+
+		urlHost := host
+		if listener.Port != defaultPort {
+			urlHost = net.JoinHostPort(host, strconv.FormatUint(uint64(listener.Port), 10))
+		}
+		return (&url.URL{Scheme: scheme, Host: urlHost, Path: "/mcp"}).String(), nil
+	}
+	return "", errors.New("MCPGatewayExtension target listener was not found")
 }
 
 func allowedMCPMethod(method string) bool {

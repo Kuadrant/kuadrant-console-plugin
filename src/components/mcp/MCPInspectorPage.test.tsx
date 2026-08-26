@@ -46,10 +46,10 @@ const readyExtension: MCPGatewayExtension = {
       name: 'mcp-gateway',
       sectionName: 'mcp',
     },
+    publicHost: 'mcp.example.test',
   },
   status: {
     conditions: [{ type: 'Ready', status: 'True' }],
-    mcpEndpoint: 'https://mcp.example.test/mcp',
   },
 };
 
@@ -159,7 +159,7 @@ describe('MCPInspectorPage', () => {
 
     await waitFor(() => expect(screen.getByText('Connected')).toBeInTheDocument());
     expect(MCPClient).toHaveBeenLastCalledWith(
-      '/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/gateways/test-ns/mcp-gateway',
+      '/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/mcpgatewayextensions/test-ns/mcp-gateway',
       { token: 'test-token' },
     );
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
