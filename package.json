@@ -35,7 +35,8 @@
     "node-forge": "^1.3.2",
     "qs": "6.14.1",
     "brace-expansion@^5": "^5.0.7",
-    "nanoid": "3.3.18"
+    "nanoid": "3.3.18",
+    "browserslist": "^4.28.7"
   },
   "devDependencies": {
     "@openshift-console/dynamic-plugin-sdk": "patch:@openshift-console/dynamic-plugin-sdk@npm%3A4.22.0#~/.yarn/patches/@openshift-console-dynamic-plugin-sdk-npm-4.22.0-40a905f3df.patch",
