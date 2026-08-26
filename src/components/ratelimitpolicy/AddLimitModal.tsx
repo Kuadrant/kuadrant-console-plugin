@@ -16,6 +16,7 @@ import {
 import * as React from 'react';
 import { Counter, LimitConfig, Predicate, Rate } from './types';
 import { useTranslation } from 'react-i18next';
+import { validateK8sName } from '../../utils/validation';
 
 const windowPattern = /^([0-9]{1,5}(h|m|s|ms)){1,4}$/;
 
@@ -58,8 +59,10 @@ const AddLimitModal: React.FC<{
   const when = newLimit.when || [];
 
   const isDuplicateName = rateName !== '' && existingLimitNames.includes(rateName);
+  const nameFormatError = rateName !== '' ? validateK8sName(rateName) : null;
+  const hasNameError = isDuplicateName || nameFormatError !== null;
   const isValidWindow = newLimitWindow === '' || windowPattern.test(newLimitWindow);
-  const isSaveDisabled = !rateName || rates.length === 0 || isDuplicateName;
+  const isSaveDisabled = !rateName || rates.length === 0 || hasNameError;
 
   const handleAddRate = () => {
     if (newLimitValue !== '' && newLimitWindow && windowPattern.test(newLimitWindow)) {
@@ -134,13 +137,15 @@ const AddLimitModal: React.FC<{
               value={rateName}
               onChange={(_event, value) => setRateName(value)}
               placeholder={t('Limit Name')}
-              validated={isDuplicateName ? 'error' : 'default'}
+              validated={hasNameError ? 'error' : 'default'}
             />
             <FormHelperText>
               <HelperText>
-                <HelperTextItem variant={isDuplicateName ? 'error' : 'default'}>
+                <HelperTextItem variant={hasNameError ? 'error' : 'default'}>
                   {isDuplicateName
                     ? t('A limit with this name already exists')
+                    : nameFormatError
+                    ? t(nameFormatError)
                     : t('Unique identifier for this rate limit')}
                 </HelperTextItem>
               </HelperText>

@@ -15,10 +15,12 @@ import {
   TabTitleText,
   Button,
   ActionGroup,
+  ValidatedOptions,
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
 import './css/gateway-api-plugin.css';
+import { validateRequired, validateK8sName } from '../utils/validation';
 import {
   ResourceYAMLEditor,
   getGroupVersionKindForResource,
@@ -66,6 +68,25 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
   const [resourceVersion, setResourceVersion] = React.useState('');
   const [formDisabled, setFormDisabled] = React.useState(false);
   const [create, setCreate] = React.useState(true);
+
+  // Validation state
+  const [policyNameError, setPolicyNameError] = React.useState<string | null>(null);
+  const [policyNameTouched, setPolicyNameTouched] = React.useState(false);
+  const [clientIDError, setClientIDError] = React.useState<string | null>(null);
+  const [clientIDTouched, setClientIDTouched] = React.useState(false);
+  const [issuerURLError, setIssuerURLError] = React.useState<string | null>(null);
+  const [issuerURLTouched, setIssuerURLTouched] = React.useState(false);
+
+  const validatePolicyName = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sName(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
 
   const createOIDCPolicy = () => {
     return {
@@ -246,7 +267,13 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
     handleCancel(navigate);
   };
 
-  const isFormValid = !!(policyName && targetRef.name && clientID && issuerURL);
+  const isFormValid = !!(
+    validatePolicyName(policyName) === null &&
+    validateRequired(targetRef.name) === null &&
+    validateK8sName(targetRef.name) === null &&
+    validateRequired(clientID) === null &&
+    validateRequired(issuerURL) === null
+  );
 
   return (
     <>
@@ -276,12 +303,27 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
                     name="policy-name"
                     value={policyName}
                     onChange={(_event, val) => setPolicyName(val)}
+                    onBlur={() => {
+                      setPolicyNameTouched(true);
+                      setPolicyNameError(validatePolicyName(policyName));
+                    }}
+                    validated={
+                      policyNameTouched && policyNameError
+                        ? ValidatedOptions.error
+                        : ValidatedOptions.default
+                    }
                     isDisabled={formDisabled}
                     placeholder={t('Policy name')}
                   />
                   <FormHelperText>
                     <HelperText>
-                      <HelperTextItem>{t('Unique name of the OIDC Policy')}</HelperTextItem>
+                      <HelperTextItem
+                        variant={policyNameTouched && policyNameError ? 'error' : 'default'}
+                      >
+                        {policyNameTouched && policyNameError
+                          ? policyNameError
+                          : t('Unique name of the OIDC Policy')}
+                      </HelperTextItem>
                     </HelperText>
                   </FormHelperText>
                 </FormGroup>
@@ -352,12 +394,27 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
                     name="client-id"
                     value={clientID}
                     onChange={(_event, val) => setClientID(val)}
+                    onBlur={() => {
+                      setClientIDTouched(true);
+                      setClientIDError(
+                        validateRequired(clientID) ? t(validateRequired(clientID)!) : null,
+                      );
+                    }}
+                    validated={
+                      clientIDTouched && clientIDError
+                        ? ValidatedOptions.error
+                        : ValidatedOptions.default
+                    }
                     placeholder={t('my-client-id')}
                   />
                   <FormHelperText>
                     <HelperText>
-                      <HelperTextItem>
-                        {t('The client ID registered with the OIDC provider')}
+                      <HelperTextItem
+                        variant={clientIDTouched && clientIDError ? 'error' : 'default'}
+                      >
+                        {clientIDTouched && clientIDError
+                          ? clientIDError
+                          : t('The client ID registered with the OIDC provider')}
                       </HelperTextItem>
                     </HelperText>
                   </FormHelperText>
@@ -370,12 +427,27 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
                     name="issuer-url"
                     value={issuerURL}
                     onChange={(_event, val) => setIssuerURL(val)}
+                    onBlur={() => {
+                      setIssuerURLTouched(true);
+                      setIssuerURLError(
+                        validateRequired(issuerURL) ? t(validateRequired(issuerURL)!) : null,
+                      );
+                    }}
+                    validated={
+                      issuerURLTouched && issuerURLError
+                        ? ValidatedOptions.error
+                        : ValidatedOptions.default
+                    }
                     placeholder={t('https://auth.example.com')}
                   />
                   <FormHelperText>
                     <HelperText>
-                      <HelperTextItem>
-                        {t('The base URL of the OIDC provider (e.g. https://auth.example.com)')}
+                      <HelperTextItem
+                        variant={issuerURLTouched && issuerURLError ? 'error' : 'default'}
+                      >
+                        {issuerURLTouched && issuerURLError
+                          ? issuerURLError
+                          : t('The base URL of the OIDC provider (e.g. https://auth.example.com)')}
                       </HelperTextItem>
                     </HelperText>
                   </FormHelperText>

@@ -14,6 +14,7 @@ interface MCPExtensionStepProps {
   updateFormState: (updates: Partial<MCPWizardFormState>) => void;
   selectedGateway?: GatewayResource;
   selectedNamespace: string;
+  onValidationChange?: (isValid: boolean) => void;
 }
 
 const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
@@ -21,6 +22,7 @@ const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
   updateFormState,
   selectedGateway,
   selectedNamespace,
+  onValidationChange,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
@@ -91,6 +93,7 @@ const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
           updateFormState={updateFormState}
           selectedGateway={selectedGateway}
           selectedNamespace={selectedNamespace}
+          onValidationChange={onValidationChange}
         />
       ) : (
         <div className="kuadrant-mcp-yaml-editor" style={{ minHeight: '400px' }} key={yamlKey}>

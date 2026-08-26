@@ -78,6 +78,7 @@ const MCPRegistrationWizard: React.FC<MCPRegistrationWizardProps> = ({ isOpen, o
   const [selectedExistingRouteName, setSelectedExistingRouteName] = React.useState('');
   const [httpRouteResource, setHttpRouteResource] = React.useState<HTTPRouteResource | null>(null);
   const [httpRouteValid, setHttpRouteValid] = React.useState(false);
+  const [serverValid, setServerValid] = React.useState(false);
   const [resourcesCreated, setResourcesCreated] = React.useState(false);
 
   // Watch existing HTTPRoutes
@@ -103,10 +104,7 @@ const MCPRegistrationWizard: React.FC<MCPRegistrationWizardProps> = ({ isOpen, o
     (routeMode === 'existing' && !!selectedExistingRouteName) ||
     (routeMode === 'new' && httpRouteValid && !!httpRouteResource);
 
-  const isStep2Valid =
-    !!formState.server.registrationName &&
-    !!formState.server.namespace &&
-    !!formState.server.toolPrefix;
+  const isStep2Valid = serverValid;
 
   const verifyItems = React.useMemo<VerifyStepItem[]>(() => {
     const routeName =
@@ -305,6 +303,7 @@ const MCPRegistrationWizard: React.FC<MCPRegistrationWizardProps> = ({ isOpen, o
                     ? selectedExistingRouteName
                     : httpRouteResource?.metadata?.name
                 }
+                onValidationChange={setServerValid}
               />
             </WizardStep>
 

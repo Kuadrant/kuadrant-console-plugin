@@ -20,10 +20,12 @@ import {
   ModalFooter,
   Label,
   LabelGroup,
+  ValidatedOptions,
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
 import './css/gateway-api-plugin.css';
+import { validateRequired, validateK8sName } from '../utils/validation';
 import {
   ResourceYAMLEditor,
   getGroupVersionKindForResource,
@@ -92,6 +94,21 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
   const [modalRates, setModalRates] = React.useState<TokenRate[]>([]);
   const [newLimitValue, setNewLimitValue] = React.useState<number | ''>('');
   const [newLimitWindow, setNewLimitWindow] = React.useState('');
+
+  // Validation state
+  const [policyNameError, setPolicyNameError] = React.useState<string | null>(null);
+  const [policyNameTouched, setPolicyNameTouched] = React.useState(false);
+
+  const validatePolicyName = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sName(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
 
   function createTokenRateLimitPolicy() {
     return {
@@ -305,7 +322,11 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
 
   const isAddLimitSaveDisabled = !newLimitName || modalRates.length === 0 || isDuplicateName;
 
-  const isFormValid = !!(policyName && targetRef.name);
+  const isFormValid = !!(
+    validatePolicyName(policyName) === null &&
+    validateRequired(targetRef.name) === null &&
+    validateK8sName(targetRef.name) === null
+  );
 
   return (
     <>
@@ -335,13 +356,26 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
                     name="policy-name"
                     value={policyName}
                     onChange={handlePolicyChange}
+                    onBlur={() => {
+                      setPolicyNameTouched(true);
+                      setPolicyNameError(validatePolicyName(policyName));
+                    }}
+                    validated={
+                      policyNameTouched && policyNameError
+                        ? ValidatedOptions.error
+                        : ValidatedOptions.default
+                    }
                     isDisabled={formDisabled}
                     placeholder={t('Policy name')}
                   />
                   <FormHelperText>
                     <HelperText>
-                      <HelperTextItem>
-                        {t('Unique name of the TokenRateLimit Policy')}
+                      <HelperTextItem
+                        variant={policyNameTouched && policyNameError ? 'error' : 'default'}
+                      >
+                        {policyNameTouched && policyNameError
+                          ? policyNameError
+                          : t('Unique name of the TokenRateLimit Policy')}
                       </HelperTextItem>
                     </HelperText>
                   </FormHelperText>

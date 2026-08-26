@@ -14,8 +14,10 @@ import {
   Tabs,
   Tab,
   TabTitleText,
+  ValidatedOptions,
 } from '@patternfly/react-core';
 import Helmet from 'react-helmet';
+import { validateRequired, validateK8sName } from '../utils/validation';
 import {
   useK8sModel,
   getGroupVersionKindForResource,
@@ -62,6 +64,22 @@ const KuadrantTLSCreatePage: React.FC = () => {
   const [create, setCreate] = React.useState(true);
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
   const [resourceVersion, setResourceVersion] = React.useState('');
+
+  // Validation state
+  const [policyNameError, setPolicyNameError] = React.useState<string | null>(null);
+  const [policyNameTouched, setPolicyNameTouched] = React.useState(false);
+
+  const validatePolicyName = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sName(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
+
   let isFormValid = false;
 
   // Creates TLS policy object to be used for form and yaml creation of the resource
@@ -225,10 +243,12 @@ const KuadrantTLSCreatePage: React.FC = () => {
   };
 
   if (
-    policyName &&
-    selectedNamespace &&
-    (selectedGateway.metadata?.name ?? '') &&
-    (certIssuerType === 'clusterissuer' ? !!selectedClusterIssuers.name : !!selectedIssuer.name)
+    validatePolicyName(policyName) === null &&
+    validateRequired(selectedNamespace) === null &&
+    validateRequired(selectedGateway.metadata?.name ?? '') === null &&
+    (certIssuerType === 'clusterissuer'
+      ? validateRequired(selectedClusterIssuers.name) === null
+      : validateRequired(selectedIssuer.name) === null)
   ) {
     isFormValid = true;
   }
@@ -262,12 +282,27 @@ const KuadrantTLSCreatePage: React.FC = () => {
                     aria-describedby="simple-form-policy-name-01-helper"
                     value={policyName}
                     onChange={handleNameChange}
+                    onBlur={() => {
+                      setPolicyNameTouched(true);
+                      setPolicyNameError(validatePolicyName(policyName));
+                    }}
+                    validated={
+                      policyNameTouched && policyNameError
+                        ? ValidatedOptions.error
+                        : ValidatedOptions.default
+                    }
                     isDisabled={formDisabled}
                     placeholder={t('Policy name')}
                   />
                   <FormHelperText>
                     <HelperText>
-                      <HelperTextItem>{t('Unique name of the TLSPolicy.')}</HelperTextItem>
+                      <HelperTextItem
+                        variant={policyNameTouched && policyNameError ? 'error' : 'default'}
+                      >
+                        {policyNameTouched && policyNameError
+                          ? policyNameError
+                          : t('Unique name of the TLSPolicy.')}
+                      </HelperTextItem>
                     </HelperText>
                   </FormHelperText>
                 </FormGroup>

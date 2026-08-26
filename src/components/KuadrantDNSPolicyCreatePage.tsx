@@ -15,10 +15,12 @@ import {
   Button,
   ExpandableSection,
   ActionGroup,
+  ValidatedOptions,
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
 import './css/gateway-api-plugin.css';
+import { validateRequired, validateK8sName } from '../utils/validation';
 import {
   ResourceYAMLEditor,
   getGroupVersionKindForResource,
@@ -71,6 +73,35 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const [create, setCreate] = React.useState(true);
   const [loadBalancingExpanded, setLoadBalancingExpanded] = React.useState(false);
   const [healthExpanded, setHealthExpanded] = React.useState(false);
+
+  // Validation state
+  const [policyNameError, setPolicyNameError] = React.useState<string | null>(null);
+  const [policyNameTouched, setPolicyNameTouched] = React.useState(false);
+  const [providerRefError, setProviderRefError] = React.useState<string | null>(null);
+  const [providerRefTouched, setProviderRefTouched] = React.useState(false);
+
+  // Validation functions
+  const validatePolicyName = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sName(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
+
+  const validateProviderRef = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sName(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
 
   let isFormValid = false;
 
@@ -285,9 +316,10 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   };
   const formValidation = () => {
     if (
-      policyName &&
+      validatePolicyName(policyName) === null &&
       (selectedGateway.metadata?.name ?? '') &&
       providerRefs.length > 0 &&
+      validateProviderRef(providerRefs[0]?.name ?? '') === null &&
       (!loadBalancingExpanded ||
         (loadBalancing.geo && loadBalancing.weight != null && loadBalancing.defaultGeo !== '')) &&
       (!healthExpanded ||
@@ -329,12 +361,27 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
                     name="policy-name"
                     value={policyName}
                     onChange={handlePolicyChange}
+                    onBlur={() => {
+                      setPolicyNameTouched(true);
+                      setPolicyNameError(validatePolicyName(policyName));
+                    }}
+                    validated={
+                      policyNameTouched && policyNameError
+                        ? ValidatedOptions.error
+                        : ValidatedOptions.default
+                    }
                     isDisabled={formDisabled}
                     placeholder={t('Policy name')}
                   />
                   <FormHelperText>
                     <HelperText>
-                      <HelperTextItem>{t('Unique name of the DNS Policy')}</HelperTextItem>
+                      <HelperTextItem
+                        variant={policyNameTouched && policyNameError ? 'error' : 'default'}
+                      >
+                        {policyNameTouched && policyNameError
+                          ? policyNameError
+                          : t('Unique name of the DNS Policy')}
+                      </HelperTextItem>
                     </HelperText>
                   </FormHelperText>
                 </FormGroup>
@@ -351,14 +398,29 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
                     name="provider-ref"
                     value={providerRefs.length > 0 ? providerRefs[0].name : ''}
                     onChange={handleProviderRefs}
+                    onBlur={() => {
+                      setProviderRefTouched(true);
+                      setProviderRefError(
+                        validateProviderRef(providerRefs.length > 0 ? providerRefs[0].name : ''),
+                      );
+                    }}
+                    validated={
+                      providerRefTouched && providerRefError
+                        ? ValidatedOptions.error
+                        : ValidatedOptions.default
+                    }
                     placeholder={t('Provider Ref')}
                   />
                   <FormHelperText>
                     <HelperText>
-                      <HelperTextItem>
-                        {t(
-                          'Reference to an existing secret resource containing DNS provider credentials and configuration',
-                        )}
+                      <HelperTextItem
+                        variant={providerRefTouched && providerRefError ? 'error' : 'default'}
+                      >
+                        {providerRefTouched && providerRefError
+                          ? providerRefError
+                          : t(
+                              'Reference to an existing secret resource containing DNS provider credentials and configuration',
+                            )}
                       </HelperTextItem>
                     </HelperText>
                   </FormHelperText>

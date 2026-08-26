@@ -48,6 +48,7 @@ const MCPSetupWizard: React.FC = () => {
   const [newGatewayValid, setNewGatewayValid] = React.useState(false);
   const [newRouteResource, setNewRouteResource] = React.useState<HTTPRouteResource | null>(null);
   const [newRouteValid, setNewRouteValid] = React.useState(false);
+  const [extensionValid, setExtensionValid] = React.useState(false);
 
   const [formState, setFormState] = React.useState<MCPWizardFormState>({
     ...initialFormState,
@@ -503,10 +504,7 @@ const MCPSetupWizard: React.FC = () => {
             id="step-extension"
             footer={{
               nextButtonText: t('Next'),
-              isNextDisabled:
-                !formState.extensionName.trim() ||
-                !formState.targetGateway.trim() ||
-                !formState.sectionName.trim(),
+              isNextDisabled: !extensionValid,
             }}
           >
             <MCPExtensionStep
@@ -514,6 +512,7 @@ const MCPSetupWizard: React.FC = () => {
               updateFormState={updateFormState}
               selectedGateway={selectedGateway}
               selectedNamespace={selectedNamespace}
+              onValidationChange={setExtensionValid}
             />
           </WizardStep>
 

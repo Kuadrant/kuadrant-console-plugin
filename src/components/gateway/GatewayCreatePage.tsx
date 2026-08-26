@@ -23,6 +23,7 @@ import {
   TabTitleText,
   Alert,
   Spinner,
+  ValidatedOptions,
 } from '@patternfly/react-core';
 import { Table, Thead, Tbody, Tr, Th, Td } from '@patternfly/react-table';
 import {
@@ -51,6 +52,12 @@ import {
   removeCertsAndTlsOptionsForPassthrough,
 } from '../../utils/gatewayCreateEditHelpers';
 import { RESOURCES } from '../../utils/resources';
+import {
+  validateRequired,
+  validateK8sName,
+  validateK8sLabel,
+  validatePort,
+} from '../../utils/validation';
 import '../css/gateway-api-plugin.css';
 
 interface GatewayCreatePageProps {
@@ -71,6 +78,10 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
   // Gateway settings
   const [gatewayName, setGatewayName] = React.useState('');
   const [gatewayClassName, setGatewayClassName] = React.useState('istio');
+
+  // Validation state
+  const [gatewayNameError, setGatewayNameError] = React.useState<string | null>(null);
+  const [gatewayNameTouched, setGatewayNameTouched] = React.useState(false);
 
   // YAML editor
   const [yamlContent, setYamlContent] = React.useState<unknown>(null);
@@ -136,6 +147,12 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
     },
   });
 
+  // Listener validation state
+  const [listenerNameError, setListenerNameError] = React.useState<string | null>(null);
+  const [listenerNameTouched, setListenerNameTouched] = React.useState(false);
+  const [listenerPortError, setListenerPortError] = React.useState<string | null>(null);
+  const [listenerPortTouched, setListenerPortTouched] = React.useState(false);
+
   const gatewayWatchResource = React.useMemo(
     () =>
       nameEdit && nameEdit !== '~new'
@@ -175,6 +192,11 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
         kinds: [],
       },
     });
+    // Reset validation state
+    setListenerNameTouched(false);
+    setListenerNameError(null);
+    setListenerPortTouched(false);
+    setListenerPortError(null);
   };
 
   const gatewayGVK = getGroupVersionKindForResource({
@@ -223,6 +245,11 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
     });
     setEditingListenerIndex(index);
     setIsModalOpen(true);
+    // Reset validation state for fresh edit session
+    setListenerNameTouched(false);
+    setListenerNameError(null);
+    setListenerPortTouched(false);
+    setListenerPortError(null);
   };
 
   const handleAddCertificateRef = () => {
@@ -660,15 +687,40 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
     }
   };
 
-  const SECTION_NAME_RE = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
+  // Validation functions with i18n messages
+  const validateGatewayName = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sName(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
+
+  const validateListenerName = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sLabel(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
+
+  const validateListenerPort = React.useCallback(
+    (value: number) => {
+      const formatError = validatePort(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
 
   const isListenerConfigValid = (l: ListenerUI) =>
-    l.name.trim() !== '' &&
-    l.name.length <= 253 &&
-    SECTION_NAME_RE.test(l.name) &&
-    Number.isInteger(l.port) &&
-    l.port > 0 &&
-    l.port <= 65535;
+    validateListenerName(l.name) === null && validateListenerPort(l.port) === null;
 
   const isListenerProtocolValid = (l: ListenerUI) =>
     (l.protocol !== 'HTTPS' && l.protocol !== 'TLS') ||
@@ -685,8 +737,7 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
     const hasDuplicateNames = new Set(listenerNames).size !== listenerNames.length;
 
     return (
-      gatewayName &&
-      gatewayName.trim() !== '' &&
+      validateGatewayName(gatewayName) === null &&
       gatewayClassName &&
       gatewayClassName !== '' &&
       listeners &&
@@ -725,13 +776,26 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
               id="listener-name"
               value={currentListener.name}
               onChange={(_event, value) => setCurrentListener({ ...currentListener, name: value })}
+              onBlur={() => {
+                setListenerNameTouched(true);
+                setListenerNameError(validateListenerName(currentListener.name));
+              }}
+              validated={
+                listenerNameTouched && listenerNameError
+                  ? ValidatedOptions.error
+                  : ValidatedOptions.default
+              }
               isRequired
               placeholder={t('Enter listener name')}
             />
             <FormHelperText>
               <HelperText>
-                <HelperTextItem>
-                  {t('A unique name for this listener within the gateway.')}
+                <HelperTextItem
+                  variant={listenerNameTouched && listenerNameError ? 'error' : 'default'}
+                >
+                  {listenerNameTouched && listenerNameError
+                    ? listenerNameError
+                    : t('A unique name for this listener within the gateway.')}
                 </HelperTextItem>
               </HelperText>
             </FormHelperText>
@@ -749,13 +813,26 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
                   port: value && Number.isInteger(num) && num >= 1 && num <= 65535 ? num : 0,
                 });
               }}
+              onBlur={() => {
+                setListenerPortTouched(true);
+                setListenerPortError(validateListenerPort(currentListener.port));
+              }}
+              validated={
+                listenerPortTouched && listenerPortError
+                  ? ValidatedOptions.error
+                  : ValidatedOptions.default
+              }
               placeholder={t('Enter port (1-65535)')}
               isRequired
             />
             <FormHelperText>
               <HelperText>
-                <HelperTextItem>
-                  {t('The network port that this listener will bind to (1-65535).')}
+                <HelperTextItem
+                  variant={listenerPortTouched && listenerPortError ? 'error' : 'default'}
+                >
+                  {listenerPortTouched && listenerPortError
+                    ? listenerPortError
+                    : t('The network port that this listener will bind to (1-65535).')}
                 </HelperTextItem>
               </HelperText>
             </FormHelperText>
@@ -1299,14 +1376,27 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
                       name="gateway-name"
                       value={gatewayName}
                       onChange={(_event, value) => setGatewayName(value)}
+                      onBlur={() => {
+                        setGatewayNameTouched(true);
+                        setGatewayNameError(validateGatewayName(gatewayName));
+                      }}
+                      validated={
+                        gatewayNameTouched && gatewayNameError
+                          ? ValidatedOptions.error
+                          : ValidatedOptions.default
+                      }
                       isRequired
                       isDisabled={!create} // Disable during edit as names are immutable
                       placeholder={t('Enter gateway name')}
                     />
                     <FormHelperText>
                       <HelperText>
-                        <HelperTextItem>
-                          {!create
+                        <HelperTextItem
+                          variant={gatewayNameTouched && gatewayNameError ? 'error' : 'default'}
+                        >
+                          {gatewayNameTouched && gatewayNameError
+                            ? gatewayNameError
+                            : !create
                             ? t('Gateway names cannot be changed after creation.')
                             : t('A unique name for the gateway within the namespace.')}
                         </HelperTextItem>

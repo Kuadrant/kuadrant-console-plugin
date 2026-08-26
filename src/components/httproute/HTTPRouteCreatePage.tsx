@@ -18,6 +18,7 @@ import {
   Tabs,
   Tab,
   TabTitleText,
+  ValidatedOptions,
 } from '@patternfly/react-core';
 import { PlusCircleIcon, MinusCircleIcon, TrashIcon, EditIcon } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
@@ -47,6 +48,7 @@ import {
 import HTTPRouteRuleWizard from './HTTPRouteRuleWizard';
 import KuadrantCreateUpdate from '../KuadrantCreateUpdate';
 import { handleCancel } from '../../utils/cancel';
+import { validateRequired, validateK8sName } from '../../utils/validation';
 import '../css/gateway-api-plugin.css';
 
 interface ParentReference {
@@ -66,6 +68,8 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [routeName, setRouteName] = React.useState('');
+  const [routeNameError, setRouteNameError] = React.useState<string | null>(null);
+  const [routeNameTouched, setRouteNameTouched] = React.useState(false);
   const [hostnames, setHostnames] = React.useState<string[]>([]);
   const [selectedNamespaceRaw] = useActiveNamespace();
 
@@ -313,6 +317,18 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
     setCreateView(newView);
   };
 
+  // Validation function
+  const validateRouteName = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sName(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
+
   const handleRouteNameChange = (_event: React.FormEvent<HTMLInputElement>, name: string) => {
     setRouteName(name);
   };
@@ -330,7 +346,7 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
         return basicFieldsValid && matchesValid;
       });
 
-    return !!(routeName && hasValidParentRef && hasValidRules);
+    return !!(validateRouteName(routeName) === null && hasValidParentRef && hasValidRules);
   };
 
   const onFormChangeRef = React.useRef(onFormChange);
@@ -416,12 +432,27 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                     name="httproute-name"
                     value={routeName}
                     onChange={handleRouteNameChange}
+                    onBlur={() => {
+                      setRouteNameTouched(true);
+                      setRouteNameError(validateRouteName(routeName));
+                    }}
+                    validated={
+                      routeNameTouched && routeNameError
+                        ? ValidatedOptions.error
+                        : ValidatedOptions.default
+                    }
                     isDisabled={isEdit}
                     placeholder={t('HTTPRoute Name')}
                   />
                   <FormHelperText>
                     <HelperText>
-                      <HelperTextItem>{t('Unique name of the HTTPRoute')}</HelperTextItem>
+                      <HelperTextItem
+                        variant={routeNameTouched && routeNameError ? 'error' : 'default'}
+                      >
+                        {routeNameTouched && routeNameError
+                          ? routeNameError
+                          : t('Unique name of the HTTPRoute')}
+                      </HelperTextItem>
                     </HelperText>
                   </FormHelperText>
                 </FormGroup>
