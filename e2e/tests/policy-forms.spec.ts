@@ -1099,6 +1099,7 @@ spec:
         await expect(page.locator('text=default')).toBeVisible({ timeout: 10_000 });
 
         // remove existing limit and add updated one
+        await page.locator('button[aria-label="Close"]').click();
         await page.getByRole('button', { name: 'Add Limit' }).click();
         await page.locator('#new-limit-name').fill('updated');
         await page.locator('#new-limit-value').fill('200');
@@ -1126,6 +1127,17 @@ spec:
             'jsonpath={.spec.limits.updated.rates[0].limit}',
           ]),
         ).toBe('200');
+        expect(
+          kubectl([
+            'get',
+            'tokenratelimitpolicy',
+            policyName,
+            '-n',
+            namespace,
+            '-o',
+            'jsonpath={.spec.limits.default}',
+          ]),
+        ).toBe('');
       },
     );
   });
