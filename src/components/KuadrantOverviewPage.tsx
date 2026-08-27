@@ -51,6 +51,7 @@ import {
   NamespaceBar,
   checkAccess,
 } from '@openshift-console/dynamic-plugin-sdk';
+import './kuadrant.css';
 import ResourceList from './ResourceList';
 import { sortable, SortByDirection } from '@patternfly/react-table';
 import { EXTERNAL_LINKS } from '../constants/links';
