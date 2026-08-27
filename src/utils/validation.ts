@@ -121,3 +121,28 @@ export const validatePort = (port: number | string): string | null => {
 export const validateNamespace = (namespace: string): string | null => {
   return validateK8sLabel(namespace);
 };
+
+/**
+ * i18n extraction marker.
+ *
+ * The validators above return raw English message strings that call sites feed
+ * through `t(errorKey)`. i18next-parser can't follow those dynamic `t(variable)`
+ * calls, so it would neither add these keys nor keep them (keepRemoved is off).
+ * Listing every message here as a literal `t('...')` lets `yarn i18n` extract
+ * and preserve them. This function is never invoked at runtime — it exists
+ * purely so the parser can see the literals. Keep it in sync with the strings
+ * returned above.
+ */
+export const _validationI18nKeys = (t: (key: string) => string): string[] => [
+  t('This field is required'),
+  t('Name must be no more than 253 characters'),
+  t(
+    'Name must consist of lowercase alphanumeric characters, "-", or ".", and must start and end with an alphanumeric character',
+  ),
+  t('Label must be no more than 63 characters'),
+  t(
+    'Label must consist of lowercase alphanumeric characters or "-", and must start and end with an alphanumeric character',
+  ),
+  t('Port must be a valid number'),
+  t('Port must be between 1 and 65535'),
+];
