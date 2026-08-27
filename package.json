@@ -111,6 +111,7 @@
       "useAPIProductActions": "./components/apiproduct/useAPIProductActions",
       "useDNSPolicyActions": "./components/dnspolicy/useDNSPolicyActions",
       "useRateLimitPolicyActions": "./components/ratelimitpolicy/useRateLimitPolicyActions",
+      "useAuthPolicyActions": "./components/authpolicy/useAuthPolicyActions",
       "useTLSPolicyActions": "./components/tlspolicy/useTLSPolicyActions",
       "useOIDCPolicyActions": "./components/oidcpolicy/useOIDCPolicyActions",
       "useTokenRateLimitPolicyActions": "./components/tokenratelimitpolicy/useTokenRateLimitPolicyActions",
