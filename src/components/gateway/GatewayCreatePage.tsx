@@ -1567,21 +1567,19 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
         )}
 
         {!isLoading && createView === 'form' && (
-          <PageSection hasBodyWrapper={false} stickyOnBreakpoint={{ default: 'bottom' }}>
-            <ActionGroup className="pf-u-mt-0">
-              <KuadrantCreateUpdate
-                validation={formValidation()}
-                model={gatewayModel}
-                resource={gatewayObject}
-                policyType="Gateway"
-                navigate={navigate}
-                redirectPath={`/k8s/ns/${selectedNamespace}/${gatewayModel?.apiGroup}~${gatewayModel?.apiVersion}~${gatewayModel?.kind}/${gatewayName}`}
-              />
-              <Button variant="link" onClick={() => navigate(-1)} className="pf-v6-u-ml-md">
-                {t('Cancel')}
-              </Button>
-            </ActionGroup>
-          </PageSection>
+          <ActionGroup className="pf-u-mt-0">
+            <KuadrantCreateUpdate
+              validation={formValidation()}
+              model={gatewayModel}
+              resource={gatewayObject}
+              policyType="Gateway"
+              navigate={navigate}
+              redirectPath={`/k8s/ns/${selectedNamespace}/${gatewayModel?.apiGroup}~${gatewayModel?.apiVersion}~${gatewayModel?.kind}/${gatewayName}`}
+            />
+            <Button variant="link" onClick={() => navigate(-1)} className="pf-v6-u-ml-md">
+              {t('Cancel')}
+            </Button>
+          </ActionGroup>
         )}
       </PageSection>
 
