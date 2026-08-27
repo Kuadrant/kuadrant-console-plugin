@@ -7,6 +7,41 @@ async function navigateToAPIProductCreate(page: Page, namespace = 'kuadrant-test
   await dismissConsoleTour(page);
 }
 
+// <ResourceYAMLEditor> is a Monaco editor, so it can't be filled like a plain input.
+// Set its content through the *visible* editor's model — getModels()[0] can be a
+// stale model whose onChange isn't wired to this editor, which silently drops the
+// change and makes YAML-driven tests flaky.
+async function setEditorValue(page: Page, yaml: string): Promise<void> {
+  await page.waitForSelector('.monaco-editor .view-lines', { state: 'visible', timeout: 20_000 });
+  await page.waitForFunction(
+    () => {
+      type MonacoType = {
+        editor?: { getEditors?: () => Array<{ getDomNode: () => Element | null; getModel: () => unknown }> };
+      };
+      const monaco = (window as unknown as { monaco?: MonacoType }).monaco;
+      const el = document.querySelector('.monaco-editor');
+      const editors = monaco?.editor?.getEditors?.() ?? [];
+      return !!el && editors.some((e) => !!e.getDomNode() && el.contains(e.getDomNode()) && !!e.getModel());
+    },
+    { timeout: 20_000 },
+  );
+  await page.evaluate((value) => {
+    type MonacoType = {
+      editor?: {
+        getEditors?: () => Array<{ getDomNode: () => Element | null; getModel: () => { setValue(v: string): void } | null }>;
+        getModels?: () => Array<{ setValue(v: string): void }>;
+      };
+    };
+    const monaco = (window as unknown as { monaco?: MonacoType }).monaco;
+    const el = document.querySelector('.monaco-editor');
+    const editors = monaco?.editor?.getEditors?.() ?? [];
+    const visible = editors.find((e) => !!e.getDomNode() && !!el && el.contains(e.getDomNode()));
+    const model = visible?.getModel() ?? monaco?.editor?.getModels?.()[0];
+    model?.setValue(value);
+  }, yaml);
+  await page.waitForTimeout(500);
+}
+
 // Note: Tests rely on test-httproute HTTPRoute existing in the test namespace
 // This is created by applying e2e/manifests/test-apiproduct-fixtures.yaml before running tests
 
@@ -139,8 +174,14 @@ test.describe('APIProduct CRUD Operations', () => {
   });
 
   test('should validate resource name format', { tag: '@nightly' }, async ({ page }) => {
+    // Full page load to a namespace-scoped URL so the console sets activeNamespace to
+    // TEST_NAMESPACE before we SPA-navigate to the create page. Without this,
+    // useActiveNamespace() returns '#ALL_NS#' and HTTPRouteSelect stays disabled.
+    await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
+    await page.waitForLoadState('domcontentloaded');
     await navigateToAPIProductCreate(page, TEST_NAMESPACE);
     await page.waitForLoadState('domcontentloaded');
+    await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
 
     const displayNameInput = page.locator('#display-name');
     const resourceNameInput = page.locator('#resource-name');
@@ -393,22 +434,12 @@ spec:
     kind: HTTPRoute
     name: test-httproute`;
 
-    // Wait for Monaco to initialise
-    await page.waitForFunction(
-      () => {
-        const monaco = (window as unknown as { monaco?: { editor?: { getModels?: () => unknown[] } } }).monaco;
-        return (monaco?.editor?.getModels?.()?.length ?? 0) > 0;
-      },
-      { timeout: 20000 },
-    );
-
-    // Set YAML content via Monaco API (triggers onDidChangeModelContent → onChange)
-    await page.evaluate((yaml) => {
-      const monaco = (window as unknown as { monaco?: { editor?: { getModels?: () => { setValue(v: string): void }[] } } }).monaco;
-      monaco?.editor?.getModels?.()[0]?.setValue(yaml);
-    }, yamlContent);
-
-    await page.waitForTimeout(500);
+    // Set the YAML content on the *visible* editor's model. Targeting
+    // getModels()[0] is unreliable — the console can keep other Monaco models
+    // around, so index 0 may be a stale model whose onChange isn't wired to
+    // this ResourceYAMLEditor, leaving the default (empty-named) resource to be
+    // created. Match the editor against the mounted .monaco-editor DOM node.
+    await setEditorValue(page, yamlContent);
 
     // Click the Create button rendered by ResourceYAMLEditor
     const createButton = page.locator('button:has-text("Create")').last();

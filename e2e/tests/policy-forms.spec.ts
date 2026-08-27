@@ -92,24 +92,44 @@ async function gotoPage(page: Page, path: string): Promise<void> {
 const createPagePath = (namespace: string, gvk: string) => `/k8s/ns/${namespace}/${gvk}/~new`;
 
 // <ResourceYAMLEditor> is a Monaco editor, so it can't be filled like a plain input.
-// Set its content through Monaco's model API, which triggers onChange like real typing.
+// Set its content through the *visible* editor's model, which triggers onChange like
+// real typing. Targeting getModels()[0] is unreliable — the console can keep other
+// Monaco models around, so index 0 may be a stale model whose onChange isn't wired to
+// this editor, silently dropping the change and making YAML-driven tests flaky.
 async function setEditorValue(page: Page, yaml: string): Promise<void> {
+  await page.waitForSelector('.monaco-editor .view-lines', { state: 'visible', timeout: 20_000 });
   await page.waitForFunction(
     () => {
-      const monaco = (
-        window as unknown as { monaco?: { editor?: { getModels?: () => unknown[] } } }
-      ).monaco;
-      return (monaco?.editor?.getModels?.()?.length ?? 0) > 0;
+      type MonacoType = {
+        editor?: {
+          getEditors?: () => Array<{ getDomNode: () => Element | null; getModel: () => unknown }>;
+        };
+      };
+      const monaco = (window as unknown as { monaco?: MonacoType }).monaco;
+      const el = document.querySelector('.monaco-editor');
+      const editors = monaco?.editor?.getEditors?.() ?? [];
+      return (
+        !!el && editors.some((e) => !!e.getDomNode() && el.contains(e.getDomNode()) && !!e.getModel())
+      );
     },
     { timeout: 20_000 },
   );
   await page.evaluate((value) => {
-    const monaco = (
-      window as unknown as {
-        monaco?: { editor?: { getModels?: () => { setValue(v: string): void }[] } };
-      }
-    ).monaco;
-    monaco?.editor?.getModels?.()[0]?.setValue(value);
+    type MonacoType = {
+      editor?: {
+        getEditors?: () => Array<{
+          getDomNode: () => Element | null;
+          getModel: () => { setValue(v: string): void } | null;
+        }>;
+        getModels?: () => Array<{ setValue(v: string): void }>;
+      };
+    };
+    const monaco = (window as unknown as { monaco?: MonacoType }).monaco;
+    const el = document.querySelector('.monaco-editor');
+    const editors = monaco?.editor?.getEditors?.() ?? [];
+    const visible = editors.find((e) => !!e.getDomNode() && !!el && el.contains(e.getDomNode()));
+    const model = visible?.getModel() ?? monaco?.editor?.getModels?.()[0];
+    model?.setValue(value);
   }, yaml);
   await page.waitForTimeout(500);
 }
