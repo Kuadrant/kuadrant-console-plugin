@@ -2,54 +2,28 @@ name: E2E Tests (Common)
 
 on:
   workflow_call:
-    inputs:
-      suite:
-        description: 'Test suite to run: smoke or full'
-        required: true
-        type: string
-      specs:
-        description: 'Space-separated spec file paths to run (empty = all)'
-        required: false
-        type: string
-        default: ''
-      test_specs:
-        description: 'Space-separated spec file paths that changed directly (run all tags)'
-        required: false
-        type: string
-        default: ''
-    outputs:
-      failure-type:
-        description: 'Type of failure: none, infrastructure, or test'
-        value: ${{ jobs.e2e-rbac.outputs.failure-type }}
 
 jobs:
   e2e-rbac:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
-    outputs:
-      failure-type: ${{ steps.classify.outputs.type }}
+    timeout-minutes: 45
 
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # ratchet:actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # ratchet:actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: Enable Corepack
         run: corepack enable
 
-      - name: Install oinc
+      - name: Install MINC
         run: |
-          OINC_VERSION="${OINC_VERSION:-v0.4.3}"
-          curl -fL -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
-          chmod +x oinc
-          file oinc | grep -q ELF || { echo "downloaded file is not a valid binary"; exit 1; }
-          ./oinc version
-          sudo mv oinc /usr/local/bin/
-
-      - name: Install Helm
-        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # ratchet:azure/setup-helm@v4
+          MINC_VERSION="${MINC_VERSION:-v0.1.0}"
+          curl -L -o minc "https://github.com/minc-org/minc/releases/download/${MINC_VERSION}/minc_linux_amd64"
+          chmod +x minc
+          sudo mv minc /usr/local/bin/
 
       - name: Install dependencies
         run: yarn install
@@ -57,89 +31,37 @@ jobs:
       - name: Install Playwright browsers
         run: yarn playwright install --with-deps chromium
 
+      - name: Setup cluster
+        run: sudo ./e2e/setup.sh
+
       - name: Start plugin dev server
-        run: |
-          yarn clean && yarn start &
-          echo $! > /tmp/dev-server.pid
+        run: yarn clean && yarn start &
         env:
           NODE_ENV: development
 
-      - name: Setup cluster
-        id: setup
-        run: ./e2e/setup.sh
-
       - name: Wait for plugin dev server
-        id: wait-server
         run: |
-          DEV_SERVER_PID=$(cat /tmp/dev-server.pid)
           for i in $(seq 1 30); do
             if curl -sf http://localhost:9001 >/dev/null 2>&1; then
               echo "plugin dev server ready"
               exit 0
-            fi
-            # Fail fast if the dev server process has already exited
-            if ! kill -0 "$DEV_SERVER_PID" 2>/dev/null; then
-              echo "plugin dev server process died unexpectedly"
-              exit 1
             fi
             sleep 2
           done
           echo "plugin dev server not ready after 60s"
           exit 1
 
-      - name: Run E2E tests (smoke)
-        id: tests
-        if: inputs.suite == 'smoke' && (inputs.specs != '' || inputs.test_specs == '')
-        env:
-          SPEC_FILTER: ${{ inputs.specs }}
-        run: |
-          if [ -n "$SPEC_FILTER" ]; then
-            npx playwright test --config=e2e/playwright.config.ts --grep @smoke $SPEC_FILTER
-          else
-            npx playwright test --config=e2e/playwright.config.ts --grep @smoke
-          fi
-
-      - name: Run E2E tests (changed test files, all tags)
-        id: tests-changed
-        if: inputs.suite == 'smoke' && inputs.test_specs != ''
-        env:
-          TEST_SPEC_FILTER: ${{ inputs.test_specs }}
-        run: npx playwright test --config=e2e/playwright.config.ts $TEST_SPEC_FILTER
-
-      - name: Run E2E tests (full)
-        id: tests-full
-        if: inputs.suite == 'full'
+      - name: Run E2E tests
         run: npx playwright test --config=e2e/playwright.config.ts
-
-      - name: Classify failure
-        id: classify
-        if: always()
-        run: |
-          if [[ "${{ steps.setup.outcome }}" == "failure" || "${{ steps.wait-server.outcome }}" == "failure" ]]; then
-            echo "type=infrastructure" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ steps.tests.outcome }}" == "failure" || "${{ steps.tests-full.outcome }}" == "failure" || "${{ steps.tests-changed.outcome }}" == "failure" ]]; then
-            echo "type=test" >> "$GITHUB_OUTPUT"
-          else
-            echo "type=none" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4
         with:
-          name: playwright-report-${{ inputs.suite }}
+          name: playwright-report
           path: playwright-report/
           retention-days: 7
 
-      - name: Upload test results JSON
-        if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # ratchet:actions/upload-artifact@v4
-        with:
-          name: playwright-results-json
-          path: playwright-results.json
-          retention-days: 7
-          if-no-files-found: ignore
-
       - name: Teardown
         if: always()
-        run: ./e2e/teardown.sh
+        run: sudo ./e2e/teardown.sh
