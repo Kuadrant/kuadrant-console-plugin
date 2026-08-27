@@ -111,11 +111,12 @@ const MCPOverviewPage: React.FC = () => {
   const watchNamespace = ns || activeNamespace;
   const resolvedNamespace = watchNamespace === '#ALL_NS#' ? undefined : watchNamespace;
 
-  const [extensions, extensionsLoaded] = useK8sWatchResource<MCPGatewayExtension[]>({
-    groupVersionKind: RESOURCES.MCPGatewayExtension.gvk,
-    isList: true,
-    namespace: resolvedNamespace,
-  });
+  const [extensions, extensionsLoaded, extensionsLoadError] =
+    useK8sWatchResource<MCPGatewayExtension[]>({
+      groupVersionKind: RESOURCES.MCPGatewayExtension.gvk,
+      isList: true,
+      namespace: resolvedNamespace,
+    });
 
   const [gateways] = useK8sWatchResource<GatewayResource[]>({
     groupVersionKind: RESOURCES.Gateway.gvk,
@@ -404,9 +405,64 @@ const MCPOverviewPage: React.FC = () => {
     return <div>{t('Loading permissions...')}</div>;
   }
 
+  if (!extensionRBAC.list) {
+    return (
+      <>
+        <Helmet>
+          <title data-test="mcp-overview-page-title">{t('MCP management')}</title>
+        </Helmet>
+        <NamespaceBar onNamespaceChange={handleNamespaceChange} />
+        <PageSection hasBodyWrapper={false}>
+          <Title headingLevel="h1">{t('MCP management')}</Title>
+        </PageSection>
+        <PageSection hasBodyWrapper={false}>
+          <Bullseye>
+            <EmptyState
+              titleText={
+                <Title headingLevel="h4" size="lg">
+                  {t('Access Denied')}
+                </Title>
+              }
+              icon={LockIcon}
+            >
+              <EmptyStateBody>
+                <Content component="p">
+                  {t('You do not have permission to view MCP Gateway Extensions')}
+                </Content>
+              </EmptyStateBody>
+            </EmptyState>
+          </Bullseye>
+        </PageSection>
+      </>
+    );
+  }
+
   const hasNoExtensions = extensionsLoaded && (!extensions || extensions.length === 0);
 
   if (hasNoExtensions) {
+    if (extensionsLoadError) {
+      return (
+        <>
+          <Helmet>
+            <title data-test="mcp-overview-page-title">{t('MCP management')}</title>
+          </Helmet>
+          <NamespaceBar onNamespaceChange={handleNamespaceChange} />
+          <PageSection hasBodyWrapper={false}>
+            <Title headingLevel="h1">{t('MCP management')}</Title>
+          </PageSection>
+          <PageSection hasBodyWrapper={false}>
+            <Alert
+              variant="danger"
+              isInline
+              title={t('Error loading MCP Gateway Extensions')}
+            >
+              {extensionsLoadError.message || t('An error occurred while loading extensions')}
+            </Alert>
+          </PageSection>
+        </>
+      );
+    }
+
     return (
       <>
         <Helmet>
