@@ -17,10 +17,12 @@ import {
   ActionGroup,
   Card,
   CardBody,
+  ValidatedOptions,
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
 import './css/gateway-api-plugin.css';
+import { validateRequired, validateK8sName } from '../utils/validation';
 import {
   ResourceYAMLEditor,
   getGroupVersionKindForResource,
@@ -83,6 +85,46 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
   const [resourceVersion, setResourceVersion] = React.useState('');
   const [formDisabled, setFormDisabled] = React.useState(false);
   const [create, setCreate] = React.useState(true);
+
+  // Validation state
+  const [policyNameError, setPolicyNameError] = React.useState<string | null>(null);
+  const [policyNameTouched, setPolicyNameTouched] = React.useState(false);
+  const [tierErrors, setTierErrors] = React.useState<{ [index: number]: string | null }>({});
+  const [tierTouched, setTierTouched] = React.useState<{ [index: number]: boolean }>({});
+  const [predicateErrors, setPredicateErrors] = React.useState<{ [index: number]: string | null }>(
+    {},
+  );
+  const [predicateTouched, setPredicateTouched] = React.useState<{ [index: number]: boolean }>({});
+
+  const validatePolicyName = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sName(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
+
+  const validateTier = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      // Tier is a freeform string per CRD, no format validation needed
+      return null;
+    },
+    [t],
+  );
+
+  const validatePredicate = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      return null;
+    },
+    [t],
+  );
 
   const createPlanPolicy = () => {
     return {
@@ -268,6 +310,22 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
   const removePlan = (index: number) => {
     if (plans.length > 1) {
       setPlans(plans.filter((_, i) => i !== index));
+      // The validation maps are keyed by array index, so removing a plan must
+      // shift every entry after `index` down by one — otherwise an error or
+      // touched flag would stay attached to the wrong plan row.
+      const reindex = <T,>(map: { [index: number]: T }): { [index: number]: T } => {
+        const next: { [index: number]: T } = {};
+        Object.keys(map).forEach((key) => {
+          const i = Number(key);
+          if (i < index) next[i] = map[i];
+          else if (i > index) next[i - 1] = map[i];
+        });
+        return next;
+      };
+      setTierErrors(reindex);
+      setTierTouched(reindex);
+      setPredicateErrors(reindex);
+      setPredicateTouched(reindex);
     }
   };
 
@@ -278,10 +336,13 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
   };
 
   const isFormValid = !!(
-    policyName &&
-    targetRef.name &&
+    validatePolicyName(policyName) === null &&
+    validateRequired(targetRef.name) === null &&
+    validateK8sName(targetRef.name) === null &&
     plans.some((p) => p.tier !== '') &&
-    plans.filter((p) => p.tier !== '').every((p) => p.predicate !== '')
+    plans
+      .filter((p) => p.tier !== '')
+      .every((p) => validateTier(p.tier) === null && validateRequired(p.predicate) === null)
   );
 
   const handleCancelResource = () => {
@@ -316,12 +377,27 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
                     name="policy-name"
                     value={policyName}
                     onChange={(_event, val) => setPolicyName(val)}
+                    onBlur={() => {
+                      setPolicyNameTouched(true);
+                      setPolicyNameError(validatePolicyName(policyName));
+                    }}
+                    validated={
+                      policyNameTouched && policyNameError
+                        ? ValidatedOptions.error
+                        : ValidatedOptions.default
+                    }
                     isDisabled={formDisabled}
                     placeholder={t('Policy name')}
                   />
                   <FormHelperText>
                     <HelperText>
-                      <HelperTextItem>{t('Unique name of the Plan Policy')}</HelperTextItem>
+                      <HelperTextItem
+                        variant={policyNameTouched && policyNameError ? 'error' : 'default'}
+                      >
+                        {policyNameTouched && policyNameError
+                          ? policyNameError
+                          : t('Unique name of the Plan Policy')}
+                      </HelperTextItem>
                     </HelperText>
                   </FormHelperText>
                 </FormGroup>
@@ -400,8 +476,28 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
                             id={`plan-tier-${i}`}
                             value={plan.tier}
                             onChange={(_event, val) => updatePlan(i, 'tier', val)}
-                            placeholder="e.g. gold, silver, free"
+                            onBlur={() => {
+                              setTierTouched((prev) => ({ ...prev, [i]: true }));
+                              setTierErrors((prev) => ({ ...prev, [i]: validateTier(plan.tier) }));
+                            }}
+                            validated={
+                              tierTouched[i] && tierErrors[i]
+                                ? ValidatedOptions.error
+                                : ValidatedOptions.default
+                            }
+                            placeholder={t('e.g. gold, silver, free')}
                           />
+                          <FormHelperText>
+                            <HelperText>
+                              <HelperTextItem
+                                variant={tierTouched[i] && tierErrors[i] ? 'error' : 'default'}
+                              >
+                                {tierTouched[i] && tierErrors[i]
+                                  ? tierErrors[i]
+                                  : t('Tier name (e.g. gold, silver, free)')}
+                              </HelperTextItem>
+                            </HelperText>
+                          </FormHelperText>
                         </FormGroup>
                         <FormGroup
                           label={t('Predicate')}
@@ -415,12 +511,30 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
                             id={`plan-predicate-${i}`}
                             value={plan.predicate}
                             onChange={(_event, val) => updatePlan(i, 'predicate', val)}
-                            placeholder='e.g. auth.identity.tier == "gold"'
+                            onBlur={() => {
+                              setPredicateTouched((prev) => ({ ...prev, [i]: true }));
+                              setPredicateErrors((prev) => ({
+                                ...prev,
+                                [i]: validatePredicate(plan.predicate),
+                              }));
+                            }}
+                            validated={
+                              predicateTouched[i] && predicateErrors[i]
+                                ? ValidatedOptions.error
+                                : ValidatedOptions.default
+                            }
+                            placeholder={t('e.g. auth.identity.tier == "gold"')}
                           />
                           <FormHelperText>
                             <HelperText>
-                              <HelperTextItem>
-                                {t("CEL expression to match this plan's subscribers")}
+                              <HelperTextItem
+                                variant={
+                                  predicateTouched[i] && predicateErrors[i] ? 'error' : 'default'
+                                }
+                              >
+                                {predicateTouched[i] && predicateErrors[i]
+                                  ? predicateErrors[i]
+                                  : t("CEL expression to match this plan's subscribers")}
                               </HelperTextItem>
                             </HelperText>
                           </FormHelperText>

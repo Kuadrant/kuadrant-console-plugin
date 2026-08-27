@@ -105,6 +105,10 @@ if echo "$CHANGED" | grep -qE "^src/components/mcp/"; then
   SPECS="$SPECS mcp-setup-wizard.spec.ts mcp-overview.spec.ts mcp-wizard.spec.ts mcp-resource-pages.spec.ts"
 fi
 
+if echo "$CHANGED" | grep -qE "^src/utils/validation\.ts"; then
+  SPECS="$SPECS inline-validation.spec.ts gateway-crud.spec.ts httproute-crud.spec.ts mcp-setup-wizard.spec.ts policy-forms.spec.ts"
+fi
+
 # Detect test files that changed → run all tags (smoke + nightly) for those files only
 TEST_SPECS=""
 CHANGED_SPECS=$(echo "$CHANGED" | grep -E "^e2e/tests/[a-z0-9-]+\.spec\.ts$" || true)

@@ -11,12 +11,14 @@ interface RegisterServerStepProps {
   formState: MCPServerFormState;
   onChange: (state: MCPServerFormState) => void;
   routeName?: string;
+  onValidationChange?: (isValid: boolean) => void;
 }
 
 const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
   formState,
   onChange,
   routeName,
+  onValidationChange,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activeTab, setActiveTab] = React.useState<string>('form');
@@ -101,6 +103,7 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
           formState={formState}
           onChange={handleChange}
           httpRouteNames={routeName ? [routeName] : []}
+          onValidationChange={onValidationChange}
         />
       </Tab>
 

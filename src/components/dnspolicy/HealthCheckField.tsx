@@ -1,8 +1,18 @@
 import * as React from 'react';
 
-import { FormGroup, TextInput, FormSelect, FormSelectOption } from '@patternfly/react-core';
+import {
+  FormGroup,
+  TextInput,
+  FormSelect,
+  FormSelectOption,
+  FormHelperText,
+  HelperText,
+  HelperTextItem,
+  ValidatedOptions,
+} from '@patternfly/react-core';
 import { HealthCheck } from './types';
 import { useTranslation } from 'react-i18next';
+import { validatePort } from '../../utils/validation';
 
 interface HealthCheckProps {
   healthCheck: HealthCheck;
@@ -11,6 +21,19 @@ interface HealthCheckProps {
 
 const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
+
+  // Validation state
+  const [portError, setPortError] = React.useState<string | null>(null);
+  const [portTouched, setPortTouched] = React.useState(false);
+
+  const validateHealthCheckPort = React.useCallback(
+    (value: number) => {
+      const formatError = validatePort(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
 
   return (
     <>
@@ -49,10 +72,22 @@ const HealthCheckField: React.FC<HealthCheckProps> = ({ healthCheck, onChange })
           onChange={(event) =>
             onChange({ ...healthCheck, port: Number(event.currentTarget.value) })
           }
+          onBlur={() => {
+            setPortTouched(true);
+            setPortError(validateHealthCheckPort(healthCheck.port));
+          }}
+          validated={portTouched && portError ? ValidatedOptions.error : ValidatedOptions.default}
           isRequired
           min={1}
           placeholder="0"
         />
+        <FormHelperText>
+          <HelperText>
+            <HelperTextItem variant={portTouched && portError ? 'error' : 'default'}>
+              {portTouched && portError ? portError : t('Port number for health checks (1-65535)')}
+            </HelperTextItem>
+          </HelperText>
+        </FormHelperText>
       </FormGroup>
       <FormGroup
         label={t('Protocol')}

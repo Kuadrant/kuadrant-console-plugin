@@ -19,6 +19,7 @@ import {
   Wizard,
   WizardStep,
   WizardHeader,
+  ValidatedOptions,
 } from '@patternfly/react-core';
 import { PlusCircleIcon, MinusCircleIcon } from '@patternfly/react-icons';
 import { HTTPRouteMatch, HTTPRouteHeader, HTTPRouteQueryParam } from './types';
@@ -26,6 +27,7 @@ import FilterActions from './filters/FilterActions';
 import { HTTPRouteFilter } from './filters/filterTypes';
 import { validateFiltersStep, getFilterSummary } from './filters/filterUtils';
 import { formatMatchesForDisplay } from './matchUtils';
+import { validateRequired, validateK8sName, validatePort } from '../../utils/validation';
 
 interface HTTPRouteRuleWizardProps {
   isOpen: boolean;
@@ -70,6 +72,46 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
   const [isFiltersValid, setIsFiltersValid] = React.useState(true);
   const [isBackendValid, setIsBackendValid] = React.useState(false);
 
+  // Validation state
+  const [ruleIdError, setRuleIdError] = React.useState<string | null>(null);
+  const [ruleIdTouched, setRuleIdTouched] = React.useState(false);
+  const [serviceNameError, setServiceNameError] = React.useState<string | null>(null);
+  const [serviceNameTouched, setServiceNameTouched] = React.useState(false);
+  const [servicePortError, setServicePortError] = React.useState<string | null>(null);
+  const [servicePortTouched, setServicePortTouched] = React.useState(false);
+
+  // Validation functions
+  const validateRuleId = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sName(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
+
+  const validateServiceName = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sName(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
+
+  const validateServicePort = React.useCallback(
+    (value: number) => {
+      const formatError = validatePort(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
+
   React.useEffect(() => {
     setIsMatchesValid(validateMatchesStep(currentRule));
   }, [currentRule.matches]);
@@ -80,12 +122,18 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
 
   React.useEffect(() => {
     setIsBackendValid(
-      !!currentRule.id &&
-        !!currentRule.serviceName &&
-        currentRule.serviceName.trim() !== '' &&
-        currentRule.servicePort > 0,
+      validateRuleId(currentRule.id) === null &&
+        validateServiceName(currentRule.serviceName) === null &&
+        validateServicePort(currentRule.servicePort) === null,
     );
-  }, [currentRule.id, currentRule.serviceName, currentRule.servicePort]);
+  }, [
+    currentRule.id,
+    currentRule.serviceName,
+    currentRule.servicePort,
+    validateRuleId,
+    validateServiceName,
+    validateServicePort,
+  ]);
 
   // Matches handling functions
   const handleAddMatch = () => {
@@ -592,11 +640,22 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
               id="rule-id"
               value={currentRule.id}
               onChange={(_, value) => setCurrentRule({ ...currentRule, id: value })}
+              onBlur={() => {
+                setRuleIdTouched(true);
+                setRuleIdError(validateRuleId(currentRule.id));
+              }}
+              validated={
+                ruleIdTouched && ruleIdError ? ValidatedOptions.error : ValidatedOptions.default
+              }
               placeholder="rule-abc123"
             />
             <FormHelperText>
               <HelperText>
-                <HelperTextItem>{t('Unique identifier for this rule')}</HelperTextItem>
+                <HelperTextItem variant={ruleIdTouched && ruleIdError ? 'error' : 'default'}>
+                  {ruleIdTouched && ruleIdError
+                    ? ruleIdError
+                    : t('Unique identifier for this rule')}
+                </HelperTextItem>
               </HelperText>
             </FormHelperText>
           </FormGroup>
@@ -606,8 +665,28 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
               id="service-name"
               value={currentRule.serviceName}
               onChange={(_, value) => setCurrentRule({ ...currentRule, serviceName: value })}
+              onBlur={() => {
+                setServiceNameTouched(true);
+                setServiceNameError(validateServiceName(currentRule.serviceName));
+              }}
+              validated={
+                serviceNameTouched && serviceNameError
+                  ? ValidatedOptions.error
+                  : ValidatedOptions.default
+              }
               placeholder="service-a"
             />
+            <FormHelperText>
+              <HelperText>
+                <HelperTextItem
+                  variant={serviceNameTouched && serviceNameError ? 'error' : 'default'}
+                >
+                  {serviceNameTouched && serviceNameError
+                    ? serviceNameError
+                    : t('Name of the Kubernetes Service to route traffic to')}
+                </HelperTextItem>
+              </HelperText>
+            </FormHelperText>
           </FormGroup>
 
           <FormGroup label={t('Service Port')} isRequired fieldId="service-port">
@@ -618,8 +697,28 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
               onChange={(_, value) =>
                 setCurrentRule({ ...currentRule, servicePort: parseInt(value) || 80 })
               }
+              onBlur={() => {
+                setServicePortTouched(true);
+                setServicePortError(validateServicePort(currentRule.servicePort));
+              }}
+              validated={
+                servicePortTouched && servicePortError
+                  ? ValidatedOptions.error
+                  : ValidatedOptions.default
+              }
               placeholder="80"
             />
+            <FormHelperText>
+              <HelperText>
+                <HelperTextItem
+                  variant={servicePortTouched && servicePortError ? 'error' : 'default'}
+                >
+                  {servicePortTouched && servicePortError
+                    ? servicePortError
+                    : t('Port number of the service (1-65535)')}
+                </HelperTextItem>
+              </HelperText>
+            </FormHelperText>
           </FormGroup>
         </Form>
       ),

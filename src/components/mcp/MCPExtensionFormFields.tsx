@@ -10,10 +10,17 @@ import {
   HelperTextItem,
   ExpandableSection,
   Switch,
+  ValidatedOptions,
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import { MCPWizardFormState } from './types';
 import { GatewayResource } from '../gateway/types';
+import {
+  validateRequired,
+  validateK8sName,
+  validateK8sLabel,
+  validateNamespace,
+} from '../../utils/validation';
 
 interface MCPExtensionFormFieldsProps {
   formState: MCPWizardFormState;
@@ -33,6 +40,8 @@ interface MCPExtensionFormFieldsProps {
   // isn't otherwise selectable there); the standalone page hides it and uses the
   // console's namespace picker instead.
   showNamespaceField?: boolean;
+  // Callback fired when validation state changes
+  onValidationChange?: (isValid: boolean) => void;
 }
 
 // The MCPGatewayExtension form body, shared between the setup wizard step and the
@@ -45,14 +54,128 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
   disableIdentity = false,
   gatewayNames = [],
   showNamespaceField = true,
+  onValidationChange,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
+
+  // Validation state
+  const [errors, setErrors] = React.useState<{
+    extensionName?: string;
+    extensionNamespace?: string;
+    targetGateway?: string;
+    sectionName?: string;
+  }>({});
+
+  const [touched, setTouched] = React.useState<{
+    extensionName?: boolean;
+    extensionNamespace?: boolean;
+    targetGateway?: boolean;
+    sectionName?: boolean;
+  }>({});
 
   // Get listener names from the selected gateway
   const listenerNames = React.useMemo(() => {
     if (!selectedGateway?.spec?.listeners) return [];
     return selectedGateway.spec.listeners.map((l) => l.name);
   }, [selectedGateway]);
+
+  // Validation functions
+  const validateExtensionName = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sName(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
+
+  const validateExtensionNamespace = React.useCallback(
+    (value: string) => {
+      if (!value) return null; // Namespace is optional (falls back to selectedNamespace)
+      const formatError = validateNamespace(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
+
+  const validateTargetGateway = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sName(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
+
+  const validateSectionName = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sLabel(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
+
+  // Notify parent when validation state changes. This effect must NOT call
+  // setErrors — the error state shown to the user is driven by the blur
+  // handlers. Setting state here would re-run the effect whenever the memoised
+  // validators change identity (they depend on `t`, which is a fresh reference
+  // on every render under some i18n setups), causing an infinite render loop.
+  React.useEffect(() => {
+    const isValid =
+      validateExtensionName(formState.extensionName) === null &&
+      validateExtensionNamespace(formState.extensionNamespace) === null &&
+      validateTargetGateway(formState.targetGateway) === null &&
+      validateSectionName(formState.sectionName) === null;
+    onValidationChange?.(isValid);
+  }, [
+    formState.extensionName,
+    formState.extensionNamespace,
+    formState.targetGateway,
+    formState.sectionName,
+    validateExtensionName,
+    validateExtensionNamespace,
+    validateTargetGateway,
+    validateSectionName,
+    onValidationChange,
+  ]);
+
+  // Blur handlers
+  const handleExtensionNameBlur = () => {
+    setTouched((prev) => ({ ...prev, extensionName: true }));
+    setErrors((prev) => ({
+      ...prev,
+      extensionName: validateExtensionName(formState.extensionName),
+    }));
+  };
+
+  const handleExtensionNamespaceBlur = () => {
+    setTouched((prev) => ({ ...prev, extensionNamespace: true }));
+    setErrors((prev) => ({
+      ...prev,
+      extensionNamespace: validateExtensionNamespace(formState.extensionNamespace),
+    }));
+  };
+
+  const handleTargetGatewayBlur = () => {
+    setTouched((prev) => ({ ...prev, targetGateway: true }));
+    setErrors((prev) => ({
+      ...prev,
+      targetGateway: validateTargetGateway(formState.targetGateway),
+    }));
+  };
+
+  const handleSectionNameBlur = () => {
+    setTouched((prev) => ({ ...prev, sectionName: true }));
+    setErrors((prev) => ({ ...prev, sectionName: validateSectionName(formState.sectionName) }));
+  };
 
   return (
     <Form>
@@ -62,6 +185,12 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
           id="extension-name"
           value={formState.extensionName}
           onChange={(_event, value) => updateFormState({ extensionName: value })}
+          onBlur={handleExtensionNameBlur}
+          validated={
+            touched.extensionName && errors.extensionName
+              ? ValidatedOptions.error
+              : ValidatedOptions.default
+          }
           isRequired
           isDisabled={disableIdentity}
           placeholder={t('Enter extension name')}
@@ -69,8 +198,12 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
         />
         <FormHelperText>
           <HelperText>
-            <HelperTextItem>
-              {t('A unique name for the MCP gateway extension resource.')}
+            <HelperTextItem
+              variant={touched.extensionName && errors.extensionName ? 'error' : 'default'}
+            >
+              {touched.extensionName && errors.extensionName
+                ? errors.extensionName
+                : t('A unique name for the MCP gateway extension resource.')}
             </HelperTextItem>
           </HelperText>
         </FormHelperText>
@@ -83,16 +216,28 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
             id="extension-namespace"
             value={formState.extensionNamespace}
             onChange={(_event, value) => updateFormState({ extensionNamespace: value })}
+            onBlur={handleExtensionNamespaceBlur}
+            validated={
+              touched.extensionNamespace && errors.extensionNamespace
+                ? ValidatedOptions.error
+                : ValidatedOptions.default
+            }
             isDisabled={disableIdentity}
             placeholder={selectedNamespace}
             data-test="mcp-extension-namespace"
           />
           <FormHelperText>
             <HelperText>
-              <HelperTextItem>
-                {t(
-                  'The namespace for the extension. If different from the gateway namespace, a ReferenceGrant will be created.',
-                )}
+              <HelperTextItem
+                variant={
+                  touched.extensionNamespace && errors.extensionNamespace ? 'error' : 'default'
+                }
+              >
+                {touched.extensionNamespace && errors.extensionNamespace
+                  ? errors.extensionNamespace
+                  : t(
+                      'The namespace for the extension. If different from the gateway namespace, a ReferenceGrant will be created.',
+                    )}
               </HelperTextItem>
             </HelperText>
           </FormHelperText>
@@ -104,7 +249,18 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
           <FormSelect
             id="target-gateway"
             value={formState.targetGateway}
-            onChange={(_event, value) => updateFormState({ targetGateway: value, sectionName: '' })}
+            onChange={(_event, value) => {
+              updateFormState({ targetGateway: value, sectionName: '' });
+              if (touched.targetGateway) {
+                setErrors((prev) => ({ ...prev, targetGateway: validateTargetGateway(value) }));
+              }
+            }}
+            onBlur={handleTargetGatewayBlur}
+            validated={
+              touched.targetGateway && errors.targetGateway
+                ? ValidatedOptions.error
+                : ValidatedOptions.default
+            }
             aria-label={t('Select a gateway')}
             data-test="mcp-target-gateway-select"
           >
@@ -119,6 +275,12 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
             id="target-gateway"
             value={formState.targetGateway}
             onChange={(_event, value) => updateFormState({ targetGateway: value, sectionName: '' })}
+            onBlur={handleTargetGatewayBlur}
+            validated={
+              touched.targetGateway && errors.targetGateway
+                ? ValidatedOptions.error
+                : ValidatedOptions.default
+            }
             isRequired
             placeholder={t('Enter target gateway name')}
             data-test="mcp-target-gateway"
@@ -126,7 +288,13 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
         )}
         <FormHelperText>
           <HelperText>
-            <HelperTextItem>{t('The name of the gateway this extension targets.')}</HelperTextItem>
+            <HelperTextItem
+              variant={touched.targetGateway && errors.targetGateway ? 'error' : 'default'}
+            >
+              {touched.targetGateway && errors.targetGateway
+                ? errors.targetGateway
+                : t('The name of the gateway this extension targets.')}
+            </HelperTextItem>
           </HelperText>
         </FormHelperText>
       </FormGroup>
@@ -136,7 +304,18 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
           <FormSelect
             id="section-name"
             value={formState.sectionName}
-            onChange={(_event, value) => updateFormState({ sectionName: value })}
+            onChange={(_event, value) => {
+              updateFormState({ sectionName: value });
+              if (touched.sectionName) {
+                setErrors((prev) => ({ ...prev, sectionName: validateSectionName(value) }));
+              }
+            }}
+            onBlur={handleSectionNameBlur}
+            validated={
+              touched.sectionName && errors.sectionName
+                ? ValidatedOptions.error
+                : ValidatedOptions.default
+            }
             aria-label={t('Select a listener')}
             data-test="mcp-section-name"
           >
@@ -151,6 +330,12 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
             id="section-name"
             value={formState.sectionName}
             onChange={(_event, value) => updateFormState({ sectionName: value })}
+            onBlur={handleSectionNameBlur}
+            validated={
+              touched.sectionName && errors.sectionName
+                ? ValidatedOptions.error
+                : ValidatedOptions.default
+            }
             isRequired
             placeholder={t('Enter listener name')}
             data-test="mcp-section-name-input"
@@ -158,8 +343,12 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
         )}
         <FormHelperText>
           <HelperText>
-            <HelperTextItem>
-              {t('The name of the gateway listener to use for MCP traffic.')}
+            <HelperTextItem
+              variant={touched.sectionName && errors.sectionName ? 'error' : 'default'}
+            >
+              {touched.sectionName && errors.sectionName
+                ? errors.sectionName
+                : t('The name of the gateway listener to use for MCP traffic.')}
             </HelperTextItem>
           </HelperText>
         </FormHelperText>

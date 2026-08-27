@@ -15,6 +15,7 @@ import {
   TabTitleText,
   Button,
   ActionGroup,
+  ValidatedOptions,
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import './kuadrant.css';
@@ -37,6 +38,7 @@ import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
 import { resourceGVKMapping, RESOURCES, isSupportedTargetRef } from '../utils/resources';
+import { validateRequired, validateK8sName } from '../utils/validation';
 
 const GATEWAY_API_GROUP = RESOURCES.Gateway.gvk.group;
 
@@ -44,6 +46,8 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
+  const [policyNameError, setPolicyNameError] = React.useState<string | null>(null);
+  const [policyNameTouched, setPolicyNameTouched] = React.useState(false);
   const [selectedNamespace] = useActiveNamespace();
   const [limits, setLimits] = React.useState<Record<string, LimitConfig>>({});
   // targetRef is the single source of truth for the selected target resource
@@ -60,6 +64,17 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   const [resourceVersion, setResourceVersion] = React.useState('');
   const [formDisabled, setFormDisabled] = React.useState(false);
   const [create, setCreate] = React.useState(true);
+
+  const validatePolicyName = React.useCallback(
+    (value: string) => {
+      const requiredError = validateRequired(value);
+      if (requiredError) return t(requiredError);
+      const formatError = validateK8sName(value);
+      if (formatError) return t(formatError);
+      return null;
+    },
+    [t],
+  );
 
   function createRateLimitPolicy() {
     return {
@@ -245,7 +260,11 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
     [targetRef],
   );
 
-  const isFormValid = !!(policyName && targetRef.name);
+  const isFormValid = !!(
+    validatePolicyName(policyName) === null &&
+    validateRequired(targetRef.name) === null &&
+    validateK8sName(targetRef.name) === null
+  );
 
   return (
     <>
@@ -276,12 +295,27 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
                     name="policy-name"
                     value={policyName}
                     onChange={handlePolicyChange}
+                    onBlur={() => {
+                      setPolicyNameTouched(true);
+                      setPolicyNameError(validatePolicyName(policyName));
+                    }}
+                    validated={
+                      policyNameTouched && policyNameError
+                        ? ValidatedOptions.error
+                        : ValidatedOptions.default
+                    }
                     isDisabled={formDisabled}
                     placeholder={t('Policy name')}
                   />
                   <FormHelperText>
                     <HelperText>
-                      <HelperTextItem>{t('Unique name of the RateLimit Policy')}</HelperTextItem>
+                      <HelperTextItem
+                        variant={policyNameTouched && policyNameError ? 'error' : 'default'}
+                      >
+                        {policyNameTouched && policyNameError
+                          ? policyNameError
+                          : t('Unique name of the RateLimit Policy')}
+                      </HelperTextItem>
                     </HelperText>
                   </FormHelperText>
                 </FormGroup>
