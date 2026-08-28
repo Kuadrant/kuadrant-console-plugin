@@ -93,9 +93,9 @@ const KuadrantAuthPolicyCreatePage: React.FC = () => {
               matchLabels: { 'authorino.kuadrant.io/managed-by': 'authorino' },
             },
             allNamespaces: true,
-            credentials: {
-              customHeader: { name: rule.headerName || 'X-API-Key' },
-            },
+          },
+          credentials: {
+            customHeader: { name: rule.headerName || 'X-API-Key' },
           },
         };
       } else if (rule.type === 'jwt') {
@@ -187,14 +187,15 @@ const KuadrantAuthPolicyCreatePage: React.FC = () => {
             const rule = value as {
               anonymous?: unknown;
               jwt?: { issuerUrl?: string };
-              apiKey?: { credentials?: { customHeader?: { name?: string } } };
+              apiKey?: unknown;
+              credentials?: { customHeader?: { name?: string } };
             };
             if (rule.anonymous !== undefined) return { name, type: 'anonymous' };
             if (rule.jwt) return { name, type: 'jwt', issuerUrl: rule.jwt.issuerUrl || '' };
             return {
               name,
               type: 'apiKey',
-              headerName: rule.apiKey?.credentials?.customHeader?.name || '',
+              headerName: rule.credentials?.customHeader?.name || '',
             };
           });
           setAuthRules(
@@ -235,7 +236,7 @@ const KuadrantAuthPolicyCreatePage: React.FC = () => {
         return {
           name,
           type: 'apiKey',
-          headerName: rule.apiKey?.credentials?.customHeader?.name || '',
+          headerName: rule.credentials?.customHeader?.name || '',
         };
       });
       setAuthRules(
@@ -317,7 +318,7 @@ const KuadrantAuthPolicyCreatePage: React.FC = () => {
         </FormGroup>
         {createView === 'form' ? (
           <Tabs activeKey={activeTab} onSelect={(_event, key) => setActiveTab(key as number)}>
-            <Tab eventKey={0} title={<TabTitleText>Basic</TabTitleText>}>
+            <Tab eventKey={0} title={<TabTitleText>{t('Basic')}</TabTitleText>}>
               <PageSection hasBodyWrapper={false}>
                 <Form className="co-m-pane__form">
                   <FormGroup label={t('Policy name')} isRequired fieldId="policy-name">
@@ -399,7 +400,7 @@ const KuadrantAuthPolicyCreatePage: React.FC = () => {
                             id={`auth-header-name-${i}`}
                             value={rule.headerName || ''}
                             onChange={(_event, value) => updateAuthRule(i, 'headerName', value)}
-                            placeholder="X-API-Key"
+                            placeholder={t('X-API-Key')}
                           />
                           <FormHelperText>
                             <HelperText>
