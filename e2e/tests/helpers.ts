@@ -2,10 +2,58 @@ import { Page, expect } from '@playwright/test';
 
 const TEST_NAMESPACE = 'kuadrant-test';
 
+// oinc's console shows a welcome/tour modal whose backdrop swallows clicks
+export async function dismissConsoleTour(page: Page): Promise<void> {
+  const backdrop = page.locator('.pf-v6-c-backdrop');
+
+  try {
+    await backdrop.waitFor({ state: 'visible', timeout: 5_000 });
+  } catch {
+    return;
+  }
+
+  const modalBox = page.locator('.pf-v6-c-modal-box, .pf-c-modal-box').first();
+
+  try {
+    await modalBox.waitFor({ state: 'visible', timeout: 5_000 });
+  } catch {
+    return;
+  }
+
+  const candidates = [
+    modalBox.locator('button:text-is("Skip tour")'),
+    modalBox.locator('button:text-is("Skip")'),
+    modalBox.locator('button:text-is("Get started")'),
+    modalBox.locator('button[aria-label="Close"]'),
+    modalBox.locator('button[title="Close"]'),
+    modalBox.locator('button:has-text("Skip")'),
+    modalBox.locator('button:has-text("Close")'),
+    modalBox.locator('.pf-v6-c-modal-box__close button, .pf-c-modal-box__close button').first(),
+    modalBox.locator('button').first(),
+  ];
+
+  for (const locator of candidates) {
+    try {
+      await locator.first().waitFor({ state: 'visible', timeout: 500 });
+      await locator.first().click({ timeout: 5_000 });
+      await modalBox.waitFor({ state: 'hidden', timeout: 2_000 });
+      break;
+    } catch {
+      continue;
+    }
+  }
+
+  await backdrop.waitFor({ state: 'hidden', timeout: 10_000 });
+}
+
 // start impersonating a user via the console masthead
 export async function impersonateUser(page: Page, username: string): Promise<void> {
   const userDropdown = page.locator('[data-test="user-dropdown-toggle"]');
   await userDropdown.waitFor({ state: 'visible', timeout: 30_000 });
+
+  // modal mounts asynchronously, so dismiss immediately before the click
+  await dismissConsoleTour(page);
+
   await userDropdown.click();
 
   const impersonateItem = page.locator('[data-test="impersonate-user"] button');
