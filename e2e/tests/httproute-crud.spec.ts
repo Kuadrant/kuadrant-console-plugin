@@ -100,8 +100,7 @@ async function addRuleViaWizard(
 ): Promise<void> {
   const { pathValue, serviceName, servicePort = '8080', isEdit = false, method = 'GET' } = opts;
 
-  // Step 1: Matches — add a match
-  await page.getByRole('button', { name: 'Add match' }).click();
+  // Step 1: Matches — "Add rule" pre-seeds one match, so fill it directly
   await page.locator('#path-type-0').selectOption('PathPrefix');
   await page.locator('#path-value-0').fill(pathValue);
   await page.locator('#http-method-0').selectOption(method);

@@ -18,7 +18,9 @@ import { useTranslation } from 'react-i18next';
 import { DestinationRuleFormState } from './types';
 import { validateRequired, validateK8sName, validateNamespace } from '../../utils/validation';
 
-const TLS_MODE_OPTIONS = ['DISABLE', 'SIMPLE', 'MUTUAL', 'ISTIO_MUTUAL'];
+// MUTUAL is omitted: it requires client credentials (credentialName / clientCertificate /
+// privateKey) that this wizard does not collect. ISTIO_MUTUAL uses Istio-managed certs.
+const TLS_MODE_OPTIONS = ['DISABLE', 'SIMPLE', 'ISTIO_MUTUAL'];
 
 interface DestinationRuleFormFieldsProps {
   formState: DestinationRuleFormState;

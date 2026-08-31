@@ -204,14 +204,28 @@ export const serviceEntryToFormState = (
 };
 
 // Validation shared by the wizard step footer and the standalone create/edit page.
-export const isServiceEntryValid = (formState: ServiceEntryFormState): boolean =>
-  !!formState.serviceName.trim() &&
-  !!formState.namespace.trim() &&
-  !!formState.hosts.trim() &&
-  !!formState.port.trim() &&
-  !!formState.protocol.trim() &&
-  !!formState.location.trim() &&
-  !!formState.resolution.trim();
+export const isServiceEntryValid = (formState: ServiceEntryFormState): boolean => {
+  // At least one non-empty host once split/trimmed (rejects "", ",," etc.).
+  const hasHost = formState.hosts
+    .split(',')
+    .map((h) => h.trim())
+    .some(Boolean);
+
+  // Port must be an integer in the valid TCP range; rejects "abc", "0", "70000".
+  const portNum = Number(formState.port);
+  const hasValidPort =
+    formState.port.trim() !== '' && Number.isInteger(portNum) && portNum >= 1 && portNum <= 65535;
+
+  return (
+    !!formState.serviceName.trim() &&
+    !!formState.namespace.trim() &&
+    hasHost &&
+    hasValidPort &&
+    !!formState.protocol.trim() &&
+    !!formState.location.trim() &&
+    !!formState.resolution.trim()
+  );
+};
 
 // Build an Istio DestinationRule resource from the external MCP wizard's step 2 form state.
 // When originalMetadata is provided (edit mode) it is preserved so that

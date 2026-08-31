@@ -67,11 +67,22 @@ interface HTTPRouteCreatePageProps {
 // and how the rule panel below is summarised.
 type RuleType = 'path' | 'header' | 'query' | 'method';
 
-const RULE_TYPE_LABELS: Record<RuleType, string> = {
-  path: 'Path match',
-  header: 'Header match',
-  query: 'Query param match',
-  method: 'Method match',
+// 'method' is intentionally omitted: method-only matches aren't fully supported
+// end-to-end yet (seed/validation/YAML generation assume a path). Tracked in #812.
+const RULE_TYPES: RuleType[] = ['path', 'header', 'query'];
+
+// Literal t() calls (not a dynamic key lookup) so i18n extraction picks up all four labels.
+const getRuleTypeLabel = (ruleType: RuleType, t: (key: string) => string): string => {
+  switch (ruleType) {
+    case 'header':
+      return t('Header match');
+    case 'query':
+      return t('Query param match');
+    case 'method':
+      return t('Method match');
+    default:
+      return t('Path match');
+  }
 };
 
 const seedMatchForRuleType = (ruleType: RuleType): HTTPRouteMatch => {
@@ -395,8 +406,10 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
   const formValidation = () => {
     const hasValidParentRef = parentRefs.some((ref) => ref.gatewayName);
 
+    // Gateway API requires spec.rules to have at least one item (minItems=1),
+    // so an HTTPRoute with zero rules is rejected by the API server.
     const hasValidRules =
-      rules.length === 0 ||
+      rules.length > 0 &&
       rules.every((rule) => {
         const basicFieldsValid = rule.id && rule.serviceName && rule.servicePort > 0;
 
@@ -582,11 +595,11 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                         onChange={(_e, value) => setSelectedRuleType(value as RuleType)}
                         aria-label={t('Select rule type')}
                       >
-                        {(Object.keys(RULE_TYPE_LABELS) as RuleType[]).map((ruleType) => (
+                        {RULE_TYPES.map((ruleType) => (
                           <FormSelectOption
                             key={ruleType}
                             value={ruleType}
-                            label={t(RULE_TYPE_LABELS[ruleType])}
+                            label={getRuleTypeLabel(ruleType, t)}
                           />
                         ))}
                       </FormSelect>
@@ -600,7 +613,7 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                     <Alert
                       variant={AlertVariant.warning}
                       isInline
-                      title={t('No rules defined. HTTPRoute will use default routing.')}
+                      title={t('Add at least one rule before creating an HTTPRoute.')}
                     />
                   )}
 
@@ -612,11 +625,11 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                           <FormFieldGroupExpandable
                             key={rule.id || index}
                             isExpanded
-                            toggleAriaLabel={t(RULE_TYPE_LABELS[rule.ruleType])}
+                            toggleAriaLabel={getRuleTypeLabel(rule.ruleType, t)}
                             header={
                               <FormFieldGroupHeader
                                 titleText={{
-                                  text: t(RULE_TYPE_LABELS[rule.ruleType]),
+                                  text: getRuleTypeLabel(rule.ruleType, t),
                                   id: `rule-${rule.id || index}`,
                                 }}
                                 actions={
@@ -624,6 +637,7 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                                     <Button
                                       variant="link"
                                       icon={<EditIcon />}
+                                      aria-label={t('Edit rule')}
                                       onClick={() => handleEditRule(index)}
                                     >
                                       {t('Edit')}
@@ -632,6 +646,7 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                                       variant="link"
                                       icon={<TrashIcon />}
                                       isDanger
+                                      aria-label={t('Remove rule')}
                                       onClick={() => handleRemoveRule(index)}
                                     >
                                       {t('Remove')}

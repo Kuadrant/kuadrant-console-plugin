@@ -101,7 +101,9 @@ async function fillRegisterServerStep(
 }
 
 async function clickNext(page: Page): Promise<void> {
-  const next = page.locator('.kuadrant-mcp-wizard').getByRole('button', { name: 'Next', exact: true });
+  const next = page
+    .locator('.kuadrant-mcp-wizard')
+    .getByRole('button', { name: 'Next', exact: true });
   await expect(next).toBeEnabled({ timeout: 10_000 });
   await next.click();
 }
@@ -109,27 +111,29 @@ async function clickNext(page: Page): Promise<void> {
 test.describe('MCP External Registration Wizard', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
+    await page.waitForLoadState('networkidle');
     await dismissConsoleTour(page);
     await navigateToMCPOverview(page, TEST_NAMESPACE);
     await waitForPermissionsLoaded(page);
   });
 
-  test('opens external wizard from Register MCP Server dropdown', { tag: '@smoke' }, async ({
-    page,
-  }) => {
-    await openExternalWizard(page);
+  test(
+    'opens external wizard from Register MCP Server dropdown',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      await openExternalWizard(page);
 
-    const wizard = page.locator('.kuadrant-mcp-wizard');
-    await expect(wizard.getByRole('button', { name: 'Create Service Entry' })).toBeVisible();
-    await expect(wizard.getByRole('button', { name: 'Create Destination Rule' })).toBeVisible();
-    await expect(wizard.getByRole('button', { name: 'Create HTTP route' })).toBeVisible();
-    await expect(wizard.getByRole('button', { name: 'Add access credentials' })).toBeVisible();
-    await expect(
-      wizard.getByRole('button', { name: 'Create MCP server registration' }),
-    ).toBeVisible();
-    await expect(wizard.getByRole('button', { name: 'Verify configuration' })).toBeVisible();
-  });
+      const wizard = page.locator('.kuadrant-mcp-wizard');
+      await expect(wizard.getByRole('button', { name: 'Create Service Entry' })).toBeVisible();
+      await expect(wizard.getByRole('button', { name: 'Create Destination Rule' })).toBeVisible();
+      await expect(wizard.getByRole('button', { name: 'Create HTTP route' })).toBeVisible();
+      await expect(wizard.getByRole('button', { name: 'Add access credentials' })).toBeVisible();
+      await expect(
+        wizard.getByRole('button', { name: 'Create MCP server registration' }),
+      ).toBeVisible();
+      await expect(wizard.getByRole('button', { name: 'Verify configuration' })).toBeVisible();
+    },
+  );
 
   test('walks all steps and creates resources', { tag: '@smoke' }, async ({ page }) => {
     const routeName = `e2e-ext-route-${uid()}`;
@@ -139,38 +143,40 @@ test.describe('MCP External Registration Wizard', () => {
     const regName = `e2e-ext-reg-${uid()}`;
     const host = 'api.external.example.com';
 
-    createRoute(routeName);
-    await openExternalWizard(page);
-    const wizard = page.locator('.kuadrant-mcp-wizard');
-
-    // Step 1: Service Entry
-    await fillServiceEntryStep(page, { name: seName, host });
-    await clickNext(page);
-
-    // Step 2: Destination Rule
-    await expect(wizard.locator('[data-test="destination-rule-name"]')).toBeVisible({
-      timeout: 10_000,
-    });
-    await fillDestinationRuleStep(page, { name: drName, host });
-    await clickNext(page);
-
-    // Step 3: HTTP route (existing)
-    await wizard.locator('[data-test="mcp-external-route-select"]').selectOption(routeName);
-    await clickNext(page);
-
-    // Step 4: Credentials
-    await expect(wizard.locator('[data-test="credential-name"]')).toBeVisible({ timeout: 10_000 });
-    await fillCredentialStep(page, { name: credName });
-    await clickNext(page);
-
-    // Step 5: Register MCP server
-    await expect(wizard.locator('[data-test="mcp-registration-name"]')).toBeVisible({
-      timeout: 10_000,
-    });
-    await fillRegisterServerStep(page, { name: regName, prefix: 'e2eext' });
-    await clickNext(page);
-
     try {
+      createRoute(routeName);
+      await openExternalWizard(page);
+      const wizard = page.locator('.kuadrant-mcp-wizard');
+
+      // Step 1: Service Entry
+      await fillServiceEntryStep(page, { name: seName, host });
+      await clickNext(page);
+
+      // Step 2: Destination Rule
+      await expect(wizard.locator('[data-test="destination-rule-name"]')).toBeVisible({
+        timeout: 10_000,
+      });
+      await fillDestinationRuleStep(page, { name: drName, host });
+      await clickNext(page);
+
+      // Step 3: HTTP route (existing)
+      await wizard.locator('[data-test="mcp-external-route-select"]').selectOption(routeName);
+      await clickNext(page);
+
+      // Step 4: Credentials
+      await expect(wizard.locator('[data-test="credential-name"]')).toBeVisible({
+        timeout: 10_000,
+      });
+      await fillCredentialStep(page, { name: credName });
+      await clickNext(page);
+
+      // Step 5: Register MCP server
+      await expect(wizard.locator('[data-test="mcp-registration-name"]')).toBeVisible({
+        timeout: 10_000,
+      });
+      await fillRegisterServerStep(page, { name: regName, prefix: 'e2eext' });
+      await clickNext(page);
+
       // Step 6: Verify — resources are created on entry
       await expect(
         page
@@ -231,18 +237,23 @@ test.describe('MCP External Registration Wizard', () => {
     await expect(wizard.locator('.monaco-editor')).toContainText(seName, { timeout: 10_000 });
   });
 
-  test('step 1 Next is disabled until required fields are filled', { tag: '@nightly' }, async ({
-    page,
-  }) => {
-    await openExternalWizard(page);
-    const wizard = page.locator('.kuadrant-mcp-wizard');
+  test(
+    'step 1 Next is disabled until required fields are filled',
+    { tag: '@nightly' },
+    async ({ page }) => {
+      await openExternalWizard(page);
+      const wizard = page.locator('.kuadrant-mcp-wizard');
 
-    const next = wizard.getByRole('button', { name: 'Next', exact: true });
-    await expect(next).toBeDisabled();
+      const next = wizard.getByRole('button', { name: 'Next', exact: true });
+      await expect(next).toBeDisabled();
 
-    await fillServiceEntryStep(page, { name: `e2e-se-${uid()}`, host: 'api.external.example.com' });
-    await expect(next).toBeEnabled({ timeout: 5_000 });
-  });
+      await fillServiceEntryStep(page, {
+        name: `e2e-se-${uid()}`,
+        host: 'api.external.example.com',
+      });
+      await expect(next).toBeEnabled({ timeout: 5_000 });
+    },
+  );
 
   test('Cancel closes the external wizard', { tag: '@nightly' }, async ({ page }) => {
     await openExternalWizard(page);

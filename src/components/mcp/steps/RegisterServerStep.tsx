@@ -54,7 +54,9 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
       onChange({
         registrationName: metadata?.name || '',
         namespace: metadata?.namespace || '',
-        targetHTTPRouteName: targetRef?.name || '',
+        // When the wizard configured a route, keep it aligned — a YAML edit must not
+        // retarget the registration at a route the wizard did not set up.
+        targetHTTPRouteName: routeName || targetRef?.name || '',
         toolPrefix: typeof spec?.prefix === 'string' ? spec.prefix : '',
       });
     } catch {
