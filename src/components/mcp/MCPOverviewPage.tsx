@@ -111,12 +111,13 @@ const MCPOverviewPage: React.FC = () => {
   const watchNamespace = ns || activeNamespace;
   const resolvedNamespace = watchNamespace === '#ALL_NS#' ? undefined : watchNamespace;
 
-  const [extensions, extensionsLoaded, extensionsLoadError] =
-    useK8sWatchResource<MCPGatewayExtension[]>({
-      groupVersionKind: RESOURCES.MCPGatewayExtension.gvk,
-      isList: true,
-      namespace: resolvedNamespace,
-    });
+  const [extensions, extensionsLoaded, extensionsLoadError] = useK8sWatchResource<
+    MCPGatewayExtension[]
+  >({
+    groupVersionKind: RESOURCES.MCPGatewayExtension.gvk,
+    isList: true,
+    namespace: resolvedNamespace,
+  });
 
   const [gateways] = useK8sWatchResource<GatewayResource[]>({
     groupVersionKind: RESOURCES.Gateway.gvk,
@@ -451,11 +452,7 @@ const MCPOverviewPage: React.FC = () => {
             <Title headingLevel="h1">{t('MCP management')}</Title>
           </PageSection>
           <PageSection hasBodyWrapper={false}>
-            <Alert
-              variant="danger"
-              isInline
-              title={t('Error loading MCP Gateway Extensions')}
-            >
+            <Alert variant="danger" isInline title={t('Error loading MCP Gateway Extensions')}>
               {extensionsLoadError.message || t('An error occurred while loading extensions')}
             </Alert>
           </PageSection>
