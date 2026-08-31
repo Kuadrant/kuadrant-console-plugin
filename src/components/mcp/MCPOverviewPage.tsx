@@ -438,28 +438,28 @@ const MCPOverviewPage: React.FC = () => {
     );
   }
 
+  if (extensionsLoadError) {
+    return (
+      <>
+        <Helmet>
+          <title data-test="mcp-overview-page-title">{t('MCP management')}</title>
+        </Helmet>
+        <NamespaceBar onNamespaceChange={handleNamespaceChange} />
+        <PageSection hasBodyWrapper={false}>
+          <Title headingLevel="h1">{t('MCP management')}</Title>
+        </PageSection>
+        <PageSection hasBodyWrapper={false}>
+          <Alert variant="danger" isInline title={t('Error loading MCP Gateway Extensions')}>
+            {extensionsLoadError.message || t('An error occurred while loading extensions')}
+          </Alert>
+        </PageSection>
+      </>
+    );
+  }
+
   const hasNoExtensions = extensionsLoaded && (!extensions || extensions.length === 0);
 
   if (hasNoExtensions) {
-    if (extensionsLoadError) {
-      return (
-        <>
-          <Helmet>
-            <title data-test="mcp-overview-page-title">{t('MCP management')}</title>
-          </Helmet>
-          <NamespaceBar onNamespaceChange={handleNamespaceChange} />
-          <PageSection hasBodyWrapper={false}>
-            <Title headingLevel="h1">{t('MCP management')}</Title>
-          </PageSection>
-          <PageSection hasBodyWrapper={false}>
-            <Alert variant="danger" isInline title={t('Error loading MCP Gateway Extensions')}>
-              {extensionsLoadError.message || t('An error occurred while loading extensions')}
-            </Alert>
-          </PageSection>
-        </>
-      );
-    }
-
     return (
       <>
         <Helmet>

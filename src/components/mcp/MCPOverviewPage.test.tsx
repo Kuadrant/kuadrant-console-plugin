@@ -137,4 +137,20 @@ describe('MCPOverviewPage', () => {
     expect(screen.getByText('boom')).toBeInTheDocument();
     expect(screen.queryByTestId('mcp-setup-wizard-button')).not.toBeInTheDocument();
   });
+
+  it('renders an error alert when the watch errors with stale extensions', () => {
+    // Non-empty result plus an error must still surface the error state,
+    // not the overview built from stale data.
+    mockExtensionsWatch = [
+      [{ metadata: { name: 'stale-ext', namespace: 'test-ns' } }],
+      true,
+      { message: 'stale watch failed' },
+    ];
+    render(<MCPOverviewPage />);
+    expect(screen.getByText('Error loading MCP Gateway Extensions')).toBeInTheDocument();
+    expect(screen.getByText('stale watch failed')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'MCP management overview' }),
+    ).not.toBeInTheDocument();
+  });
 });
