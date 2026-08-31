@@ -31,7 +31,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useLocation, useNavigate } from 'react-router';
 import * as yaml from 'js-yaml';
-import ParentReferencesSelect from '../../utils/ParentReferencesSelect';
+import ParentReferencesSelect, { GatewayForSelect } from '../../utils/ParentReferencesSelect';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 import { HTTPRouteResource, HTTPRouteMatch } from './types';
 import {
@@ -62,9 +62,15 @@ interface ParentReference {
 
 interface HTTPRouteCreatePageProps {
   onFormChange?: (resource: HTTPRouteResource, isValid: boolean) => void;
+  // Additional, not-yet-persisted Gateways to offer as parentRef options (e.g. a
+  // draft Gateway from an enclosing wizard). Not passed by the standalone page.
+  extraGateways?: GatewayForSelect[];
 }
 
-const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange }) => {
+const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
+  onFormChange,
+  extraGateways,
+}) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [routeName, setRouteName] = React.useState('');
@@ -457,7 +463,11 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                   </FormHelperText>
                 </FormGroup>
 
-                <ParentReferencesSelect parentRefs={parentRefs} onChange={setParentRefs} />
+                <ParentReferencesSelect
+                  parentRefs={parentRefs}
+                  onChange={setParentRefs}
+                  extraGateways={extraGateways}
+                />
 
                 <FormGroup
                   label={t('Hostnames')}

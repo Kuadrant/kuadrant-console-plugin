@@ -33,6 +33,7 @@ import MCPExtensionStep from './MCPExtensionStep';
 import MCPVerifyStep, { VerifyStepItem, WatchResourceConfig } from './MCPVerifyStep';
 import GatewayCreatePage from '../gateway/GatewayCreatePage';
 import HTTPRouteCreatePage from '../httproute/HTTPRouteCreatePage';
+import { GatewayForSelect } from '../../utils/ParentReferencesSelect';
 import '../css/gateway-api-plugin.css';
 
 const MCPSetupWizard: React.FC = () => {
@@ -94,6 +95,19 @@ const MCPSetupWizard: React.FC = () => {
     if (formState.gatewayMode !== 'existing' || !formState.selectedGatewayName) return undefined;
     return (gateways || []).find((gw) => gw.metadata?.name === formState.selectedGatewayName);
   }, [gateways, formState.gatewayMode, formState.selectedGatewayName]);
+
+  // Expose the Step 1 draft Gateway to Step 2's parentRef selector before it is
+  // persisted (created only at the Verify step). Force the frozen wizard namespace
+  // so it passes the selector's allowed-namespace validation. See issue #795.
+  const draftGateways = React.useMemo<GatewayForSelect[]>(() => {
+    if (formState.gatewayMode !== 'new' || !newGatewayResource) return [];
+    return [
+      {
+        ...newGatewayResource,
+        metadata: { ...newGatewayResource.metadata, namespace: selectedNamespace },
+      } as GatewayForSelect,
+    ];
+  }, [formState.gatewayMode, newGatewayResource, selectedNamespace]);
 
   const extensionNamespace = formState.extensionNamespace || selectedNamespace;
   const gatewayNamespace = formState.selectedGatewayNamespace || selectedNamespace;
@@ -484,6 +498,7 @@ const MCPSetupWizard: React.FC = () => {
                 <CardBody>
                   <div className="kuadrant-mcp-embedded-form">
                     <HTTPRouteCreatePage
+                      extraGateways={draftGateways}
                       onFormChange={(resource, isValid) => {
                         setNewRouteResource(resource);
                         setNewRouteValid(isValid);

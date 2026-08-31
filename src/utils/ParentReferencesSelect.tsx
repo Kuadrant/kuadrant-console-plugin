@@ -22,7 +22,7 @@ import {
   K8sResourceCommon,
 } from '@openshift-console/dynamic-plugin-sdk';
 
-interface GatewayForSelect extends K8sResourceCommon {
+export interface GatewayForSelect extends K8sResourceCommon {
   spec?: {
     listeners?: Array<{
       name: string;
@@ -66,12 +66,17 @@ interface ParentReferencesSelectProps {
   parentRefs: ParentReference[];
   onChange: (parentRefs: ParentReference[]) => void;
   isDisabled?: boolean;
+  // Additional Gateways to include in the selector that aren't yet persisted in
+  // the cluster (e.g. a draft Gateway defined earlier in a wizard). Merged with
+  // the live watch results, deduped by namespace/name (real Gateways win).
+  extraGateways?: GatewayForSelect[];
 }
 
 const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
   parentRefs,
   onChange,
   isDisabled = false,
+  extraGateways = [],
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [availableGateways, setAvailableGateways] = React.useState<GatewayForSelect[]>([]);
@@ -93,10 +98,14 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
     useK8sWatchResource<GatewayForSelect[]>(gatewayResource);
 
   React.useEffect(() => {
-    if (gatewayLoaded && !gatewayError && Array.isArray(gatewayData)) {
-      setAvailableGateways(gatewayData);
-    }
-  }, [gatewayData, gatewayLoaded, gatewayError]);
+    const watched = gatewayLoaded && !gatewayError && Array.isArray(gatewayData) ? gatewayData : [];
+    // Merge in any draft Gateways, deduped by namespace/name. A real Gateway from
+    // the watch takes precedence over a draft with the same key.
+    const keyOf = (gw: GatewayForSelect) => `${gw.metadata?.namespace}/${gw.metadata?.name}`;
+    const watchedKeys = new Set(watched.map(keyOf));
+    const drafts = extraGateways.filter((gw) => !watchedKeys.has(keyOf(gw)));
+    setAvailableGateways([...watched, ...drafts]);
+  }, [gatewayData, gatewayLoaded, gatewayError, extraGateways]);
 
   // Gateway validation function
   const validateGateway = (gateway: GatewayForSelect): string | null => {
