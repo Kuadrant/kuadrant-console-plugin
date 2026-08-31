@@ -209,8 +209,22 @@
   border-width: 1px;
 }
 
-.kuadrant-mcp-overview-page .kuadrant-mcp-getting-started-title {
-  font-weight: normal;
+.kuadrant-mcp-overview-page .kuadrant-mcp-getting-started-options {
+  width: 100%;
+}
+
+.kuadrant-mcp-overview-page .kuadrant-mcp-getting-started-option {
+  padding: 0 1.5rem;
+  text-align: center;
+}
+
+.kuadrant-mcp-overview-page .kuadrant-mcp-getting-started-option p {
+  margin: 0;
+  max-width: 32rem;
+}
+
+.kuadrant-mcp-overview-page .kuadrant-mcp-getting-started-divider {
+  align-self: stretch;
 }
 
 .kuadrant-mcp-overview-page .kuadrant-mcp-card-heading {
@@ -228,6 +242,17 @@
 /* position card titles for absolute buttons in MCP page */
 .kuadrant-mcp-overview-page .pf-v6-c-card__title {
   position: relative;
+}
+
+@media (max-width: 768px) {
+  .kuadrant-mcp-overview-page .kuadrant-mcp-getting-started-option {
+    padding: 0.75rem 0;
+  }
+
+  .kuadrant-mcp-overview-page .kuadrant-mcp-getting-started-divider {
+    align-self: auto;
+    width: 100%;
+  }
 }
 
 /* MCP wizard YAML editor */

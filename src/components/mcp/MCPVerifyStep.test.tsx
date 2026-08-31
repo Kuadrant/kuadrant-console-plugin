@@ -9,6 +9,7 @@ configure({ testIdAttribute: 'data-test' });
 const mockNavigate = jest.fn();
 const mockK8sCreate = jest.fn((_opts?: unknown) => Promise.resolve({}));
 const mockK8sDelete = jest.fn((_opts?: unknown) => Promise.resolve({}));
+let mockWatchResult: [unknown, boolean, unknown] = [null, false, null];
 
 jest.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -23,7 +24,7 @@ jest.mock('react-router', () => ({
 jest.mock('@openshift-console/dynamic-plugin-sdk', () => ({
   k8sCreate: (opts: unknown) => mockK8sCreate(opts),
   k8sDelete: (opts: unknown) => mockK8sDelete(opts),
-  useK8sWatchResource: () => [null, false, null],
+  useK8sWatchResource: () => mockWatchResult,
 }));
 
 jest.mock('../../utils/getModelFromResource', () => ({
@@ -87,6 +88,7 @@ describe('MCPVerifyStep', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockWatchResult = [null, false, null];
   });
 
   it('renders the verify heading', () => {
@@ -216,6 +218,80 @@ describe('MCPVerifyStep', () => {
     await waitFor(() => {
       expect(screen.getByText('Error creating resources')).toBeInTheDocument();
       expect(screen.getAllByText('Forbidden').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('shows a watch error even when the watch has not loaded', async () => {
+    mockWatchResult = [null, false, new Error('Forbidden to watch')];
+
+    render(<MCPVerifyStep {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(mockK8sCreate).toHaveBeenCalledTimes(1);
+      expect(screen.getByText('Forbidden to watch')).toBeInTheDocument();
+    });
+  });
+
+  it('shows a useful Kubernetes cause when the API returns a structured error', async () => {
+    mockK8sCreate.mockRejectedValueOnce({
+      json: {
+        reason: 'Invalid',
+        details: { causes: [{ message: 'spec.targetRef.sectionName: listener not found' }] },
+      },
+    });
+
+    render(<MCPVerifyStep {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByText('spec.targetRef.sectionName: listener not found').length,
+      ).toBeGreaterThan(0);
+    });
+  });
+
+  it('prefers the top-level API message over a Kubernetes cause', async () => {
+    mockK8sCreate.mockRejectedValueOnce({
+      json: {
+        message: 'Top-level API message',
+        details: { causes: [{ message: 'Cause message' }] },
+      },
+    });
+
+    render(<MCPVerifyStep {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Top-level API message').length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText('Cause message')).not.toBeInTheDocument();
+  });
+
+  it('falls back when structured causes contain invalid entries', async () => {
+    mockK8sCreate.mockRejectedValueOnce({
+      json: {
+        reason: 'Invalid',
+        details: { causes: [null, {}, { message: '' }, 'invalid cause'] },
+      },
+    });
+
+    render(<MCPVerifyStep {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Invalid').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('falls back when structured causes are not an array', async () => {
+    mockK8sCreate.mockRejectedValueOnce({
+      json: {
+        reason: 'Invalid',
+        details: { causes: { message: 'not an array' } },
+      },
+    });
+
+    render(<MCPVerifyStep {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Invalid').length).toBeGreaterThan(0);
     });
   });
 

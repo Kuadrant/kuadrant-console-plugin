@@ -31,7 +31,10 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useLocation, useNavigate } from 'react-router';
 import * as yaml from 'js-yaml';
-import ParentReferencesSelect, { GatewayForSelect } from '../../utils/ParentReferencesSelect';
+import ParentReferencesSelect, {
+  GatewayForSelect,
+  RequiredParentReference,
+} from '../../utils/ParentReferencesSelect';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 import { HTTPRouteResource, HTTPRouteMatch } from './types';
 import {
@@ -76,6 +79,9 @@ interface HTTPRouteCreatePageProps {
   reconcileParentRefs?: boolean;
   // Optional predicate to restrict which Gateways can be selected as parent references.
   gatewayFilter?: (gateway: GatewayForSelect) => boolean;
+  // The MCP wizard uses this to keep manually-created routes attached to the
+  // Gateway/listener selected in the preceding steps.
+  requiredParentRef?: RequiredParentReference;
 }
 
 const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
@@ -85,6 +91,7 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
   initialResource,
   reconcileParentRefs,
   gatewayFilter,
+  requiredParentRef,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
@@ -97,7 +104,9 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
   // YAML editor state
   const [yamlContent, setYamlContent] = React.useState<unknown>(null);
   const [yamlError, setYamlError] = React.useState<string | null>(null);
-  const [parentRefs, setParentRefs] = React.useState<ParentReference[]>([]);
+  const [parentRefs, setParentRefs] = React.useState<ParentReference[]>(() =>
+    requiredParentRef ? [{ ...requiredParentRef }] : [],
+  );
 
   // Metadata for determining edit/create mode
   const [originalMetadata, setOriginalMetadata] = React.useState<
@@ -135,6 +144,46 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
   const nameEdit = resourceIndex >= 0 ? segments[resourceIndex + 1] : undefined;
   const selectedNamespace =
     !selectedNamespaceRaw || selectedNamespaceRaw === '#ALL_NS#' ? 'default' : selectedNamespaceRaw;
+
+  const requiredParentReference = requiredParentRef;
+
+  const isRequiredParentReference = React.useCallback(
+    (parentRef: ParentReference) =>
+      !!requiredParentReference &&
+      parentRef.gatewayName === requiredParentReference.gatewayName &&
+      parentRef.gatewayNamespace === requiredParentReference.gatewayNamespace &&
+      (!parentRef.sectionName || parentRef.sectionName === requiredParentReference.sectionName),
+    [requiredParentReference],
+  );
+
+  React.useEffect(() => {
+    if (!requiredParentReference) return;
+
+    setParentRefs((currentParentRefs) => {
+      const currentRequired = currentParentRefs.find(
+        (parentRef) => parentRef.id === requiredParentReference.id,
+      );
+      const requiredIsUnchanged =
+        currentRequired &&
+        currentRequired.gatewayName === requiredParentReference.gatewayName &&
+        currentRequired.gatewayNamespace === requiredParentReference.gatewayNamespace &&
+        currentRequired.sectionName === requiredParentReference.sectionName &&
+        currentRequired.port === requiredParentReference.port;
+
+      if (requiredIsUnchanged && currentParentRefs[0]?.id === requiredParentReference.id) {
+        return currentParentRefs;
+      }
+
+      return [
+        requiredParentReference,
+        ...currentParentRefs.filter(
+          (parentRef) =>
+            parentRef.id !== requiredParentReference.id && !isRequiredParentReference(parentRef),
+        ),
+      ];
+    });
+  }, [requiredParentReference, isRequiredParentReference]);
+
   // Function to add a new hostname field
   const addHostnameField = () => {
     setHostnames([...hostnames, '']);
@@ -157,7 +206,16 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
   const httpRouteObject = React.useMemo(() => {
     // Filter out empty hostnames
     const validHostnames = hostnames.filter((h) => h.trim().length > 0);
-    const validParentRefs = parentRefs.filter((ref) => ref.gatewayName);
+    const effectiveParentRefs = requiredParentReference
+      ? [
+          requiredParentReference,
+          ...parentRefs.filter(
+            (parentRef) =>
+              parentRef.id !== requiredParentReference.id && !isRequiredParentReference(parentRef),
+          ),
+        ]
+      : parentRefs;
+    const validParentRefs = effectiveParentRefs.filter((ref) => ref.gatewayName);
 
     const httpRoute = {
       apiVersion: 'gateway.networking.k8s.io/v1',
@@ -201,7 +259,16 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
     };
 
     return httpRoute;
-  }, [routeName, hostnames, parentRefs, rules, selectedNamespace, originalMetadata]);
+  }, [
+    routeName,
+    hostnames,
+    parentRefs,
+    rules,
+    selectedNamespace,
+    originalMetadata,
+    requiredParentReference,
+    isRequiredParentReference,
+  ]);
 
   const populateFormFromHTTPRoute = (httpRoute: unknown) => {
     try {
@@ -223,8 +290,14 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
             port: ref.port || 0,
           }),
         );
-        if (JSON.stringify(formattedParentRefs) !== JSON.stringify(parentRefs))
-          setParentRefs(formattedParentRefs);
+        const nextParentRefs = requiredParentReference
+          ? [
+              requiredParentReference,
+              ...formattedParentRefs.filter((parentRef) => !isRequiredParentReference(parentRef)),
+            ]
+          : formattedParentRefs;
+        if (JSON.stringify(nextParentRefs) !== JSON.stringify(parentRefs))
+          setParentRefs(nextParentRefs);
       }
 
       if (hr.spec?.rules && hr.spec.rules.length > 0) {
@@ -355,7 +428,16 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
   };
 
   const formValidation = () => {
-    const hasValidParentRef = parentRefs.some((ref) => ref.gatewayName);
+    const effectiveParentRefs = requiredParentReference
+      ? [
+          requiredParentReference,
+          ...parentRefs.filter(
+            (parentRef) =>
+              parentRef.id !== requiredParentReference.id && !isRequiredParentReference(parentRef),
+          ),
+        ]
+      : parentRefs;
+    const hasValidParentRef = effectiveParentRefs.some((ref) => ref.gatewayName);
 
     // Gateway API requires spec.rules to have at least one item (minItems=1),
     // so an HTTPRoute with zero rules is rejected by the API server.
@@ -546,6 +628,7 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
                   extraGateways={extraGateways}
                   reconcileParentRefs={reconcileParentRefs}
                   gatewayFilter={gatewayFilter}
+                  requiredParentRef={requiredParentReference}
                 />
 
                 <FormGroup
