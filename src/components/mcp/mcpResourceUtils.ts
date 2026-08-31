@@ -15,6 +15,7 @@ import {
 } from './types';
 import { HTTPRouteResource } from '../httproute/types';
 import { RESOURCES, Secret } from '../../utils/resources';
+import type { GatewayResource } from '../gateway/types';
 
 // Key used within the credential Secret's stringData for the token configured in
 // step 4 (Add access credentials) of the external MCP wizard.
@@ -25,6 +26,45 @@ export const parseServiceEntryHosts = (hosts: string): string[] =>
     .split(',')
     .map((host) => host.trim())
     .filter(Boolean);
+
+const DNS_SUBDOMAIN_REGEX = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
+const DNS_LABEL_REGEX = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+
+export const isKubernetesResourceName = (name: string): boolean =>
+  name.length > 0 && name.length <= 253 && DNS_SUBDOMAIN_REGEX.test(name);
+
+export const isGatewayListenerName = (name: string): boolean =>
+  name.length > 0 && name.length <= 63 && DNS_LABEL_REGEX.test(name);
+
+export const getMCPGatewayExtensionValidationError = (
+  formState: MCPWizardFormState,
+  selectedGateway?: GatewayResource,
+): string | null => {
+  if (!isKubernetesResourceName(formState.extensionName.trim())) {
+    return 'The extension name must be a valid Kubernetes resource name.';
+  }
+  if (!formState.targetGateway.trim()) return 'A target Gateway is required.';
+  if (!isGatewayListenerName(formState.sectionName.trim())) {
+    return 'The listener name must be a valid Kubernetes name.';
+  }
+
+  if (selectedGateway) {
+    const listenerExists = (selectedGateway.spec?.listeners || []).some(
+      (listener) => listener.name === formState.sectionName.trim(),
+    );
+    if (!listenerExists) {
+      return `Listener "${formState.sectionName}" was not found on Gateway "${formState.targetGateway}".`;
+    }
+  }
+
+  if (formState.sessionStorageEnabled && !formState.sessionStoreSecretName.trim()) {
+    return 'A session store Secret name is required when session storage is enabled.';
+  }
+  if (formState.oauthEnabled && !formState.oauthAuthorizationServers.trim()) {
+    return 'At least one OAuth authorization server is required when OAuth is enabled.';
+  }
+  return null;
+};
 
 // Build an MCPGatewayExtension resource from wizard/page form state.
 // When originalMetadata is provided (edit mode) it is preserved so that
@@ -51,6 +91,7 @@ export const buildMCPGatewayExtension = (
         namespace: gatewayNamespace,
         sectionName: formState.sectionName,
       },
+      httpRouteManagement: formState.httpRouteManagementEnabled ? 'Enabled' : 'Disabled',
     },
   };
 
@@ -100,16 +141,15 @@ export const mcpExtensionToFormState = (
     oauthEnabled: hasOauth,
     oauthAuthorizationServers: spec.oauthProtectedResource?.authorizationServers?.join(', ') || '',
     oauthResourceName: spec.oauthProtectedResource?.resourceName || '',
+    httpRouteManagementEnabled: spec.httpRouteManagement !== 'Disabled',
   };
 };
 
 // Validation shared by the wizard step footer and the standalone create/edit page.
-export const isMCPGatewayExtensionValid = (formState: MCPWizardFormState): boolean =>
-  !!formState.extensionName.trim() &&
-  !!formState.targetGateway.trim() &&
-  !!formState.sectionName.trim() &&
-  (!formState.sessionStorageEnabled || !!formState.sessionStoreSecretName.trim()) &&
-  (!formState.oauthEnabled || !!formState.oauthAuthorizationServers.trim());
+export const isMCPGatewayExtensionValid = (
+  formState: MCPWizardFormState,
+  selectedGateway?: GatewayResource,
+): boolean => !getMCPGatewayExtensionValidationError(formState, selectedGateway);
 
 // Build an MCPServerRegistration resource from wizard/page form state.
 // When originalMetadata is provided (edit mode) it is preserved so that

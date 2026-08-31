@@ -51,6 +51,27 @@ interface WatchedResource extends K8sResourceCommon {
   };
 }
 
+const getErrorMessage = (error: unknown): string => {
+  if (error instanceof Error && error.message) return error.message;
+  const response = error as {
+    message?: string;
+    reason?: string;
+    json?: {
+      message?: string;
+      reason?: string;
+      details?: { causes?: { message?: string }[] };
+    };
+  };
+  return (
+    response?.json?.message ||
+    response?.json?.details?.causes?.find((cause) => cause.message)?.message ||
+    response?.message ||
+    response?.json?.reason ||
+    response?.reason ||
+    'The resource could not be created or verified.'
+  );
+};
+
 interface MCPVerifyStepProps {
   items: VerifyStepItem[];
   watchResource: WatchResourceConfig;
@@ -86,7 +107,7 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
 
   const watchReadyId = 'watch-ready';
 
-  const [watchedData, watchedLoaded] = useK8sWatchResource<WatchedResource>(
+  const [watchedData, watchedLoaded, watchedError] = useK8sWatchResource<WatchedResource>(
     watchStarted
       ? {
           groupVersionKind: watchResource.gvk,
@@ -98,7 +119,15 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
   );
 
   React.useEffect(() => {
-    if (!watchStarted || !watchedLoaded || !watchedData) return;
+    if (!watchStarted || !watchedLoaded) return;
+    if (watchedError) {
+      updateCheckById(watchReadyId, 'error', getErrorMessage(watchedError));
+      return;
+    }
+    if (!watchedData) {
+      updateCheckById(watchReadyId, 'error', 'The created resource could not be found.');
+      return;
+    }
 
     const conditions = watchedData.status?.conditions || [];
     const readyCondition = conditions.find((c) => c.type === 'Ready');
@@ -116,7 +145,7 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
         readyCondition.message || readyCondition.reason || t('Resource is not ready'),
       );
     }
-  }, [watchedData, watchedLoaded, watchStarted, watchSuccessMessage, t]);
+  }, [watchedData, watchedLoaded, watchedError, watchStarted, watchSuccessMessage, t]);
 
   const updateCheckById = React.useCallback((id: string, status: CheckStatus, message?: string) => {
     setChecks((prev) =>
@@ -195,7 +224,7 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
       setWatchStarted(true);
       onAllCreated?.();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
+      const message = getErrorMessage(err);
       setError(message);
 
       setChecks((prev) =>

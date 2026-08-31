@@ -115,17 +115,16 @@ spec:
       deleteResource('gateway', setupGatewayName, TEST_NAMESPACE);
     });
 
-    test('renders the wizard with 4 steps', { tag: '@nightly' }, async ({ page }) => {
+    test('renders the wizard with 3 steps by default', { tag: '@nightly' }, async ({ page }) => {
       await spaNavigate(page, '/kuadrant/mcp/setup-wizard');
 
       await expect(page.getByRole('heading', { name: 'MCP Gateway Setup' })).toBeVisible({
         timeout: 15_000,
       });
 
-      await expect(page.getByRole('button', { name: '1. Create Gateway' })).toBeVisible();
-      await expect(page.getByRole('button', { name: '2. Route for Gateway' })).toBeVisible();
-      await expect(page.getByRole('button', { name: '3. MCP Extension' })).toBeVisible();
-      await expect(page.getByRole('button', { name: '4. Verify configuration' })).toBeVisible();
+      await expect(page.getByRole('button', { name: /1\. Create Gateway/ })).toBeVisible();
+      await expect(page.getByRole('button', { name: /2\. MCP Extension/ })).toBeVisible();
+      await expect(page.getByRole('button', { name: /3\. Verify configuration/ })).toBeVisible();
     });
 
     test('step 1 shows choose and create radio options', { tag: '@nightly' }, async ({ page }) => {
@@ -145,7 +144,7 @@ spec:
     });
 
     test(
-      'steps 2-4 are disabled until step 1 is complete',
+      'steps 2-3 are disabled until step 1 is complete',
       { tag: '@nightly' },
       async ({ page }) => {
         await spaNavigate(page, '/kuadrant/mcp/setup-wizard');
@@ -154,9 +153,8 @@ spec:
           timeout: 15_000,
         });
 
-        await expect(page.getByRole('button', { name: '2. Route for Gateway' })).toBeDisabled();
-        await expect(page.getByRole('button', { name: '3. MCP Extension' })).toBeDisabled();
-        await expect(page.getByRole('button', { name: '4. Verify configuration' })).toBeDisabled();
+        await expect(page.getByRole('button', { name: /2\. MCP Extension/ })).toBeDisabled();
+        await expect(page.getByRole('button', { name: /3\. Verify configuration/ })).toBeDisabled();
       },
     );
 
@@ -262,12 +260,7 @@ spec:
       await expect(nextButton).toBeEnabled();
       await nextButton.click();
 
-      // Step 2: Select existing route
-      await expect(page.locator('[data-test="mcp-route-select"]')).toBeVisible({ timeout: 15_000 });
-      await page.locator('[data-test="mcp-route-select"]').selectOption(routeName);
-      await nextButton.click();
-
-      // Step 3: Fill MCP Extension form
+      // Step 2: Fill MCP Extension form
       await expect(page.locator('[data-test="mcp-extension-name"]')).toBeVisible({
         timeout: 15_000,
       });
@@ -283,7 +276,7 @@ spec:
 
       await nextButton.click();
 
-      // Step 4: Verify — MCPGatewayExtension should be created
+      // Step 3: Verify — MCPGatewayExtension should be created
       await expect(page.getByText('Create MCPGatewayExtension')).toBeVisible({ timeout: 15_000 });
       await expect(page.getByText('MCPGatewayExtension created successfully')).toBeVisible({
         timeout: 30_000,
@@ -349,14 +342,7 @@ spec:
       await expect(nextButton).toBeEnabled({ timeout: 15_000 });
       await nextButton.click();
 
-      // Step 2: Select the pre-created route
-      await expect(page.getByLabel('Choose an existing HTTPRoute')).toBeChecked({
-        timeout: 15_000,
-      });
-      await page.locator('[data-test="mcp-route-select"]').selectOption(routeName);
-      await nextButton.click();
-
-      // Step 3: Fill MCP Extension
+      // Step 2: Fill MCP Extension
       await expect(page.locator('[data-test="mcp-extension-name"]')).toBeVisible({
         timeout: 15_000,
       });
@@ -364,7 +350,7 @@ spec:
       await page.locator('[data-test="mcp-section-name-input"]').fill('mcp');
       await nextButton.click();
 
-      // Step 4: Verify
+      // Step 3: Verify
       await expect(page.getByText('Create Gateway', { exact: true })).toBeVisible({
         timeout: 15_000,
       });
@@ -446,14 +432,7 @@ spec:
       const nextButton = page.getByRole('button', { name: 'Next', exact: true });
       await nextButton.click();
 
-      // Step 2: Select existing route
-      await expect(page.locator('[data-test="mcp-route-select"]')).toBeVisible({
-        timeout: 15_000,
-      });
-      await page.locator('[data-test="mcp-route-select"]').selectOption('e2e-mcp-adv-route');
-      await nextButton.click();
-
-      // Step 3: Fill MCP Extension with advanced settings
+      // Step 2: Fill MCP Extension with advanced settings
       await expect(page.locator('[data-test="mcp-extension-name"]')).toBeVisible({
         timeout: 15_000,
       });
@@ -478,7 +457,7 @@ spec:
 
       await nextButton.click();
 
-      // Step 4: Verify
+      // Step 3: Verify
       await expect(page.getByText('MCPGatewayExtension created successfully')).toBeVisible({
         timeout: 30_000,
       });
@@ -571,14 +550,7 @@ spec:
         const nextButton = page.getByRole('button', { name: 'Next', exact: true });
         await nextButton.click();
 
-        // Step 2: Select existing route
-        await expect(page.locator('[data-test="mcp-route-select"]')).toBeVisible({
-          timeout: 15_000,
-        });
-        await page.locator('[data-test="mcp-route-select"]').selectOption('e2e-mcp-xns-route');
-        await nextButton.click();
-
-        // Step 3: Fill extension — set a DIFFERENT namespace to trigger ReferenceGrant
+        // Step 2: Fill extension — set a DIFFERENT namespace to trigger ReferenceGrant
         await expect(page.locator('[data-test="mcp-extension-name"]')).toBeVisible({
           timeout: 15_000,
         });
@@ -592,7 +564,7 @@ spec:
         }
         await nextButton.click();
 
-        // Step 4: Verify — should create ReferenceGrant + MCPGatewayExtension
+        // Step 3: Verify — should create ReferenceGrant + MCPGatewayExtension
         await expect(page.getByText('Create ReferenceGrant')).toBeVisible({ timeout: 15_000 });
         await expect(page.getByText('ReferenceGrant created successfully')).toBeVisible({
           timeout: 30_000,

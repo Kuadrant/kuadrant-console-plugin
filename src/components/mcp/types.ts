@@ -105,6 +105,7 @@ export interface MCPWizardFormState {
   oauthEnabled: boolean;
   oauthAuthorizationServers: string;
   oauthResourceName: string;
+  httpRouteManagementEnabled: boolean;
 }
 
 export const initialFormState: MCPWizardFormState = {
@@ -131,6 +132,7 @@ export const initialFormState: MCPWizardFormState = {
   oauthEnabled: false,
   oauthAuthorizationServers: '',
   oauthResourceName: '',
+  httpRouteManagementEnabled: true,
 };
 
 // Registration wizard form state

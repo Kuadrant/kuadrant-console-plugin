@@ -4,7 +4,10 @@ import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import * as yaml from 'js-yaml';
 import { MCPWizardFormState, MCPGatewayExtension } from './types';
-import { buildMCPGatewayExtension } from './mcpResourceUtils';
+import {
+  buildMCPGatewayExtension,
+  getMCPGatewayExtensionValidationError,
+} from './mcpResourceUtils';
 import MCPExtensionFormFields from './MCPExtensionFormFields';
 import '../css/gateway-api-plugin.css';
 import { GatewayResource } from '../gateway/types';
@@ -33,6 +36,7 @@ const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
     () => buildMCPGatewayExtension(formState, selectedNamespace),
     [formState, selectedNamespace],
   );
+  const validationError = getMCPGatewayExtensionValidationError(formState, selectedGateway);
 
   // Handle YAML changes and sync back to form
   const handleYamlChange = (yamlInput: string) => {
@@ -58,6 +62,7 @@ const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
           oauthAuthorizationServers:
             parsed.spec?.oauthProtectedResource?.authorizationServers?.join(', ') || '',
           oauthResourceName: parsed.spec?.oauthProtectedResource?.resourceName || '',
+          httpRouteManagementEnabled: parsed.spec?.httpRouteManagement !== 'Disabled',
         });
       }
     } catch {
@@ -88,13 +93,16 @@ const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
       </Tabs>
 
       {createView === 'form' ? (
-        <MCPExtensionFormFields
-          formState={formState}
-          updateFormState={updateFormState}
-          selectedGateway={selectedGateway}
-          selectedNamespace={selectedNamespace}
-          onValidationChange={onValidationChange}
-        />
+        <>
+          <MCPExtensionFormFields
+            formState={formState}
+            updateFormState={updateFormState}
+            selectedGateway={selectedGateway}
+            selectedNamespace={selectedNamespace}
+            validationError={validationError}
+            onValidationChange={onValidationChange}
+          />
+        </>
       ) : (
         <div className="kuadrant-mcp-yaml-editor" style={{ minHeight: '400px' }} key={yamlKey}>
           <React.Suspense fallback={<div>{t('Loading YAML editor...')}</div>}>

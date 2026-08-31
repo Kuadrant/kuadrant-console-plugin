@@ -2,6 +2,9 @@ import {
   buildMCPGatewayExtension,
   mcpExtensionToFormState,
   isMCPGatewayExtensionValid,
+  getMCPGatewayExtensionValidationError,
+  isKubernetesResourceName,
+  isGatewayListenerName,
   buildMCPServerRegistration,
   wireHTTPRouteToExternalHost,
   parseServiceEntryHosts,
@@ -208,6 +211,45 @@ describe('wireHTTPRouteToExternalHost', () => {
 describe('parseServiceEntryHosts', () => {
   it('removes empty and whitespace-only entries', () => {
     expect(parseServiceEntryHosts(', api.example.com, ')).toEqual(['api.example.com']);
+  });
+});
+
+describe('MCPGatewayExtension validation', () => {
+  it('accepts valid Kubernetes resource and listener names', () => {
+    expect(isKubernetesResourceName('my-extension.example')).toBe(true);
+    expect(isGatewayListenerName('https-443')).toBe(true);
+    expect(isMCPGatewayExtensionValid(baseFormState())).toBe(true);
+  });
+
+  it.each(['UPPERCASE', 'has spaces', '-starts-wrong', 'ends-wrong-', ''])(
+    'rejects invalid extension name "%s"',
+    (name) => {
+      expect(isKubernetesResourceName(name)).toBe(false);
+      expect(isMCPGatewayExtensionValid(baseFormState({ extensionName: name }))).toBe(false);
+    },
+  );
+
+  it('rejects a listener that is not present on the selected Gateway', () => {
+    const gateway = {
+      apiVersion: 'gateway.networking.k8s.io/v1',
+      kind: 'Gateway',
+      metadata: { name: 'my-gw', namespace: 'gw-ns' },
+      spec: {
+        gatewayClassName: 'istio',
+        listeners: [{ name: 'http', port: 80, protocol: 'HTTP' as const }],
+      },
+    };
+
+    expect(
+      getMCPGatewayExtensionValidationError(baseFormState({ sectionName: 'https' }), gateway),
+    ).toBe('Listener "https" was not found on Gateway "my-gw".');
+  });
+
+  it('rejects invalid listener names', () => {
+    expect(isGatewayListenerName('listener with spaces')).toBe(false);
+    expect(
+      getMCPGatewayExtensionValidationError(baseFormState({ sectionName: 'listener with spaces' })),
+    ).toBe('The listener name must be a valid Kubernetes name.');
   });
 });
 

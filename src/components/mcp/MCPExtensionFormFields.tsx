@@ -40,7 +40,7 @@ interface MCPExtensionFormFieldsProps {
   // isn't otherwise selectable there); the standalone page hides it and uses the
   // console's namespace picker instead.
   showNamespaceField?: boolean;
-  // Callback fired when validation state changes
+  validationError?: string | null;
   onValidationChange?: (isValid: boolean) => void;
 }
 
@@ -54,6 +54,7 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
   disableIdentity = false,
   gatewayNames = [],
   showNamespaceField = true,
+  validationError,
   onValidationChange,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -196,6 +197,13 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
           placeholder={t('Enter extension name')}
           data-test="mcp-extension-name"
         />
+        {validationError?.includes('extension name') && formState.extensionName.trim() && (
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem variant="error">{validationError}</HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        )}
         <FormHelperText>
           <HelperText>
             <HelperTextItem
@@ -297,6 +305,13 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
             </HelperTextItem>
           </HelperText>
         </FormHelperText>
+        {validationError?.includes('target Gateway') && formState.targetGateway.trim() && (
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem variant="error">{validationError}</HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        )}
       </FormGroup>
 
       <FormGroup label={t('Listener name')} isRequired fieldId="section-name">
@@ -352,9 +367,38 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
             </HelperTextItem>
           </HelperText>
         </FormHelperText>
+        {validationError &&
+          !validationError.includes('extension name') &&
+          !validationError.includes('target Gateway') &&
+          formState.sectionName.trim() && (
+            <FormHelperText>
+              <HelperText>
+                <HelperTextItem variant="error">{validationError}</HelperTextItem>
+              </HelperText>
+            </FormHelperText>
+          )}
       </FormGroup>
 
       <ExpandableSection toggleText={t('Advanced broker settings')}>
+        <FormGroup fieldId="http-route-management">
+          <Switch
+            id="http-route-management"
+            label={t('HTTPRoute Management')}
+            isChecked={!formState.httpRouteManagementEnabled}
+            onChange={(_event, checked) =>
+              updateFormState({ httpRouteManagementEnabled: !checked })
+            }
+            data-test="mcp-http-route-management"
+          />
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem>
+                {t('Disables the controller automatically creating the gateway HTTPRoute.')}
+              </HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        </FormGroup>
+
         <FormGroup fieldId="override-hostnames">
           <Switch
             id="override-hostnames"
