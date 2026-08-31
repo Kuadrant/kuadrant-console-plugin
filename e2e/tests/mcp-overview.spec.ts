@@ -184,14 +184,19 @@ test.describe('MCP Overview dashboard', () => {
     await expect(serversCard.locator('text=test-mcp-server').first()).toBeVisible();
   });
 
-  test('External registration option is disabled', { tag: '@nightly' }, async ({ page }) => {
+  test('External registration option opens the external wizard', { tag: '@nightly' }, async ({
+    page,
+  }) => {
     const toggle = page.getByRole('button', { name: 'Register MCP Server' });
     await expect(toggle).toBeVisible({ timeout: 15_000 });
     await toggle.click();
 
     const externalItem = page.getByRole('menuitem', { name: 'External' });
     await expect(externalItem).toBeVisible();
-    await expect(externalItem).toHaveAttribute('aria-disabled', 'true');
+    await expect(externalItem).not.toHaveAttribute('aria-disabled', 'true');
+    await externalItem.click();
+
+    await expect(page.getByText('Setup external MCP server')).toBeVisible({ timeout: 10_000 });
   });
 
   test('navigates to extension details from table', { tag: '@nightly' }, async ({ page }) => {

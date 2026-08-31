@@ -3,40 +3,32 @@ import { useTranslation } from 'react-i18next';
 import { Tabs, Tab, TabTitleText } from '@patternfly/react-core';
 import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
-import { MCPServerFormState } from '../types';
-import MCPServerRegistrationFormFields from '../MCPServerRegistrationFormFields';
-import { buildMCPServerRegistration } from '../mcpResourceUtils';
+import { DestinationRuleFormState } from '../types';
+import DestinationRuleFormFields from '../DestinationRuleFormFields';
+import { buildDestinationRule } from '../mcpResourceUtils';
 
-interface RegisterServerStepProps {
-  formState: MCPServerFormState;
-  onChange: (state: MCPServerFormState) => void;
-  routeName?: string;
+interface DestinationRuleStepProps {
+  formState: DestinationRuleFormState;
+  onChange: (state: DestinationRuleFormState) => void;
   onValidationChange?: (isValid: boolean) => void;
 }
 
-const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
+const DestinationRuleStep: React.FC<DestinationRuleStepProps> = ({
   formState,
   onChange,
-  routeName,
   onValidationChange,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activeTab, setActiveTab] = React.useState<'form' | 'yaml'>('form');
   const [yamlKey, setYamlKey] = React.useState(0);
 
-  React.useEffect(() => {
-    if (routeName && formState.targetHTTPRouteName !== routeName) {
-      onChange({ ...formState, targetHTTPRouteName: routeName });
-    }
-  }, [routeName]); // eslint-disable-line -- only resync when routeName changes; re-running on formState/onChange would fight typing in other fields
-
   // Rebuilt from form state on every change so the YAML view is always current.
-  const serverResource = React.useMemo(
-    () => buildMCPServerRegistration(formState, formState.namespace, null, routeName),
-    [formState, routeName],
+  const destinationRuleResource = React.useMemo(
+    () => buildDestinationRule(formState, formState.namespace),
+    [formState],
   );
 
-  const handleChange = (field: keyof MCPServerFormState, value: string) => {
+  const handleChange = (field: keyof DestinationRuleFormState, value: string) => {
     onChange({ ...formState, [field]: value });
   };
 
@@ -49,13 +41,15 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
 
       const metadata = parsed.metadata as Record<string, string> | undefined;
       const spec = parsed.spec as Record<string, unknown> | undefined;
-      const targetRef = spec?.targetRef as Record<string, string> | undefined;
+      const trafficPolicy = spec?.trafficPolicy as Record<string, unknown> | undefined;
+      const tls = trafficPolicy?.tls as Record<string, string> | undefined;
 
       onChange({
-        registrationName: metadata?.name || '',
+        destinationName: metadata?.name || '',
         namespace: metadata?.namespace || '',
-        targetHTTPRouteName: targetRef?.name || '',
-        toolPrefix: typeof spec?.prefix === 'string' ? spec.prefix : '',
+        host: typeof spec?.host === 'string' ? spec.host : '',
+        tlsMode: tls?.mode || 'SIMPLE',
+        tlsSni: tls?.sni || '',
       });
     } catch {
       // Invalid YAML — don't update form state
@@ -78,10 +72,9 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
       </Tabs>
 
       {activeTab === 'form' ? (
-        <MCPServerRegistrationFormFields
+        <DestinationRuleFormFields
           formState={formState}
           onChange={handleChange}
-          httpRouteNames={routeName ? [routeName] : []}
           onValidationChange={onValidationChange}
         />
       ) : (
@@ -92,7 +85,7 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
         >
           <React.Suspense fallback={<div>{t('Loading YAML editor...')}</div>}>
             <ResourceYAMLEditor
-              initialResource={serverResource}
+              initialResource={destinationRuleResource}
               onChange={handleYamlChange}
               create={true}
             />
@@ -103,4 +96,4 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
   );
 };
 
-export default RegisterServerStep;
+export default DestinationRuleStep;

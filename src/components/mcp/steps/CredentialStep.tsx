@@ -3,40 +3,32 @@ import { useTranslation } from 'react-i18next';
 import { Tabs, Tab, TabTitleText } from '@patternfly/react-core';
 import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
-import { MCPServerFormState } from '../types';
-import MCPServerRegistrationFormFields from '../MCPServerRegistrationFormFields';
-import { buildMCPServerRegistration } from '../mcpResourceUtils';
+import { CredentialFormState } from '../types';
+import CredentialFormFields from '../CredentialFormFields';
+import { buildCredentialSecret, CREDENTIAL_SECRET_KEY } from '../mcpResourceUtils';
 
-interface RegisterServerStepProps {
-  formState: MCPServerFormState;
-  onChange: (state: MCPServerFormState) => void;
-  routeName?: string;
+interface CredentialStepProps {
+  formState: CredentialFormState;
+  onChange: (state: CredentialFormState) => void;
   onValidationChange?: (isValid: boolean) => void;
 }
 
-const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
+const CredentialStep: React.FC<CredentialStepProps> = ({
   formState,
   onChange,
-  routeName,
   onValidationChange,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [activeTab, setActiveTab] = React.useState<'form' | 'yaml'>('form');
   const [yamlKey, setYamlKey] = React.useState(0);
 
-  React.useEffect(() => {
-    if (routeName && formState.targetHTTPRouteName !== routeName) {
-      onChange({ ...formState, targetHTTPRouteName: routeName });
-    }
-  }, [routeName]); // eslint-disable-line -- only resync when routeName changes; re-running on formState/onChange would fight typing in other fields
-
   // Rebuilt from form state on every change so the YAML view is always current.
-  const serverResource = React.useMemo(
-    () => buildMCPServerRegistration(formState, formState.namespace, null, routeName),
-    [formState, routeName],
+  const credentialResource = React.useMemo(
+    () => buildCredentialSecret(formState, formState.namespace),
+    [formState],
   );
 
-  const handleChange = (field: keyof MCPServerFormState, value: string) => {
+  const handleChange = (field: keyof CredentialFormState, value: string) => {
     onChange({ ...formState, [field]: value });
   };
 
@@ -48,14 +40,13 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
       if (!parsed || typeof parsed !== 'object') return;
 
       const metadata = parsed.metadata as Record<string, string> | undefined;
-      const spec = parsed.spec as Record<string, unknown> | undefined;
-      const targetRef = spec?.targetRef as Record<string, string> | undefined;
+      const stringData = parsed.stringData as Record<string, string> | undefined;
 
       onChange({
-        registrationName: metadata?.name || '',
+        credentialName: metadata?.name || '',
         namespace: metadata?.namespace || '',
-        targetHTTPRouteName: targetRef?.name || '',
-        toolPrefix: typeof spec?.prefix === 'string' ? spec.prefix : '',
+        type: (parsed.type as string) || 'Opaque',
+        tokenString: stringData?.[CREDENTIAL_SECRET_KEY] || '',
       });
     } catch {
       // Invalid YAML — don't update form state
@@ -78,10 +69,9 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
       </Tabs>
 
       {activeTab === 'form' ? (
-        <MCPServerRegistrationFormFields
+        <CredentialFormFields
           formState={formState}
           onChange={handleChange}
-          httpRouteNames={routeName ? [routeName] : []}
           onValidationChange={onValidationChange}
         />
       ) : (
@@ -92,7 +82,7 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
         >
           <React.Suspense fallback={<div>{t('Loading YAML editor...')}</div>}>
             <ResourceYAMLEditor
-              initialResource={serverResource}
+              initialResource={credentialResource}
               onChange={handleYamlChange}
               create={true}
             />
@@ -103,4 +93,4 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
   );
 };
 
-export default RegisterServerStep;
+export default CredentialStep;

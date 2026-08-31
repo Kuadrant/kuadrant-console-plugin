@@ -82,9 +82,16 @@ describe('getModelFromResource', () => {
     expect(model.plural).toBe('dnspolicies');
   });
 
-  it('sets apiVersion to undefined when apiVersion has no slash (core resource like "v1")', () => {
-    const model = getModelFromResource(makeResource({ apiVersion: 'v1' }));
-    expect(model.apiVersion).toBeUndefined();
+  it('treats an apiVersion with no slash as a core resource (group undefined, version "v1")', () => {
+    const model = getModelFromResource(makeResource({ apiVersion: 'v1', kind: 'Secret' }));
+    expect(model.apiGroup).toBeUndefined();
+    expect(model.apiVersion).toBe('v1');
+  });
+
+  it('splits group and version for a grouped apiVersion', () => {
+    const model = getModelFromResource(makeResource({ apiVersion: 'kuadrant.io/v1' }));
+    expect(model.apiGroup).toBe('kuadrant.io');
+    expect(model.apiVersion).toBe('v1');
   });
 
   it('sets abbr to empty string when kind is empty', () => {

@@ -7,8 +7,17 @@ import {
   MCPGatewayExtension,
   MCPServerRegistration,
   MCPServerFormState,
+  ServiceEntry,
+  ServiceEntryFormState,
+  DestinationRule,
+  DestinationRuleFormState,
+  CredentialFormState,
 } from './types';
-import { RESOURCES } from '../../utils/resources';
+import { RESOURCES, Secret } from '../../utils/resources';
+
+// Key used within the credential Secret's stringData for the token configured in
+// step 4 (Add access credentials) of the external MCP wizard.
+export const CREDENTIAL_SECRET_KEY = 'token';
 
 // Build an MCPGatewayExtension resource from wizard/page form state.
 // When originalMetadata is provided (edit mode) it is preserved so that
@@ -143,6 +152,152 @@ export const isMCPServerRegistrationValid = (formState: MCPServerFormState): boo
   !!formState.namespace.trim() &&
   !!formState.targetHTTPRouteName.trim() &&
   !!formState.toolPrefix.trim();
+
+// Build an Istio ServiceEntry resource from the external MCP wizard's step 1 form state.
+// When originalMetadata is provided (edit mode) it is preserved so that
+// k8sUpdate keeps the resourceVersion and other server-managed fields.
+export const buildServiceEntry = (
+  formState: ServiceEntryFormState,
+  namespace: string,
+  originalMetadata?: ServiceEntry['metadata'] | null,
+): ServiceEntry => ({
+  apiVersion: `${RESOURCES.ServiceEntry.gvk.group}/${RESOURCES.ServiceEntry.gvk.version}`,
+  kind: RESOURCES.ServiceEntry.gvk.kind,
+  metadata: originalMetadata
+    ? { ...originalMetadata, name: formState.serviceName }
+    : { name: formState.serviceName, namespace: formState.namespace || namespace },
+  spec: {
+    hosts: formState.hosts
+      .split(',')
+      .map((h) => h.trim())
+      .filter(Boolean),
+    ports: formState.port
+      ? [
+          {
+            number: Number(formState.port),
+            protocol: formState.protocol,
+            name: `${formState.protocol.toLowerCase()}-${formState.port}`,
+          },
+        ]
+      : [],
+    location: formState.location,
+    resolution: formState.resolution,
+  },
+});
+
+// Reverse of buildServiceEntry — populate form state from an existing resource.
+export const serviceEntryToFormState = (
+  resource: ServiceEntry,
+  namespace: string,
+): ServiceEntryFormState => {
+  const spec = resource.spec || ({} as ServiceEntry['spec']);
+  const port = spec.ports?.[0];
+  return {
+    serviceName: resource.metadata?.name || '',
+    namespace: resource.metadata?.namespace || namespace,
+    hosts: (spec.hosts || []).join(', '),
+    port: port ? String(port.number) : '',
+    protocol: port?.protocol || 'HTTPS',
+    location: spec.location || 'MESH_EXTERNAL',
+    resolution: spec.resolution || 'DNS',
+  };
+};
+
+// Validation shared by the wizard step footer and the standalone create/edit page.
+export const isServiceEntryValid = (formState: ServiceEntryFormState): boolean =>
+  !!formState.serviceName.trim() &&
+  !!formState.namespace.trim() &&
+  !!formState.hosts.trim() &&
+  !!formState.port.trim() &&
+  !!formState.protocol.trim() &&
+  !!formState.location.trim() &&
+  !!formState.resolution.trim();
+
+// Build an Istio DestinationRule resource from the external MCP wizard's step 2 form state.
+// When originalMetadata is provided (edit mode) it is preserved so that
+// k8sUpdate keeps the resourceVersion and other server-managed fields.
+export const buildDestinationRule = (
+  formState: DestinationRuleFormState,
+  namespace: string,
+  originalMetadata?: DestinationRule['metadata'] | null,
+): DestinationRule => ({
+  apiVersion: `${RESOURCES.DestinationRule.gvk.group}/${RESOURCES.DestinationRule.gvk.version}`,
+  kind: RESOURCES.DestinationRule.gvk.kind,
+  metadata: originalMetadata
+    ? { ...originalMetadata, name: formState.destinationName }
+    : { name: formState.destinationName, namespace: formState.namespace || namespace },
+  spec: {
+    host: formState.host,
+    trafficPolicy: {
+      tls: {
+        mode: formState.tlsMode,
+        ...(formState.tlsMode !== 'DISABLE' && formState.tlsSni ? { sni: formState.tlsSni } : {}),
+      },
+    },
+  },
+});
+
+// Reverse of buildDestinationRule — populate form state from an existing resource.
+export const destinationRuleToFormState = (
+  resource: DestinationRule,
+  namespace: string,
+): DestinationRuleFormState => {
+  const spec = resource.spec || ({} as DestinationRule['spec']);
+  const tls = spec.trafficPolicy?.tls;
+  return {
+    destinationName: resource.metadata?.name || '',
+    namespace: resource.metadata?.namespace || namespace,
+    host: spec.host || '',
+    tlsMode: tls?.mode || 'SIMPLE',
+    tlsSni: tls?.sni || '',
+  };
+};
+
+// Validation shared by the wizard step footer and the standalone create/edit page.
+export const isDestinationRuleValid = (formState: DestinationRuleFormState): boolean =>
+  !!formState.destinationName.trim() &&
+  !!formState.namespace.trim() &&
+  !!formState.host.trim() &&
+  !!formState.tlsMode.trim();
+
+// Build a Kubernetes Secret resource from the external MCP wizard's step 4 form state.
+// When originalMetadata is provided (edit mode) it is preserved so that
+// k8sUpdate keeps the resourceVersion and other server-managed fields.
+export const buildCredentialSecret = (
+  formState: CredentialFormState,
+  namespace: string,
+  originalMetadata?: Secret['metadata'] | null,
+): Secret => ({
+  apiVersion: 'v1',
+  kind: 'Secret',
+  metadata: originalMetadata
+    ? { ...originalMetadata, name: formState.credentialName }
+    : { name: formState.credentialName, namespace: formState.namespace || namespace },
+  type: formState.type,
+  stringData: {
+    [CREDENTIAL_SECRET_KEY]: formState.tokenString,
+  },
+});
+
+// Reverse of buildCredentialSecret — populate form state from an existing resource.
+// The token itself is never round-tripped back into the form (Secrets don't return
+// stringData/data on read in a way that's safe to display), so it's left blank.
+export const credentialSecretToFormState = (
+  resource: Secret,
+  namespace: string,
+): CredentialFormState => ({
+  credentialName: resource.metadata?.name || '',
+  namespace: resource.metadata?.namespace || namespace,
+  type: resource.type || 'Opaque',
+  tokenString: '',
+});
+
+// Validation shared by the wizard step footer and the standalone create/edit page.
+export const isCredentialValid = (formState: CredentialFormState): boolean =>
+  !!formState.credentialName.trim() &&
+  !!formState.namespace.trim() &&
+  !!formState.type.trim() &&
+  !!formState.tokenString.trim();
 
 // Pre-populated MCPServerRegistration template for the YAML editor on the
 // standalone create page.

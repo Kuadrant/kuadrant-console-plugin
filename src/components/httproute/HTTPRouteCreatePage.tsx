@@ -19,6 +19,10 @@ import {
   Tab,
   TabTitleText,
   ValidatedOptions,
+  FormSelect,
+  FormSelectOption,
+  FormFieldGroupExpandable,
+  FormFieldGroupHeader,
 } from '@patternfly/react-core';
 import { PlusCircleIcon, MinusCircleIcon, TrashIcon, EditIcon } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
@@ -32,19 +36,13 @@ import {
 import { useLocation, useNavigate } from 'react-router';
 import * as yaml from 'js-yaml';
 import ParentReferencesSelect from '../../utils/ParentReferencesSelect';
-import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
-import { HTTPRouteResource, HTTPRouteMatch } from './types';
+import { HTTPRouteResource, HTTPRouteMatch, HTTPRoutePathType, HTTPRouteMethod } from './types';
 import {
   generateFiltersForYAML,
   parseFiltersFromYAML,
   getFilterSummary,
 } from './filters/filterUtils';
-import {
-  generateMatchesForYAML,
-  parseMatchesFromYAML,
-  validateMatchesInRule,
-  formatMatchesForDisplay,
-} from './matchUtils';
+import { generateMatchesForYAML, parseMatchesFromYAML, validateMatchesInRule } from './matchUtils';
 import HTTPRouteRuleWizard from './HTTPRouteRuleWizard';
 import KuadrantCreateUpdate from '../KuadrantCreateUpdate';
 import { handleCancel } from '../../utils/cancel';
@@ -63,6 +61,60 @@ interface ParentReference {
 interface HTTPRouteCreatePageProps {
   onFormChange?: (resource: HTTPRouteResource, isValid: boolean) => void;
 }
+
+// UI-only categorisation of a rule's primary matching criteria — HTTPRoute matches don't
+// carry this distinction in the API, it just drives which fields we seed on "Add rule"
+// and how the rule panel below is summarised.
+type RuleType = 'path' | 'header' | 'query' | 'method';
+
+const RULE_TYPE_LABELS: Record<RuleType, string> = {
+  path: 'Path match',
+  header: 'Header match',
+  query: 'Query param match',
+  method: 'Method match',
+};
+
+const seedMatchForRuleType = (ruleType: RuleType): HTTPRouteMatch => {
+  const base: HTTPRouteMatch = {
+    id: `match-${Date.now().toString(36)}`,
+    pathType: '' as HTTPRoutePathType,
+    pathValue: '/',
+    method: '' as HTTPRouteMethod,
+    headers: [],
+    queryParams: [],
+  };
+  switch (ruleType) {
+    case 'path':
+      return { ...base, pathType: 'Exact', pathValue: '/path' };
+    case 'header':
+      return {
+        ...base,
+        headers: [{ id: `header-${Date.now().toString(36)}`, type: 'Exact', name: '', value: '' }],
+      };
+    case 'query':
+      return {
+        ...base,
+        queryParams: [
+          { id: `queryparam-${Date.now().toString(36)}`, type: 'Exact', name: '', value: '' },
+        ],
+      };
+    case 'method':
+      return { ...base, method: 'GET' };
+    default:
+      return base;
+  }
+};
+
+// Infer a rule's type from its matches when it wasn't created through the "Rule type"
+// picker (e.g. parsed from YAML or an existing resource being edited).
+const inferRuleType = (matches: HTTPRouteMatch[]): RuleType => {
+  const match = matches?.[0];
+  if (!match) return 'path';
+  if (match.headers?.some((h) => h.name)) return 'header';
+  if (match.queryParams?.some((q) => q.name)) return 'query';
+  if (match.method && !match.pathValue) return 'method';
+  return 'path';
+};
 
 const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -91,9 +143,11 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
     filters: ReturnType<typeof parseFiltersFromYAML>;
     serviceName: string;
     servicePort: number;
+    ruleType: RuleType;
   };
   const [rules, setRules] = React.useState<RuleUI[]>([]);
   const [isRuleModalOpen, setIsRuleModalOpen] = React.useState(false);
+  const [selectedRuleType, setSelectedRuleType] = React.useState<RuleType>('path');
 
   const [currentRule, setCurrentRule] = React.useState<RuleUI>({
     id: 'rule-1',
@@ -101,6 +155,7 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
     filters: [], // Filters array
     serviceName: '', // Backend service name
     servicePort: 80, // Backend service port
+    ruleType: 'path',
   });
 
   const [editingRuleIndex, setEditingRuleIndex] = React.useState<number | null>(null);
@@ -207,13 +262,17 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
       }
 
       if (hr.spec?.rules && hr.spec.rules.length > 0) {
-        const formattedRules = hr.spec.rules.map((rule, index: number) => ({
-          id: rules[index]?.id || `rule-${index + 1}`,
-          matches: parseMatchesFromYAML(rule.matches),
-          filters: parseFiltersFromYAML(rule.filters),
-          serviceName: rule.backendRefs?.[0]?.name || '',
-          servicePort: rule.backendRefs?.[0]?.port || 80,
-        }));
+        const formattedRules = hr.spec.rules.map((rule, index: number) => {
+          const matches = parseMatchesFromYAML(rule.matches);
+          return {
+            id: rules[index]?.id || `rule-${index + 1}`,
+            matches,
+            filters: parseFiltersFromYAML(rule.filters),
+            serviceName: rule.backendRefs?.[0]?.name || '',
+            servicePort: rule.backendRefs?.[0]?.port || 80,
+            ruleType: rules[index]?.ruleType || inferRuleType(matches),
+          };
+        });
         if (JSON.stringify(formattedRules) !== JSON.stringify(rules)) setRules(formattedRules);
       }
 
@@ -337,7 +396,7 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
     const hasValidParentRef = parentRefs.some((ref) => ref.gatewayName);
 
     const hasValidRules =
-      rules.length > 0 &&
+      rules.length === 0 ||
       rules.every((rule) => {
         const basicFieldsValid = rule.id && rule.serviceName && rule.servicePort > 0;
 
@@ -365,10 +424,11 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
     setEditingRuleIndex(null);
     setCurrentRule({
       id: `rule-${Date.now().toString(36)}`,
-      matches: [],
+      matches: [seedMatchForRuleType(selectedRuleType)],
       filters: [],
       serviceName: '',
       servicePort: 80,
+      ruleType: selectedRuleType,
     });
     setIsRuleModalOpen(true);
   };
@@ -463,11 +523,25 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                   label={t('Hostnames')}
                   fieldId={hostnames[0] !== undefined ? `hostname-0` : 'hostnames'}
                 >
+                  <Button
+                    variant={ButtonVariant.link}
+                    icon={<PlusCircleIcon />}
+                    onClick={addHostnameField}
+                    isInline
+                    style={{ marginBottom: '16px' }}
+                  >
+                    {t('Add hostname')}
+                  </Button>
                   {hostnames.map((hostname, index) => (
                     <div
                       key={index}
                       className="pf-v6-c-form__group-control"
-                      style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginBottom: '8px',
+                      }}
                     >
                       <TextInput
                         type="text"
@@ -476,51 +550,52 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                         onChange={(_, value) => updateHostname(value, index)}
                         placeholder={t('example.com')}
                       />
-                      {hostnames.length > 0 && (
-                        <Button
-                          variant={ButtonVariant.plain}
-                          onClick={() => removeHostnameField(index)}
-                          aria-label="Remove hostname"
-                        >
-                          <MinusCircleIcon />
-                        </Button>
-                      )}
+                      <Button
+                        variant={ButtonVariant.link}
+                        icon={<MinusCircleIcon />}
+                        isDanger
+                        onClick={() => removeHostnameField(index)}
+                      >
+                        {t('Remove')}
+                      </Button>
                     </div>
                   ))}
-                  {
-                    <Button
-                      variant={ButtonVariant.link}
-                      icon={<PlusCircleIcon />}
-                      onClick={addHostnameField}
-                      isInline
-                    >
-                      {t('Add hostname')}
-                    </Button>
-                  }
                   <FormHelperText>
                     <HelperText>
                       <HelperTextItem>{t('Hostnames for this HTTPRoute')}</HelperTextItem>
                     </HelperText>
                   </FormHelperText>
                 </FormGroup>
-                <FormGroup
-                  label={
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        width: '100%',
-                      }}
-                    >
-                      <div>{t('Rules')}</div>
-                      <Button variant="secondary" icon={<PlusCircleIcon />} onClick={handleAddRule}>
-                        {t('Add rule')}
-                      </Button>
-                    </div>
-                  }
-                  fieldId="rules"
-                >
+                <FormGroup label={t('Rules')} fieldId="rules">
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-end',
+                      gap: '16px',
+                      marginBottom: '16px',
+                    }}
+                  >
+                    <FormGroup label={t('Rule type')} fieldId="rule-type">
+                      <FormSelect
+                        id="rule-type"
+                        value={selectedRuleType}
+                        onChange={(_e, value) => setSelectedRuleType(value as RuleType)}
+                        aria-label={t('Select rule type')}
+                      >
+                        {(Object.keys(RULE_TYPE_LABELS) as RuleType[]).map((ruleType) => (
+                          <FormSelectOption
+                            key={ruleType}
+                            value={ruleType}
+                            label={t(RULE_TYPE_LABELS[ruleType])}
+                          />
+                        ))}
+                      </FormSelect>
+                    </FormGroup>
+                    <Button variant="secondary" icon={<PlusCircleIcon />} onClick={handleAddRule}>
+                      {t('Add rule')}
+                    </Button>
+                  </div>
+
                   {rules.length === 0 && (
                     <Alert
                       variant={AlertVariant.warning}
@@ -530,77 +605,102 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                   )}
 
                   {rules.length > 0 && !isRuleModalOpen && (
-                    <Table aria-label={t('Rules table')} variant="compact" borders={false}>
-                      <Thead>
-                        <Tr>
-                          <Th width={15}>{t('Rule ID')}</Th>
-                          <Th width={25}>{t('Matches')}</Th>
-                          <Th width={20}>{t('Filters')}</Th>
-                          <Th width={30}>{t('Backend references')}</Th>
-                          <Th width={10}>{t('Actions')}</Th>
-                        </Tr>
-                      </Thead>
-                      <Tbody>
-                        {rules.map((rule, index) => (
-                          <Tr key={rule.id || index}>
-                            <Td dataLabel={t('Rule ID')}>
-                              <strong>{rule.id}</strong>
-                            </Td>
-                            <Td dataLabel={t('Matches')}>
-                              <span
-                                style={{
-                                  color:
-                                    rule.matches?.length > 0
-                                      ? 'inherit'
-                                      : 'var(--pf-v6-global--Color--200)',
+                    <>
+                      {rules.map((rule, index) => {
+                        const match = rule.matches?.[0];
+                        return (
+                          <FormFieldGroupExpandable
+                            key={rule.id || index}
+                            isExpanded
+                            toggleAriaLabel={t(RULE_TYPE_LABELS[rule.ruleType])}
+                            header={
+                              <FormFieldGroupHeader
+                                titleText={{
+                                  text: t(RULE_TYPE_LABELS[rule.ruleType]),
+                                  id: `rule-${rule.id || index}`,
                                 }}
-                              >
-                                {formatMatchesForDisplay(rule.matches)}
-                              </span>
-                            </Td>
-                            <Td dataLabel={t('Filters')}>
-                              {rule.filters && rule.filters.length > 0 ? (
+                                actions={
+                                  <>
+                                    <Button
+                                      variant="link"
+                                      icon={<EditIcon />}
+                                      onClick={() => handleEditRule(index)}
+                                    >
+                                      {t('Edit')}
+                                    </Button>
+                                    <Button
+                                      variant="link"
+                                      icon={<TrashIcon />}
+                                      isDanger
+                                      onClick={() => handleRemoveRule(index)}
+                                    >
+                                      {t('Remove')}
+                                    </Button>
+                                  </>
+                                }
+                              />
+                            }
+                            style={{
+                              marginBottom: '16px',
+                              border: '1px solid var(--pf-t--global--border--color--default)',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            <div style={{ paddingRight: '16px', display: 'grid', gap: '8px' }}>
+                              {rule.ruleType === 'path' && (
+                                <>
+                                  <div>
+                                    <strong>{t('Match type')}:</strong> {match?.pathType || '—'}
+                                  </div>
+                                  <div>
+                                    <strong>{t('Path match')}:</strong> {match?.pathValue || '—'}
+                                  </div>
+                                </>
+                              )}
+                              {rule.ruleType === 'method' && (
                                 <div>
+                                  <strong>{t('HTTP method')}:</strong> {match?.method || '—'}
+                                </div>
+                              )}
+                              {rule.ruleType === 'header' &&
+                                (match?.headers?.length ? (
+                                  match.headers.map((header) => (
+                                    <div key={header.id}>
+                                      <strong>{t('Header')}</strong> ({header.type}): {header.name}{' '}
+                                      = {header.value}
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div>—</div>
+                                ))}
+                              {rule.ruleType === 'query' &&
+                                (match?.queryParams?.length ? (
+                                  match.queryParams.map((queryParam) => (
+                                    <div key={queryParam.id}>
+                                      <strong>{t('Query param')}</strong> ({queryParam.type}):{' '}
+                                      {queryParam.name} = {queryParam.value}
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div>—</div>
+                                ))}
+                              {rule.filters && rule.filters.length > 0 && (
+                                <div>
+                                  <strong>{t('Filters')}:</strong>{' '}
                                   {rule.filters.map((filter, idx: number) => (
-                                    <div key={idx}>{getFilterSummary(filter, t)}</div>
+                                    <span key={idx}>{getFilterSummary(filter, t)} </span>
                                   ))}
                                 </div>
-                              ) : (
-                                <span style={{ color: 'var(--pf-v6-global--Color--200)' }}>—</span>
                               )}
-                            </Td>
-                            <Td dataLabel={t('Backend references')}>
-                              {rule.serviceName ? (
-                                <div>
-                                  <strong>{rule.serviceName}:</strong> {rule.servicePort}
-                                </div>
-                              ) : (
-                                <span style={{ color: 'var(--pf-v6-global--Color--200)' }}>—</span>
-                              )}
-                            </Td>
-                            <Td dataLabel={t('Actions')}>
-                              <div style={{ display: 'flex', gap: '4px' }}>
-                                <Button
-                                  variant="plain"
-                                  onClick={() => handleEditRule(index)}
-                                  aria-label={t('Edit rule')}
-                                >
-                                  <EditIcon />
-                                </Button>
-                                <Button
-                                  variant="plain"
-                                  onClick={() => handleRemoveRule(index)}
-                                  isDanger
-                                  aria-label={t('Delete rule')}
-                                >
-                                  <TrashIcon />
-                                </Button>
+                              <div>
+                                <strong>{t('Backend')}:</strong>{' '}
+                                {rule.serviceName ? `${rule.serviceName}:${rule.servicePort}` : '—'}
                               </div>
-                            </Td>
-                          </Tr>
-                        ))}
-                      </Tbody>
-                    </Table>
+                            </div>
+                          </FormFieldGroupExpandable>
+                        );
+                      })}
+                    </>
                   )}
 
                   <FormHelperText>
@@ -664,7 +764,9 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
           onClose={handleRuleModalClose}
           onSave={handleRuleSave}
           currentRule={currentRule}
-          setCurrentRule={setCurrentRule}
+          setCurrentRule={(rule) =>
+            setCurrentRule((prev) => ({ ...rule, ruleType: prev.ruleType }))
+          }
           editingRuleIndex={editingRuleIndex}
           t={t}
         />

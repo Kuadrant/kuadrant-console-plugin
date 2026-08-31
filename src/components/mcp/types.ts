@@ -151,3 +151,91 @@ export const initialServerFormState: MCPServerFormState = {
   targetHTTPRouteName: '',
   toolPrefix: '',
 };
+
+// Istio ServiceEntry, used by the external MCP server registration wizard to
+// register a service running outside the mesh.
+export interface ServiceEntry extends K8sResourceCommon {
+  spec: {
+    hosts: string[];
+    ports: Array<{ number: number; protocol: string; name: string }>;
+    location?: string;
+    resolution?: string;
+  };
+}
+
+// Step 1 (Create Service Entry) form state for the external MCP server registration wizard
+export interface ServiceEntryFormState {
+  serviceName: string;
+  namespace: string;
+  hosts: string;
+  port: string;
+  protocol: string;
+  location: string;
+  resolution: string;
+}
+
+export const initialServiceEntryFormState: ServiceEntryFormState = {
+  serviceName: '',
+  namespace: '',
+  hosts: '',
+  port: '',
+  protocol: 'HTTPS',
+  location: 'MESH_EXTERNAL',
+  resolution: 'DNS',
+};
+
+// Istio DestinationRule, used by the external MCP server registration wizard to
+// configure TLS to the external service registered by the ServiceEntry.
+export interface DestinationRule extends K8sResourceCommon {
+  spec: {
+    host: string;
+    trafficPolicy?: {
+      tls?: {
+        mode: string;
+        sni?: string;
+      };
+    };
+  };
+}
+
+// Step 2 (Create Destination Rule) form state for the external MCP server registration wizard
+export interface DestinationRuleFormState {
+  destinationName: string;
+  namespace: string;
+  host: string;
+  tlsMode: string;
+  tlsSni: string;
+}
+
+export const initialDestinationRuleFormState: DestinationRuleFormState = {
+  destinationName: '',
+  namespace: '',
+  host: '',
+  tlsMode: 'SIMPLE',
+  tlsSni: '',
+};
+
+// Step 4 (Add access credentials) form state for the external MCP server registration
+// wizard. Builds a Kubernetes Secret holding the token used to authenticate to the
+// external service.
+export interface CredentialFormState {
+  credentialName: string;
+  namespace: string;
+  type: string;
+  tokenString: string;
+}
+
+export const initialCredentialFormState: CredentialFormState = {
+  credentialName: '',
+  namespace: '',
+  type: 'Opaque',
+  tokenString: '',
+};
+
+// External MCP server registration wizard form state
+export interface MCPExternalRegistrationFormState {
+  serviceEntry: ServiceEntryFormState;
+  destinationRule: DestinationRuleFormState;
+  credential: CredentialFormState;
+  server: MCPServerFormState;
+}
