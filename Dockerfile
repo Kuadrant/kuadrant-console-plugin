@@ -36,5 +36,8 @@ RUN test -f /usr/share/nginx/html/plugin-manifest.json && \
     test -d /usr/share/nginx/html/locales && \
     echo "All required files are present."
 
+ARG QUAY_IMAGE_EXPIRY="never"
+LABEL quay.expires-after=${QUAY_IMAGE_EXPIRY}
+
 USER 1001
 ENTRYPOINT ["/usr/share/nginx/html/entrypoint.sh"]
