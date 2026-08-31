@@ -138,18 +138,18 @@
     "@babel/core": "^7.29.6",
     "@babel/preset-env": "^7.25.3",
     "@babel/preset-react": "^7.24.7",
-    "@patternfly/react-data-view": "6.4.0-prerelease.12",
+    "@patternfly/react-data-view": "6.5.0",
     "@patternfly/react-table": "^6.4.0",
-    "@patternfly/react-topology": "~6.4.0",
+    "@patternfly/react-topology": "~6.6.0",
     "babel-loader": "^8.2.0",
     "graphlib": "^2.1.8",
     "graphlib-dot": "^0.6.4",
     "i18next": "^25.8.0",
-    "i18next-parser": "^9.0.1",
+    "i18next-parser": "^9.4.0",
     "js-yaml": "^4.3.1",
     "nanoid": "3.3.18",
     "pluralize": "^8.0.0",
-    "swagger-ui-react": "5.10.5"
+    "swagger-ui-react": "5.32.14"
   },
   "packageManager": "yarn@4.12.0"
 }
