@@ -134,4 +134,18 @@ describe('MCPExtensionStep', () => {
       screen.getByText('The name of the gateway listener to use for MCP traffic.'),
     ).toBeInTheDocument();
   });
+
+  it('renders automatic HTTPRoute management enabled by default', () => {
+    render(<MCPExtensionStep {...defaultProps} />);
+    expect(screen.getByTestId('mcp-http-route-management')).not.toBeChecked();
+  });
+
+  it('updates HTTPRoute management when toggled off', () => {
+    render(<MCPExtensionStep {...defaultProps} />);
+    fireEvent.click(screen.getByTestId('mcp-http-route-management'));
+    expect(defaultProps.updateFormState).toHaveBeenCalledWith({
+      httpRouteManagementEnabled: false,
+      routeMode: 'new',
+    });
+  });
 });

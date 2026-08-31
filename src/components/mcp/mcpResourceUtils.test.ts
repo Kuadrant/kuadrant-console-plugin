@@ -2,6 +2,10 @@ import {
   buildMCPGatewayExtension,
   mcpExtensionToFormState,
   isMCPGatewayExtensionValid,
+  getMCPGatewayExtensionValidationError,
+  isKubernetesResourceName,
+  isGatewayListenerName,
+  isHTTPRouteAttachedToGateway,
   buildMCPServerRegistration,
   wireHTTPRouteToExternalHost,
   parseServiceEntryHosts,
@@ -51,6 +55,16 @@ describe('buildMCPGatewayExtension', () => {
       namespace: 'gw-ns',
       sectionName: 'https',
     });
+    expect(resource.spec.httpRouteManagement).toBe('Enabled');
+  });
+
+  it('sets HTTPRoute management to Disabled when the form switch is off', () => {
+    const resource = buildMCPGatewayExtension(
+      baseFormState({ httpRouteManagementEnabled: false }),
+      'default',
+    );
+
+    expect(resource.spec.httpRouteManagement).toBe('Disabled');
   });
 
   it('falls back to the provided namespace when extensionNamespace is empty', () => {
@@ -211,6 +225,169 @@ describe('parseServiceEntryHosts', () => {
   });
 });
 
+describe('MCPGatewayExtension validation', () => {
+  it('accepts valid Kubernetes resource and listener names', () => {
+    expect(isKubernetesResourceName('my-extension.example')).toBe(true);
+    expect(isGatewayListenerName('https-443')).toBe(true);
+    expect(isMCPGatewayExtensionValid(baseFormState())).toBe(true);
+  });
+
+  it.each(['UPPERCASE', 'has spaces', '-starts-wrong', 'ends-wrong-', ''])(
+    'rejects invalid extension name "%s"',
+    (name) => {
+      expect(isKubernetesResourceName(name)).toBe(false);
+      expect(isMCPGatewayExtensionValid(baseFormState({ extensionName: name }))).toBe(false);
+    },
+  );
+
+  it('rejects a listener that is not present on the selected Gateway', () => {
+    const gateway = {
+      apiVersion: 'gateway.networking.k8s.io/v1',
+      kind: 'Gateway',
+      metadata: { name: 'my-gw', namespace: 'gw-ns' },
+      spec: {
+        gatewayClassName: 'istio',
+        listeners: [{ name: 'http', port: 80, protocol: 'HTTP' as const }],
+      },
+    };
+
+    expect(
+      getMCPGatewayExtensionValidationError(baseFormState({ sectionName: 'https' }), gateway),
+    ).toEqual({
+      field: 'sectionName',
+      messageKey: 'Listener "{{listener}}" was not found on Gateway "{{gateway}}".',
+      messageParams: { listener: 'https', gateway: 'my-gw' },
+    });
+  });
+
+  it('does not validate a stale Gateway against the current target', () => {
+    const staleGateway = {
+      apiVersion: 'gateway.networking.k8s.io/v1',
+      kind: 'Gateway',
+      metadata: { name: 'my-gw', namespace: 'gw-ns' },
+      spec: {
+        gatewayClassName: 'istio',
+        listeners: [{ name: 'http', port: 80, protocol: 'HTTP' as const }],
+      },
+    };
+
+    expect(
+      getMCPGatewayExtensionValidationError(
+        baseFormState({ targetGateway: 'other-gw', sectionName: 'https' }),
+        staleGateway,
+      ),
+    ).toBeNull();
+  });
+
+  it('rejects invalid listener names', () => {
+    expect(isGatewayListenerName('listener with spaces')).toBe(false);
+    expect(
+      getMCPGatewayExtensionValidationError(baseFormState({ sectionName: 'listener with spaces' })),
+    ).toEqual({
+      field: 'sectionName',
+      messageKey: 'The listener name must be a valid Kubernetes name.',
+    });
+  });
+
+  it('rejects an invalid target Gateway name', () => {
+    expect(
+      getMCPGatewayExtensionValidationError(baseFormState({ targetGateway: 'Invalid Gateway' })),
+    ).toEqual({
+      field: 'targetGateway',
+      messageKey: 'The target Gateway name must be a valid Kubernetes resource name.',
+    });
+  });
+
+  it('rejects an invalid extension namespace', () => {
+    expect(
+      getMCPGatewayExtensionValidationError(baseFormState({ extensionNamespace: 'not.valid' })),
+    ).toEqual({
+      field: 'extensionNamespace',
+      messageKey: 'The extension namespace must be a valid Kubernetes namespace.',
+    });
+  });
+});
+
+describe('HTTPRoute Gateway association', () => {
+  const target = { name: 'mcp-gateway', namespace: 'mcp', sectionName: 'http', port: 80 };
+
+  it('matches a parent reference in the route namespace without a section', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(
+        {
+          metadata: { namespace: 'mcp' },
+          spec: { parentRefs: [{ name: 'mcp-gateway' }] },
+        },
+        target,
+      ),
+    ).toBe(true);
+  });
+
+  it('matches an explicit Gateway namespace and listener', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(
+        {
+          spec: {
+            parentRefs: [
+              {
+                name: 'mcp-gateway',
+                namespace: 'mcp',
+                sectionName: 'http',
+              },
+            ],
+          },
+        },
+        target,
+        'routes',
+      ),
+    ).toBe(true);
+  });
+
+  it('matches an explicit Gateway listener port', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(
+        {
+          metadata: { namespace: 'mcp' },
+          spec: {
+            parentRefs: [{ name: 'mcp-gateway', sectionName: 'http', port: 80 }],
+          },
+        },
+        target,
+      ),
+    ).toBe(true);
+  });
+
+  it('does not match a different Gateway listener port', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(
+        {
+          spec: {
+            parentRefs: [{ name: 'mcp-gateway', sectionName: 'http', port: 443 }],
+          },
+        },
+        target,
+      ),
+    ).toBe(false);
+  });
+
+  it('does not match a different Gateway or listener', () => {
+    const route = {
+      metadata: { namespace: 'mcp' },
+      spec: { parentRefs: [{ name: 'other-gateway', sectionName: 'http' }] },
+    };
+    expect(isHTTPRouteAttachedToGateway(route, target)).toBe(false);
+    expect(
+      isHTTPRouteAttachedToGateway(
+        {
+          metadata: { namespace: 'mcp' },
+          spec: { parentRefs: [{ name: 'mcp-gateway', sectionName: 'https' }] },
+        },
+        target,
+      ),
+    ).toBe(false);
+  });
+});
+
 describe('mcpExtensionToFormState', () => {
   it('is the inverse of buildMCPGatewayExtension for a fully-populated resource', () => {
     const formState = baseFormState({
@@ -222,6 +399,7 @@ describe('mcpExtensionToFormState', () => {
       oauthEnabled: true,
       oauthAuthorizationServers: 'https://a.example.com, https://b.example.com',
       oauthResourceName: 'MCP Server',
+      httpRouteManagementEnabled: true,
     });
 
     const resource = buildMCPGatewayExtension(formState, 'default');
@@ -257,12 +435,43 @@ describe('mcpExtensionToFormState', () => {
     expect(formState.overrideHostnames).toBe(false);
     expect(formState.sessionStorageEnabled).toBe(false);
     expect(formState.oauthEnabled).toBe(false);
+    expect(formState.httpRouteManagementEnabled).toBe(true);
+  });
+
+  it('restores disabled HTTPRoute management from an existing resource', () => {
+    const resource: MCPGatewayExtension = {
+      apiVersion: 'mcp.kuadrant.io/v1',
+      kind: 'MCPGatewayExtension',
+      metadata: { name: 'n', namespace: 'ns' },
+      spec: {
+        targetRef: { name: 'gw', sectionName: 'https' },
+        httpRouteManagement: 'Disabled',
+      },
+    };
+
+    expect(mcpExtensionToFormState(resource, 'ns').httpRouteManagementEnabled).toBe(false);
   });
 });
 
 describe('isMCPGatewayExtensionValid', () => {
   it('returns true when name, gateway and listener are all set', () => {
     expect(isMCPGatewayExtensionValid(baseFormState())).toBe(true);
+  });
+
+  it('returns false when the selected Gateway does not contain the listener', () => {
+    const gateway = {
+      apiVersion: 'gateway.networking.k8s.io/v1',
+      kind: 'Gateway',
+      metadata: { name: 'my-gw', namespace: 'gw-ns' },
+      spec: {
+        gatewayClassName: 'istio',
+        listeners: [{ name: 'http', port: 80, protocol: 'HTTP' as const }],
+      },
+    };
+
+    expect(isMCPGatewayExtensionValid(baseFormState({ sectionName: 'https' }), gateway)).toBe(
+      false,
+    );
   });
 
   it.each([

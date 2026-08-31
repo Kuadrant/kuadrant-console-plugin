@@ -1142,4 +1142,4 @@ const KuadrantOverviewPage: React.FC = () => {
     );
 };
 
-export default React.memo(KuadrantOverviewPage);
+export default KuadrantOverviewPage;

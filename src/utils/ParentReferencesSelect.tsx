@@ -22,7 +22,7 @@ import {
   K8sResourceCommon,
 } from '@openshift-console/dynamic-plugin-sdk';
 
-export interface GatewayForSelect extends K8sResourceCommon {
+interface GatewayForSelect extends K8sResourceCommon {
   spec?: {
     listeners?: Array<{
       name: string;
@@ -62,39 +62,54 @@ interface ParentReference {
   port: number;
 }
 
+export interface RequiredParentReference {
+  id: string;
+  gatewayName: string;
+  gatewayNamespace: string;
+  sectionName: string;
+  port: number;
+}
+
 interface ParentReferencesSelectProps {
   parentRefs: ParentReference[];
   onChange: (parentRefs: ParentReference[]) => void;
   isDisabled?: boolean;
-  // Additional Gateways to include in the selector that aren't yet persisted in
-  // the cluster (e.g. a draft Gateway defined earlier in a wizard). Merged with
-  // the live watch results, deduped by namespace/name (real Gateways win).
-  extraGateways?: GatewayForSelect[];
-  // Enable reconciliation of parentRefs against the available Gateways (wizard
-  // context only). When a selected Gateway or listener changes upstream — e.g. a
-  // draft Gateway from an earlier wizard step is renamed, removed, or has its
-  // listeners edited — stale selections are cleared/refreshed. Kept off by default
-  // so the standalone Create/Edit HTTPRoute page is untouched. This is an explicit
-  // flag rather than `extraGateways.length` so reconciliation still runs when the
-  // wizard removes its last draft Gateway.
-  reconcileParentRefs?: boolean;
+  requiredParentRef?: RequiredParentReference;
 }
 
 const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
   parentRefs,
   onChange,
   isDisabled = false,
-  extraGateways,
-  reconcileParentRefs = false,
+  requiredParentRef,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
-  // Stabilize the optional prop reference. A default `[]` literal would be a new
-  // array on every render, so the availableGateways memo below would recompute every
-  // render, giving it a fresh reference that re-runs the reconcile effect each render.
-  const stableExtraGateways = React.useMemo(() => extraGateways ?? [], [extraGateways]);
+  const [availableGateways, setAvailableGateways] = React.useState<GatewayForSelect[]>([]);
   const [activeNamespace] = useActiveNamespace();
   const isAllNamespaces = !activeNamespace || activeNamespace === '#ALL_NS#';
   const selectedNamespace = isAllNamespaces ? undefined : activeNamespace;
+
+  const requiredGateway = React.useMemo<GatewayForSelect | undefined>(
+    () =>
+      requiredParentRef
+        ? ({
+            metadata: {
+              name: requiredParentRef.gatewayName,
+              namespace: requiredParentRef.gatewayNamespace,
+            },
+            spec: {
+              listeners: [
+                {
+                  name: requiredParentRef.sectionName,
+                  port: requiredParentRef.port,
+                  protocol: 'HTTP',
+                },
+              ],
+            },
+          } as GatewayForSelect)
+        : undefined,
+    [requiredParentRef],
+  );
 
   // Load all available Gateways
   const gatewayResource = {
@@ -109,64 +124,11 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
   const [gatewayData, gatewayLoaded, gatewayError] =
     useK8sWatchResource<GatewayForSelect[]>(gatewayResource);
 
-  // Merge live watch results with any draft Gateways, deduped by namespace/name (a
-  // real Gateway from the watch wins). Computed in render (not via state + effect) so
-  // it always reflects the current watch synchronously. Otherwise, on the
-  // loading→loaded transition, the reconcile effect below could run before a
-  // setAvailableGateways update committed and see an empty list, wrongly clearing a
-  // persisted parentRef that points at an existing Gateway.
-  const availableGateways = React.useMemo<GatewayForSelect[]>(() => {
-    const watched = gatewayLoaded && !gatewayError && Array.isArray(gatewayData) ? gatewayData : [];
-    const keyOf = (gw: GatewayForSelect) => `${gw.metadata?.namespace}/${gw.metadata?.name}`;
-    const watchedKeys = new Set(watched.map(keyOf));
-    const drafts = stableExtraGateways.filter((gw) => !watchedKeys.has(keyOf(gw)));
-    return [...watched, ...drafts];
-  }, [gatewayData, gatewayLoaded, gatewayError, stableExtraGateways]);
-
-  // Reconcile parentRefs against the available Gateways in wizard context. When a
-  // draft Gateway from an earlier wizard step changes, stale selections are cleaned
-  // up so the form can't emit an HTTPRoute pointing at a Gateway/listener that no
-  // longer exists:
-  //   - Gateway removed/renamed  → clear the whole selection.
-  //   - listener removed         → clear sectionName and port.
-  //   - listener port changed    → refresh port.
-  // Gated on the explicit reconcileParentRefs flag so the standalone Create/Edit
-  // HTTPRoute page is untouched, and so reconciliation still runs even when the
-  // wizard has removed its last draft Gateway (draft list empty).
-  // Skipped while gatewayError is present: on a transient API/watch failure the
-  // merged list collapses to just the draft Gateways (or empty), and reconciling
-  // against it would wrongly clear the user's existing selection. Preserve it until
-  // the watch recovers.
   React.useEffect(() => {
-    if (!reconcileParentRefs || !gatewayLoaded || gatewayError) return;
-    let changed = false;
-    const reconciled = parentRefs.map((ref) => {
-      if (!ref.gatewayName) return ref;
-      const gateway = availableGateways.find(
-        (gw) =>
-          gw.metadata?.name === ref.gatewayName && gw.metadata?.namespace === ref.gatewayNamespace,
-      );
-      // Gateway no longer available (removed or renamed) → clear the selection.
-      if (!gateway) {
-        changed = true;
-        return { ...ref, gatewayName: '', gatewayNamespace: '', sectionName: '', port: 0 };
-      }
-      // Reconcile the selected listener against the current Gateway spec.
-      if (ref.sectionName) {
-        const listener = gateway.spec?.listeners?.find((l) => l.name === ref.sectionName);
-        if (!listener) {
-          changed = true;
-          return { ...ref, sectionName: '', port: 0 };
-        }
-        if (listener.port !== ref.port) {
-          changed = true;
-          return { ...ref, port: listener.port };
-        }
-      }
-      return ref;
-    });
-    if (changed) onChange(reconciled);
-  }, [availableGateways, gatewayLoaded, gatewayError, reconcileParentRefs, parentRefs, onChange]);
+    if (gatewayLoaded && !gatewayError && Array.isArray(gatewayData)) {
+      setAvailableGateways(gatewayData);
+    }
+  }, [gatewayData, gatewayLoaded, gatewayError]);
 
   // Gateway validation function
   const validateGateway = (gateway: GatewayForSelect): string | null => {
@@ -235,7 +197,17 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 
   // Sort Gateways: available first, then unavailable
   const getSortedGateways = () => {
-    return [...availableGateways].sort((a, b) => {
+    const gateways =
+      requiredGateway &&
+      !availableGateways.some(
+        (gateway) =>
+          gateway.metadata.name === requiredGateway.metadata.name &&
+          gateway.metadata.namespace === requiredGateway.metadata.namespace,
+      )
+        ? [...availableGateways, requiredGateway]
+        : availableGateways;
+
+    return [...gateways].sort((a, b) => {
       const restrictionA = validateGateway(a);
       const restrictionB = validateGateway(b);
 
@@ -250,7 +222,7 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 
   // Sort Listeners
   const getSortedSections = (gatewayName: string, gatewayNamespace: string) => {
-    const gateway = availableGateways.find(
+    const gateway = [...availableGateways, ...(requiredGateway ? [requiredGateway] : [])].find(
       (gw) => gw.metadata.name === gatewayName && gw.metadata.namespace === gatewayNamespace,
     );
 
@@ -283,34 +255,6 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
     onChange(updatedRefs);
   };
 
-  // Select a Gateway by its composite `namespace/name` key. Gateway names are not
-  // unique across namespaces (a draft Gateway from an earlier wizard step can share a
-  // name with a live Gateway elsewhere), so the option value carries both fields and
-  // both are resolved together — resolving by name alone could write the wrong
-  // namespace into the parentRef.
-  const updateParentGateway = (id: string, gatewayKey: string) => {
-    const selectedGateway = gatewayKey
-      ? availableGateways.find(
-          (gw) => `${gw.metadata?.namespace}/${gw.metadata?.name}` === gatewayKey,
-        )
-      : undefined;
-    const updatedRefs = parentRefs.map((ref) => {
-      if (ref.id !== id) return ref;
-      // Empty selection or an unresolved key → clear the whole selection.
-      if (!selectedGateway) {
-        return { ...ref, gatewayName: '', gatewayNamespace: '', sectionName: '', port: 0 };
-      }
-      return {
-        ...ref,
-        gatewayName: selectedGateway.metadata.name,
-        gatewayNamespace: selectedGateway.metadata.namespace,
-        sectionName: '',
-        port: 80,
-      };
-    });
-    onChange(updatedRefs);
-  };
-
   // Update parent reference
   const updateParentReference = (
     id: string,
@@ -321,9 +265,25 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
       if (ref.id === id) {
         const updatedRef = { ...ref, [field]: value };
 
+        // If Gateway is changed, automatically update namespace and reset section
+        if (field === 'gatewayName') {
+          const selectedGateway = [
+            ...availableGateways,
+            ...(requiredGateway ? [requiredGateway] : []),
+          ].find((gw) => gw.metadata.name === value);
+          if (selectedGateway) {
+            updatedRef.gatewayNamespace = selectedGateway.metadata.namespace;
+            updatedRef.sectionName = '';
+            updatedRef.port = 80;
+          }
+        }
+
         // If Section is changed, update port
         if (field === 'sectionName') {
-          const selectedGateway = availableGateways.find(
+          const selectedGateway = [
+            ...availableGateways,
+            ...(requiredGateway ? [requiredGateway] : []),
+          ].find(
             (gw) =>
               gw.metadata.name === ref.gatewayName &&
               gw.metadata.namespace === ref.gatewayNamespace,
@@ -385,7 +345,8 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
                 }}
                 titleDescription={description}
                 actions={
-                  !isDisabled && (
+                  !isDisabled &&
+                  parentRef.id !== requiredParentRef?.id && (
                     <Button
                       variant="plain"
                       onClick={() => removeParentReference(parentRef.id)}
@@ -415,24 +376,21 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
                 <FormGroup label={t('Gateway name')} isRequired fieldId={`parent-gateway-${index}`}>
                   <FormSelect
                     id={`parent-gateway-${index}`}
-                    value={
-                      parentRef.gatewayName
-                        ? `${parentRef.gatewayNamespace}/${parentRef.gatewayName}`
-                        : ''
+                    value={parentRef.gatewayName}
+                    onChange={(_, value) =>
+                      updateParentReference(parentRef.id, 'gatewayName', value)
                     }
-                    onChange={(_, value) => updateParentGateway(parentRef.id, value)}
                     aria-label={t('Select Gateway')}
-                    isDisabled={isDisabled}
+                    isDisabled={isDisabled || parentRef.id === requiredParentRef?.id}
                   >
                     <FormSelectOption key="empty" value="" label={t('Select Gateway')} />
                     {getSortedGateways().map((gateway) => {
                       const restriction = validateGateway(gateway);
-                      const gatewayKey = `${gateway.metadata.namespace}/${gateway.metadata.name}`;
 
                       return (
                         <FormSelectOption
-                          key={gatewayKey}
-                          value={gatewayKey}
+                          key={`${gateway.metadata.name}-${gateway.metadata.namespace}`}
+                          value={gateway.metadata.name}
                           label={
                             restriction
                               ? `${gateway.metadata.name} (${gateway.metadata.namespace}) — ${restriction}`
@@ -466,12 +424,17 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
                       updateParentReference(parentRef.id, 'sectionName', value)
                     }
                     aria-label={t('Select Section')}
-                    isDisabled={isDisabled || !parentRef.gatewayName}
+                    isDisabled={
+                      isDisabled || !parentRef.gatewayName || parentRef.id === requiredParentRef?.id
+                    }
                   >
                     <FormSelectOption key="empty" value="" label={t('Select Section')} />
                     {getSortedSections(parentRef.gatewayName, parentRef.gatewayNamespace).map(
                       (listener) => {
-                        const gateway = availableGateways.find(
+                        const gateway = [
+                          ...availableGateways,
+                          ...(requiredGateway ? [requiredGateway] : []),
+                        ].find(
                           (gw) =>
                             gw.metadata.name === parentRef.gatewayName &&
                             gw.metadata.namespace === parentRef.gatewayNamespace,

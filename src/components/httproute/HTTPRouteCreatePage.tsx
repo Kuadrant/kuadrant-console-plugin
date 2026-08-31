@@ -31,7 +31,9 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useLocation, useNavigate } from 'react-router';
 import * as yaml from 'js-yaml';
-import ParentReferencesSelect, { GatewayForSelect } from '../../utils/ParentReferencesSelect';
+import ParentReferencesSelect, {
+  RequiredParentReference,
+} from '../../utils/ParentReferencesSelect';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 import { HTTPRouteResource, HTTPRouteMatch } from './types';
 import {
@@ -63,25 +65,15 @@ interface ParentReference {
 interface HTTPRouteCreatePageProps {
   onFormChange?: (resource: HTTPRouteResource, isValid: boolean) => void;
   isEmbedded?: boolean;
-  // Additional, not-yet-persisted Gateways to offer as parentRef options (e.g. a
-  // draft Gateway from an enclosing wizard). Not passed by the standalone page.
-  extraGateways?: GatewayForSelect[];
-  // Hydrate the form from a previously built resource on mount. Used when this page
-  // is embedded in a wizard step that unmounts on navigation, so returning to the
-  // step restores the user's input instead of showing a blank form.
-  initialResource?: HTTPRouteResource;
-  // Reconcile parentRefs against draft Gateways from an enclosing wizard (clear/
-  // refresh stale selections when the draft Gateway changes upstream). Off by
-  // default so the standalone page is untouched.
-  reconcileParentRefs?: boolean;
+  // The MCP wizard uses this to keep manually-created routes attached to the
+  // Gateway/listener selected in the preceding steps.
+  requiredParentRef?: RequiredParentReference;
 }
 
 const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
   onFormChange,
   isEmbedded,
-  extraGateways,
-  initialResource,
-  reconcileParentRefs,
+  requiredParentRef,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
@@ -94,7 +86,9 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
   // YAML editor state
   const [yamlContent, setYamlContent] = React.useState<unknown>(null);
   const [yamlError, setYamlError] = React.useState<string | null>(null);
-  const [parentRefs, setParentRefs] = React.useState<ParentReference[]>([]);
+  const [parentRefs, setParentRefs] = React.useState<ParentReference[]>(() =>
+    requiredParentRef ? [{ ...requiredParentRef }] : [],
+  );
 
   // Metadata for determining edit/create mode
   const [originalMetadata, setOriginalMetadata] = React.useState<
@@ -132,6 +126,46 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
   const nameEdit = resourceIndex >= 0 ? segments[resourceIndex + 1] : undefined;
   const selectedNamespace =
     !selectedNamespaceRaw || selectedNamespaceRaw === '#ALL_NS#' ? 'default' : selectedNamespaceRaw;
+
+  const requiredParentReference = requiredParentRef;
+
+  const isRequiredParentReference = React.useCallback(
+    (parentRef: ParentReference) =>
+      !!requiredParentReference &&
+      parentRef.gatewayName === requiredParentReference.gatewayName &&
+      parentRef.gatewayNamespace === requiredParentReference.gatewayNamespace &&
+      (!parentRef.sectionName || parentRef.sectionName === requiredParentReference.sectionName),
+    [requiredParentReference],
+  );
+
+  React.useEffect(() => {
+    if (!requiredParentReference) return;
+
+    setParentRefs((currentParentRefs) => {
+      const currentRequired = currentParentRefs.find(
+        (parentRef) => parentRef.id === requiredParentReference.id,
+      );
+      const requiredIsUnchanged =
+        currentRequired &&
+        currentRequired.gatewayName === requiredParentReference.gatewayName &&
+        currentRequired.gatewayNamespace === requiredParentReference.gatewayNamespace &&
+        currentRequired.sectionName === requiredParentReference.sectionName &&
+        currentRequired.port === requiredParentReference.port;
+
+      if (requiredIsUnchanged && currentParentRefs[0]?.id === requiredParentReference.id) {
+        return currentParentRefs;
+      }
+
+      return [
+        requiredParentReference,
+        ...currentParentRefs.filter(
+          (parentRef) =>
+            parentRef.id !== requiredParentReference.id && !isRequiredParentReference(parentRef),
+        ),
+      ];
+    });
+  }, [requiredParentReference, isRequiredParentReference]);
+
   // Function to add a new hostname field
   const addHostnameField = () => {
     setHostnames([...hostnames, '']);
@@ -154,7 +188,16 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
   const httpRouteObject = React.useMemo(() => {
     // Filter out empty hostnames
     const validHostnames = hostnames.filter((h) => h.trim().length > 0);
-    const validParentRefs = parentRefs.filter((ref) => ref.gatewayName);
+    const effectiveParentRefs = requiredParentReference
+      ? [
+          requiredParentReference,
+          ...parentRefs.filter(
+            (parentRef) =>
+              parentRef.id !== requiredParentReference.id && !isRequiredParentReference(parentRef),
+          ),
+        ]
+      : parentRefs;
+    const validParentRefs = effectiveParentRefs.filter((ref) => ref.gatewayName);
 
     const httpRoute = {
       apiVersion: 'gateway.networking.k8s.io/v1',
@@ -198,7 +241,16 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
     };
 
     return httpRoute;
-  }, [routeName, hostnames, parentRefs, rules, selectedNamespace, originalMetadata]);
+  }, [
+    routeName,
+    hostnames,
+    parentRefs,
+    rules,
+    selectedNamespace,
+    originalMetadata,
+    requiredParentReference,
+    isRequiredParentReference,
+  ]);
 
   const populateFormFromHTTPRoute = (httpRoute: unknown) => {
     try {
@@ -220,8 +272,14 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
             port: ref.port || 0,
           }),
         );
-        if (JSON.stringify(formattedParentRefs) !== JSON.stringify(parentRefs))
-          setParentRefs(formattedParentRefs);
+        const nextParentRefs = requiredParentReference
+          ? [
+              requiredParentReference,
+              ...formattedParentRefs.filter((parentRef) => !isRequiredParentReference(parentRef)),
+            ]
+          : formattedParentRefs;
+        if (JSON.stringify(nextParentRefs) !== JSON.stringify(parentRefs))
+          setParentRefs(nextParentRefs);
       }
 
       if (hr.spec?.rules && hr.spec.rules.length > 0) {
@@ -352,7 +410,16 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
   };
 
   const formValidation = () => {
-    const hasValidParentRef = parentRefs.some((ref) => ref.gatewayName);
+    const effectiveParentRefs = requiredParentReference
+      ? [
+          requiredParentReference,
+          ...parentRefs.filter(
+            (parentRef) =>
+              parentRef.id !== requiredParentReference.id && !isRequiredParentReference(parentRef),
+          ),
+        ]
+      : parentRefs;
+    const hasValidParentRef = effectiveParentRefs.some((ref) => ref.gatewayName);
 
     // Gateway API requires spec.rules to have at least one item (minItems=1),
     // so an HTTPRoute with zero rules is rejected by the API server.
@@ -369,32 +436,13 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
     return !!(validateRouteName(routeName) === null && hasValidParentRef && hasValidRules);
   };
 
-  // Hydrate the form once from a previously built resource when embedded in a wizard
-  // step that unmounts on navigation. Only in create mode — edit mode hydrates from
-  // the live cluster watch above.
-  const hasHydratedFromInitial = React.useRef(false);
-  React.useEffect(() => {
-    if (initialResource && !hasHydratedFromInitial.current && (!nameEdit || nameEdit === '~new')) {
-      populateFormFromHTTPRoute(initialResource);
-      hasHydratedFromInitial.current = true;
-    }
-  }, [initialResource]);
-
   const onFormChangeRef = React.useRef(onFormChange);
 
   React.useEffect(() => {
     onFormChangeRef.current = onFormChange;
   }, [onFormChange]);
 
-  // Skip the first emit when hydrating from initialResource: the built object lags one
-  // render behind the setState calls in populateFormFromHTTPRoute, so emitting it would
-  // clobber the parent's stored draft with a blank/stale resource.
-  const skipInitialEmit = React.useRef(!!initialResource);
   React.useEffect(() => {
-    if (skipInitialEmit.current) {
-      skipInitialEmit.current = false;
-      return;
-    }
     if (onFormChangeRef.current) {
       onFormChangeRef.current(httpRouteObject as HTTPRouteResource, formValidation());
     }
@@ -506,8 +554,7 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
                 <ParentReferencesSelect
                   parentRefs={parentRefs}
                   onChange={setParentRefs}
-                  extraGateways={extraGateways}
-                  reconcileParentRefs={reconcileParentRefs}
+                  requiredParentRef={requiredParentReference}
                 />
 
                 <FormGroup
