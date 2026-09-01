@@ -76,9 +76,14 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
   parentRefs,
   onChange,
   isDisabled = false,
-  extraGateways = [],
+  extraGateways,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
+  // Stabilize the optional prop reference. A default `[]` literal would be a new
+  // array on every render, so effects that depend on it would re-run each render
+  // and, via setAvailableGateways, spin an infinite update loop in the standalone
+  // form (where no extraGateways are passed).
+  const stableExtraGateways = React.useMemo(() => extraGateways ?? [], [extraGateways]);
   const [availableGateways, setAvailableGateways] = React.useState<GatewayForSelect[]>([]);
   const [activeNamespace] = useActiveNamespace();
   const isAllNamespaces = !activeNamespace || activeNamespace === '#ALL_NS#';
@@ -103,9 +108,9 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
     // the watch takes precedence over a draft with the same key.
     const keyOf = (gw: GatewayForSelect) => `${gw.metadata?.namespace}/${gw.metadata?.name}`;
     const watchedKeys = new Set(watched.map(keyOf));
-    const drafts = extraGateways.filter((gw) => !watchedKeys.has(keyOf(gw)));
+    const drafts = stableExtraGateways.filter((gw) => !watchedKeys.has(keyOf(gw)));
     setAvailableGateways([...watched, ...drafts]);
-  }, [gatewayData, gatewayLoaded, gatewayError, extraGateways]);
+  }, [gatewayData, gatewayLoaded, gatewayError, stableExtraGateways]);
 
   // Reconcile parentRefs against the available Gateways when draft Gateways are in
   // play (wizard context only). If a selected Gateway disappears — e.g. a draft
@@ -113,7 +118,7 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
   // form can't emit an HTTPRoute pointing at a Gateway that no longer exists.
   // Gated on extraGateways so the standalone Create/Edit HTTPRoute page is untouched.
   React.useEffect(() => {
-    if (extraGateways.length === 0 || !gatewayLoaded) return;
+    if (stableExtraGateways.length === 0 || !gatewayLoaded) return;
     const validNames = new Set(availableGateways.map((gw) => gw.metadata?.name));
     let changed = false;
     const reconciled = parentRefs.map((ref) => {
@@ -124,7 +129,7 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
       return ref;
     });
     if (changed) onChange(reconciled);
-  }, [availableGateways, gatewayLoaded, extraGateways.length, parentRefs, onChange]);
+  }, [availableGateways, gatewayLoaded, stableExtraGateways.length, parentRefs, onChange]);
 
   // Gateway validation function
   const validateGateway = (gateway: GatewayForSelect): string | null => {
