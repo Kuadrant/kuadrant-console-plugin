@@ -172,14 +172,6 @@
   {
     "type": "console.page/route",
     "properties": {
-      "exact": true,
-      "path": ["/kuadrant/mcp/overview/ns/:ns", "/kuadrant/mcp/overview/all-namespaces"],
-      "component": { "$codeRef": "MCPOverviewPage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
       "exact": false,
       "path": ["/kuadrant/policies/ns/:ns", "/kuadrant/policies/all-namespaces"],
       "component": { "$codeRef": "KuadrantPoliciesPage" }

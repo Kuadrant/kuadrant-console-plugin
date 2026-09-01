@@ -54,6 +54,16 @@ describe('buildMCPGatewayExtension', () => {
       namespace: 'gw-ns',
       sectionName: 'https',
     });
+    expect(resource.spec.httpRouteManagement).toBe('Enabled');
+  });
+
+  it('sets HTTPRoute management to Disabled when the form switch is off', () => {
+    const resource = buildMCPGatewayExtension(
+      baseFormState({ httpRouteManagementEnabled: false }),
+      'default',
+    );
+
+    expect(resource.spec.httpRouteManagement).toBe('Disabled');
   });
 
   it('falls back to the provided namespace when extensionNamespace is empty', () => {
@@ -264,6 +274,7 @@ describe('mcpExtensionToFormState', () => {
       oauthEnabled: true,
       oauthAuthorizationServers: 'https://a.example.com, https://b.example.com',
       oauthResourceName: 'MCP Server',
+      httpRouteManagementEnabled: true,
     });
 
     const resource = buildMCPGatewayExtension(formState, 'default');
@@ -299,6 +310,21 @@ describe('mcpExtensionToFormState', () => {
     expect(formState.overrideHostnames).toBe(false);
     expect(formState.sessionStorageEnabled).toBe(false);
     expect(formState.oauthEnabled).toBe(false);
+    expect(formState.httpRouteManagementEnabled).toBe(true);
+  });
+
+  it('restores disabled HTTPRoute management from an existing resource', () => {
+    const resource: MCPGatewayExtension = {
+      apiVersion: 'mcp.kuadrant.io/v1',
+      kind: 'MCPGatewayExtension',
+      metadata: { name: 'n', namespace: 'ns' },
+      spec: {
+        targetRef: { name: 'gw', sectionName: 'https' },
+        httpRouteManagement: 'Disabled',
+      },
+    };
+
+    expect(mcpExtensionToFormState(resource, 'ns').httpRouteManagementEnabled).toBe(false);
   });
 });
 

@@ -380,25 +380,6 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
       </FormGroup>
 
       <ExpandableSection toggleText={t('Advanced broker settings')}>
-        <FormGroup fieldId="http-route-management">
-          <Switch
-            id="http-route-management"
-            label={t('HTTPRoute Management')}
-            isChecked={!formState.httpRouteManagementEnabled}
-            onChange={(_event, checked) =>
-              updateFormState({ httpRouteManagementEnabled: !checked })
-            }
-            data-test="mcp-http-route-management"
-          />
-          <FormHelperText>
-            <HelperText>
-              <HelperTextItem>
-                {t('Disables the controller automatically creating the gateway HTTPRoute.')}
-              </HelperTextItem>
-            </HelperText>
-          </FormHelperText>
-        </FormGroup>
-
         <FormGroup fieldId="override-hostnames">
           <Switch
             id="override-hostnames"
@@ -471,6 +452,30 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
             />
           </FormGroup>
         )}
+
+        <FormGroup fieldId="http-route-management">
+          <Switch
+            id="http-route-management"
+            label={t('Disable automatic HTTPRoute management')}
+            isChecked={!formState.httpRouteManagementEnabled}
+            onChange={(_event, checked) => {
+              updateFormState({
+                httpRouteManagementEnabled: !checked,
+                ...(checked ? { routeMode: 'new' } : {}),
+              });
+            }}
+            data-test="mcp-http-route-management"
+          />
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem>
+                {t(
+                  'When enabled, you will create or select the HTTPRoute in the next wizard step.',
+                )}
+              </HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        </FormGroup>
 
         <FormGroup fieldId="oauth-metadata">
           <Switch

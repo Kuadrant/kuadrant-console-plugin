@@ -7,15 +7,13 @@ describe('MCPWizardFormState', () => {
       expect(initialFormState.gatewayMode).toBe('existing');
     });
 
-    it('has routeMode set to existing by default', () => {
-      expect(initialFormState.routeMode).toBe('existing');
+    it('has automatic HTTPRoute management enabled by default', () => {
+      expect(initialFormState.httpRouteManagementEnabled).toBe(true);
     });
 
     it('has empty string values for all name fields', () => {
       expect(initialFormState.selectedGatewayName).toBe('');
       expect(initialFormState.newGatewayName).toBe('');
-      expect(initialFormState.selectedRouteName).toBe('');
-      expect(initialFormState.newRouteName).toBe('');
       expect(initialFormState.extensionName).toBe('');
       expect(initialFormState.sectionName).toBe('');
       expect(initialFormState.targetGateway).toBe('');
@@ -65,31 +63,7 @@ describe('MCPWizardFormState validation logic', () => {
     expect(isValid).toBe(true);
   });
 
-  it('step 2 is valid when existing route is selected', () => {
-    const state: MCPWizardFormState = {
-      ...initialFormState,
-      routeMode: 'existing',
-      selectedRouteName: 'my-route',
-    };
-    const isValid =
-      (state.routeMode === 'existing' && state.selectedRouteName !== '') ||
-      (state.routeMode === 'new' && state.newRouteName.trim() !== '');
-    expect(isValid).toBe(true);
-  });
-
-  it('step 2 is invalid when no route selected', () => {
-    const state: MCPWizardFormState = {
-      ...initialFormState,
-      routeMode: 'existing',
-      selectedRouteName: '',
-    };
-    const isValid =
-      (state.routeMode === 'existing' && state.selectedRouteName !== '') ||
-      (state.routeMode === 'new' && state.newRouteName.trim() !== '');
-    expect(isValid).toBe(false);
-  });
-
-  it('step 3 is valid when all required fields are filled', () => {
+  it('step 2 is valid when all required fields are filled', () => {
     const state: MCPWizardFormState = {
       ...initialFormState,
       extensionName: 'my-ext',
@@ -103,7 +77,7 @@ describe('MCPWizardFormState validation logic', () => {
     expect(isValid).toBe(true);
   });
 
-  it('step 3 is invalid when extension name is missing', () => {
+  it('step 2 is invalid when extension name is missing', () => {
     const state: MCPWizardFormState = {
       ...initialFormState,
       extensionName: '',
