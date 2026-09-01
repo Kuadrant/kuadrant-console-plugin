@@ -107,6 +107,25 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
     setAvailableGateways([...watched, ...drafts]);
   }, [gatewayData, gatewayLoaded, gatewayError, extraGateways]);
 
+  // Reconcile parentRefs against the available Gateways when draft Gateways are in
+  // play (wizard context only). If a selected Gateway disappears — e.g. a draft
+  // Gateway is renamed in an earlier wizard step — clear the stale selection so the
+  // form can't emit an HTTPRoute pointing at a Gateway that no longer exists.
+  // Gated on extraGateways so the standalone Create/Edit HTTPRoute page is untouched.
+  React.useEffect(() => {
+    if (extraGateways.length === 0 || !gatewayLoaded) return;
+    const validNames = new Set(availableGateways.map((gw) => gw.metadata?.name));
+    let changed = false;
+    const reconciled = parentRefs.map((ref) => {
+      if (ref.gatewayName && !validNames.has(ref.gatewayName)) {
+        changed = true;
+        return { ...ref, gatewayName: '', gatewayNamespace: '', sectionName: '', port: 0 };
+      }
+      return ref;
+    });
+    if (changed) onChange(reconciled);
+  }, [availableGateways, gatewayLoaded, extraGateways.length, parentRefs, onChange]);
+
   // Gateway validation function
   const validateGateway = (gateway: GatewayForSelect): string | null => {
     if (gateway.metadata?.deletionTimestamp) {

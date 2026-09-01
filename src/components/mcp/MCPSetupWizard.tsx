@@ -97,17 +97,12 @@ const MCPSetupWizard: React.FC = () => {
   }, [gateways, formState.gatewayMode, formState.selectedGatewayName]);
 
   // Expose the Step 1 draft Gateway to Step 2's parentRef selector before it is
-  // persisted (created only at the Verify step). Force the frozen wizard namespace
-  // so it passes the selector's allowed-namespace validation. See issue #795.
+  // persisted (created only at the Verify step). newGatewayResource is already
+  // pinned to the frozen wizard namespace at storage time. See issue #795.
   const draftGateways = React.useMemo<GatewayForSelect[]>(() => {
     if (formState.gatewayMode !== 'new' || !newGatewayResource) return [];
-    return [
-      {
-        ...newGatewayResource,
-        metadata: { ...newGatewayResource.metadata, namespace: selectedNamespace },
-      } as GatewayForSelect,
-    ];
-  }, [formState.gatewayMode, newGatewayResource, selectedNamespace]);
+    return [newGatewayResource as GatewayForSelect];
+  }, [formState.gatewayMode, newGatewayResource]);
 
   const extensionNamespace = formState.extensionNamespace || selectedNamespace;
   const gatewayNamespace = formState.selectedGatewayNamespace || selectedNamespace;
@@ -381,7 +376,13 @@ const MCPSetupWizard: React.FC = () => {
                   <div className="kuadrant-mcp-embedded-form">
                     <GatewayCreatePage
                       onFormChange={(resource, isValid) => {
-                        setNewGatewayResource(resource);
+                        // Pin the namespace to the frozen wizard namespace so the
+                        // Gateway created at Verify and the draft shown in Step 2
+                        // never diverge if the active namespace changes mid-wizard.
+                        setNewGatewayResource({
+                          ...resource,
+                          metadata: { ...resource.metadata, namespace: selectedNamespace },
+                        });
                         setNewGatewayValid(isValid);
                         updateFormState({
                           newGatewayName: resource.metadata?.name || '',
