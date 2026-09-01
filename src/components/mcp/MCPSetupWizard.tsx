@@ -375,6 +375,7 @@ const MCPSetupWizard: React.FC = () => {
                 <CardBody>
                   <div className="kuadrant-mcp-embedded-form">
                     <GatewayCreatePage
+                      initialResource={newGatewayResource ?? undefined}
                       onFormChange={(resource, isValid) => {
                         // Pin the namespace to the frozen wizard namespace so the
                         // Gateway created at Verify and the draft shown in Step 2
@@ -500,6 +501,7 @@ const MCPSetupWizard: React.FC = () => {
                   <div className="kuadrant-mcp-embedded-form">
                     <HTTPRouteCreatePage
                       extraGateways={draftGateways}
+                      initialResource={newRouteResource ?? undefined}
                       onFormChange={(resource, isValid) => {
                         setNewRouteResource(resource);
                         setNewRouteValid(isValid);
@@ -533,15 +535,11 @@ const MCPSetupWizard: React.FC = () => {
           </WizardStep>
 
           {/* Step 4: Verify configuration */}
-          <WizardStep
-            name={t('4. Verify configuration')}
-            id="step-verify"
-            footer={{
-              nextButtonText: t('Done'),
-              onNext: () => navigate(`/kuadrant/mcp/overview/ns/${selectedNamespace}`),
-              isBackHidden: true,
-            }}
-          >
+          {/* No footer buttons: Done/Cancel both just navigated to the overview, which
+              is redundant with the in-card "View in overview" button below. Resources
+              persist as they are created, so the user can leave via that button or by
+              navigating away at any time. */}
+          <WizardStep name={t('4. Verify configuration')} id="step-verify" footer={<div />}>
             <MCPVerifyStep
               items={verifyItems}
               watchResource={verifyWatchResource}
