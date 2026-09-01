@@ -48,7 +48,7 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/kuadrant/overview/ns/:ns",
+      "path": ["/kuadrant/overview/ns/:ns", "/kuadrant/overview/all-namespaces"],
       "component": { "$codeRef": "KuadrantOverviewPage" }
     }
   },
@@ -173,23 +173,7 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/kuadrant/overview/all-namespaces",
-      "component": { "$codeRef": "KuadrantOverviewPage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "exact": true,
-      "path": "/kuadrant/mcp/overview/ns/:ns",
-      "component": { "$codeRef": "MCPOverviewPage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "exact": true,
-      "path": "/kuadrant/mcp/overview/all-namespaces",
+      "path": ["/kuadrant/mcp/overview/ns/:ns", "/kuadrant/mcp/overview/all-namespaces"],
       "component": { "$codeRef": "MCPOverviewPage" }
     }
   },
@@ -197,29 +181,14 @@
     "type": "console.page/route",
     "properties": {
       "exact": false,
-      "path": "/kuadrant/policies/ns/:ns",
+      "path": ["/kuadrant/policies/ns/:ns", "/kuadrant/policies/all-namespaces"],
       "component": { "$codeRef": "KuadrantPoliciesPage" }
     }
   },
   {
     "type": "console.page/route",
     "properties": {
-      "exact": false,
-      "path": "/kuadrant/policies/all-namespaces",
-      "component": { "$codeRef": "KuadrantPoliciesPage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "path": "/kuadrant/policy-topology/ns/:ns",
-      "component": { "$codeRef": "PolicyTopologyPage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "path": "/kuadrant/policy-topology/all-namespaces",
+      "path": ["/kuadrant/policy-topology/ns/:ns", "/kuadrant/policy-topology/all-namespaces"],
       "component": { "$codeRef": "PolicyTopologyPage" }
     }
   },
@@ -242,14 +211,7 @@
   {
     "type": "console.page/route",
     "properties": {
-      "path": "/kuadrant/apiproducts/ns/:ns",
-      "component": { "$codeRef": "APIProductsListPage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "path": "/kuadrant/apiproducts/all-namespaces",
+      "path": ["/kuadrant/apiproducts/ns/:ns", "/kuadrant/apiproducts/all-namespaces"],
       "component": { "$codeRef": "APIProductsListPage" }
     }
   },
@@ -257,15 +219,7 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/kuadrant/apikey-approvals/ns/:ns",
-      "component": { "$codeRef": "APIKeyApprovalPage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "exact": true,
-      "path": "/kuadrant/apikey-approvals/all-namespaces",
+      "path": ["/kuadrant/apikey-approvals/ns/:ns", "/kuadrant/apikey-approvals/all-namespaces"],
       "component": { "$codeRef": "APIKeyApprovalPage" }
     }
   },
@@ -281,15 +235,7 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
-      "path": "/kuadrant/apikeys/ns/:ns",
-      "component": { "$codeRef": "MyAPIKeysPage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "exact": true,
-      "path": "/kuadrant/apikeys/all-namespaces",
+      "path": ["/kuadrant/apikeys/ns/:ns", "/kuadrant/apikeys/all-namespaces"],
       "component": { "$codeRef": "MyAPIKeysPage" }
     }
   },
@@ -733,22 +679,6 @@
       "namespaced": true,
       "perspective": "dev",
       "section": "kuadrant-mcp-section-dev"
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "exact": true,
-      "path": "/kuadrant/mcp/overview/ns/:ns",
-      "component": { "$codeRef": "MCPOverviewPage" }
-    }
-  },
-  {
-    "type": "console.page/route",
-    "properties": {
-      "exact": true,
-      "path": "/kuadrant/mcp/overview/all-namespaces",
-      "component": { "$codeRef": "MCPOverviewPage" }
     }
   },
   {
