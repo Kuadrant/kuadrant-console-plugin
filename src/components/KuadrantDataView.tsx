@@ -128,10 +128,10 @@ const decorateRowCells = (row: DataViewTr, rowKey: string, labels: (string | und
   return isDataViewTrObject(row) ? { ...row, row: decorated } : decorated;
 };
 
-const getInitialSortBy = <T,>(columns: KuadrantDataViewColumn<T>[]): ISortBy => {
+const getInitialSortBy = <T,>(columns: KuadrantDataViewColumn<T>[], ouiaId: string): ISortBy => {
   const params =
     typeof window === 'undefined' ? undefined : new URLSearchParams(window.location.search);
-  const sortByParam = params?.get('sortBy');
+  const sortByParam = params?.get(`${ouiaId}.sortBy`);
   const restoredIndex = sortByParam
     ? columns.findIndex(
         (column) =>
@@ -148,7 +148,7 @@ const getInitialSortBy = <T,>(columns: KuadrantDataViewColumn<T>[]): ISortBy => 
     ? {
         index,
         direction:
-          restoredIndex >= 0 && params?.get('orderBy') === SortByDirection.desc
+          restoredIndex >= 0 && params?.get(`${ouiaId}.orderBy`) === SortByDirection.desc
             ? SortByDirection.desc
             : SortByDirection.asc,
       }
@@ -167,7 +167,7 @@ const KuadrantDataView = <T extends K8sResourceCommon>({
   ouiaId = 'KuadrantDataViewTable',
 }: KuadrantDataViewProps<T>): React.ReactElement => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
-  const [sortBy, setSortBy] = React.useState<ISortBy>(() => getInitialSortBy(columns));
+  const [sortBy, setSortBy] = React.useState<ISortBy>(() => getInitialSortBy(columns, ouiaId));
 
   const onSort = React.useCallback(
     (_event: SortEvent, index: number, direction: SortByDirection) => {
@@ -175,8 +175,8 @@ const KuadrantDataView = <T extends K8sResourceCommon>({
       const sortParam = column?.id;
       if (typeof window !== 'undefined' && sortParam) {
         const params = new URLSearchParams(window.location.search);
-        params.set('sortBy', sortParam);
-        params.set('orderBy', direction);
+        params.set(`${ouiaId}.sortBy`, sortParam);
+        params.set(`${ouiaId}.orderBy`, direction);
         window.history.replaceState(
           window.history.state,
           '',
@@ -185,7 +185,7 @@ const KuadrantDataView = <T extends K8sResourceCommon>({
       }
       setSortBy({ index, direction });
     },
-    [columns],
+    [columns, ouiaId],
   );
 
   const dataViewColumns = React.useMemo<DataViewTh[]>(

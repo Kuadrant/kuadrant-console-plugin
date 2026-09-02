@@ -90,7 +90,11 @@ describe('KuadrantDataView', () => {
   });
 
   it.each(['Name', 'name'])('restores a descending sort from URL key %s', (sortBy) => {
-    window.history.replaceState({}, '', `/?sortBy=${sortBy}&orderBy=desc`);
+    window.history.replaceState(
+      {},
+      '',
+      `/?KuadrantDataViewTable.sortBy=${sortBy}&KuadrantDataViewTable.orderBy=desc`,
+    );
     render(view({ data: items('charlie', 'alice', 'bob'), page: 1, perPage: 2 }));
 
     const table = screen.getByRole('grid', { name: 'Items' });
@@ -106,10 +110,42 @@ describe('KuadrantDataView', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Name' }));
 
     const params = new URLSearchParams(window.location.search);
-    expect(params.get('sortBy')).toBe('name');
-    expect(params.get('orderBy')).toBe('desc');
+    expect(params.get('KuadrantDataViewTable.sortBy')).toBe('name');
+    expect(params.get('KuadrantDataViewTable.orderBy')).toBe('desc');
     expect(params.get('view')).toBe('all');
     expect(window.location.hash).toBe('#results');
+  });
+
+  it('keeps sort state independent between tables', () => {
+    const table = (ariaLabel: string, ouiaId: string) => (
+      <KuadrantDataView
+        ariaLabel={ariaLabel}
+        columns={columns}
+        data={items('charlie', 'alice', 'bob')}
+        loaded
+        getRow={getRow}
+        ouiaId={ouiaId}
+      />
+    );
+
+    render(
+      <>
+        {table('First table', 'FirstTable')}
+        {table('Second table', 'SecondTable')}
+      </>,
+    );
+
+    fireEvent.click(
+      within(screen.getByRole('grid', { name: 'First table' })).getByRole('button', {
+        name: 'Name',
+      }),
+    );
+
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get('FirstTable.sortBy')).toBe('name');
+    expect(params.get('FirstTable.orderBy')).toBe('desc');
+    expect(params.get('SecondTable.sortBy')).toBeNull();
+    expect(params.get('SecondTable.orderBy')).toBeNull();
   });
 
   it('renders loading, error, loaded, and empty watch states', () => {
