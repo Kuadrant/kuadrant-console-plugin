@@ -48,7 +48,7 @@ export const APIKeyStatusBadge: React.FC<APIKeyStatusBadgeProps> = ({ phase }) =
     case 'Expired':
       return (
         <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <BanIcon style={{ color: '#6a6e73' }} />
+          <BanIcon style={{ color: 'var(--pf-t--global--text--color--subtle)' }} />
           {t('Expired')}
         </span>
       );
