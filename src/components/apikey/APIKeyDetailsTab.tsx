@@ -123,7 +123,17 @@ const APIKeyDetailsTab: React.FC<APIKeyDetailsTabProps> = ({ apiKey }) => {
               <DescriptionListDescription>
                 {(() => {
                   const { text, isExpired } = formatExpiry(apiKey.spec?.expiresAt, t);
-                  return <span style={isExpired ? { color: '#6a6e73' } : undefined}>{text}</span>;
+                  return (
+                    <span
+                      style={
+                        isExpired
+                          ? { color: 'var(--pf-t--global--text--color--subtle)' }
+                          : undefined
+                      }
+                    >
+                      {text}
+                    </span>
+                  );
                 })()}
               </DescriptionListDescription>
             </DescriptionListGroup>

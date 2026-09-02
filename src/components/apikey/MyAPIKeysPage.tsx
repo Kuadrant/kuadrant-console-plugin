@@ -553,7 +553,13 @@ const MyAPIKeysPage: React.FC = () => {
         },
         { cell: <Timestamp timestamp={apiKey.metadata.creationTimestamp} /> },
         {
-          cell: <span style={isExpired ? { color: '#6a6e73' } : undefined}>{expiryText}</span>,
+          cell: (
+            <span
+              style={isExpired ? { color: 'var(--pf-t--global--text--color--subtle)' } : undefined}
+            >
+              {expiryText}
+            </span>
+          ),
         },
         {
           cell: (
