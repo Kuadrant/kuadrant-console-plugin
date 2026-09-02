@@ -77,6 +77,10 @@ if echo "$CHANGED" | grep -qE "^src/components/(gateway|KuadrantOverview|Kuadran
   SPECS="$SPECS overview.spec.ts rbac.spec.ts data-view-regressions.spec.ts"
 fi
 
+if echo "$CHANGED" | grep -qE "^src/components/DropdownWithKebab(\.tsx)?$"; then
+  SPECS="$SPECS mcp-overview.spec.ts"
+fi
+
 if echo "$CHANGED" | grep -qE "^src/components/KuadrantDataView"; then
   SPECS="$SPECS data-view-regressions.spec.ts"
 fi
