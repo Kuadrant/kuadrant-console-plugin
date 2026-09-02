@@ -27,6 +27,7 @@ export interface ResourceCreateItem {
   label: string;
   resource: K8sResourceCommon;
   successMessage: string;
+  allowAlreadyExists?: boolean;
 }
 
 export interface InfoCheckItem {
@@ -161,10 +162,11 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
         } catch (err: unknown) {
           const errStatus =
             (err as { code?: number })?.code ?? (err as { json?: { code?: number } })?.json?.code;
-          if (errStatus === 409) {
+          if (errStatus === 409 && item.allowAlreadyExists !== false) {
             updateCheckById(item.id, 'success', t('Already exists'));
           } else {
             if (rollbackOnFailure) {
+              const rollbackFailures: string[] = [];
               for (const created of [...createdResources].reverse()) {
                 try {
                   await k8sDelete({
@@ -173,7 +175,15 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
                   });
                 } catch (rollbackErr) {
                   console.error('Failed to roll back resource:', rollbackErr);
+                  rollbackFailures.push(created.kind || 'resource');
                 }
+              }
+              if (rollbackFailures.length) {
+                throw new Error(
+                  `${String(err instanceof Error ? err.message : err)} (${t(
+                    'Rollback failed for',
+                  )}: ${rollbackFailures.join(', ')})`,
+                );
               }
             }
             throw err;

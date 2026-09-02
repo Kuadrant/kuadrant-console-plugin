@@ -5,7 +5,7 @@ import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
 import { ServiceEntryFormState } from '../types';
 import ServiceEntryFormFields from '../ServiceEntryFormFields';
-import { buildServiceEntry } from '../mcpResourceUtils';
+import { buildServiceEntry, isServiceEntryValid } from '../mcpResourceUtils';
 
 interface ServiceEntryStepProps {
   formState: ServiceEntryFormState;
@@ -44,7 +44,7 @@ const ServiceEntryStep: React.FC<ServiceEntryStepProps> = ({
       const ports = spec?.ports as Array<{ number: number; protocol: string }> | undefined;
       const hosts = spec?.hosts as string[] | undefined;
 
-      onChange({
+      const nextState = {
         serviceName: metadata?.name || '',
         namespace: metadata?.namespace || '',
         hosts: hosts?.length ? hosts.join(', ') : '',
@@ -52,7 +52,9 @@ const ServiceEntryStep: React.FC<ServiceEntryStepProps> = ({
         protocol: ports?.length ? ports[0].protocol : 'HTTPS',
         location: typeof spec?.location === 'string' ? spec.location : 'MESH_EXTERNAL',
         resolution: typeof spec?.resolution === 'string' ? spec.resolution : 'DNS',
-      });
+      };
+      onChange(nextState);
+      onValidationChange?.(isServiceEntryValid(nextState));
     } catch {
       // Invalid YAML — don't update form state
     }

@@ -5,7 +5,11 @@ import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
 import { CredentialFormState } from '../types';
 import CredentialFormFields from '../CredentialFormFields';
-import { buildCredentialSecret, CREDENTIAL_SECRET_KEY } from '../mcpResourceUtils';
+import {
+  buildCredentialSecret,
+  CREDENTIAL_SECRET_KEY,
+  isCredentialValid,
+} from '../mcpResourceUtils';
 
 interface CredentialStepProps {
   formState: CredentialFormState;
@@ -42,12 +46,14 @@ const CredentialStep: React.FC<CredentialStepProps> = ({
       const metadata = parsed.metadata as Record<string, string> | undefined;
       const stringData = parsed.stringData as Record<string, string> | undefined;
 
-      onChange({
+      const nextState = {
         credentialName: metadata?.name || '',
         namespace: metadata?.namespace || '',
         type: (parsed.type as string) || 'Opaque',
         tokenString: stringData?.[CREDENTIAL_SECRET_KEY] || '',
-      });
+      };
+      onChange(nextState);
+      onValidationChange?.(isCredentialValid(nextState));
     } catch {
       // Invalid YAML — don't update form state
     }

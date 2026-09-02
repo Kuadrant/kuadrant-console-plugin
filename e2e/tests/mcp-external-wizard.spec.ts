@@ -45,7 +45,9 @@ spec:
     - name: test-gateway
   rules:
     - backendRefs:
-        - name: test-service
+        - group: networking.istio.io
+          kind: Hostname
+          name: api.external.example.com
           port: 8080
 `);
 }
@@ -96,14 +98,13 @@ async function fillRegisterServerStep(
 ): Promise<void> {
   const wizard = page.locator('.kuadrant-mcp-wizard');
   await wizard.locator('[data-test="mcp-registration-name"]').fill(opts.name);
-  await wizard.locator('[data-test="mcp-registration-namespace"]').selectOption(TEST_NAMESPACE);
   await wizard.locator('[data-test="mcp-registration-prefix"]').fill(opts.prefix);
 }
 
 async function clickNext(page: Page): Promise<void> {
   const next = page
     .locator('.kuadrant-mcp-wizard')
-    .getByRole('button', { name: 'Next', exact: true });
+    .getByRole('button', { name: /^(Next|Save and continue)$/ });
   await expect(next).toBeEnabled({ timeout: 10_000 });
   await next.click();
 }
@@ -213,6 +214,28 @@ test.describe('MCP External Registration Wizard', () => {
           'jsonpath={.spec.prefix}',
         ]),
       ).toBe('e2eext');
+      expect(
+        kubectl([
+          'get',
+          'mcpserverregistration',
+          regName,
+          '-n',
+          TEST_NAMESPACE,
+          '-o',
+          'jsonpath={.spec.credentialRef.name}:{.spec.credentialRef.key}',
+        ]),
+      ).toBe(`${credName}:token`);
+      expect(
+        kubectl([
+          'get',
+          'mcpserverregistration',
+          regName,
+          '-n',
+          TEST_NAMESPACE,
+          '-o',
+          'jsonpath={.spec.targetRef.namespace}',
+        ]),
+      ).toBe(TEST_NAMESPACE);
     } finally {
       deleteResource('mcpserverregistration', regName, TEST_NAMESPACE);
       deleteResource('secret', credName, TEST_NAMESPACE);
@@ -221,6 +244,78 @@ test.describe('MCP External Registration Wizard', () => {
       deleteResource('httproute', routeName, TEST_NAMESPACE);
     }
   });
+
+  test(
+    'new HTTPRoute uses the external Istio hostname backend',
+    { tag: '@smoke' },
+    async ({ page }) => {
+      const routeName = `e2e-ext-new-route-${uid()}`;
+      const seName = `e2e-se-${uid()}`;
+      const drName = `e2e-dr-${uid()}`;
+      const credName = `e2e-cred-${uid()}`;
+      const regName = `e2e-ext-reg-${uid()}`;
+      const host = 'api.external.example.com';
+
+      try {
+        await openExternalWizard(page);
+        const wizard = page.locator('.kuadrant-mcp-wizard');
+
+        await fillServiceEntryStep(page, { name: seName, host });
+        await clickNext(page);
+        await fillDestinationRuleStep(page, { name: drName, host });
+        await clickNext(page);
+
+        await wizard.locator('#external-route-mode-new').check();
+        await wizard.locator('#httproute-name').fill(routeName);
+        await wizard.getByRole('button', { name: 'Add parent reference' }).click();
+        await wizard.locator('#parent-gateway-0').selectOption('test-gateway');
+        await wizard.locator('#parent-section-0').selectOption('http');
+        await wizard.getByRole('button', { name: 'Add rule' }).click();
+
+        const ruleWizard = page
+          .getByRole('dialog')
+          .filter({ hasText: 'Configure routing rule with matches and backend services' });
+        await ruleWizard.locator('#http-method-0').selectOption('POST');
+        await ruleWizard.getByRole('button', { name: 'Next', exact: true }).click();
+        await ruleWizard.getByRole('button', { name: 'Next', exact: true }).click();
+        await ruleWizard.locator('#service-name').fill('placeholder-service');
+        await ruleWizard.locator('#service-port').fill('8080');
+        await ruleWizard.getByRole('button', { name: 'Next', exact: true }).click();
+        await ruleWizard.getByRole('button', { name: 'Create', exact: true }).click();
+        await expect(ruleWizard).toBeHidden({ timeout: 5_000 });
+        await clickNext(page);
+
+        await fillCredentialStep(page, { name: credName });
+        await clickNext(page);
+        await fillRegisterServerStep(page, { name: regName, prefix: 'e2enew' });
+        await clickNext(page);
+
+        await expect(page.getByText('MCPServerRegistration created successfully')).toBeVisible({
+          timeout: 30_000,
+        });
+
+        const route = JSON.parse(
+          kubectl(['get', 'httproute', routeName, '-n', TEST_NAMESPACE, '-o', 'json']),
+        );
+        expect(route.spec.rules[0].backendRefs).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({
+              group: 'networking.istio.io',
+              kind: 'Hostname',
+              name: host,
+              port: 443,
+            }),
+          ]),
+        );
+      } finally {
+        deleteResource('mcpserverregistration', regName, TEST_NAMESPACE);
+        deleteResource('secret', credName, TEST_NAMESPACE);
+        deleteResource('destinationrule', drName, TEST_NAMESPACE);
+        deleteResource('serviceentry', seName, TEST_NAMESPACE);
+        deleteResource('httproute', routeName, TEST_NAMESPACE);
+      }
+    },
+  );
 
   test('step 1 has Form and YAML tabs that stay in sync', { tag: '@nightly' }, async ({ page }) => {
     const seName = `e2e-se-${uid()}`;

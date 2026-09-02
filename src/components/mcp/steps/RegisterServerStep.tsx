@@ -5,12 +5,15 @@ import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
 import { MCPServerFormState } from '../types';
 import MCPServerRegistrationFormFields from '../MCPServerRegistrationFormFields';
-import { buildMCPServerRegistration } from '../mcpResourceUtils';
+import { buildMCPServerRegistration, isMCPServerRegistrationValid } from '../mcpResourceUtils';
 
 interface RegisterServerStepProps {
   formState: MCPServerFormState;
   onChange: (state: MCPServerFormState) => void;
   routeName?: string;
+  routeNamespace?: string;
+  credentialNamespace?: string;
+  credentialName?: string;
   onValidationChange?: (isValid: boolean) => void;
 }
 
@@ -18,6 +21,9 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
   formState,
   onChange,
   routeName,
+  routeNamespace,
+  credentialNamespace,
+  credentialName,
   onValidationChange,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -25,15 +31,32 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
   const [yamlKey, setYamlKey] = React.useState(0);
 
   React.useEffect(() => {
-    if (routeName && formState.targetHTTPRouteName !== routeName) {
-      onChange({ ...formState, targetHTTPRouteName: routeName });
+    if (
+      (routeName && formState.targetHTTPRouteName !== routeName) ||
+      (credentialNamespace && formState.namespace !== credentialNamespace)
+    ) {
+      const nextState = {
+        ...formState,
+        ...(routeName ? { targetHTTPRouteName: routeName } : {}),
+        ...(credentialNamespace ? { namespace: credentialNamespace } : {}),
+      };
+      onChange(nextState);
+      onValidationChange?.(isMCPServerRegistrationValid(nextState));
     }
-  }, [routeName]); // eslint-disable-line -- only resync when routeName changes; re-running on formState/onChange would fight typing in other fields
+  }, [routeName, credentialNamespace]); // eslint-disable-line -- only resync wizard-owned references
 
   // Rebuilt from form state on every change so the YAML view is always current.
   const serverResource = React.useMemo(
-    () => buildMCPServerRegistration(formState, formState.namespace, null, routeName),
-    [formState, routeName],
+    () =>
+      buildMCPServerRegistration(
+        { ...formState, namespace: credentialNamespace || formState.namespace },
+        credentialNamespace || formState.namespace,
+        null,
+        routeName,
+        routeNamespace,
+        credentialName,
+      ),
+    [formState, routeName, routeNamespace, credentialName],
   );
 
   const handleChange = (field: keyof MCPServerFormState, value: string) => {
@@ -53,7 +76,7 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
 
       onChange({
         registrationName: metadata?.name || '',
-        namespace: metadata?.namespace || '',
+        namespace: credentialNamespace || metadata?.namespace || '',
         // When the wizard configured a route, keep it aligned — a YAML edit must not
         // retarget the registration at a route the wizard did not set up.
         targetHTTPRouteName: routeName || targetRef?.name || '',
@@ -84,6 +107,7 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
           formState={formState}
           onChange={handleChange}
           httpRouteNames={routeName ? [routeName] : []}
+          showNamespaceField={!credentialNamespace}
           onValidationChange={onValidationChange}
         />
       ) : (

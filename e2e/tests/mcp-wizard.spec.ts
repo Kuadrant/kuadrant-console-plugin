@@ -55,7 +55,12 @@ async function fillStep1UsingExisting(
 
   // Existing route should already be selected by default
   // Just select it from the dropdown
-  await wizard.locator('#route-select').selectOption(opts.routeName);
+  const routeSelect = wizard.locator('#route-select');
+  await expect(routeSelect).toBeVisible({ timeout: 15_000 });
+  await expect(routeSelect.locator(`option[value="${opts.routeName}"]`)).toBeAttached({
+    timeout: 15_000,
+  });
+  await routeSelect.selectOption(opts.routeName);
   await page.waitForTimeout(300);
 }
 
@@ -362,9 +367,11 @@ spec:
     await wizard.getByRole('button', { name: 'Back' }).click();
 
     // Should be back on step 1
-    await expect(
-      wizard.getByRole('button', { name: 'HTTPRoute for MCP server' }),
-    ).toHaveAttribute('aria-current', 'step', { timeout: 5_000 });
+    await expect(wizard.getByRole('button', { name: 'HTTPRoute for MCP server' })).toHaveAttribute(
+      'aria-current',
+      'step',
+      { timeout: 5_000 },
+    );
   });
 
   test('step 2 validates required fields', { tag: '@nightly' }, async ({ page }) => {

@@ -18,4 +18,20 @@ export default defineConfig({
     trace: 'on-first-retry',
     actionTimeout: 10_000,
   },
+  projects: [
+    {
+      name: 'default',
+      testIgnore: '**/mcp-external-wizard.spec.ts',
+    },
+    {
+      name: 'light',
+      testMatch: '**/mcp-external-wizard.spec.ts',
+      use: { colorScheme: 'light' },
+    },
+    {
+      name: 'dark',
+      testMatch: '**/mcp-external-wizard.spec.ts',
+      use: { colorScheme: 'dark' },
+    },
+  ],
 });

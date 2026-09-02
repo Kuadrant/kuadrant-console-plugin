@@ -13,11 +13,18 @@ import {
   DestinationRuleFormState,
   CredentialFormState,
 } from './types';
+import { HTTPRouteResource } from '../httproute/types';
 import { RESOURCES, Secret } from '../../utils/resources';
 
 // Key used within the credential Secret's stringData for the token configured in
 // step 4 (Add access credentials) of the external MCP wizard.
 export const CREDENTIAL_SECRET_KEY = 'token';
+
+export const parseServiceEntryHosts = (hosts: string): string[] =>
+  hosts
+    .split(',')
+    .map((host) => host.trim())
+    .filter(Boolean);
 
 // Build an MCPGatewayExtension resource from wizard/page form state.
 // When originalMetadata is provided (edit mode) it is preserved so that
@@ -114,6 +121,8 @@ export const buildMCPServerRegistration = (
   namespace: string,
   originalMetadata?: MCPServerRegistration['metadata'] | null,
   routeNameFallback?: string,
+  routeNamespace?: string,
+  credentialName?: string,
 ): MCPServerRegistration => ({
   apiVersion: `${RESOURCES.MCPServerRegistration.gvk.group}/${RESOURCES.MCPServerRegistration.gvk.version}`,
   kind: RESOURCES.MCPServerRegistration.gvk.kind,
@@ -125,8 +134,27 @@ export const buildMCPServerRegistration = (
       group: 'gateway.networking.k8s.io',
       kind: 'HTTPRoute',
       name: formState.targetHTTPRouteName || routeNameFallback || '',
+      ...(routeNamespace ? { namespace: routeNamespace } : {}),
     },
     prefix: formState.toolPrefix,
+    ...(credentialName
+      ? { credentialRef: { name: credentialName, key: CREDENTIAL_SECRET_KEY } }
+      : {}),
+  },
+});
+
+export const wireHTTPRouteToExternalHost = (
+  resource: HTTPRouteResource,
+  host: string,
+  port: number,
+): HTTPRouteResource => ({
+  ...resource,
+  spec: {
+    ...resource.spec,
+    rules: resource.spec?.rules?.map((rule) => ({
+      ...rule,
+      backendRefs: [{ group: 'networking.istio.io', kind: 'Hostname', name: host, port }],
+    })),
   },
 });
 
@@ -167,10 +195,7 @@ export const buildServiceEntry = (
     ? { ...originalMetadata, name: formState.serviceName }
     : { name: formState.serviceName, namespace: formState.namespace || namespace },
   spec: {
-    hosts: formState.hosts
-      .split(',')
-      .map((h) => h.trim())
-      .filter(Boolean),
+    hosts: parseServiceEntryHosts(formState.hosts),
     ports: formState.port
       ? [
           {
@@ -206,10 +231,7 @@ export const serviceEntryToFormState = (
 // Validation shared by the wizard step footer and the standalone create/edit page.
 export const isServiceEntryValid = (formState: ServiceEntryFormState): boolean => {
   // At least one non-empty host once split/trimmed (rejects "", ",," etc.).
-  const hasHost = formState.hosts
-    .split(',')
-    .map((h) => h.trim())
-    .some(Boolean);
+  const hasHost = parseServiceEntryHosts(formState.hosts).length > 0;
 
   // Port must be an integer in the valid TCP range; rejects "abc", "0", "70000".
   const portNum = Number(formState.port);
@@ -285,8 +307,16 @@ export const buildCredentialSecret = (
   apiVersion: 'v1',
   kind: 'Secret',
   metadata: originalMetadata
-    ? { ...originalMetadata, name: formState.credentialName }
-    : { name: formState.credentialName, namespace: formState.namespace || namespace },
+    ? {
+        ...originalMetadata,
+        name: formState.credentialName,
+        labels: { ...originalMetadata.labels, 'mcp.kuadrant.io/secret': 'true' },
+      }
+    : {
+        name: formState.credentialName,
+        namespace: formState.namespace || namespace,
+        labels: { 'mcp.kuadrant.io/secret': 'true' },
+      },
   type: formState.type,
   stringData: {
     [CREDENTIAL_SECRET_KEY]: formState.tokenString,

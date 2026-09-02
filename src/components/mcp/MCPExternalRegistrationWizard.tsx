@@ -39,6 +39,8 @@ import {
   buildDestinationRule,
   buildCredentialSecret,
   buildMCPServerRegistration,
+  wireHTTPRouteToExternalHost,
+  parseServiceEntryHosts,
 } from './mcpResourceUtils';
 
 interface WizardErrorBoundaryProps {
@@ -97,7 +99,8 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
   const [isCredentialValid, setIsCredentialValid] = React.useState(false);
   const [isServerValid, setIsServerValid] = React.useState(false);
   const [routeMode, setRouteMode] = React.useState<'existing' | 'new'>('existing');
-  const [selectedExistingRouteName, setSelectedExistingRouteName] = React.useState('');
+  const [selectedExistingRoute, setSelectedExistingRoute] =
+    React.useState<HTTPRouteResource | null>(null);
   const [httpRouteResource, setHttpRouteResource] = React.useState<HTTPRouteResource | null>(null);
   const [httpRouteValid, setHttpRouteValid] = React.useState(false);
   const [resourcesCreated, setResourcesCreated] = React.useState(false);
@@ -110,11 +113,17 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
   });
 
   const isHTTPRouteStepValid =
-    (routeMode === 'existing' && !!selectedExistingRouteName) ||
+    (routeMode === 'existing' && !!selectedExistingRoute) ||
     (routeMode === 'new' && httpRouteValid && !!httpRouteResource);
 
   const routeName =
-    routeMode === 'existing' ? selectedExistingRouteName : httpRouteResource?.metadata?.name;
+    routeMode === 'existing'
+      ? selectedExistingRoute?.metadata?.name
+      : httpRouteResource?.metadata?.name;
+  const routeNamespace =
+    routeMode === 'existing'
+      ? selectedExistingRoute?.metadata?.namespace
+      : httpRouteResource?.metadata?.namespace;
 
   const verifyItems = React.useMemo<VerifyStepItem[]>(() => {
     if (!routeName) return [];
@@ -144,7 +153,11 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
         type: 'create' as const,
         id: 'create-route',
         label: t('Create HTTPRoute'),
-        resource: httpRouteResource,
+        resource: wireHTTPRouteToExternalHost(
+          httpRouteResource,
+          parseServiceEntryHosts(formState.serviceEntry.hosts)[0],
+          Number(formState.serviceEntry.port),
+        ),
         successMessage: t('HTTPRoute created successfully'),
       });
     }
@@ -155,6 +168,7 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
       label: t('Create credential Secret'),
       resource: buildCredentialSecret(formState.credential, formState.credential.namespace),
       successMessage: t('Credential Secret created successfully'),
+      allowAlreadyExists: false,
     });
 
     items.push({
@@ -162,10 +176,12 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
       id: 'create-server',
       label: t('Create MCPServerRegistration'),
       resource: buildMCPServerRegistration(
-        formState.server,
-        formState.server.namespace,
+        { ...formState.server, namespace: formState.credential.namespace },
+        formState.credential.namespace,
         null,
         routeName,
+        routeNamespace,
+        formState.credential.credentialName,
       ),
       successMessage: t('MCPServerRegistration created successfully'),
     });
@@ -173,6 +189,7 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
     return items;
   }, [
     routeName,
+    routeNamespace,
     routeMode,
     httpRouteResource,
     formState.serviceEntry,
@@ -186,9 +203,9 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
     () => ({
       gvk: RESOURCES.MCPServerRegistration.gvk,
       name: formState.server.registrationName,
-      namespace: formState.server.namespace,
+      namespace: formState.credential.namespace,
     }),
-    [formState.server.registrationName, formState.server.namespace],
+    [formState.server.registrationName, formState.credential.namespace],
   );
 
   const handleClose = () => {
@@ -203,7 +220,7 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
     setIsCredentialValid(false);
     setIsServerValid(false);
     setRouteMode('existing');
-    setSelectedExistingRouteName('');
+    setSelectedExistingRoute(null);
     setHttpRouteResource(null);
     setHttpRouteValid(false);
     setResourcesCreated(false);
@@ -222,7 +239,7 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
       <ModalHeader
         labelId="mcp-external-wizard-modal-title"
         title={t('Setup external MCP server')}
-        description={t('Create gateway by filling out the form or creating the YAML')}
+        description={t('Create the resources needed to register an external MCP server')}
       />
       <ModalBody>
         <WizardErrorBoundary errorTitle={t('An error occurred in the wizard')}>
@@ -242,7 +259,18 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
             >
               <ServiceEntryStep
                 formState={formState.serviceEntry}
-                onChange={(serviceEntry) => setFormState((prev) => ({ ...prev, serviceEntry }))}
+                onChange={(serviceEntry) =>
+                  setFormState((prev) => ({
+                    ...prev,
+                    serviceEntry,
+                    destinationRule: {
+                      ...prev.destinationRule,
+                      namespace: serviceEntry.namespace,
+                      host:
+                        parseServiceEntryHosts(serviceEntry.hosts)[0] || prev.destinationRule.host,
+                    },
+                  }))
+                }
                 onValidationChange={setIsServiceEntryValid}
               />
             </WizardStep>
@@ -305,8 +333,13 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
                     >
                       <FormSelect
                         id="external-route-select"
-                        value={selectedExistingRouteName}
-                        onChange={(_event, value) => setSelectedExistingRouteName(value)}
+                        value={selectedExistingRoute?.metadata?.name || ''}
+                        onChange={(_event, value) =>
+                          setSelectedExistingRoute(
+                            (httpRoutes || []).find((route) => route.metadata?.name === value) ||
+                              null,
+                          )
+                        }
                         aria-label={t('Select an HTTPRoute')}
                         data-test="mcp-external-route-select"
                         isDisabled={!routesLoaded}
@@ -316,13 +349,25 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
                           label={!routesLoaded ? t('Loading routes...') : t('Select a route...')}
                           isPlaceholder
                         />
-                        {(httpRoutes || []).map((route) => (
-                          <FormSelectOption
-                            key={`${route.metadata?.namespace}/${route.metadata?.name}`}
-                            value={route.metadata?.name || ''}
-                            label={`${route.metadata?.name} (${route.metadata?.namespace})`}
-                          />
-                        ))}
+                        {(httpRoutes || [])
+                          .filter((route) =>
+                            route.spec?.rules?.some((rule) =>
+                              rule.backendRefs?.some(
+                                (backend) =>
+                                  backend.group === 'networking.istio.io' &&
+                                  backend.kind === 'Hostname' &&
+                                  backend.name ===
+                                    parseServiceEntryHosts(formState.serviceEntry.hosts)[0],
+                              ),
+                            ),
+                          )
+                          .map((route) => (
+                            <FormSelectOption
+                              key={`${route.metadata?.namespace}/${route.metadata?.name}`}
+                              value={route.metadata?.name || ''}
+                              label={`${route.metadata?.name} (${route.metadata?.namespace})`}
+                            />
+                          ))}
                       </FormSelect>
                     </FormGroup>
                     {routesError && (
@@ -390,7 +435,7 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
                 !isCredentialValid
               }
               footer={{
-                nextButtonText: t('Next'),
+                nextButtonText: t('Save and continue'),
                 isNextDisabled: !isServerValid,
               }}
             >
@@ -398,6 +443,9 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
                 formState={formState.server}
                 onChange={(server) => setFormState((prev) => ({ ...prev, server }))}
                 routeName={routeName}
+                routeNamespace={routeNamespace}
+                credentialNamespace={formState.credential.namespace}
+                credentialName={formState.credential.credentialName}
                 onValidationChange={setIsServerValid}
               />
             </WizardStep>
@@ -420,12 +468,12 @@ const MCPExternalRegistrationWizard: React.FC<MCPExternalRegistrationWizardProps
               <MCPVerifyStep
                 items={verifyItems}
                 watchResource={verifyWatchResource}
-                selectedNamespace={formState.server.namespace}
+                selectedNamespace={formState.credential.namespace}
                 title={t('Verify configuration')}
                 description={t(
                   'Creating and verifying your external MCP server registration. Resources will be removed if registration fails.',
                 )}
-                watchLabel={t('MCP server is ready')}
+                watchLabel={t('MCP server registration created')}
                 watchSuccessMessage={t('MCP server is running and healthy')}
                 rollbackOnFailure
                 onAllCreated={() => setResourcesCreated(true)}

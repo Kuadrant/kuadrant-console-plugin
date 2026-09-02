@@ -441,7 +441,7 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
                           >
                             <FormSelect
                               id={`http-method-${index}`}
-                              value={match.method}
+                              value={match.method || ''}
                               onChange={(_, value) => {
                                 const updatedMatches = [...currentRule.matches];
                                 updatedMatches[index] = {

@@ -16,6 +16,7 @@ import { HelpIcon } from '@patternfly/react-icons';
 import { K8sResourceCommon, useK8sWatchResource } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import { ServiceEntryFormState } from './types';
+import { parseServiceEntryHosts } from './mcpResourceUtils';
 import {
   validateRequired,
   validateK8sName,
@@ -99,6 +100,7 @@ const ServiceEntryFormFields: React.FC<ServiceEntryFormFieldsProps> = ({
     (value: string) => {
       const requiredError = validateRequired(value);
       if (requiredError) return t(requiredError);
+      if (parseServiceEntryHosts(value).length === 0) return t('At least one host is required.');
       return null;
     },
     [t],

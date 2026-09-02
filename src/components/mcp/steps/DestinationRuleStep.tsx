@@ -5,7 +5,7 @@ import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
 import { DestinationRuleFormState } from '../types';
 import DestinationRuleFormFields from '../DestinationRuleFormFields';
-import { buildDestinationRule } from '../mcpResourceUtils';
+import { buildDestinationRule, isDestinationRuleValid } from '../mcpResourceUtils';
 
 interface DestinationRuleStepProps {
   formState: DestinationRuleFormState;
@@ -44,13 +44,15 @@ const DestinationRuleStep: React.FC<DestinationRuleStepProps> = ({
       const trafficPolicy = spec?.trafficPolicy as Record<string, unknown> | undefined;
       const tls = trafficPolicy?.tls as Record<string, string> | undefined;
 
-      onChange({
+      const nextState = {
         destinationName: metadata?.name || '',
         namespace: metadata?.namespace || '',
         host: typeof spec?.host === 'string' ? spec.host : '',
         tlsMode: tls?.mode || 'SIMPLE',
         tlsSni: tls?.sni || '',
-      });
+      };
+      onChange(nextState);
+      onValidationChange?.(isDestinationRuleValid(nextState));
     } catch {
       // Invalid YAML — don't update form state
     }
