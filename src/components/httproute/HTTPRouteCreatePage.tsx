@@ -350,7 +350,10 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
   };
 
   const onFormChangeRef = React.useRef(onFormChange);
-  onFormChangeRef.current = onFormChange;
+
+  React.useEffect(() => {
+    onFormChangeRef.current = onFormChange;
+  }, [onFormChange]);
 
   React.useEffect(() => {
     if (onFormChangeRef.current) {
