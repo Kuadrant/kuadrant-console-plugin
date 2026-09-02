@@ -33,6 +33,10 @@ import MCPExtensionStep from './MCPExtensionStep';
 import MCPVerifyStep, { VerifyStepItem, WatchResourceConfig } from './MCPVerifyStep';
 import GatewayCreatePage from '../gateway/GatewayCreatePage';
 import HTTPRouteCreatePage from '../httproute/HTTPRouteCreatePage';
+import {
+  getMCPGatewayExtensionValidationError,
+  isHTTPRouteAttachedToGateway,
+} from './mcpResourceUtils';
 import '../css/gateway-api-plugin.css';
 
 const MCPSetupWizard: React.FC = () => {
@@ -90,13 +94,79 @@ const MCPSetupWizard: React.FC = () => {
 
   // Get listeners from the selected gateway for the listener dropdown in Step 3
   const selectedGateway = React.useMemo(() => {
-    if (formState.gatewayMode !== 'existing' || !formState.selectedGatewayName) return undefined;
-    return (gateways || []).find((gw) => gw.metadata?.name === formState.selectedGatewayName);
-  }, [gateways, formState.gatewayMode, formState.selectedGatewayName]);
+    if (formState.gatewayMode === 'new') return newGatewayResource || undefined;
+    if (!formState.selectedGatewayName) return undefined;
+    return (gateways || []).find(
+      (gw) =>
+        gw.metadata?.name === formState.selectedGatewayName &&
+        (gw.metadata?.namespace || selectedNamespace) ===
+          (formState.selectedGatewayNamespace || selectedNamespace),
+    );
+  }, [
+    gateways,
+    formState.gatewayMode,
+    formState.selectedGatewayName,
+    formState.selectedGatewayNamespace,
+    newGatewayResource,
+    selectedNamespace,
+  ]);
 
   const extensionNamespace = formState.extensionNamespace || selectedNamespace;
   const gatewayNamespace = formState.selectedGatewayNamespace || selectedNamespace;
   const isCrossNamespace = extensionNamespace !== gatewayNamespace;
+  const selectedGatewayTarget = React.useMemo(
+    () => ({
+      name: formState.targetGateway,
+      namespace: gatewayNamespace,
+      sectionName: formState.sectionName,
+    }),
+    [formState.targetGateway, formState.sectionName, gatewayNamespace],
+  );
+  const matchingHttpRoutes = React.useMemo(
+    () =>
+      (httpRoutes || []).filter((route) =>
+        isHTTPRouteAttachedToGateway(route, selectedGatewayTarget, selectedNamespace),
+      ),
+    [httpRoutes, selectedGatewayTarget, selectedNamespace],
+  );
+  const extensionValidationError = getMCPGatewayExtensionValidationError(
+    formState,
+    selectedGateway,
+  );
+
+  React.useEffect(() => {
+    if (
+      !routesLoaded ||
+      formState.routeMode !== 'existing' ||
+      !formState.selectedRouteName ||
+      matchingHttpRoutes.some((route) => route.metadata?.name === formState.selectedRouteName)
+    ) {
+      return;
+    }
+
+    updateFormState({ selectedRouteName: '', selectedRouteNamespace: selectedNamespace });
+  }, [
+    routesLoaded,
+    formState.routeMode,
+    formState.selectedRouteName,
+    matchingHttpRoutes,
+    selectedNamespace,
+    updateFormState,
+  ]);
+
+  const requiredRouteParentRef = React.useMemo(
+    () => ({
+      id: 'mcp-required-parent-ref',
+      gatewayName: formState.targetGateway,
+      gatewayNamespace,
+      sectionName: formState.sectionName,
+      port:
+        selectedGateway?.spec?.listeners?.find(
+          (listener) => listener.name === formState.sectionName,
+        )?.port || 0,
+    }),
+    [formState.targetGateway, formState.sectionName, gatewayNamespace, selectedGateway],
+  );
 
   const verifyItems = React.useMemo<VerifyStepItem[]>(() => {
     const result: VerifyStepItem[] = [];
@@ -195,7 +265,8 @@ const MCPSetupWizard: React.FC = () => {
     if (
       !formState.httpRouteManagementEnabled &&
       formState.routeMode === 'new' &&
-      newRouteResource
+      newRouteResource &&
+      newRouteValid
     ) {
       result.push({
         type: 'create',
@@ -219,6 +290,7 @@ const MCPSetupWizard: React.FC = () => {
     formState,
     newGatewayResource,
     newRouteResource,
+    newRouteValid,
     isCrossNamespace,
     extensionNamespace,
     gatewayNamespace,
@@ -391,10 +463,7 @@ const MCPSetupWizard: React.FC = () => {
             id="step-extension"
             footer={{
               nextButtonText: t('Next'),
-              isNextDisabled:
-                !formState.extensionName.trim() ||
-                !formState.targetGateway.trim() ||
-                !formState.sectionName.trim(),
+              isNextDisabled: !!extensionValidationError,
             }}
           >
             <MCPExtensionStep
@@ -422,6 +491,14 @@ const MCPSetupWizard: React.FC = () => {
                   'Select an existing route or create a new one to direct traffic to MCP servers.',
                 )}
               </Content>
+              <Alert
+                variant="info"
+                title={t('HTTPRoute target')}
+                isInline
+                style={{ marginBottom: '16px' }}
+              >
+                {t('The HTTPRoute must attach to the selected Gateway and listener.')}
+              </Alert>
 
               <Card style={{ marginBottom: '16px' }}>
                 <CardHeader>
@@ -444,7 +521,7 @@ const MCPSetupWizard: React.FC = () => {
                             routeMode: 'existing',
                             selectedRouteName: value,
                             selectedRouteNamespace:
-                              (httpRoutes || []).find((r) => r.metadata?.name === value)?.metadata
+                              matchingHttpRoutes.find((r) => r.metadata?.name === value)?.metadata
                                 ?.namespace || selectedNamespace,
                           })
                         }
@@ -457,7 +534,7 @@ const MCPSetupWizard: React.FC = () => {
                           label={!routesLoaded ? t('Loading routes...') : t('Select a route...')}
                           isPlaceholder
                         />
-                        {(httpRoutes || []).map((route) => (
+                        {matchingHttpRoutes.map((route) => (
                           <FormSelectOption
                             key={`${route.metadata?.namespace}/${route.metadata?.name}`}
                             value={route.metadata?.name || ''}
@@ -489,6 +566,7 @@ const MCPSetupWizard: React.FC = () => {
                   <CardBody>
                     <div className="kuadrant-mcp-embedded-form">
                       <HTTPRouteCreatePage
+                        requiredParentRef={requiredRouteParentRef}
                         onFormChange={(resource, isValid) => {
                           setNewRouteResource(resource);
                           setNewRouteValid(isValid);

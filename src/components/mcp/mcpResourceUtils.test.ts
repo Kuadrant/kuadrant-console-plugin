@@ -5,6 +5,7 @@ import {
   getMCPGatewayExtensionValidationError,
   isKubernetesResourceName,
   isGatewayListenerName,
+  isHTTPRouteAttachedToGateway,
   buildMCPServerRegistration,
   wireHTTPRouteToExternalHost,
   parseServiceEntryHosts,
@@ -260,6 +261,71 @@ describe('MCPGatewayExtension validation', () => {
     expect(
       getMCPGatewayExtensionValidationError(baseFormState({ sectionName: 'listener with spaces' })),
     ).toBe('The listener name must be a valid Kubernetes name.');
+  });
+
+  it('rejects an invalid target Gateway name', () => {
+    expect(
+      getMCPGatewayExtensionValidationError(baseFormState({ targetGateway: 'Invalid Gateway' })),
+    ).toBe('The target Gateway name must be a valid Kubernetes resource name.');
+  });
+
+  it('rejects an invalid extension namespace', () => {
+    expect(
+      getMCPGatewayExtensionValidationError(baseFormState({ extensionNamespace: 'not.valid' })),
+    ).toBe('The extension namespace must be a valid Kubernetes namespace.');
+  });
+});
+
+describe('HTTPRoute Gateway association', () => {
+  const target = { name: 'mcp-gateway', namespace: 'mcp', sectionName: 'http' };
+
+  it('matches a parent reference in the route namespace without a section', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(
+        {
+          metadata: { namespace: 'mcp' },
+          spec: { parentRefs: [{ name: 'mcp-gateway' }] },
+        },
+        target,
+      ),
+    ).toBe(true);
+  });
+
+  it('matches an explicit Gateway namespace and listener', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(
+        {
+          spec: {
+            parentRefs: [
+              {
+                name: 'mcp-gateway',
+                namespace: 'mcp',
+                sectionName: 'http',
+              },
+            ],
+          },
+        },
+        target,
+        'routes',
+      ),
+    ).toBe(true);
+  });
+
+  it('does not match a different Gateway or listener', () => {
+    const route = {
+      metadata: { namespace: 'mcp' },
+      spec: { parentRefs: [{ name: 'other-gateway', sectionName: 'http' }] },
+    };
+    expect(isHTTPRouteAttachedToGateway(route, target)).toBe(false);
+    expect(
+      isHTTPRouteAttachedToGateway(
+        {
+          metadata: { namespace: 'mcp' },
+          spec: { parentRefs: [{ name: 'mcp-gateway', sectionName: 'https' }] },
+        },
+        target,
+      ),
+    ).toBe(false);
   });
 });
 

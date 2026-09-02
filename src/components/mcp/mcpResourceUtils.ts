@@ -16,6 +16,8 @@ import {
 import { HTTPRouteResource } from '../httproute/types';
 import { RESOURCES, Secret } from '../../utils/resources';
 import type { GatewayResource } from '../gateway/types';
+import type { HTTPRouteResource } from '../httproute/types';
+import { validateNamespace } from '../../utils/validation';
 
 // Key used within the credential Secret's stringData for the token configured in
 // step 4 (Add access credentials) of the external MCP wizard.
@@ -36,21 +38,57 @@ export const isKubernetesResourceName = (name: string): boolean =>
 export const isGatewayListenerName = (name: string): boolean =>
   name.length > 0 && name.length <= 63 && DNS_LABEL_REGEX.test(name);
 
+export interface HTTPRouteGatewayTarget {
+  name: string;
+  namespace: string;
+  sectionName: string;
+}
+
+/**
+ * Returns whether an HTTPRoute has a parent reference for the selected
+ * Gateway. A missing namespace means the route's own namespace, and a
+ * missing sectionName means the reference applies to the Gateway generally.
+ */
+export const isHTTPRouteAttachedToGateway = (
+  route: HTTPRouteResource,
+  target: HTTPRouteGatewayTarget,
+  routeNamespace = route.metadata?.namespace || '',
+): boolean =>
+  (route.spec?.parentRefs || []).some((parentRef) => {
+    const parentNamespace = parentRef.namespace || routeNamespace;
+    const parentGroup = parentRef.group || 'gateway.networking.k8s.io';
+    const parentKind = parentRef.kind || 'Gateway';
+
+    return (
+      parentRef.name === target.name &&
+      parentNamespace === target.namespace &&
+      parentGroup === 'gateway.networking.k8s.io' &&
+      parentKind === 'Gateway' &&
+      (!parentRef.sectionName || parentRef.sectionName === target.sectionName)
+    );
+  });
+
 export const getMCPGatewayExtensionValidationError = (
   formState: MCPWizardFormState,
   selectedGateway?: GatewayResource,
 ): string | null => {
-  if (!isKubernetesResourceName(formState.extensionName.trim())) {
+  if (!isKubernetesResourceName(formState.extensionName)) {
     return 'The extension name must be a valid Kubernetes resource name.';
   }
+  if (formState.extensionNamespace && validateNamespace(formState.extensionNamespace)) {
+    return 'The extension namespace must be a valid Kubernetes namespace.';
+  }
   if (!formState.targetGateway.trim()) return 'A target Gateway is required.';
-  if (!isGatewayListenerName(formState.sectionName.trim())) {
+  if (!isKubernetesResourceName(formState.targetGateway)) {
+    return 'The target Gateway name must be a valid Kubernetes resource name.';
+  }
+  if (!isGatewayListenerName(formState.sectionName)) {
     return 'The listener name must be a valid Kubernetes name.';
   }
 
   if (selectedGateway) {
     const listenerExists = (selectedGateway.spec?.listeners || []).some(
-      (listener) => listener.name === formState.sectionName.trim(),
+      (listener) => listener.name === formState.sectionName,
     );
     if (!listenerExists) {
       return `Listener "${formState.sectionName}" was not found on Gateway "${formState.targetGateway}".`;
@@ -59,6 +97,12 @@ export const getMCPGatewayExtensionValidationError = (
 
   if (formState.sessionStorageEnabled && !formState.sessionStoreSecretName.trim()) {
     return 'A session store Secret name is required when session storage is enabled.';
+  }
+  if (
+    formState.sessionStorageEnabled &&
+    !isKubernetesResourceName(formState.sessionStoreSecretName)
+  ) {
+    return 'The session store Secret name must be a valid Kubernetes resource name.';
   }
   if (formState.oauthEnabled && !formState.oauthAuthorizationServers.trim()) {
     return 'At least one OAuth authorization server is required when OAuth is enabled.';

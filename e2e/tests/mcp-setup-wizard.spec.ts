@@ -115,6 +115,20 @@ spec:
       deleteResource('gateway', setupGatewayName, TEST_NAMESPACE);
     });
 
+    let manualRouteName = '';
+    let manualExtensionName = '';
+
+    test.afterEach(() => {
+      if (manualExtensionName) {
+        deleteResource('mcpgatewayextension', manualExtensionName, TEST_NAMESPACE);
+        manualExtensionName = '';
+      }
+      if (manualRouteName) {
+        deleteResource('httproute', manualRouteName, TEST_NAMESPACE);
+        manualRouteName = '';
+      }
+    });
+
     test('renders the wizard with 3 steps', { tag: '@nightly' }, async ({ page }) => {
       await spaNavigate(page, '/kuadrant/mcp/setup-wizard');
 
@@ -147,6 +161,9 @@ spec:
       'disabling automatic HTTPRoute management adds the route step',
       { tag: '@nightly' },
       async ({ page }) => {
+        manualRouteName = `e2e-mcp-manual-route-${uid()}`;
+        manualExtensionName = `e2e-mcp-manual-ext-${uid()}`;
+
         await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
         await page.waitForLoadState('networkidle');
         await dismissConsoleTour(page);
@@ -156,28 +173,74 @@ spec:
           timeout: 15_000,
         });
         await page.locator('[data-test="mcp-gateway-select"]').selectOption({ index: 1 });
+        const selectedGatewayName = await page
+          .locator('[data-test="mcp-gateway-select"]')
+          .inputValue();
         await page.getByRole('button', { name: 'Next', exact: true }).click();
         await page.getByText('Advanced broker settings').click();
         await expect(page.locator('[data-test="mcp-http-route-management"]')).not.toBeChecked();
-        await page.locator('[data-test="mcp-http-route-management"]').click();
+        await page.getByLabel('Disable automatic HTTPRoute management').click();
 
         await expect(page.getByRole('button', { name: '3. HTTPRoute' })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Configure MCP Extension' })).toBeVisible();
         await expect(page.getByRole('button', { name: '2. MCP Extension' })).toBeVisible();
         await expect(page.getByRole('button', { name: '4. Verify configuration' })).toBeVisible();
 
-        await page.locator('[data-test="mcp-extension-name"]').fill('mcp-ext');
+        await page.locator('[data-test="mcp-extension-name"]').fill(manualExtensionName);
         const sectionSelect = page.locator('[data-test="mcp-section-name"]');
+        let selectedSectionName = 'http';
         if (await sectionSelect.isVisible().catch(() => false)) {
           await sectionSelect.selectOption({ index: 1 });
         } else {
           await page.locator('[data-test="mcp-section-name-input"]').fill('http');
+        }
+        if (await sectionSelect.isVisible().catch(() => false)) {
+          selectedSectionName = await sectionSelect.inputValue();
         }
         await page.getByRole('button', { name: 'Next', exact: true }).click();
         await expect(
           page.getByRole('heading', { name: 'Choose or create an HTTPRoute' }),
         ).toBeVisible();
         await expect(page.getByLabel('Create a new HTTPRoute')).toBeChecked();
+        await expect(page.locator('#parent-gateway-0')).toHaveValue(selectedGatewayName);
+        await expect(page.locator('#parent-gateway-0')).toBeDisabled();
+        await expect(page.locator('#parent-section-0')).toHaveValue(selectedSectionName);
+
+        await page.locator('#httproute-name').fill(manualRouteName);
+        await page.getByRole('button', { name: 'Add rule', exact: true }).click();
+
+        const ruleModal = page.locator('.pf-v6-c-modal-box');
+        await expect(ruleModal).toBeVisible();
+        await ruleModal.getByRole('button', { name: 'Next', exact: true }).click();
+        await ruleModal.getByRole('button', { name: 'Next', exact: true }).click();
+        await ruleModal.locator('#service-name').fill('test-svc');
+        await ruleModal.getByRole('button', { name: 'Next', exact: true }).click();
+        await ruleModal.getByRole('button', { name: 'Create', exact: true }).click();
+        await page.waitForSelector('.pf-v6-c-modal-box', { state: 'detached', timeout: 10_000 });
+
+        await page.getByRole('button', { name: 'Next', exact: true }).click();
+        await expect(page.getByText('Create HTTPRoute', { exact: true })).toBeVisible({
+          timeout: 15_000,
+        });
+        await expect(page.getByText('HTTPRoute created successfully')).toBeVisible({
+          timeout: 30_000,
+        });
+        await expect(page.getByText('MCPGatewayExtension created successfully')).toBeVisible({
+          timeout: 30_000,
+        });
+
+        expect(resourceExists('httproute', manualRouteName, TEST_NAMESPACE)).toBe(true);
+        expect(
+          kubectl([
+            'get',
+            'httproute',
+            manualRouteName,
+            '-n',
+            TEST_NAMESPACE,
+            '-o',
+            'jsonpath={.spec.parentRefs[0].name}',
+          ]),
+        ).toBe(selectedGatewayName);
       },
     );
 

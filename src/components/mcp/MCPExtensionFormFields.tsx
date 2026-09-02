@@ -249,6 +249,13 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
               </HelperTextItem>
             </HelperText>
           </FormHelperText>
+          {validationError?.includes('extension namespace') && formState.extensionNamespace && (
+            <FormHelperText>
+              <HelperText>
+                <HelperTextItem variant="error">{validationError}</HelperTextItem>
+              </HelperText>
+            </FormHelperText>
+          )}
         </FormGroup>
       )}
 
@@ -450,6 +457,13 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
               placeholder={t('e.g. redis-session-secret')}
               data-test="mcp-session-store-secret"
             />
+            {validationError?.includes('session store Secret') && (
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem variant="error">{validationError}</HelperTextItem>
+                </HelperText>
+              </FormHelperText>
+            )}
           </FormGroup>
         )}
 
@@ -507,6 +521,13 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
                 placeholder={t('e.g. https://auth.example.com')}
                 data-test="mcp-oauth-auth-servers"
               />
+              {validationError?.includes('OAuth authorization server') && (
+                <FormHelperText>
+                  <HelperText>
+                    <HelperTextItem variant="error">{validationError}</HelperTextItem>
+                  </HelperText>
+                </FormHelperText>
+              )}
               <FormHelperText>
                 <HelperText>
                   <HelperTextItem>

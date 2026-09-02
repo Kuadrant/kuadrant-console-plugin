@@ -62,22 +62,54 @@ interface ParentReference {
   port: number;
 }
 
+export interface RequiredParentReference {
+  id: string;
+  gatewayName: string;
+  gatewayNamespace: string;
+  sectionName: string;
+  port: number;
+}
+
 interface ParentReferencesSelectProps {
   parentRefs: ParentReference[];
   onChange: (parentRefs: ParentReference[]) => void;
   isDisabled?: boolean;
+  requiredParentRef?: RequiredParentReference;
 }
 
 const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
   parentRefs,
   onChange,
   isDisabled = false,
+  requiredParentRef,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [availableGateways, setAvailableGateways] = React.useState<GatewayForSelect[]>([]);
   const [activeNamespace] = useActiveNamespace();
   const isAllNamespaces = !activeNamespace || activeNamespace === '#ALL_NS#';
   const selectedNamespace = isAllNamespaces ? undefined : activeNamespace;
+
+  const requiredGateway = React.useMemo<GatewayForSelect | undefined>(
+    () =>
+      requiredParentRef
+        ? ({
+            metadata: {
+              name: requiredParentRef.gatewayName,
+              namespace: requiredParentRef.gatewayNamespace,
+            },
+            spec: {
+              listeners: [
+                {
+                  name: requiredParentRef.sectionName,
+                  port: requiredParentRef.port,
+                  protocol: 'HTTP',
+                },
+              ],
+            },
+          } as GatewayForSelect)
+        : undefined,
+    [requiredParentRef],
+  );
 
   // Load all available Gateways
   const gatewayResource = {
@@ -165,7 +197,17 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 
   // Sort Gateways: available first, then unavailable
   const getSortedGateways = () => {
-    return [...availableGateways].sort((a, b) => {
+    const gateways =
+      requiredGateway &&
+      !availableGateways.some(
+        (gateway) =>
+          gateway.metadata.name === requiredGateway.metadata.name &&
+          gateway.metadata.namespace === requiredGateway.metadata.namespace,
+      )
+        ? [...availableGateways, requiredGateway]
+        : availableGateways;
+
+    return [...gateways].sort((a, b) => {
       const restrictionA = validateGateway(a);
       const restrictionB = validateGateway(b);
 
@@ -180,7 +222,7 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 
   // Sort Listeners
   const getSortedSections = (gatewayName: string, gatewayNamespace: string) => {
-    const gateway = availableGateways.find(
+    const gateway = [...availableGateways, ...(requiredGateway ? [requiredGateway] : [])].find(
       (gw) => gw.metadata.name === gatewayName && gw.metadata.namespace === gatewayNamespace,
     );
 
@@ -225,7 +267,10 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 
         // If Gateway is changed, automatically update namespace and reset section
         if (field === 'gatewayName') {
-          const selectedGateway = availableGateways.find((gw) => gw.metadata.name === value);
+          const selectedGateway = [
+            ...availableGateways,
+            ...(requiredGateway ? [requiredGateway] : []),
+          ].find((gw) => gw.metadata.name === value);
           if (selectedGateway) {
             updatedRef.gatewayNamespace = selectedGateway.metadata.namespace;
             updatedRef.sectionName = '';
@@ -235,7 +280,10 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 
         // If Section is changed, update port
         if (field === 'sectionName') {
-          const selectedGateway = availableGateways.find(
+          const selectedGateway = [
+            ...availableGateways,
+            ...(requiredGateway ? [requiredGateway] : []),
+          ].find(
             (gw) =>
               gw.metadata.name === ref.gatewayName &&
               gw.metadata.namespace === ref.gatewayNamespace,
@@ -297,7 +345,8 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
                 }}
                 titleDescription={description}
                 actions={
-                  !isDisabled && (
+                  !isDisabled &&
+                  parentRef.id !== requiredParentRef?.id && (
                     <Button
                       variant="plain"
                       onClick={() => removeParentReference(parentRef.id)}
@@ -332,7 +381,7 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
                       updateParentReference(parentRef.id, 'gatewayName', value)
                     }
                     aria-label={t('Select Gateway')}
-                    isDisabled={isDisabled}
+                    isDisabled={isDisabled || parentRef.id === requiredParentRef?.id}
                   >
                     <FormSelectOption key="empty" value="" label={t('Select Gateway')} />
                     {getSortedGateways().map((gateway) => {
@@ -375,12 +424,17 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
                       updateParentReference(parentRef.id, 'sectionName', value)
                     }
                     aria-label={t('Select Section')}
-                    isDisabled={isDisabled || !parentRef.gatewayName}
+                    isDisabled={
+                      isDisabled || !parentRef.gatewayName || parentRef.id === requiredParentRef?.id
+                    }
                   >
                     <FormSelectOption key="empty" value="" label={t('Select Section')} />
                     {getSortedSections(parentRef.gatewayName, parentRef.gatewayNamespace).map(
                       (listener) => {
-                        const gateway = availableGateways.find(
+                        const gateway = [
+                          ...availableGateways,
+                          ...(requiredGateway ? [requiredGateway] : []),
+                        ].find(
                           (gw) =>
                             gw.metadata.name === parentRef.gatewayName &&
                             gw.metadata.namespace === parentRef.gatewayNamespace,

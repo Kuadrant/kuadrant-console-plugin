@@ -37,6 +37,10 @@ const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
     [formState, selectedNamespace],
   );
   const validationError = getMCPGatewayExtensionValidationError(formState, selectedGateway);
+  const handleValidationChange = React.useCallback(
+    (isValid: boolean) => onValidationChange?.(isValid && !validationError),
+    [onValidationChange, validationError],
+  );
 
   // Handle YAML changes and sync back to form
   const handleYamlChange = (yamlInput: string) => {
@@ -100,7 +104,7 @@ const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
             selectedGateway={selectedGateway}
             selectedNamespace={selectedNamespace}
             validationError={validationError}
-            onValidationChange={onValidationChange}
+            onValidationChange={handleValidationChange}
           />
         </>
       ) : (
