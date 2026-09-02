@@ -102,7 +102,7 @@ if echo "$CHANGED" | grep -qE "^src/components/(AttachedResources|gateway/Gatewa
 fi
 
 if echo "$CHANGED" | grep -qE "^src/components/mcp/"; then
-  SPECS="$SPECS mcp-setup-wizard.spec.ts mcp-overview.spec.ts mcp-wizard.spec.ts mcp-resource-pages.spec.ts"
+  SPECS="$SPECS mcp-setup-wizard.spec.ts mcp-overview.spec.ts mcp-wizard.spec.ts mcp-resource-pages.spec.ts mcp-inspector.spec.ts"
 fi
 
 if echo "$CHANGED" | grep -qE "^src/utils/validation\.ts"; then

@@ -25,36 +25,33 @@ spec:
         app.kubernetes.io/part-of: kuadrant-console-plugin
     spec:
       containers:
-      - name: kuadrant-console-plugin
-        image: quay.io/kuadrant/console-plugin:latest
-        ports:
-        - containerPort: 9443
-          protocol: TCP
-        imagePullPolicy: Always
-        env:
-          - name: TOPOLOGY_CONFIGMAP_NAME
-            value: topology
-          - name: TOPOLOGY_CONFIGMAP_NAMESPACE
-            value: kuadrant-system
-          - name: METRICS_WORKLOAD_SUFFIX
-            value: -openshift-default
-        volumeMounts:
-        - name: plugin-serving-cert
-          readOnly: true
-          mountPath: /var/serving-cert
-        - name: nginx-conf
-          readOnly: true
-          mountPath: /etc/nginx/nginx.conf
-          subPath: nginx.conf
+        - name: kuadrant-console-plugin
+          image: quay.io/kuadrant/console-plugin:latest
+          ports:
+            - name: https
+              containerPort: 9443
+              protocol: TCP
+          imagePullPolicy: Always
+          env:
+            - name: TOPOLOGY_CONFIGMAP_NAME
+              value: topology
+            - name: TOPOLOGY_CONFIGMAP_NAMESPACE
+              value: kuadrant-system
+            - name: METRICS_WORKLOAD_SUFFIX
+              value: -openshift-default
+            - name: TLS_CERTIFICATE_FILE
+              value: /var/serving-cert/tls.crt
+            - name: TLS_KEY_FILE
+              value: /var/serving-cert/tls.key
+          volumeMounts:
+            - name: plugin-serving-cert
+              readOnly: true
+              mountPath: /var/serving-cert
       volumes:
-      - name: plugin-serving-cert
-        secret:
-          secretName: plugin-serving-cert
-          defaultMode: 420
-      - name: nginx-conf
-        configMap:
-          name: nginx-conf
-          defaultMode: 420
+        - name: plugin-serving-cert
+          secret:
+            secretName: plugin-serving-cert
+            defaultMode: 420
       restartPolicy: Always
       dnsPolicy: ClusterFirst
   strategy:
@@ -62,44 +59,6 @@ spec:
     rollingUpdate:
       maxUnavailable: 25%
       maxSurge: 25%
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: nginx-conf
-  namespace: kuadrant-system
-  labels:
-    app: kuadrant-console-plugin
-    app.kubernetes.io/component: kuadrant-console-plugin
-    app.kubernetes.io/instance: kuadrant-console-plugin
-    app.kubernetes.io/name: kuadrant-console-plugin
-    app.kubernetes.io/part-of: kuadrant-console-plugin
-data:
-  nginx.conf: |
-    error_log /dev/stdout;
-    events {}
-    http {
-      access_log         /dev/stdout;
-      include            /etc/nginx/mime.types;
-      default_type       application/octet-stream;
-      keepalive_timeout  65;
-
-      server {
-        listen              9443 ssl;
-        listen              [::]:9443 ssl;
-        ssl_certificate     /var/serving-cert/tls.crt;
-        ssl_certificate_key /var/serving-cert/tls.key;
-
-        location / {
-          root                /usr/share/nginx/html;
-        }
-
-        # Serve config.js from /tmp
-        location /config.js {
-          root /tmp;
-        }
-      }
-    }
 ---
 apiVersion: v1
 kind: Service
@@ -116,10 +75,10 @@ metadata:
     app.kubernetes.io/part-of: kuadrant-console-plugin
 spec:
   ports:
-  - name: 9443-tcp
-    protocol: TCP
-    port: 9443
-    targetPort: 9443
+    - name: 9443-tcp
+      protocol: TCP
+      port: 9443
+      targetPort: 9443
   selector:
     app: kuadrant-console-plugin
   type: ClusterIP
@@ -140,3 +99,12 @@ spec:
       namespace: kuadrant-system
       port: 9443
       basePath: '/'
+  proxy:
+    - alias: backend
+      authorization: UserToken
+      endpoint:
+        type: Service
+        service:
+          name: kuadrant-console-plugin
+          namespace: kuadrant-system
+          port: 9443

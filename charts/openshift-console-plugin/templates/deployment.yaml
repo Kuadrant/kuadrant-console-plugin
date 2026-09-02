@@ -20,7 +20,8 @@ spec:
         - name: {{ template "openshift-console-plugin.name" . }}
           image: {{ required "Plugin image must be specified!" .Values.plugin.image }}
           ports:
-            - containerPort: {{ .Values.plugin.port }}
+            - name: https
+              containerPort: {{ .Values.plugin.port }}
               protocol: TCP
           imagePullPolicy: {{ .Values.plugin.imagePullPolicy }}
           env:
@@ -30,6 +31,10 @@ spec:
               value: {{ .Values.plugin.topologyConfigMapNamespace | default "kuadrant-system" | quote }}
             - name: METRICS_WORKLOAD_SUFFIX
               value: {{ .Values.plugin.metricsWorkloadSuffix | default "-openshift-default" | quote }}
+            - name: TLS_CERTIFICATE_FILE
+              value: /var/cert/tls.crt
+            - name: TLS_KEY_FILE
+              value: /var/cert/tls.key
           {{- if and (.Values.plugin.securityContext.enabled) (.Values.plugin.containerSecurityContext) }}
           securityContext: {{ tpl (toYaml (omit .Values.plugin.containerSecurityContext "enabled")) $ | nindent 12 }}
           {{- end }}
@@ -39,18 +44,10 @@ spec:
             - name: {{ template "openshift-console-plugin.certificateSecret" . }}
               readOnly: true
               mountPath: /var/cert
-            - name: nginx-conf
-              readOnly: true
-              mountPath: /etc/nginx/nginx.conf
-              subPath: nginx.conf
       volumes:
         - name: {{ template "openshift-console-plugin.certificateSecret" . }}
           secret:
             secretName: {{ template "openshift-console-plugin.certificateSecret" . }}
-            defaultMode: 420
-        - name: nginx-conf
-          configMap:
-            name: {{ template "openshift-console-plugin.name" . }}
             defaultMode: 420
       restartPolicy: Always
       dnsPolicy: ClusterFirst
