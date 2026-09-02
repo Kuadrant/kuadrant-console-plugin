@@ -36,7 +36,8 @@
     "qs": "6.14.1",
     "brace-expansion@^5": "^5.0.7",
     "nanoid": "3.3.18",
-    "browserslist": "^4.28.7"
+    "browserslist": "^4.28.7",
+    "js-yaml": "^4.3.2"
   },
   "devDependencies": {
     "@openshift-console/dynamic-plugin-sdk": "patch:@openshift-console/dynamic-plugin-sdk@npm%3A4.22.0#~/.yarn/patches/@openshift-console-dynamic-plugin-sdk-npm-4.22.0-40a905f3df.patch",
@@ -146,7 +147,7 @@
     "graphlib-dot": "^0.6.4",
     "i18next": "^25.8.0",
     "i18next-parser": "^9.0.1",
-    "js-yaml": "^4.3.1",
+    "js-yaml": "^4.3.2",
     "nanoid": "3.3.18",
     "pluralize": "^8.0.0",
     "swagger-ui-react": "5.10.5"
