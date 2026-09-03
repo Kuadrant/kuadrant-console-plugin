@@ -126,6 +126,7 @@
       "useHTTPRouteActions": "./components/httproute/useHTTPRouteActions",
       "GatewaySingleOverview": "./components/gateway/GatewaySingleOverview",
       "HTTPRouteSingleOverview": "./components/httproute/HTTPRouteSingleOverview",
+      "MCPOverviewPage": "./components/mcp/MCPOverviewPage",
       "MCPSetupWizard": "./components/mcp/MCPSetupWizard",
       "MCPGatewayExtensionCreatePage": "./components/mcp/MCPGatewayExtensionCreatePage",
       "MCPServerRegistrationCreatePage": "./components/mcp/MCPServerRegistrationCreatePage"

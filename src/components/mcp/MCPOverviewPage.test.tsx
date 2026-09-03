@@ -34,8 +34,24 @@ jest.mock('react-helmet', () => ({
 jest.mock('@openshift-console/dynamic-plugin-sdk', () => {
   return {
     useK8sWatchResource: (resource: { groupVersionKind: { kind: string } }) => {
-    if (resource.groupVersionKind.kind === 'MCPGatewayExtension') {
-      if (mockMcpResourceKind === 'extension' || mockMcpResourceKind === 'both') {
+      if (resource.groupVersionKind.kind === 'MCPGatewayExtension') {
+        if (mockMcpResourceKind === 'extension' || mockMcpResourceKind === 'both') {
+          return [
+            [
+              { metadata: { name: 'mcp-resource', namespace: 'test-ns' } },
+              { metadata: { name: 'another-mcp-resource', namespace: 'test-ns' } },
+            ],
+            true,
+            null,
+          ];
+        }
+        return mockExtensionsWatch;
+      }
+
+      if (
+        resource.groupVersionKind.kind === 'MCPServerRegistration' &&
+        (mockMcpResourceKind === 'server' || mockMcpResourceKind === 'both')
+      ) {
         return [
           [
             { metadata: { name: 'mcp-resource', namespace: 'test-ns' } },
@@ -45,24 +61,8 @@ jest.mock('@openshift-console/dynamic-plugin-sdk', () => {
           null,
         ];
       }
-      return mockExtensionsWatch;
-    }
 
-    if (
-      resource.groupVersionKind.kind === 'MCPServerRegistration' &&
-      (mockMcpResourceKind === 'server' || mockMcpResourceKind === 'both')
-    ) {
-      return [
-        [
-          { metadata: { name: 'mcp-resource', namespace: 'test-ns' } },
-          { metadata: { name: 'another-mcp-resource', namespace: 'test-ns' } },
-        ],
-        true,
-        null,
-      ];
-    }
-
-    return [[], true, null];
+      return [[], true, null];
     },
     NamespaceBar: () => <div data-test="namespace-bar" />,
     ResourceLink: ({ name }: { name: string }) => <span>{name}</span>,
