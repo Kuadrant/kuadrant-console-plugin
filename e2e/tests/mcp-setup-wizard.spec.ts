@@ -90,6 +90,31 @@ test.describe('MCP Management', () => {
   });
 
   test.describe('Setup wizard', () => {
+    const setupGatewayName = `e2e-mcp-setup-gw-${uid()}`;
+
+    test.beforeAll(() => {
+      kubectl(
+        ['apply', '-f', '-'],
+        `
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ${setupGatewayName}
+  namespace: ${TEST_NAMESPACE}
+spec:
+  gatewayClassName: istio
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+`,
+      );
+    });
+
+    test.afterAll(() => {
+      deleteResource('gateway', setupGatewayName, TEST_NAMESPACE);
+    });
+
     test('renders the wizard with 4 steps', { tag: '@nightly' }, async ({ page }) => {
       await spaNavigate(page, '/kuadrant/mcp/setup-wizard');
 
@@ -147,7 +172,9 @@ test.describe('MCP Management', () => {
       const nextButton = page.getByRole('button', { name: 'Next', exact: true });
       await expect(nextButton).toBeDisabled();
 
-      await page.locator('[data-test="mcp-gateway-select"]').selectOption({ index: 1 });
+      await page
+        .locator('[data-test="mcp-gateway-select"]')
+        .selectOption({ value: setupGatewayName });
       await expect(nextButton).toBeEnabled();
     });
 
