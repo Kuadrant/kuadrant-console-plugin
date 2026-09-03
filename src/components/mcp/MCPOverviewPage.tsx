@@ -94,6 +94,25 @@ const mcpResources = [
 
 const mcpPolicies = ['AuthPolicy', 'RateLimitPolicy', 'TLSPolicy', 'DNSPolicy'];
 
+// Shared page scaffold (Helmet title, namespace bar, heading) for the early-return
+// states (access denied, load error, empty) so the layout has a single source of truth.
+const MCPOverviewPageShell: React.FC<{
+  title: string;
+  onNamespaceChange: React.ComponentProps<typeof NamespaceBar>['onNamespaceChange'];
+  children: React.ReactNode;
+}> = ({ title, onNamespaceChange, children }) => (
+  <>
+    <Helmet>
+      <title data-test="mcp-overview-page-title">{title}</title>
+    </Helmet>
+    <NamespaceBar onNamespaceChange={onNamespaceChange} />
+    <PageSection hasBodyWrapper={false}>
+      <Title headingLevel="h1">{title}</Title>
+    </PageSection>
+    <PageSection hasBodyWrapper={false}>{children}</PageSection>
+  </>
+);
+
 const MCPOverviewPage: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
@@ -111,7 +130,9 @@ const MCPOverviewPage: React.FC = () => {
   const watchNamespace = ns || activeNamespace;
   const resolvedNamespace = watchNamespace === '#ALL_NS#' ? undefined : watchNamespace;
 
-  const [extensions, extensionsLoaded] = useK8sWatchResource<MCPGatewayExtension[]>({
+  const [extensions, extensionsLoaded, extensionsLoadError] = useK8sWatchResource<
+    MCPGatewayExtension[]
+  >({
     groupVersionKind: RESOURCES.MCPGatewayExtension.gvk,
     isList: true,
     namespace: resolvedNamespace,
@@ -404,41 +425,65 @@ const MCPOverviewPage: React.FC = () => {
     return <div>{t('Loading permissions...')}</div>;
   }
 
+  if (!extensionRBAC.list) {
+    return (
+      <MCPOverviewPageShell title={t('MCP management')} onNamespaceChange={handleNamespaceChange}>
+        <Bullseye>
+          <EmptyState
+            titleText={
+              <Title headingLevel="h4" size="lg">
+                {t('Access Denied')}
+              </Title>
+            }
+            icon={LockIcon}
+          >
+            <EmptyStateBody>
+              <Content component="p">
+                {t('You do not have permission to view MCP Gateway Extensions')}
+              </Content>
+            </EmptyStateBody>
+          </EmptyState>
+        </Bullseye>
+      </MCPOverviewPageShell>
+    );
+  }
+
+  if (extensionsLoadError) {
+    return (
+      <MCPOverviewPageShell title={t('MCP management')} onNamespaceChange={handleNamespaceChange}>
+        <Alert variant="danger" isInline title={t('Error loading MCP Gateway Extensions')}>
+          {extensionsLoadError.message || t('An error occurred while loading extensions')}
+        </Alert>
+      </MCPOverviewPageShell>
+    );
+  }
+
   const hasNoExtensions = extensionsLoaded && (!extensions || extensions.length === 0);
 
   if (hasNoExtensions) {
     return (
-      <>
-        <Helmet>
-          <title data-test="mcp-overview-page-title">{t('MCP management')}</title>
-        </Helmet>
-        <NamespaceBar onNamespaceChange={handleNamespaceChange} />
-        <PageSection hasBodyWrapper={false}>
-          <Title headingLevel="h1">{t('MCP management')}</Title>
-        </PageSection>
-        <PageSection hasBodyWrapper={false}>
-          <EmptyState headingLevel="h2" titleText={t('Get started')} icon={RocketIcon}>
-            <EmptyStateBody>
-              <Content component="p">
-                {t(
-                  'Set up your MCP infrastructure by creating a gateway, route, and MCP extension. Use the setup wizard to get started quickly.',
-                )}
-              </Content>
-            </EmptyStateBody>
-            <EmptyStateFooter>
-              <EmptyStateActions>
-                <Button
-                  variant="primary"
-                  onClick={() => navigate('/kuadrant/mcp/setup-wizard')}
-                  data-test="mcp-setup-wizard-button"
-                >
-                  {t('MCP gateway setup wizard')}
-                </Button>
-              </EmptyStateActions>
-            </EmptyStateFooter>
-          </EmptyState>
-        </PageSection>
-      </>
+      <MCPOverviewPageShell title={t('MCP management')} onNamespaceChange={handleNamespaceChange}>
+        <EmptyState headingLevel="h2" titleText={t('Get started')} icon={RocketIcon}>
+          <EmptyStateBody>
+            <Content component="p">
+              {t(
+                'Set up your MCP infrastructure by creating a gateway, route, and MCP extension. Use the setup wizard to get started quickly.',
+              )}
+            </Content>
+          </EmptyStateBody>
+          <EmptyStateFooter>
+            <EmptyStateActions>
+              <Button
+                variant="primary"
+                onClick={() => navigate('/kuadrant/mcp/setup-wizard')}
+                data-test="mcp-setup-wizard-button"
+              >
+                {t('MCP gateway setup wizard')}
+              </Button>
+            </EmptyStateActions>
+          </EmptyStateFooter>
+        </EmptyState>
+      </MCPOverviewPageShell>
     );
   }
 
