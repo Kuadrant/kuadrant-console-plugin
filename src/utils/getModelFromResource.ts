@@ -10,9 +10,14 @@ export const getModelFromResource = (obj: K8sResourceCommon): K8sModel => {
     return `${kind}s`.toLowerCase();
   };
 
+  // Core resources (e.g. Secret, ConfigMap) have an apiVersion without a group
+  // segment ("v1"), so there is no group and the version is the whole string.
+  const [groupOrVersion, version] = obj.apiVersion.split('/');
+  const isCoreGroup = version === undefined;
+
   return {
-    apiGroup: obj.apiVersion.split('/')[0],
-    apiVersion: obj.apiVersion.split('/')[1],
+    apiGroup: isCoreGroup ? undefined : groupOrVersion,
+    apiVersion: isCoreGroup ? groupOrVersion : version,
     kind: obj.kind,
     plural: pluralizeKind(obj.kind),
     namespaced: !!obj.metadata.namespace,

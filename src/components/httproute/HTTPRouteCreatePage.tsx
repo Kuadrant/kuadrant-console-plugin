@@ -336,6 +336,8 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
   const formValidation = () => {
     const hasValidParentRef = parentRefs.some((ref) => ref.gatewayName);
 
+    // Gateway API requires spec.rules to have at least one item (minItems=1),
+    // so an HTTPRoute with zero rules is rejected by the API server.
     const hasValidRules =
       rules.length > 0 &&
       rules.every((rule) => {
@@ -368,7 +370,7 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
     setEditingRuleIndex(null);
     setCurrentRule({
       id: `rule-${Date.now().toString(36)}`,
-      matches: [],
+      matches: [{ id: 'match-1', pathType: 'PathPrefix', pathValue: '/' }],
       filters: [],
       serviceName: '',
       servicePort: 80,
@@ -466,11 +468,25 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                   label={t('Hostnames')}
                   fieldId={hostnames[0] !== undefined ? `hostname-0` : 'hostnames'}
                 >
+                  <Button
+                    variant={ButtonVariant.link}
+                    icon={<PlusCircleIcon />}
+                    onClick={addHostnameField}
+                    isInline
+                    style={{ marginBottom: '16px' }}
+                  >
+                    {t('Add hostname')}
+                  </Button>
                   {hostnames.map((hostname, index) => (
                     <div
                       key={index}
                       className="pf-v6-c-form__group-control"
-                      style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        marginBottom: '8px',
+                      }}
                     >
                       <TextInput
                         type="text"
@@ -479,27 +495,16 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                         onChange={(_, value) => updateHostname(value, index)}
                         placeholder={t('example.com')}
                       />
-                      {hostnames.length > 0 && (
-                        <Button
-                          variant={ButtonVariant.plain}
-                          onClick={() => removeHostnameField(index)}
-                          aria-label="Remove hostname"
-                        >
-                          <MinusCircleIcon />
-                        </Button>
-                      )}
+                      <Button
+                        variant={ButtonVariant.link}
+                        icon={<MinusCircleIcon />}
+                        isDanger
+                        onClick={() => removeHostnameField(index)}
+                      >
+                        {t('Remove')}
+                      </Button>
                     </div>
                   ))}
-                  {
-                    <Button
-                      variant={ButtonVariant.link}
-                      icon={<PlusCircleIcon />}
-                      onClick={addHostnameField}
-                      isInline
-                    >
-                      {t('Add hostname')}
-                    </Button>
-                  }
                   <FormHelperText>
                     <HelperText>
                       <HelperTextItem>{t('Hostnames for this HTTPRoute')}</HelperTextItem>
@@ -528,7 +533,7 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                     <Alert
                       variant={AlertVariant.warning}
                       isInline
-                      title={t('No rules defined. HTTPRoute will use default routing.')}
+                      title={t('Add at least one rule before creating an HTTPRoute.')}
                     />
                   )}
 

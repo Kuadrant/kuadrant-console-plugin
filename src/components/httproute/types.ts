@@ -105,7 +105,7 @@ export interface HTTPRouteMatch {
   id: string;
   pathType: HTTPRoutePathType;
   pathValue: string;
-  method: HTTPRouteMethod;
+  method?: HTTPRouteMethod;
   headers?: HTTPRouteHeader[];
   queryParams?: HTTPRouteQueryParam[];
 }

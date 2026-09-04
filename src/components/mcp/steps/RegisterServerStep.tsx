@@ -1,16 +1,19 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Alert, Tabs, Tab, TabTitleText } from '@patternfly/react-core';
+import { Tabs, Tab, TabTitleText } from '@patternfly/react-core';
 import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
 import { MCPServerFormState } from '../types';
 import MCPServerRegistrationFormFields from '../MCPServerRegistrationFormFields';
-import { buildMCPServerRegistration } from '../mcpResourceUtils';
+import { buildMCPServerRegistration, isMCPServerRegistrationValid } from '../mcpResourceUtils';
 
 interface RegisterServerStepProps {
   formState: MCPServerFormState;
   onChange: (state: MCPServerFormState) => void;
   routeName?: string;
+  routeNamespace?: string;
+  credentialNamespace?: string;
+  credentialName?: string;
   onValidationChange?: (isValid: boolean) => void;
 }
 
@@ -18,112 +21,111 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
   formState,
   onChange,
   routeName,
+  routeNamespace,
+  credentialNamespace,
+  credentialName,
   onValidationChange,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
-  const [activeTab, setActiveTab] = React.useState<string>('form');
-  const [yamlContent, setYamlContent] = React.useState<unknown>(null);
-  const [yamlError, setYamlError] = React.useState<string | null>(null);
+  const [activeTab, setActiveTab] = React.useState<'form' | 'yaml'>('form');
+  const [yamlKey, setYamlKey] = React.useState(0);
 
   React.useEffect(() => {
-    if (routeName && formState.targetHTTPRouteName !== routeName) {
-      onChange({ ...formState, targetHTTPRouteName: routeName });
+    if (
+      (routeName && formState.targetHTTPRouteName !== routeName) ||
+      (credentialNamespace && formState.namespace !== credentialNamespace)
+    ) {
+      const nextState = {
+        ...formState,
+        ...(routeName ? { targetHTTPRouteName: routeName } : {}),
+        ...(credentialNamespace ? { namespace: credentialNamespace } : {}),
+      };
+      onChange(nextState);
+      onValidationChange?.(isMCPServerRegistrationValid(nextState));
     }
-  }, [routeName]); // eslint-disable-line -- only resync when routeName changes; re-running on formState/onChange would fight typing in other fields
+  }, [routeName, credentialNamespace]); // eslint-disable-line -- only resync wizard-owned references
+
+  // Rebuilt from form state on every change so the YAML view is always current.
+  const serverResource = React.useMemo(
+    () =>
+      buildMCPServerRegistration(
+        { ...formState, namespace: credentialNamespace || formState.namespace },
+        credentialNamespace || formState.namespace,
+        null,
+        routeName,
+        routeNamespace,
+        credentialName,
+      ),
+    [formState, routeName, routeNamespace, credentialName],
+  );
 
   const handleChange = (field: keyof MCPServerFormState, value: string) => {
     onChange({ ...formState, [field]: value });
   };
 
-  const populateFormFromYAML = (parsed: Record<string, unknown>) => {
-    const metadata = parsed.metadata as Record<string, string> | undefined;
-    const spec = parsed.spec as Record<string, unknown> | undefined;
-
-    const newState: MCPServerFormState = {
-      registrationName: metadata?.name || '',
-      namespace: metadata?.namespace || '',
-      targetHTTPRouteName: '',
-      toolPrefix: '',
-    };
-
-    if (spec) {
-      const targetRef = spec.targetRef as Record<string, string> | undefined;
-      if (targetRef?.name) {
-        newState.targetHTTPRouteName = targetRef.name;
-      }
-      if (typeof spec.prefix === 'string') {
-        newState.toolPrefix = spec.prefix;
-      }
-    }
-
-    if (JSON.stringify(newState) !== JSON.stringify(formState)) {
-      onChange(newState);
-    }
-  };
-
-  const parseYAMLToForm = (yamlInput: string) => {
-    setYamlError(null);
+  // Parse YAML edits back into form state live. Invalid intermediate YAML is
+  // ignored so typing in the editor doesn't clobber the form.
+  const handleYamlChange = (yamlInput: string) => {
     try {
       const parsed = yaml.load(yamlInput) as Record<string, unknown>;
-      if (parsed && typeof parsed === 'object') {
-        populateFormFromYAML(parsed);
-      }
-    } catch (error: unknown) {
-      const err = error as Error;
-      setYamlError(err?.message || t('Invalid YAML'));
-    }
-  };
+      if (!parsed || typeof parsed !== 'object') return;
 
-  const handleYAMLChange = (yamlInput: string) => {
-    setYamlContent(yamlInput);
+      const metadata = parsed.metadata as Record<string, string> | undefined;
+      const spec = parsed.spec as Record<string, unknown> | undefined;
+      const targetRef = spec?.targetRef as Record<string, string> | undefined;
+
+      onChange({
+        registrationName: metadata?.name || '',
+        namespace: credentialNamespace || metadata?.namespace || '',
+        // When the wizard configured a route, keep it aligned — a YAML edit must not
+        // retarget the registration at a route the wizard did not set up.
+        targetHTTPRouteName: routeName || targetRef?.name || '',
+        toolPrefix: typeof spec?.prefix === 'string' ? spec.prefix : '',
+      });
+    } catch {
+      // Invalid YAML — don't update form state
+    }
   };
 
   return (
-    <Tabs
-      activeKey={activeTab}
-      onSelect={(_e, key) => {
-        if (key === 'form' && activeTab === 'yaml') {
-          if (yamlContent) {
-            parseYAMLToForm(
-              typeof yamlContent === 'string' ? yamlContent : JSON.stringify(yamlContent),
-            );
-          }
-        } else if (key === 'yaml' && activeTab === 'form') {
-          setYamlContent(
-            buildMCPServerRegistration(formState, formState.namespace, null, routeName),
-          );
-          setYamlError(null);
-        }
-        setActiveTab(key as string);
-      }}
-    >
-      <Tab eventKey="form" title={<TabTitleText>{t('Form')}</TabTitleText>}>
-        <br />
+    <>
+      <Tabs
+        activeKey={activeTab}
+        onSelect={(_e, key) => {
+          const view = key as 'form' | 'yaml';
+          if (view === 'yaml') setYamlKey((k) => k + 1);
+          setActiveTab(view);
+        }}
+        style={{ marginBottom: '16px' }}
+      >
+        <Tab eventKey="form" title={<TabTitleText>{t('Form')}</TabTitleText>} />
+        <Tab eventKey="yaml" title={<TabTitleText>{t('YAML')}</TabTitleText>} />
+      </Tabs>
+
+      {activeTab === 'form' ? (
         <MCPServerRegistrationFormFields
           formState={formState}
           onChange={handleChange}
           httpRouteNames={routeName ? [routeName] : []}
+          showNamespaceField={!credentialNamespace}
           onValidationChange={onValidationChange}
         />
-      </Tab>
-
-      <Tab eventKey="yaml" title={<TabTitleText>{t('YAML')}</TabTitleText>}>
-        {yamlError && (
-          <Alert variant="warning" isInline title={t('Invalid YAML')} className="pf-v6-u-mt-md">
-            {yamlError}
-          </Alert>
-        )}
-        <div className="kuadrant-mcp-wizard__yaml-editor">
-          <React.Suspense fallback={<div />}>
+      ) : (
+        <div
+          className="kuadrant-mcp-wizard__yaml-editor"
+          style={{ minHeight: '400px' }}
+          key={yamlKey}
+        >
+          <React.Suspense fallback={<div>{t('Loading YAML editor...')}</div>}>
             <ResourceYAMLEditor
-              initialResource={yamlContent}
-              onChange={handleYAMLChange}
+              initialResource={serverResource}
+              onChange={handleYamlChange}
               create={true}
             />
           </React.Suspense>
         </div>
-      </Tab>
-    </Tabs>
+      )}
+    </>
   );
 };
 

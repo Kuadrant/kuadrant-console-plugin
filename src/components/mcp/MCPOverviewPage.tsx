@@ -53,6 +53,7 @@ import { getResourceNameFromKind } from '../../utils/getModelFromResource';
 import { GatewayResource } from '../gateway/types';
 import { MCPGatewayExtension, MCPServerRegistration } from './types';
 import MCPRegistrationWizard from './MCPRegistrationWizard';
+import MCPExternalRegistrationWizard from './MCPExternalRegistrationWizard';
 
 const mcpResources = [
   {
@@ -90,6 +91,22 @@ const mcpResources = [
     kind: getResourceNameFromKind('DNSPolicy'),
     namespace: undefined as string | undefined,
   },
+  // extra resources the external registration wizard also creates
+  {
+    group: RESOURCES.ServiceEntry.gvk.group,
+    kind: getResourceNameFromKind('ServiceEntry'),
+    namespace: undefined as string | undefined,
+  },
+  {
+    group: RESOURCES.DestinationRule.gvk.group,
+    kind: getResourceNameFromKind('DestinationRule'),
+    namespace: undefined as string | undefined,
+  },
+  {
+    group: '',
+    kind: getResourceNameFromKind('Secret'),
+    namespace: undefined as string | undefined,
+  },
 ];
 
 const mcpPolicies = ['AuthPolicy', 'RateLimitPolicy', 'TLSPolicy', 'DNSPolicy'];
@@ -121,6 +138,7 @@ const MCPOverviewPage: React.FC = () => {
 
   const [isRegisterServerOpen, setIsRegisterServerOpen] = React.useState(false);
   const [isWizardOpen, setIsWizardOpen] = React.useState(false);
+  const [isExternalWizardOpen, setIsExternalWizardOpen] = React.useState(false);
   const [isPolicyCreateOpen, setIsPolicyCreateOpen] = React.useState(false);
   const [isGettingStartedMenuOpen, setIsGettingStartedMenuOpen] = React.useState(false);
   const [hideCard, setHideCard] = React.useState(
@@ -247,6 +265,16 @@ const MCPOverviewPage: React.FC = () => {
   const serverRBAC = {
     list: userRBAC[`${getResourceNameFromKind('MCPServerRegistration')}-list`],
     create: userRBAC[`${getResourceNameFromKind('MCPServerRegistration')}-create`],
+  };
+
+  // The external wizard also creates a ServiceEntry, DestinationRule and Secret,
+  // so gate its dropdown item on create permission for all of them.
+  const externalRBAC = {
+    create:
+      serverRBAC.create &&
+      userRBAC[`${getResourceNameFromKind('ServiceEntry')}-create`] &&
+      userRBAC[`${getResourceNameFromKind('DestinationRule')}-create`] &&
+      userRBAC[`${getResourceNameFromKind('Secret')}-create`],
   };
 
   const referenceGrantRBAC = {
@@ -822,11 +850,31 @@ const MCPOverviewPage: React.FC = () => {
                           {t('Internal')}
                         </DropdownItem>
                       )}
-                      <Tooltip content={t('External registration is not available yet')}>
-                        <DropdownItem key="external" isAriaDisabled>
+                      {!externalRBAC.create || isAllNamespaces ? (
+                        <Tooltip
+                          content={
+                            isAllNamespaces
+                              ? t('Select a namespace to create a resource')
+                              : t(
+                                  'You do not have permission to create the required resources (MCPServerRegistration, ServiceEntry, DestinationRule, Secret)',
+                                )
+                          }
+                        >
+                          <DropdownItem key="external" isAriaDisabled>
+                            {t('External')}
+                          </DropdownItem>
+                        </Tooltip>
+                      ) : (
+                        <DropdownItem
+                          key="external"
+                          onClick={() => {
+                            setIsRegisterServerOpen(false);
+                            setIsExternalWizardOpen(true);
+                          }}
+                        >
                           {t('External')}
                         </DropdownItem>
-                      </Tooltip>
+                      )}
                     </DropdownList>
                   </Dropdown>
                 </CardTitle>
@@ -1046,6 +1094,10 @@ const MCPOverviewPage: React.FC = () => {
         </Grid>
       </PageSection>
       <MCPRegistrationWizard isOpen={isWizardOpen} onClose={() => setIsWizardOpen(false)} />
+      <MCPExternalRegistrationWizard
+        isOpen={isExternalWizardOpen}
+        onClose={() => setIsExternalWizardOpen(false)}
+      />
     </>
   );
 };

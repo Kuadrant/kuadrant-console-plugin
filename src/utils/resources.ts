@@ -341,6 +341,24 @@ export const RESOURCES = {
     createPath: 'MCPServerRegistrationCreatePage',
   },
 
+  // istio resources, used by the external MCP server registration wizard
+  ServiceEntry: {
+    gvk: { group: 'networking.istio.io', version: 'v1beta1', kind: 'ServiceEntry' },
+    plural: 'ServiceEntries',
+    isPolicy: false,
+    isGatewayAPI: false,
+    showInTopologyByDefault: false,
+    isKuadrantInternal: false,
+  },
+  DestinationRule: {
+    gvk: { group: 'networking.istio.io', version: 'v1beta1', kind: 'DestinationRule' },
+    plural: 'DestinationRules',
+    isPolicy: false,
+    isGatewayAPI: false,
+    showInTopologyByDefault: false,
+    isKuadrantInternal: false,
+  },
+
   // developer portal resources
   APIProduct: {
     gvk: { group: 'devportal.kuadrant.io', version: 'v1alpha1', kind: 'APIProduct' },

@@ -260,12 +260,8 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 
   return (
     <FormGroup
-      label={
-        <span>
-          {t('Parent references')}{' '}
-          <span style={{ color: 'var(--pf-v6-global--danger-color--100)' }}>*</span>
-        </span>
-      }
+      label={t('Parent references')}
+      isRequired
       fieldId={parentRefs[0] ? 'parent-gateway-0' : 'parent-references'}
     >
       {!hasValidParentRef && (

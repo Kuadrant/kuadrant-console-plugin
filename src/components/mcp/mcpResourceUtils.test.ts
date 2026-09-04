@@ -3,6 +3,8 @@ import {
   mcpExtensionToFormState,
   isMCPGatewayExtensionValid,
   buildMCPServerRegistration,
+  wireHTTPRouteToExternalHost,
+  parseServiceEntryHosts,
   mcpServerToFormState,
   isMCPServerRegistrationValid,
   buildMCPServerRegistrationTemplate,
@@ -142,6 +144,70 @@ describe('buildMCPGatewayExtension', () => {
     expect(resource.metadata.resourceVersion).toBe('12345');
     expect(resource.metadata.uid).toBe('abc-uid');
     expect(resource.metadata.name).toBe('my-ext');
+  });
+
+  it('includes cross-namespace route and credential references for the external flow', () => {
+    const resource = buildMCPServerRegistration(
+      baseServerFormState({ namespace: 'registration-ns', targetHTTPRouteName: '' }),
+      'registration-ns',
+      null,
+      'external-route',
+      'route-ns',
+      'external-token',
+    );
+
+    expect(resource.spec.targetRef).toEqual({
+      group: 'gateway.networking.k8s.io',
+      kind: 'HTTPRoute',
+      name: 'external-route',
+      namespace: 'route-ns',
+    });
+    expect(resource.spec.credentialRef).toEqual({ name: 'external-token', key: 'token' });
+  });
+});
+
+describe('wireHTTPRouteToExternalHost', () => {
+  it('replaces every rule backend with the complete Istio Hostname reference', () => {
+    const resource = wireHTTPRouteToExternalHost(
+      {
+        apiVersion: 'gateway.networking.k8s.io/v1',
+        kind: 'HTTPRoute',
+        metadata: { name: 'external-route', namespace: 'route-ns' },
+        spec: {
+          rules: [
+            { backendRefs: [{ name: 'placeholder', port: 8080 }] },
+            { backendRefs: [{ name: 'another-placeholder', port: 8081 }] },
+          ],
+        },
+      },
+      'api.external.example.com',
+      443,
+    );
+
+    expect(resource.spec?.rules?.map((rule) => rule.backendRefs)).toEqual([
+      [
+        {
+          group: 'networking.istio.io',
+          kind: 'Hostname',
+          name: 'api.external.example.com',
+          port: 443,
+        },
+      ],
+      [
+        {
+          group: 'networking.istio.io',
+          kind: 'Hostname',
+          name: 'api.external.example.com',
+          port: 443,
+        },
+      ],
+    ]);
+  });
+});
+
+describe('parseServiceEntryHosts', () => {
+  it('removes empty and whitespace-only entries', () => {
+    expect(parseServiceEntryHosts(', api.example.com, ')).toEqual(['api.example.com']);
   });
 });
 
