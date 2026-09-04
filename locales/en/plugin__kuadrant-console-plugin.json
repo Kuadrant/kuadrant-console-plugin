@@ -254,7 +254,6 @@
   "DNSPolicy configures how North-South based traffic should be balanced and reach the gateways": "DNSPolicy configures how North-South based traffic should be balanced and reach the gateways",
   "Documentation": "Documentation",
   "Documentation URL": "Documentation URL",
-  "Done": "Done",
   "Draft": "Draft",
   "e.g. 1h, 60s, 500ms, 1h30m": "e.g. 1h, 60s, 500ms, 1h30m",
   "e.g. auth.identity.tier == \"gold\"": "e.g. auth.identity.tier == \"gold\"",

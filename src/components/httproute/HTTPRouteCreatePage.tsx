@@ -31,7 +31,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useLocation, useNavigate } from 'react-router';
 import * as yaml from 'js-yaml';
-import ParentReferencesSelect from '../../utils/ParentReferencesSelect';
+import ParentReferencesSelect, { GatewayForSelect } from '../../utils/ParentReferencesSelect';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@patternfly/react-table';
 import { HTTPRouteResource, HTTPRouteMatch } from './types';
 import {
@@ -62,9 +62,20 @@ interface ParentReference {
 
 interface HTTPRouteCreatePageProps {
   onFormChange?: (resource: HTTPRouteResource, isValid: boolean) => void;
+  // Additional, not-yet-persisted Gateways to offer as parentRef options (e.g. a
+  // draft Gateway from an enclosing wizard). Not passed by the standalone page.
+  extraGateways?: GatewayForSelect[];
+  // Hydrate the form from a previously built resource on mount. Used when this page
+  // is embedded in a wizard step that unmounts on navigation, so returning to the
+  // step restores the user's input instead of showing a blank form.
+  initialResource?: HTTPRouteResource;
 }
 
-const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange }) => {
+const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
+  onFormChange,
+  extraGateways,
+  initialResource,
+}) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [routeName, setRouteName] = React.useState('');
@@ -349,13 +360,32 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
     return !!(validateRouteName(routeName) === null && hasValidParentRef && hasValidRules);
   };
 
+  // Hydrate the form once from a previously built resource when embedded in a wizard
+  // step that unmounts on navigation. Only in create mode — edit mode hydrates from
+  // the live cluster watch above.
+  const hasHydratedFromInitial = React.useRef(false);
+  React.useEffect(() => {
+    if (initialResource && !hasHydratedFromInitial.current && (!nameEdit || nameEdit === '~new')) {
+      populateFormFromHTTPRoute(initialResource);
+      hasHydratedFromInitial.current = true;
+    }
+  }, [initialResource]);
+
   const onFormChangeRef = React.useRef(onFormChange);
 
   React.useEffect(() => {
     onFormChangeRef.current = onFormChange;
   }, [onFormChange]);
 
+  // Skip the first emit when hydrating from initialResource: the built object lags one
+  // render behind the setState calls in populateFormFromHTTPRoute, so emitting it would
+  // clobber the parent's stored draft with a blank/stale resource.
+  const skipInitialEmit = React.useRef(!!initialResource);
   React.useEffect(() => {
+    if (skipInitialEmit.current) {
+      skipInitialEmit.current = false;
+      return;
+    }
     if (onFormChangeRef.current) {
       onFormChangeRef.current(httpRouteObject as HTTPRouteResource, formValidation());
     }
@@ -460,7 +490,11 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({ onFormChange 
                   </FormHelperText>
                 </FormGroup>
 
-                <ParentReferencesSelect parentRefs={parentRefs} onChange={setParentRefs} />
+                <ParentReferencesSelect
+                  parentRefs={parentRefs}
+                  onChange={setParentRefs}
+                  extraGateways={extraGateways}
+                />
 
                 <FormGroup
                   label={t('Hostnames')}

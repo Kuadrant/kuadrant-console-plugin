@@ -62,9 +62,13 @@ import '../css/gateway-api-plugin.css';
 
 interface GatewayCreatePageProps {
   onFormChange?: (resource: GatewayResource, isValid: boolean) => void;
+  // Hydrate the form from a previously built resource on mount. Used when this page
+  // is embedded in a wizard step that unmounts on navigation, so returning to the
+  // step restores the user's input instead of showing a blank form.
+  initialResource?: GatewayResource;
 }
 
-const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) => {
+const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange, initialResource }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [activeNamespace] = useActiveNamespace();
@@ -656,13 +660,30 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({ onFormChange }) =
     }
   }, [gatewayObject]);
 
+  // Restore form state from a parent-provided draft on mount (wizard back-navigation).
+  // Only in create mode — edit mode hydrates from the cluster watch above.
+  const hasHydratedFromInitial = React.useRef(false);
+  React.useEffect(() => {
+    if (initialResource && !hasHydratedFromInitial.current && (!nameEdit || nameEdit === '~new')) {
+      populateFormFromGateway(initialResource);
+      hasHydratedFromInitial.current = true;
+    }
+  }, [initialResource]);
+
   const onFormChangeRef = React.useRef(onFormChange);
 
   React.useEffect(() => {
     onFormChangeRef.current = onFormChange;
   }, [onFormChange]);
 
+  // Skip the first (empty) emit when hydrating from initialResource so the blank
+  // mount render can't clobber the parent's stored draft before hydration runs.
+  const skipInitialEmit = React.useRef(!!initialResource);
   React.useEffect(() => {
+    if (skipInitialEmit.current) {
+      skipInitialEmit.current = false;
+      return;
+    }
     if (onFormChangeRef.current) {
       onFormChangeRef.current(gatewayObject, formValidation());
     }

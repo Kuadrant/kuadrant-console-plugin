@@ -33,6 +33,7 @@ import MCPExtensionStep from './MCPExtensionStep';
 import MCPVerifyStep, { VerifyStepItem, WatchResourceConfig } from './MCPVerifyStep';
 import GatewayCreatePage from '../gateway/GatewayCreatePage';
 import HTTPRouteCreatePage from '../httproute/HTTPRouteCreatePage';
+import { GatewayForSelect } from '../../utils/ParentReferencesSelect';
 import '../css/gateway-api-plugin.css';
 
 const MCPSetupWizard: React.FC = () => {
@@ -94,6 +95,14 @@ const MCPSetupWizard: React.FC = () => {
     if (formState.gatewayMode !== 'existing' || !formState.selectedGatewayName) return undefined;
     return (gateways || []).find((gw) => gw.metadata?.name === formState.selectedGatewayName);
   }, [gateways, formState.gatewayMode, formState.selectedGatewayName]);
+
+  // Expose the Step 1 draft Gateway to Step 2's parentRef selector before it is
+  // persisted (created only at the Verify step). newGatewayResource is already
+  // pinned to the frozen wizard namespace at storage time. See issue #795.
+  const draftGateways = React.useMemo<GatewayForSelect[]>(() => {
+    if (formState.gatewayMode !== 'new' || !newGatewayResource) return [];
+    return [newGatewayResource as GatewayForSelect];
+  }, [formState.gatewayMode, newGatewayResource]);
 
   const extensionNamespace = formState.extensionNamespace || selectedNamespace;
   const gatewayNamespace = formState.selectedGatewayNamespace || selectedNamespace;
@@ -366,8 +375,15 @@ const MCPSetupWizard: React.FC = () => {
                 <CardBody>
                   <div className="kuadrant-mcp-embedded-form">
                     <GatewayCreatePage
+                      initialResource={newGatewayResource ?? undefined}
                       onFormChange={(resource, isValid) => {
-                        setNewGatewayResource(resource);
+                        // Pin the namespace to the frozen wizard namespace so the
+                        // Gateway created at Verify and the draft shown in Step 2
+                        // never diverge if the active namespace changes mid-wizard.
+                        setNewGatewayResource({
+                          ...resource,
+                          metadata: { ...resource.metadata, namespace: selectedNamespace },
+                        });
                         setNewGatewayValid(isValid);
                         updateFormState({
                           newGatewayName: resource.metadata?.name || '',
@@ -484,6 +500,8 @@ const MCPSetupWizard: React.FC = () => {
                 <CardBody>
                   <div className="kuadrant-mcp-embedded-form">
                     <HTTPRouteCreatePage
+                      extraGateways={draftGateways}
+                      initialResource={newRouteResource ?? undefined}
                       onFormChange={(resource, isValid) => {
                         setNewRouteResource(resource);
                         setNewRouteValid(isValid);
@@ -517,15 +535,11 @@ const MCPSetupWizard: React.FC = () => {
           </WizardStep>
 
           {/* Step 4: Verify configuration */}
-          <WizardStep
-            name={t('4. Verify configuration')}
-            id="step-verify"
-            footer={{
-              nextButtonText: t('Done'),
-              onNext: () => navigate(`/kuadrant/mcp/overview/ns/${selectedNamespace}`),
-              isBackHidden: true,
-            }}
-          >
+          {/* No footer buttons: Done/Cancel both just navigated to the overview, which
+              is redundant with the in-card "View in overview" button below. Resources
+              persist as they are created, so the user can leave via that button or by
+              navigating away at any time. */}
+          <WizardStep name={t('4. Verify configuration')} id="step-verify" footer={<div />}>
             <MCPVerifyStep
               items={verifyItems}
               watchResource={verifyWatchResource}
