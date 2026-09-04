@@ -14,6 +14,7 @@ import {
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import { MCPWizardFormState } from './types';
+import { MCPGatewayExtensionValidationError } from './mcpResourceUtils';
 import { GatewayResource } from '../gateway/types';
 import {
   validateRequired,
@@ -40,7 +41,7 @@ interface MCPExtensionFormFieldsProps {
   // isn't otherwise selectable there); the standalone page hides it and uses the
   // console's namespace picker instead.
   showNamespaceField?: boolean;
-  validationError?: string | null;
+  validationError?: MCPGatewayExtensionValidationError | null;
   onValidationChange?: (isValid: boolean) => void;
 }
 
@@ -58,6 +59,9 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
   onValidationChange,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
+  const validationMessage = validationError
+    ? t(validationError.messageKey, validationError.messageParams)
+    : null;
 
   // Validation state
   const [errors, setErrors] = React.useState<{
@@ -197,10 +201,10 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
           placeholder={t('Enter extension name')}
           data-test="mcp-extension-name"
         />
-        {validationError?.includes('extension name') && formState.extensionName.trim() && (
+        {validationError?.field === 'extensionName' && formState.extensionName.trim() && (
           <FormHelperText>
             <HelperText>
-              <HelperTextItem variant="error">{validationError}</HelperTextItem>
+              <HelperTextItem variant="error">{validationMessage}</HelperTextItem>
             </HelperText>
           </FormHelperText>
         )}
@@ -249,10 +253,10 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
               </HelperTextItem>
             </HelperText>
           </FormHelperText>
-          {validationError?.includes('extension namespace') && formState.extensionNamespace && (
+          {validationError?.field === 'extensionNamespace' && formState.extensionNamespace && (
             <FormHelperText>
               <HelperText>
-                <HelperTextItem variant="error">{validationError}</HelperTextItem>
+                <HelperTextItem variant="error">{validationMessage}</HelperTextItem>
               </HelperText>
             </FormHelperText>
           )}
@@ -312,10 +316,10 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
             </HelperTextItem>
           </HelperText>
         </FormHelperText>
-        {validationError?.includes('target Gateway') && formState.targetGateway.trim() && (
+        {validationError?.field === 'targetGateway' && formState.targetGateway.trim() && (
           <FormHelperText>
             <HelperText>
-              <HelperTextItem variant="error">{validationError}</HelperTextItem>
+              <HelperTextItem variant="error">{validationMessage}</HelperTextItem>
             </HelperText>
           </FormHelperText>
         )}
@@ -374,16 +378,13 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
             </HelperTextItem>
           </HelperText>
         </FormHelperText>
-        {validationError &&
-          !validationError.includes('extension name') &&
-          !validationError.includes('target Gateway') &&
-          formState.sectionName.trim() && (
-            <FormHelperText>
-              <HelperText>
-                <HelperTextItem variant="error">{validationError}</HelperTextItem>
-              </HelperText>
-            </FormHelperText>
-          )}
+        {validationError?.field === 'sectionName' && formState.sectionName.trim() && (
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem variant="error">{validationMessage}</HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        )}
       </FormGroup>
 
       <ExpandableSection toggleText={t('Advanced broker settings')}>
@@ -457,10 +458,10 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
               placeholder={t('e.g. redis-session-secret')}
               data-test="mcp-session-store-secret"
             />
-            {validationError?.includes('session store Secret') && (
+            {validationError?.field === 'sessionStoreSecretName' && (
               <FormHelperText>
                 <HelperText>
-                  <HelperTextItem variant="error">{validationError}</HelperTextItem>
+                  <HelperTextItem variant="error">{validationMessage}</HelperTextItem>
                 </HelperText>
               </FormHelperText>
             )}
@@ -521,10 +522,10 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
                 placeholder={t('e.g. https://auth.example.com')}
                 data-test="mcp-oauth-auth-servers"
               />
-              {validationError?.includes('OAuth authorization server') && (
+              {validationError?.field === 'oauthAuthorizationServers' && (
                 <FormHelperText>
                   <HelperText>
-                    <HelperTextItem variant="error">{validationError}</HelperTextItem>
+                    <HelperTextItem variant="error">{validationMessage}</HelperTextItem>
                   </HelperText>
                 </FormHelperText>
               )}

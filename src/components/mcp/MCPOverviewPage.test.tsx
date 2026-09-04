@@ -119,6 +119,10 @@ describe('MCPOverviewPage', () => {
     };
   });
 
+  afterEach(() => {
+    document.body.classList.remove('pf-v6-theme-light', 'pf-v6-theme-dark');
+  });
+
   it('renders the empty state when no extensions exist', () => {
     render(<MCPOverviewPage />);
     expect(screen.getByRole('heading', { name: 'MCP management' })).toBeInTheDocument();
@@ -209,6 +213,24 @@ describe('MCPOverviewPage', () => {
     expect(screen.getByTestId('mcp-getting-started-registration-button')).toHaveTextContent(
       'Open server registration wizard',
     );
+  });
+
+  it.each([
+    ['light', 'pf-v6-theme-light'],
+    ['dark', 'pf-v6-theme-dark'],
+  ])('renders getting-started content in the %s theme', (_theme, themeClass) => {
+    document.body.classList.add(themeClass);
+    mockMcpResourceKind = 'both';
+
+    const { container } = render(<MCPOverviewPage />);
+
+    const gettingStartedAlert = container.querySelector('.kuadrant-mcp-getting-started-alert');
+    expect(document.body).toHaveClass(themeClass);
+    expect(gettingStartedAlert).toBeInTheDocument();
+    expect(gettingStartedAlert).toHaveClass('kuadrant-mcp-getting-started-alert');
+    expect(gettingStartedAlert).toHaveTextContent('Get started with MCP management');
+    expect(screen.getByTestId('mcp-getting-started-extension-button')).toBeVisible();
+    expect(screen.getByTestId('mcp-getting-started-registration-button')).toBeVisible();
   });
 
   it('uses the existing wizard entry points from the cards', () => {

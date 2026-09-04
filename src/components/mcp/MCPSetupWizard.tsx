@@ -94,18 +94,22 @@ const MCPSetupWizard: React.FC = () => {
 
   // Get listeners from the selected gateway for the listener dropdown in Step 3
   const selectedGateway = React.useMemo(() => {
-    if (formState.gatewayMode === 'new') return newGatewayResource || undefined;
-    if (!formState.selectedGatewayName) return undefined;
+    if (!formState.targetGateway) return undefined;
+    if (formState.gatewayMode === 'new') {
+      return newGatewayResource?.metadata?.name === formState.targetGateway
+        ? newGatewayResource
+        : undefined;
+    }
     return (gateways || []).find(
       (gw) =>
-        gw.metadata?.name === formState.selectedGatewayName &&
+        gw.metadata?.name === formState.targetGateway &&
         (gw.metadata?.namespace || selectedNamespace) ===
           (formState.selectedGatewayNamespace || selectedNamespace),
     );
   }, [
     gateways,
     formState.gatewayMode,
-    formState.selectedGatewayName,
+    formState.targetGateway,
     formState.selectedGatewayNamespace,
     newGatewayResource,
     selectedNamespace,
@@ -114,13 +118,17 @@ const MCPSetupWizard: React.FC = () => {
   const extensionNamespace = formState.extensionNamespace || selectedNamespace;
   const gatewayNamespace = formState.selectedGatewayNamespace || selectedNamespace;
   const isCrossNamespace = extensionNamespace !== gatewayNamespace;
+  const selectedListenerPort = selectedGateway?.spec?.listeners?.find(
+    (listener) => listener.name === formState.sectionName,
+  )?.port;
   const selectedGatewayTarget = React.useMemo(
     () => ({
       name: formState.targetGateway,
       namespace: gatewayNamespace,
       sectionName: formState.sectionName,
+      port: selectedListenerPort,
     }),
-    [formState.targetGateway, formState.sectionName, gatewayNamespace],
+    [formState.targetGateway, formState.sectionName, gatewayNamespace, selectedListenerPort],
   );
   const matchingHttpRoutes = React.useMemo(
     () =>

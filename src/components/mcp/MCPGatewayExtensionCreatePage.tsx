@@ -133,8 +133,14 @@ const MCPGatewayExtensionCreatePage: React.FC = () => {
     namespace: formState.selectedGatewayNamespace || selectedNamespace,
   });
   const selectedGateway = React.useMemo(
-    () => (gateways || []).find((gw) => gw.metadata?.name === formState.targetGateway),
-    [gateways, formState.targetGateway],
+    () =>
+      (gateways || []).find(
+        (gw) =>
+          gw.metadata?.name === formState.targetGateway &&
+          (gw.metadata?.namespace || selectedNamespace) ===
+            (formState.selectedGatewayNamespace || selectedNamespace),
+      ),
+    [gateways, formState.targetGateway, formState.selectedGatewayNamespace, selectedNamespace],
   );
   const gatewayNames = React.useMemo(
     () =>

@@ -51,24 +51,39 @@ interface WatchedResource extends K8sResourceCommon {
   };
 }
 
-const getErrorMessage = (error: unknown): string => {
+const getErrorMessage = (error: unknown, fallbackMessage: string): string => {
   if (error instanceof Error && error.message) return error.message;
   const response = error as {
-    message?: string;
-    reason?: string;
+    message?: unknown;
+    reason?: unknown;
     json?: {
-      message?: string;
-      reason?: string;
-      details?: { causes?: { message?: string }[] };
+      message?: unknown;
+      reason?: unknown;
+      details?: { causes?: unknown };
     };
   };
+
+  const causes = response?.json?.details?.causes;
+  const causeMessage = Array.isArray(causes)
+    ? causes.find(
+        (cause): cause is { message: string } =>
+          typeof cause === 'object' &&
+          cause !== null &&
+          'message' in cause &&
+          typeof cause.message === 'string' &&
+          cause.message.length > 0,
+      )?.message
+    : undefined;
+  const getStringMessage = (value: unknown): string | undefined =>
+    typeof value === 'string' && value.length > 0 ? value : undefined;
+
   return (
-    response?.json?.message ||
-    response?.json?.details?.causes?.find((cause) => cause.message)?.message ||
-    response?.message ||
-    response?.json?.reason ||
-    response?.reason ||
-    'The resource could not be created or verified.'
+    getStringMessage(response?.json?.message) ||
+    causeMessage ||
+    getStringMessage(response?.message) ||
+    getStringMessage(response?.json?.reason) ||
+    getStringMessage(response?.reason) ||
+    fallbackMessage
   );
 };
 
@@ -121,11 +136,15 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
   React.useEffect(() => {
     if (!watchStarted || !watchedLoaded) return;
     if (watchedError) {
-      updateCheckById(watchReadyId, 'error', getErrorMessage(watchedError));
+      updateCheckById(
+        watchReadyId,
+        'error',
+        getErrorMessage(watchedError, t('The resource could not be created or verified.')),
+      );
       return;
     }
     if (!watchedData) {
-      updateCheckById(watchReadyId, 'error', 'The created resource could not be found.');
+      updateCheckById(watchReadyId, 'error', t('The created resource could not be found.'));
       return;
     }
 
@@ -224,7 +243,7 @@ const MCPVerifyStep: React.FC<MCPVerifyStepProps> = ({
       setWatchStarted(true);
       onAllCreated?.();
     } catch (err: unknown) {
-      const message = getErrorMessage(err);
+      const message = getErrorMessage(err, t('The resource could not be created or verified.'));
       setError(message);
 
       setChecks((prev) =>
