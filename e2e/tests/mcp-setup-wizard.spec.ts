@@ -115,7 +115,21 @@ spec:
       deleteResource('gateway', setupGatewayName, TEST_NAMESPACE);
     });
 
-    test('renders the wizard with 4 steps', { tag: '@nightly' }, async ({ page }) => {
+    let manualRouteName = '';
+    let manualExtensionName = '';
+
+    test.afterEach(() => {
+      if (manualExtensionName) {
+        deleteResource('mcpgatewayextension', manualExtensionName, TEST_NAMESPACE);
+        manualExtensionName = '';
+      }
+      if (manualRouteName) {
+        deleteResource('httproute', manualRouteName, TEST_NAMESPACE);
+        manualRouteName = '';
+      }
+    });
+
+    test('renders the wizard with 3 steps', { tag: '@nightly' }, async ({ page }) => {
       await spaNavigate(page, '/kuadrant/mcp/setup-wizard');
 
       await expect(page.getByRole('heading', { name: 'MCP Gateway Setup' })).toBeVisible({
@@ -123,9 +137,8 @@ spec:
       });
 
       await expect(page.getByRole('button', { name: '1. Create Gateway' })).toBeVisible();
-      await expect(page.getByRole('button', { name: '2. Route for Gateway' })).toBeVisible();
-      await expect(page.getByRole('button', { name: '3. MCP Extension' })).toBeVisible();
-      await expect(page.getByRole('button', { name: '4. Verify configuration' })).toBeVisible();
+      await expect(page.getByRole('button', { name: '2. MCP Extension' })).toBeVisible();
+      await expect(page.getByRole('button', { name: '3. Verify configuration' })).toBeVisible();
     });
 
     test('step 1 shows choose and create radio options', { tag: '@nightly' }, async ({ page }) => {
@@ -145,7 +158,94 @@ spec:
     });
 
     test(
-      'steps 2-4 are disabled until step 1 is complete',
+      'disabling automatic HTTPRoute management adds the route step',
+      { tag: '@nightly' },
+      async ({ page }) => {
+        manualRouteName = `e2e-mcp-manual-route-${uid()}`;
+        manualExtensionName = `e2e-mcp-manual-ext-${uid()}`;
+
+        await page.goto(`/k8s/ns/${TEST_NAMESPACE}`);
+        await page.waitForLoadState('networkidle');
+        await dismissConsoleTour(page);
+        await spaNavigate(page, '/kuadrant/mcp/setup-wizard');
+
+        await expect(page.locator('[data-test="mcp-gateway-select"]')).toBeVisible({
+          timeout: 15_000,
+        });
+        await page.locator('[data-test="mcp-gateway-select"]').selectOption({ index: 1 });
+        const selectedGatewayName = await page
+          .locator('[data-test="mcp-gateway-select"]')
+          .inputValue();
+        await page.getByRole('button', { name: 'Next', exact: true }).click();
+        await page.getByText('Advanced broker settings').click();
+        await expect(page.locator('[data-test="mcp-http-route-management"]')).not.toBeChecked();
+        await page.getByLabel('Disable automatic HTTPRoute management').click();
+
+        await expect(page.getByRole('button', { name: '3. HTTPRoute' })).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Configure MCP Extension' })).toBeVisible();
+        await expect(page.getByRole('button', { name: '2. MCP Extension' })).toBeVisible();
+        await expect(page.getByRole('button', { name: '4. Verify configuration' })).toBeVisible();
+
+        await page.locator('[data-test="mcp-extension-name"]').fill(manualExtensionName);
+        const sectionSelect = page.locator('[data-test="mcp-section-name"]');
+        let selectedSectionName = 'http';
+        if (await sectionSelect.isVisible().catch(() => false)) {
+          await sectionSelect.selectOption({ index: 1 });
+        } else {
+          await page.locator('[data-test="mcp-section-name-input"]').fill('http');
+        }
+        if (await sectionSelect.isVisible().catch(() => false)) {
+          selectedSectionName = await sectionSelect.inputValue();
+        }
+        await page.getByRole('button', { name: 'Next', exact: true }).click();
+        await expect(
+          page.getByRole('heading', { name: 'Choose or create an HTTPRoute' }),
+        ).toBeVisible();
+        await expect(page.getByLabel('Create a new HTTPRoute')).toBeChecked();
+        await expect(page.locator('#parent-gateway-0')).toHaveValue(selectedGatewayName);
+        await expect(page.locator('#parent-gateway-0')).toBeDisabled();
+        await expect(page.locator('#parent-section-0')).toHaveValue(selectedSectionName);
+
+        await page.locator('#httproute-name').fill(manualRouteName);
+        await page.getByRole('button', { name: 'Add rule', exact: true }).click();
+
+        const ruleModal = page.locator('.pf-v6-c-modal-box');
+        await expect(ruleModal).toBeVisible();
+        await ruleModal.getByRole('button', { name: 'Next', exact: true }).click();
+        await ruleModal.getByRole('button', { name: 'Next', exact: true }).click();
+        await ruleModal.locator('#service-name').fill('test-svc');
+        await ruleModal.getByRole('button', { name: 'Next', exact: true }).click();
+        await ruleModal.getByRole('button', { name: 'Create', exact: true }).click();
+        await page.waitForSelector('.pf-v6-c-modal-box', { state: 'detached', timeout: 10_000 });
+
+        await page.getByRole('button', { name: 'Next', exact: true }).click();
+        await expect(page.getByText('Create HTTPRoute', { exact: true })).toBeVisible({
+          timeout: 15_000,
+        });
+        await expect(page.getByText('HTTPRoute created successfully')).toBeVisible({
+          timeout: 30_000,
+        });
+        await expect(page.getByText('MCPGatewayExtension created successfully')).toBeVisible({
+          timeout: 30_000,
+        });
+
+        expect(resourceExists('httproute', manualRouteName, TEST_NAMESPACE)).toBe(true);
+        expect(
+          kubectl([
+            'get',
+            'httproute',
+            manualRouteName,
+            '-n',
+            TEST_NAMESPACE,
+            '-o',
+            'jsonpath={.spec.parentRefs[0].name}',
+          ]),
+        ).toBe(selectedGatewayName);
+      },
+    );
+
+    test(
+      'steps 2-3 are disabled until step 1 is complete',
       { tag: '@nightly' },
       async ({ page }) => {
         await spaNavigate(page, '/kuadrant/mcp/setup-wizard');
@@ -154,9 +254,8 @@ spec:
           timeout: 15_000,
         });
 
-        await expect(page.getByRole('button', { name: '2. Route for Gateway' })).toBeDisabled();
-        await expect(page.getByRole('button', { name: '3. MCP Extension' })).toBeDisabled();
-        await expect(page.getByRole('button', { name: '4. Verify configuration' })).toBeDisabled();
+        await expect(page.getByRole('button', { name: '2. MCP Extension' })).toBeDisabled();
+        await expect(page.getByRole('button', { name: '3. Verify configuration' })).toBeDisabled();
       },
     );
 
@@ -200,7 +299,6 @@ spec:
   test.describe('Happy path: existing resources', () => {
     let namespace = '';
     const gatewayName = `e2e-mcp-gw-${uid()}`;
-    const routeName = `e2e-mcp-route-${uid()}`;
 
     test.beforeAll(() => {
       namespace = `e2e-mcp-existing-${uid()}`;
@@ -221,23 +319,6 @@ spec:
     protocol: HTTP
 `,
       );
-      kubectl(
-        ['apply', '-f', '-'],
-        `
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: ${routeName}
-  namespace: ${namespace}
-spec:
-  parentRefs:
-  - name: ${gatewayName}
-  rules:
-  - backendRefs:
-    - name: test-svc
-      port: 80
-`,
-      );
     });
 
     test.afterAll(() => {
@@ -245,7 +326,7 @@ spec:
       deleteNamespace(namespace);
     });
 
-    test('wizard flow with existing gateway and route', { tag: '@smoke' }, async ({ page }) => {
+    test('wizard flow with existing gateway', { tag: '@smoke' }, async ({ page }) => {
       // Set active namespace to the test namespace so the wizard watches resources there
       await page.goto(`/k8s/ns/${namespace}`);
       await page.waitForLoadState('networkidle');
@@ -262,12 +343,7 @@ spec:
       await expect(nextButton).toBeEnabled();
       await nextButton.click();
 
-      // Step 2: Select existing route
-      await expect(page.locator('[data-test="mcp-route-select"]')).toBeVisible({ timeout: 15_000 });
-      await page.locator('[data-test="mcp-route-select"]').selectOption(routeName);
-      await nextButton.click();
-
-      // Step 3: Fill MCP Extension form
+      // Step 2: Fill MCP Extension form
       await expect(page.locator('[data-test="mcp-extension-name"]')).toBeVisible({
         timeout: 15_000,
       });
@@ -283,7 +359,7 @@ spec:
 
       await nextButton.click();
 
-      // Step 4: Verify — MCPGatewayExtension should be created
+      // Step 3: Verify — MCPGatewayExtension should be created
       await expect(page.getByText('Create MCPGatewayExtension')).toBeVisible({ timeout: 15_000 });
       await expect(page.getByText('MCPGatewayExtension created successfully')).toBeVisible({
         timeout: 30_000,
@@ -295,35 +371,17 @@ spec:
 
   test.describe('Happy path: create new resources', () => {
     let namespace = '';
-    const routeName = `e2e-mcp-route-new-${uid()}`;
 
     test.beforeAll(() => {
       namespace = `e2e-mcp-new-${uid()}`;
       kubectl(['create', 'namespace', namespace]);
-      kubectl(
-        ['apply', '-f', '-'],
-        `
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: ${routeName}
-  namespace: ${namespace}
-spec:
-  parentRefs:
-  - name: placeholder-gw
-  rules:
-  - backendRefs:
-    - name: test-svc
-      port: 80
-`,
-      );
     });
 
     test.afterAll(() => {
       deleteNamespace(namespace);
     });
 
-    test('wizard flow creating new gateway and route', { tag: '@smoke' }, async ({ page }) => {
+    test('wizard flow creating a new gateway', { tag: '@smoke' }, async ({ page }) => {
       const gwName = `e2e-new-gw-${uid()}`;
       const extName = `e2e-new-ext-${uid()}`;
 
@@ -349,22 +407,20 @@ spec:
       await expect(nextButton).toBeEnabled({ timeout: 15_000 });
       await nextButton.click();
 
-      // Step 2: Select the pre-created route
-      await expect(page.getByLabel('Choose an existing HTTPRoute')).toBeChecked({
-        timeout: 15_000,
-      });
-      await page.locator('[data-test="mcp-route-select"]').selectOption(routeName);
-      await nextButton.click();
-
-      // Step 3: Fill MCP Extension
+      // Step 2: Fill MCP Extension
       await expect(page.locator('[data-test="mcp-extension-name"]')).toBeVisible({
         timeout: 15_000,
       });
       await page.locator('[data-test="mcp-extension-name"]').fill(extName);
-      await page.locator('[data-test="mcp-section-name-input"]').fill('mcp');
+      const sectionSelect = page.locator('[data-test="mcp-section-name"]');
+      if (await sectionSelect.isVisible().catch(() => false)) {
+        await sectionSelect.selectOption('mcp');
+      } else {
+        await page.locator('[data-test="mcp-section-name-input"]').fill('mcp');
+      }
       await nextButton.click();
 
-      // Step 4: Verify
+      // Step 3: Verify
       await expect(page.getByText('Create Gateway', { exact: true })).toBeVisible({
         timeout: 15_000,
       });
@@ -407,23 +463,6 @@ spec:
     protocol: HTTP
 `,
       );
-      kubectl(
-        ['apply', '-f', '-'],
-        `
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: e2e-mcp-adv-route
-  namespace: ${namespace}
-spec:
-  parentRefs:
-  - name: ${gatewayName}
-  rules:
-  - backendRefs:
-    - name: test-svc
-      port: 80
-`,
-      );
     });
 
     test.afterAll(() => {
@@ -446,14 +485,7 @@ spec:
       const nextButton = page.getByRole('button', { name: 'Next', exact: true });
       await nextButton.click();
 
-      // Step 2: Select existing route
-      await expect(page.locator('[data-test="mcp-route-select"]')).toBeVisible({
-        timeout: 15_000,
-      });
-      await page.locator('[data-test="mcp-route-select"]').selectOption('e2e-mcp-adv-route');
-      await nextButton.click();
-
-      // Step 3: Fill MCP Extension with advanced settings
+      // Step 2: Fill MCP Extension with advanced settings
       await expect(page.locator('[data-test="mcp-extension-name"]')).toBeVisible({
         timeout: 15_000,
       });
@@ -478,7 +510,7 @@ spec:
 
       await nextButton.click();
 
-      // Step 4: Verify
+      // Step 3: Verify
       await expect(page.getByText('MCPGatewayExtension created successfully')).toBeVisible({
         timeout: 30_000,
       });
@@ -527,23 +559,6 @@ spec:
     protocol: HTTP
 `,
       );
-      kubectl(
-        ['apply', '-f', '-'],
-        `
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: e2e-mcp-xns-route
-  namespace: ${gwNamespace}
-spec:
-  parentRefs:
-  - name: ${gatewayName}
-  rules:
-  - backendRefs:
-    - name: test-svc
-      port: 80
-`,
-      );
     });
 
     test.afterAll(() => {
@@ -571,14 +586,7 @@ spec:
         const nextButton = page.getByRole('button', { name: 'Next', exact: true });
         await nextButton.click();
 
-        // Step 2: Select existing route
-        await expect(page.locator('[data-test="mcp-route-select"]')).toBeVisible({
-          timeout: 15_000,
-        });
-        await page.locator('[data-test="mcp-route-select"]').selectOption('e2e-mcp-xns-route');
-        await nextButton.click();
-
-        // Step 3: Fill extension — set a DIFFERENT namespace to trigger ReferenceGrant
+        // Step 2: Fill extension — set a DIFFERENT namespace to trigger ReferenceGrant
         await expect(page.locator('[data-test="mcp-extension-name"]')).toBeVisible({
           timeout: 15_000,
         });
@@ -592,7 +600,7 @@ spec:
         }
         await nextButton.click();
 
-        // Step 4: Verify — should create ReferenceGrant + MCPGatewayExtension
+        // Step 3: Verify — should create ReferenceGrant + MCPGatewayExtension
         await expect(page.getByText('Create ReferenceGrant')).toBeVisible({ timeout: 15_000 });
         await expect(page.getByText('ReferenceGrant created successfully')).toBeVisible({
           timeout: 30_000,

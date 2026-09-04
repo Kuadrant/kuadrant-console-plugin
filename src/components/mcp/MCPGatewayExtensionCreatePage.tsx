@@ -24,6 +24,7 @@ import { GatewayResource } from '../gateway/types';
 import {
   buildMCPGatewayExtension,
   mcpExtensionToFormState,
+  getMCPGatewayExtensionValidationError,
   isMCPGatewayExtensionValid,
 } from './mcpResourceUtils';
 import MCPExtensionFormFields from './MCPExtensionFormFields';
@@ -133,8 +134,14 @@ const MCPGatewayExtensionCreatePage: React.FC = () => {
     namespace: formState.selectedGatewayNamespace || selectedNamespace,
   });
   const selectedGateway = React.useMemo(
-    () => (gateways || []).find((gw) => gw.metadata?.name === formState.targetGateway),
-    [gateways, formState.targetGateway],
+    () =>
+      (gateways || []).find(
+        (gw) =>
+          gw.metadata?.name === formState.targetGateway &&
+          (gw.metadata?.namespace || selectedNamespace) ===
+            (formState.selectedGatewayNamespace || selectedNamespace),
+      ),
+    [gateways, formState.targetGateway, formState.selectedGatewayNamespace, selectedNamespace],
   );
   const gatewayNames = React.useMemo(
     () =>
@@ -164,6 +171,7 @@ const MCPGatewayExtensionCreatePage: React.FC = () => {
     () => getModelFromResource(extensionResource),
     [extensionResource],
   );
+  const validationError = getMCPGatewayExtensionValidationError(formState, selectedGateway);
 
   const redirectPath = `/kuadrant/mcp/overview/ns/${
     extensionResource.metadata?.namespace || selectedNamespace
@@ -233,10 +241,11 @@ const MCPGatewayExtensionCreatePage: React.FC = () => {
             disableIdentity={isEdit}
             gatewayNames={gatewayNames}
             showNamespaceField={false}
+            validationError={validationError}
           />
           <ActionGroup>
             <KuadrantCreateUpdate
-              validation={isMCPGatewayExtensionValid(formState)}
+              validation={isMCPGatewayExtensionValid(formState, selectedGateway)}
               model={extensionModel}
               resource={extensionResource}
               policyType="MCPGatewayExtension"

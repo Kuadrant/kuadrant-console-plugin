@@ -15,6 +15,8 @@ import {
 } from './types';
 import { HTTPRouteResource } from '../httproute/types';
 import { RESOURCES, Secret } from '../../utils/resources';
+import type { GatewayResource } from '../gateway/types';
+import { validateNamespace } from '../../utils/validation';
 
 // Key used within the credential Secret's stringData for the token configured in
 // step 4 (Add access credentials) of the external MCP wizard.
@@ -25,6 +27,172 @@ export const parseServiceEntryHosts = (hosts: string): string[] =>
     .split(',')
     .map((host) => host.trim())
     .filter(Boolean);
+
+const DNS_SUBDOMAIN_REGEX = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$/;
+const DNS_LABEL_REGEX = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
+
+export const isKubernetesResourceName = (name: string): boolean =>
+  name.length > 0 && name.length <= 253 && DNS_SUBDOMAIN_REGEX.test(name);
+
+export const isGatewayListenerName = (name: string): boolean =>
+  name.length > 0 && name.length <= 63 && DNS_LABEL_REGEX.test(name);
+
+export type MCPGatewayExtensionValidationField =
+  | 'extensionName'
+  | 'extensionNamespace'
+  | 'targetGateway'
+  | 'sectionName'
+  | 'sessionStoreSecretName'
+  | 'oauthAuthorizationServers';
+
+export type MCPGatewayExtensionValidationMessageKey =
+  | 'The extension name must be a valid Kubernetes resource name.'
+  | 'The extension namespace must be a valid Kubernetes namespace.'
+  | 'A target Gateway is required.'
+  | 'The target Gateway name must be a valid Kubernetes resource name.'
+  | 'The listener name must be a valid Kubernetes name.'
+  | 'Listener "{{listener}}" was not found on Gateway "{{gateway}}".'
+  | 'A session store Secret name is required when session storage is enabled.'
+  | 'The session store Secret name must be a valid Kubernetes resource name.'
+  | 'At least one OAuth authorization server is required when OAuth is enabled.';
+
+export interface MCPGatewayExtensionValidationError {
+  field: MCPGatewayExtensionValidationField;
+  messageKey: MCPGatewayExtensionValidationMessageKey;
+  messageParams?: Record<string, string>;
+}
+
+export interface HTTPRouteGatewayTarget {
+  name: string;
+  namespace: string;
+  sectionName: string;
+  port?: number;
+}
+
+/**
+ * Returns whether an HTTPRoute has a parent reference for the selected
+ * Gateway. A missing namespace means the route's own namespace, and a
+ * missing sectionName or port means the reference applies to the Gateway
+ * generally for that selector.
+ */
+export const isHTTPRouteAttachedToGateway = (
+  route: HTTPRouteResource,
+  target: HTTPRouteGatewayTarget,
+  routeNamespace = route.metadata?.namespace || '',
+): boolean =>
+  (route.spec?.parentRefs || []).some((parentRef) => {
+    const parentNamespace = parentRef.namespace || routeNamespace;
+    const parentGroup = parentRef.group || 'gateway.networking.k8s.io';
+    const parentKind = parentRef.kind || 'Gateway';
+
+    return (
+      parentRef.name === target.name &&
+      parentNamespace === target.namespace &&
+      parentGroup === 'gateway.networking.k8s.io' &&
+      parentKind === 'Gateway' &&
+      (!parentRef.sectionName || parentRef.sectionName === target.sectionName) &&
+      (!parentRef.port || parentRef.port === target.port)
+    );
+  });
+
+export const getMCPGatewayExtensionValidationError = (
+  formState: MCPWizardFormState,
+  selectedGateway?: GatewayResource,
+): MCPGatewayExtensionValidationError | null => {
+  if (!isKubernetesResourceName(formState.extensionName)) {
+    return {
+      field: 'extensionName',
+      messageKey: 'The extension name must be a valid Kubernetes resource name.',
+    };
+  }
+  if (formState.extensionNamespace && validateNamespace(formState.extensionNamespace)) {
+    return {
+      field: 'extensionNamespace',
+      messageKey: 'The extension namespace must be a valid Kubernetes namespace.',
+    };
+  }
+  if (!formState.targetGateway.trim()) {
+    return { field: 'targetGateway', messageKey: 'A target Gateway is required.' };
+  }
+  if (!isKubernetesResourceName(formState.targetGateway)) {
+    return {
+      field: 'targetGateway',
+      messageKey: 'The target Gateway name must be a valid Kubernetes resource name.',
+    };
+  }
+  if (!isGatewayListenerName(formState.sectionName)) {
+    return {
+      field: 'sectionName',
+      messageKey: 'The listener name must be a valid Kubernetes name.',
+    };
+  }
+
+  const selectedGatewayMatchesTarget =
+    selectedGateway?.metadata?.name === formState.targetGateway &&
+    (!formState.selectedGatewayNamespace ||
+      selectedGateway.metadata?.namespace === formState.selectedGatewayNamespace);
+
+  if (selectedGatewayMatchesTarget) {
+    const listenerExists = (selectedGateway.spec?.listeners || []).some(
+      (listener) => listener.name === formState.sectionName,
+    );
+    if (!listenerExists) {
+      return {
+        field: 'sectionName',
+        messageKey: 'Listener "{{listener}}" was not found on Gateway "{{gateway}}".',
+        messageParams: {
+          listener: formState.sectionName,
+          gateway: formState.targetGateway,
+        },
+      };
+    }
+  }
+
+  if (formState.sessionStorageEnabled && !formState.sessionStoreSecretName.trim()) {
+    return {
+      field: 'sessionStoreSecretName',
+      messageKey: 'A session store Secret name is required when session storage is enabled.',
+    };
+  }
+  if (
+    formState.sessionStorageEnabled &&
+    !isKubernetesResourceName(formState.sessionStoreSecretName)
+  ) {
+    return {
+      field: 'sessionStoreSecretName',
+      messageKey: 'The session store Secret name must be a valid Kubernetes resource name.',
+    };
+  }
+  if (formState.oauthEnabled && !formState.oauthAuthorizationServers.trim()) {
+    return {
+      field: 'oauthAuthorizationServers',
+      messageKey: 'At least one OAuth authorization server is required when OAuth is enabled.',
+    };
+  }
+  return null;
+};
+
+/**
+ * i18n extraction marker for validation keys returned above. The utility keeps
+ * validation independent from React; callers translate the returned key at
+ * the UI boundary.
+ */
+export const _mcpGatewayExtensionValidationI18nKeys = (
+  t: (key: string, options?: Record<string, string>) => string,
+): string[] => [
+  t('The extension name must be a valid Kubernetes resource name.'),
+  t('The extension namespace must be a valid Kubernetes namespace.'),
+  t('A target Gateway is required.'),
+  t('The target Gateway name must be a valid Kubernetes resource name.'),
+  t('The listener name must be a valid Kubernetes name.'),
+  t('Listener "{{listener}}" was not found on Gateway "{{gateway}}".', {
+    listener: '',
+    gateway: '',
+  }),
+  t('A session store Secret name is required when session storage is enabled.'),
+  t('The session store Secret name must be a valid Kubernetes resource name.'),
+  t('At least one OAuth authorization server is required when OAuth is enabled.'),
+];
 
 // Build an MCPGatewayExtension resource from wizard/page form state.
 // When originalMetadata is provided (edit mode) it is preserved so that
@@ -51,6 +219,7 @@ export const buildMCPGatewayExtension = (
         namespace: gatewayNamespace,
         sectionName: formState.sectionName,
       },
+      httpRouteManagement: formState.httpRouteManagementEnabled ? 'Enabled' : 'Disabled',
     },
   };
 
@@ -100,16 +269,15 @@ export const mcpExtensionToFormState = (
     oauthEnabled: hasOauth,
     oauthAuthorizationServers: spec.oauthProtectedResource?.authorizationServers?.join(', ') || '',
     oauthResourceName: spec.oauthProtectedResource?.resourceName || '',
+    httpRouteManagementEnabled: spec.httpRouteManagement !== 'Disabled',
   };
 };
 
 // Validation shared by the wizard step footer and the standalone create/edit page.
-export const isMCPGatewayExtensionValid = (formState: MCPWizardFormState): boolean =>
-  !!formState.extensionName.trim() &&
-  !!formState.targetGateway.trim() &&
-  !!formState.sectionName.trim() &&
-  (!formState.sessionStorageEnabled || !!formState.sessionStoreSecretName.trim()) &&
-  (!formState.oauthEnabled || !!formState.oauthAuthorizationServers.trim());
+export const isMCPGatewayExtensionValid = (
+  formState: MCPWizardFormState,
+  selectedGateway?: GatewayResource,
+): boolean => !getMCPGatewayExtensionValidationError(formState, selectedGateway);
 
 // Build an MCPServerRegistration resource from wizard/page form state.
 // When originalMetadata is provided (edit mode) it is preserved so that

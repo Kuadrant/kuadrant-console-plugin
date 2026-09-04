@@ -14,6 +14,7 @@ import {
 } from '@patternfly/react-core';
 import { useTranslation } from 'react-i18next';
 import { MCPWizardFormState } from './types';
+import { MCPGatewayExtensionValidationError } from './mcpResourceUtils';
 import { GatewayResource } from '../gateway/types';
 import {
   validateRequired,
@@ -40,7 +41,7 @@ interface MCPExtensionFormFieldsProps {
   // isn't otherwise selectable there); the standalone page hides it and uses the
   // console's namespace picker instead.
   showNamespaceField?: boolean;
-  // Callback fired when validation state changes
+  validationError?: MCPGatewayExtensionValidationError | null;
   onValidationChange?: (isValid: boolean) => void;
 }
 
@@ -54,9 +55,13 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
   disableIdentity = false,
   gatewayNames = [],
   showNamespaceField = true,
+  validationError,
   onValidationChange,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
+  const validationMessage = validationError
+    ? t(validationError.messageKey, validationError.messageParams)
+    : null;
 
   // Validation state
   const [errors, setErrors] = React.useState<{
@@ -196,6 +201,13 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
           placeholder={t('Enter extension name')}
           data-test="mcp-extension-name"
         />
+        {validationError?.field === 'extensionName' && formState.extensionName.trim() && (
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem variant="error">{validationMessage}</HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        )}
         <FormHelperText>
           <HelperText>
             <HelperTextItem
@@ -241,6 +253,13 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
               </HelperTextItem>
             </HelperText>
           </FormHelperText>
+          {validationError?.field === 'extensionNamespace' && formState.extensionNamespace && (
+            <FormHelperText>
+              <HelperText>
+                <HelperTextItem variant="error">{validationMessage}</HelperTextItem>
+              </HelperText>
+            </FormHelperText>
+          )}
         </FormGroup>
       )}
 
@@ -297,6 +316,13 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
             </HelperTextItem>
           </HelperText>
         </FormHelperText>
+        {validationError?.field === 'targetGateway' && formState.targetGateway.trim() && (
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem variant="error">{validationMessage}</HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        )}
       </FormGroup>
 
       <FormGroup label={t('Listener name')} isRequired fieldId="section-name">
@@ -352,6 +378,13 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
             </HelperTextItem>
           </HelperText>
         </FormHelperText>
+        {validationError?.field === 'sectionName' && formState.sectionName.trim() && (
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem variant="error">{validationMessage}</HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        )}
       </FormGroup>
 
       <ExpandableSection toggleText={t('Advanced broker settings')}>
@@ -425,8 +458,39 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
               placeholder={t('e.g. redis-session-secret')}
               data-test="mcp-session-store-secret"
             />
+            {validationError?.field === 'sessionStoreSecretName' && (
+              <FormHelperText>
+                <HelperText>
+                  <HelperTextItem variant="error">{validationMessage}</HelperTextItem>
+                </HelperText>
+              </FormHelperText>
+            )}
           </FormGroup>
         )}
+
+        <FormGroup fieldId="http-route-management">
+          <Switch
+            id="http-route-management"
+            label={t('Disable automatic HTTPRoute management')}
+            isChecked={!formState.httpRouteManagementEnabled}
+            onChange={(_event, checked) => {
+              updateFormState({
+                httpRouteManagementEnabled: !checked,
+                ...(checked ? { routeMode: 'new' } : {}),
+              });
+            }}
+            data-test="mcp-http-route-management"
+          />
+          <FormHelperText>
+            <HelperText>
+              <HelperTextItem>
+                {t(
+                  'When enabled, you will create or select the HTTPRoute in the next wizard step.',
+                )}
+              </HelperTextItem>
+            </HelperText>
+          </FormHelperText>
+        </FormGroup>
 
         <FormGroup fieldId="oauth-metadata">
           <Switch
@@ -458,6 +522,13 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
                 placeholder={t('e.g. https://auth.example.com')}
                 data-test="mcp-oauth-auth-servers"
               />
+              {validationError?.field === 'oauthAuthorizationServers' && (
+                <FormHelperText>
+                  <HelperText>
+                    <HelperTextItem variant="error">{validationMessage}</HelperTextItem>
+                  </HelperText>
+                </FormHelperText>
+              )}
               <FormHelperText>
                 <HelperText>
                   <HelperTextItem>

@@ -162,7 +162,7 @@ const MCPOverviewPage: React.FC = () => {
     namespace: resolvedNamespace,
   });
 
-  const [servers] = useK8sWatchResource<MCPServerRegistration[]>({
+  const [servers, serversLoaded] = useK8sWatchResource<MCPServerRegistration[]>({
     groupVersionKind: RESOURCES.MCPServerRegistration.gvk,
     isList: true,
     namespace: resolvedNamespace,
@@ -486,9 +486,13 @@ const MCPOverviewPage: React.FC = () => {
     );
   }
 
-  const hasNoExtensions = extensionsLoaded && (!extensions || extensions.length === 0);
+  const hasNoMcpResources =
+    extensionsLoaded &&
+    serversLoaded &&
+    (!extensions || extensions.length === 0) &&
+    (!servers || servers.length === 0);
 
-  if (hasNoExtensions) {
+  if (hasNoMcpResources) {
     return (
       <MCPOverviewPageShell title={t('MCP management')} onNamespaceChange={handleNamespaceChange}>
         <EmptyState headingLevel="h2" titleText={t('Get started')} icon={RocketIcon}>
@@ -533,18 +537,7 @@ const MCPOverviewPage: React.FC = () => {
                 variant="info"
                 isInline
                 className="kuadrant-mcp-getting-started-alert"
-                title={
-                  <span className="kuadrant-mcp-getting-started-title">
-                    {t('Getting started with Kuadrant')}:{' '}
-                    <a
-                      href={EXTERNAL_LINKS.documentation}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {t('View Documentation')} <ExternalLinkAltIcon />
-                    </a>
-                  </span>
-                }
+                title={t('Get started with MCP management')}
                 actionClose={
                   <Dropdown
                     onSelect={() => setIsGettingStartedMenuOpen(false)}
@@ -570,7 +563,138 @@ const MCPOverviewPage: React.FC = () => {
                     </DropdownList>
                   </Dropdown>
                 }
-              />
+              >
+                <Flex
+                  className="kuadrant-mcp-getting-started-options"
+                  direction={{ default: 'column', md: 'row' }}
+                  alignItems={{ default: 'alignItemsStretch' }}
+                >
+                  <FlexItem
+                    flex={{ default: 'flex_1' }}
+                    className="kuadrant-mcp-getting-started-option"
+                  >
+                    <Flex
+                      direction={{ default: 'column' }}
+                      alignItems={{ default: 'alignItemsCenter' }}
+                      gap={{ default: 'gapSm' }}
+                    >
+                      <Title headingLevel="h3" size="md">
+                        {t('Getting started with Kuadrant')}
+                      </Title>
+                      <Content component="p">
+                        {t('Learn how to create, import, and use MCP gateways and servers.')}
+                      </Content>
+                      <Button
+                        component="a"
+                        variant="link"
+                        href={EXTERNAL_LINKS.documentation}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {t('View Documentation')} <ExternalLinkAltIcon />
+                      </Button>
+                    </Flex>
+                  </FlexItem>
+                  <Divider
+                    orientation={{ default: 'horizontal', md: 'vertical' }}
+                    className="kuadrant-mcp-getting-started-divider"
+                  />
+                  <FlexItem
+                    flex={{ default: 'flex_1' }}
+                    className="kuadrant-mcp-getting-started-option"
+                  >
+                    <Flex
+                      direction={{ default: 'column' }}
+                      alignItems={{ default: 'alignItemsCenter' }}
+                      gap={{ default: 'gapSm' }}
+                    >
+                      <Title headingLevel="h3" size="md">
+                        {t('Get started with MCPGatewayExtensions')}
+                      </Title>
+                      <Content component="p">
+                        {t('Configure how a Gateway connects to MCP servers.')}
+                      </Content>
+                      {!extensionRBAC.create || isAllNamespaces ? (
+                        <Tooltip
+                          content={
+                            isAllNamespaces
+                              ? t('Select a namespace to create a resource')
+                              : t('You do not have permission to create a {{policyType}}', {
+                                  policyType: 'MCPGatewayExtension',
+                                })
+                          }
+                        >
+                          <Button
+                            variant="link"
+                            size="sm"
+                            isAriaDisabled
+                            data-test="mcp-getting-started-extension-button"
+                          >
+                            {t('Open extension setup wizard')}
+                          </Button>
+                        </Tooltip>
+                      ) : (
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() => navigate('/kuadrant/mcp/setup-wizard')}
+                          data-test="mcp-getting-started-extension-button"
+                        >
+                          {t('Open extension setup wizard')}
+                        </Button>
+                      )}
+                    </Flex>
+                  </FlexItem>
+                  <Divider
+                    orientation={{ default: 'horizontal', md: 'vertical' }}
+                    className="kuadrant-mcp-getting-started-divider"
+                  />
+                  <FlexItem
+                    flex={{ default: 'flex_1' }}
+                    className="kuadrant-mcp-getting-started-option"
+                  >
+                    <Flex
+                      direction={{ default: 'column' }}
+                      alignItems={{ default: 'alignItemsCenter' }}
+                      gap={{ default: 'gapSm' }}
+                    >
+                      <Title headingLevel="h3" size="md">
+                        {t('Get started with MCPServerRegistrations')}
+                      </Title>
+                      <Content component="p">{t('Add an MCP server to your Gateway.')}</Content>
+                      {!serverRBAC.create || isAllNamespaces ? (
+                        <Tooltip
+                          content={
+                            isAllNamespaces
+                              ? t('Select a namespace to create a resource')
+                              : t('You do not have permission to create {{policyType}}', {
+                                  policyType: 'MCPServerRegistration',
+                                })
+                          }
+                        >
+                          <Button
+                            variant="link"
+                            size="sm"
+                            isAriaDisabled
+                            data-test="mcp-getting-started-registration-button"
+                          >
+                            {t('Open server registration wizard')}
+                          </Button>
+                        </Tooltip>
+                      ) : (
+                        <Button
+                          variant="link"
+                          size="sm"
+                          onClick={() => setIsWizardOpen(true)}
+                          data-test="mcp-getting-started-registration-button"
+                        >
+                          {t('Open server registration wizard')}
+                        </Button>
+                      )}
+                    </Flex>
+                  </FlexItem>
+                </Flex>
+              </Alert>
             </GridItem>
           )}
 
@@ -1102,4 +1226,4 @@ const MCPOverviewPage: React.FC = () => {
   );
 };
 
-export default React.memo(MCPOverviewPage);
+export default MCPOverviewPage;

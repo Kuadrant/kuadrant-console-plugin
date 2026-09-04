@@ -33,6 +33,10 @@ import MCPExtensionStep from './MCPExtensionStep';
 import MCPVerifyStep, { VerifyStepItem, WatchResourceConfig } from './MCPVerifyStep';
 import GatewayCreatePage from '../gateway/GatewayCreatePage';
 import HTTPRouteCreatePage from '../httproute/HTTPRouteCreatePage';
+import {
+  getMCPGatewayExtensionValidationError,
+  isHTTPRouteAttachedToGateway,
+} from './mcpResourceUtils';
 import '../css/gateway-api-plugin.css';
 
 const MCPSetupWizard: React.FC = () => {
@@ -48,7 +52,6 @@ const MCPSetupWizard: React.FC = () => {
   const [newGatewayValid, setNewGatewayValid] = React.useState(false);
   const [newRouteResource, setNewRouteResource] = React.useState<HTTPRouteResource | null>(null);
   const [newRouteValid, setNewRouteValid] = React.useState(false);
-  const [extensionValid, setExtensionValid] = React.useState(false);
 
   const [formState, setFormState] = React.useState<MCPWizardFormState>({
     ...initialFormState,
@@ -64,7 +67,7 @@ const MCPSetupWizard: React.FC = () => {
     namespace: selectedNamespace,
   });
 
-  // Watch existing HTTPRoutes for Step 2 dropdown
+  // Watch existing HTTPRoutes only for the optional manually-managed route step.
   const [httpRoutes, routesLoaded, routesError] = useK8sWatchResource<HTTPRouteResource[]>({
     groupVersionKind: RESOURCES.HTTPRoute.gvk,
     isList: true,
@@ -91,13 +94,87 @@ const MCPSetupWizard: React.FC = () => {
 
   // Get listeners from the selected gateway for the listener dropdown in Step 3
   const selectedGateway = React.useMemo(() => {
-    if (formState.gatewayMode !== 'existing' || !formState.selectedGatewayName) return undefined;
-    return (gateways || []).find((gw) => gw.metadata?.name === formState.selectedGatewayName);
-  }, [gateways, formState.gatewayMode, formState.selectedGatewayName]);
+    if (!formState.targetGateway) return undefined;
+    if (formState.gatewayMode === 'new') {
+      return newGatewayResource?.metadata?.name === formState.targetGateway
+        ? newGatewayResource
+        : undefined;
+    }
+    return (gateways || []).find(
+      (gw) =>
+        gw.metadata?.name === formState.targetGateway &&
+        (gw.metadata?.namespace || selectedNamespace) ===
+          (formState.selectedGatewayNamespace || selectedNamespace),
+    );
+  }, [
+    gateways,
+    formState.gatewayMode,
+    formState.targetGateway,
+    formState.selectedGatewayNamespace,
+    newGatewayResource,
+    selectedNamespace,
+  ]);
 
   const extensionNamespace = formState.extensionNamespace || selectedNamespace;
   const gatewayNamespace = formState.selectedGatewayNamespace || selectedNamespace;
   const isCrossNamespace = extensionNamespace !== gatewayNamespace;
+  const selectedListenerPort = selectedGateway?.spec?.listeners?.find(
+    (listener) => listener.name === formState.sectionName,
+  )?.port;
+  const selectedGatewayTarget = React.useMemo(
+    () => ({
+      name: formState.targetGateway,
+      namespace: gatewayNamespace,
+      sectionName: formState.sectionName,
+      port: selectedListenerPort,
+    }),
+    [formState.targetGateway, formState.sectionName, gatewayNamespace, selectedListenerPort],
+  );
+  const matchingHttpRoutes = React.useMemo(
+    () =>
+      (httpRoutes || []).filter((route) =>
+        isHTTPRouteAttachedToGateway(route, selectedGatewayTarget, selectedNamespace),
+      ),
+    [httpRoutes, selectedGatewayTarget, selectedNamespace],
+  );
+  const extensionValidationError = getMCPGatewayExtensionValidationError(
+    formState,
+    selectedGateway,
+  );
+
+  React.useEffect(() => {
+    if (
+      !routesLoaded ||
+      formState.routeMode !== 'existing' ||
+      !formState.selectedRouteName ||
+      matchingHttpRoutes.some((route) => route.metadata?.name === formState.selectedRouteName)
+    ) {
+      return;
+    }
+
+    updateFormState({ selectedRouteName: '', selectedRouteNamespace: selectedNamespace });
+  }, [
+    routesLoaded,
+    formState.routeMode,
+    formState.selectedRouteName,
+    matchingHttpRoutes,
+    selectedNamespace,
+    updateFormState,
+  ]);
+
+  const requiredRouteParentRef = React.useMemo(
+    () => ({
+      id: 'mcp-required-parent-ref',
+      gatewayName: formState.targetGateway,
+      gatewayNamespace,
+      sectionName: formState.sectionName,
+      port:
+        selectedGateway?.spec?.listeners?.find(
+          (listener) => listener.name === formState.sectionName,
+        )?.port || 0,
+    }),
+    [formState.targetGateway, formState.sectionName, gatewayNamespace, selectedGateway],
+  );
 
   const verifyItems = React.useMemo<VerifyStepItem[]>(() => {
     const result: VerifyStepItem[] = [];
@@ -109,16 +186,6 @@ const MCPSetupWizard: React.FC = () => {
         label: t('Create Gateway'),
         resource: newGatewayResource,
         successMessage: t('Gateway created successfully'),
-      });
-    }
-
-    if (formState.routeMode === 'new' && newRouteResource) {
-      result.push({
-        type: 'create',
-        id: 'create-route',
-        label: t('Create HTTPRoute'),
-        resource: newRouteResource,
-        successMessage: t('HTTPRoute created successfully'),
       });
     }
 
@@ -199,8 +266,24 @@ const MCPSetupWizard: React.FC = () => {
               },
             }
           : {}),
+        httpRouteManagement: formState.httpRouteManagementEnabled ? 'Enabled' : 'Disabled',
       },
     };
+
+    if (
+      !formState.httpRouteManagementEnabled &&
+      formState.routeMode === 'new' &&
+      newRouteResource &&
+      newRouteValid
+    ) {
+      result.push({
+        type: 'create',
+        id: 'create-route',
+        label: t('Create HTTPRoute'),
+        resource: newRouteResource,
+        successMessage: t('HTTPRoute created successfully'),
+      });
+    }
 
     result.push({
       type: 'create',
@@ -215,6 +298,7 @@ const MCPSetupWizard: React.FC = () => {
     formState,
     newGatewayResource,
     newRouteResource,
+    newRouteValid,
     isCrossNamespace,
     extensionNamespace,
     gatewayNamespace,
@@ -239,8 +323,8 @@ const MCPSetupWizard: React.FC = () => {
     (formState.gatewayMode === 'existing' && formState.selectedGatewayName !== '') ||
     (formState.gatewayMode === 'new' && newGatewayValid);
 
-  // Step 2 validation: must have a route selected or a valid new route form
-  const isStep2Valid =
+  const isRouteStepVisible = !formState.httpRouteManagementEnabled;
+  const isRouteStepValid =
     (formState.routeMode === 'existing' && formState.selectedRouteName !== '') ||
     (formState.routeMode === 'new' && newRouteValid);
 
@@ -254,7 +338,7 @@ const MCPSetupWizard: React.FC = () => {
           <Title headingLevel="h1">{t('MCP Gateway Setup')}</Title>
           <p className="help-block co-m-pane__heading-help-text">
             {t(
-              'Set up the infrastructure needed to expose MCP servers through a gateway. This wizard will guide you through creating a gateway, route, and MCP extension.',
+              'Set up the infrastructure needed to expose MCP servers through a gateway. This wizard will guide you through creating a gateway and MCP extension.',
             )}
           </p>
         </div>
@@ -381,130 +465,13 @@ const MCPSetupWizard: React.FC = () => {
             </Card>
           </WizardStep>
 
-          {/* Step 2: Route for Gateway */}
+          {/* MCP Extension */}
           <WizardStep
-            name={t('2. Route for Gateway')}
-            id="step-route"
-            footer={{
-              nextButtonText: t('Next'),
-              isNextDisabled: !isStep2Valid,
-            }}
-          >
-            <Title headingLevel="h2" style={{ marginBottom: '16px' }}>
-              {t('Choose or create an HTTPRoute')}
-            </Title>
-            <Content component="p" style={{ marginBottom: '24px' }}>
-              {t('Select an existing route or create a new one to direct traffic to MCP servers.')}
-            </Content>
-
-            <Card style={{ marginBottom: '16px' }}>
-              <CardHeader>
-                <Radio
-                  id="route-mode-existing"
-                  name="route-mode"
-                  label={t('Choose an existing HTTPRoute')}
-                  isChecked={formState.routeMode === 'existing'}
-                  onChange={() => updateFormState({ routeMode: 'existing' })}
-                />
-              </CardHeader>
-              {formState.routeMode === 'existing' && (
-                <CardBody>
-                  <FormGroup
-                    label={
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        {t('HTTPRoute name')}
-                        <Popover
-                          bodyContent={t(
-                            'Select an HTTPRoute that defines how traffic reaches your MCP servers.',
-                          )}
-                        >
-                          <Button variant="plain" aria-label={t('HTTPRoute name help')}>
-                            <HelpIcon />
-                          </Button>
-                        </Popover>
-                      </div>
-                    }
-                    fieldId="route-select"
-                  >
-                    <FormSelect
-                      id="route-select"
-                      value={formState.selectedRouteName}
-                      onChange={(_event, value) =>
-                        updateFormState({
-                          routeMode: 'existing',
-                          selectedRouteName: value,
-                          selectedRouteNamespace:
-                            (httpRoutes || []).find((r) => r.metadata?.name === value)?.metadata
-                              ?.namespace || selectedNamespace,
-                        })
-                      }
-                      aria-label={t('Select an HTTPRoute')}
-                      data-test="mcp-route-select"
-                      isDisabled={!routesLoaded}
-                    >
-                      <FormSelectOption
-                        value=""
-                        label={!routesLoaded ? t('Loading routes...') : t('Select a route...')}
-                        isPlaceholder
-                      />
-                      {(httpRoutes || []).map((route) => (
-                        <FormSelectOption
-                          key={`${route.metadata?.namespace}/${route.metadata?.name}`}
-                          value={route.metadata?.name || ''}
-                          label={`${route.metadata?.name} (${route.metadata?.namespace})`}
-                        />
-                      ))}
-                    </FormSelect>
-                  </FormGroup>
-                  {routesError && (
-                    <Alert
-                      variant="warning"
-                      title={t('Could not load routes')}
-                      isInline
-                      style={{ marginTop: '8px' }}
-                    >
-                      {String(routesError)}
-                    </Alert>
-                  )}
-                </CardBody>
-              )}
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <Radio
-                  id="route-mode-new"
-                  name="route-mode"
-                  label={t('Create a new HTTPRoute')}
-                  isChecked={formState.routeMode === 'new'}
-                  onChange={() => updateFormState({ routeMode: 'new' })}
-                />
-              </CardHeader>
-              {formState.routeMode === 'new' && (
-                <CardBody>
-                  <div className="kuadrant-mcp-embedded-form">
-                    <HTTPRouteCreatePage
-                      onFormChange={(resource, isValid) => {
-                        setNewRouteResource(resource);
-                        setNewRouteValid(isValid);
-                        updateFormState({
-                          newRouteName: resource.metadata?.name || '',
-                        });
-                      }}
-                    />
-                  </div>
-                </CardBody>
-              )}
-            </Card>
-          </WizardStep>
-
-          {/* Step 3: MCP Extension */}
-          <WizardStep
-            name={t('3. MCP Extension')}
+            name={t('2. MCP Extension')}
             id="step-extension"
             footer={{
               nextButtonText: t('Next'),
-              isNextDisabled: !extensionValid,
+              isNextDisabled: !!extensionValidationError,
             }}
           >
             <MCPExtensionStep
@@ -512,13 +479,118 @@ const MCPSetupWizard: React.FC = () => {
               updateFormState={updateFormState}
               selectedGateway={selectedGateway}
               selectedNamespace={selectedNamespace}
-              onValidationChange={setExtensionValid}
             />
           </WizardStep>
 
-          {/* Step 4: Verify configuration */}
+          {isRouteStepVisible && (
+            <WizardStep
+              name={t('3. HTTPRoute')}
+              id="step-route"
+              footer={{
+                nextButtonText: t('Next'),
+                isNextDisabled: !isRouteStepValid,
+              }}
+            >
+              <Title headingLevel="h2" style={{ marginBottom: '16px' }}>
+                {t('Choose or create an HTTPRoute')}
+              </Title>
+              <Content component="p" style={{ marginBottom: '24px' }}>
+                {t(
+                  'Select an existing route or create a new one to direct traffic to MCP servers.',
+                )}
+              </Content>
+              <Alert
+                variant="info"
+                title={t('HTTPRoute target')}
+                isInline
+                style={{ marginBottom: '16px' }}
+              >
+                {t('The HTTPRoute must attach to the selected Gateway and listener.')}
+              </Alert>
+
+              <Card style={{ marginBottom: '16px' }}>
+                <CardHeader>
+                  <Radio
+                    id="route-mode-existing"
+                    name="route-mode"
+                    label={t('Choose an existing HTTPRoute')}
+                    isChecked={formState.routeMode === 'existing'}
+                    onChange={() => updateFormState({ routeMode: 'existing' })}
+                  />
+                </CardHeader>
+                {formState.routeMode === 'existing' && (
+                  <CardBody>
+                    <FormGroup label={t('HTTPRoute name')} fieldId="route-select">
+                      <FormSelect
+                        id="route-select"
+                        value={formState.selectedRouteName}
+                        onChange={(_event, value) =>
+                          updateFormState({
+                            routeMode: 'existing',
+                            selectedRouteName: value,
+                            selectedRouteNamespace:
+                              matchingHttpRoutes.find((r) => r.metadata?.name === value)?.metadata
+                                ?.namespace || selectedNamespace,
+                          })
+                        }
+                        aria-label={t('Select an HTTPRoute')}
+                        data-test="mcp-route-select"
+                        isDisabled={!routesLoaded}
+                      >
+                        <FormSelectOption
+                          value=""
+                          label={!routesLoaded ? t('Loading routes...') : t('Select a route...')}
+                          isPlaceholder
+                        />
+                        {matchingHttpRoutes.map((route) => (
+                          <FormSelectOption
+                            key={`${route.metadata?.namespace}/${route.metadata?.name}`}
+                            value={route.metadata?.name || ''}
+                            label={`${route.metadata?.name} (${route.metadata?.namespace})`}
+                          />
+                        ))}
+                      </FormSelect>
+                    </FormGroup>
+                    {routesError && (
+                      <Alert variant="warning" title={t('Could not load routes')} isInline>
+                        {String(routesError)}
+                      </Alert>
+                    )}
+                  </CardBody>
+                )}
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <Radio
+                    id="route-mode-new"
+                    name="route-mode"
+                    label={t('Create a new HTTPRoute')}
+                    isChecked={formState.routeMode === 'new'}
+                    onChange={() => updateFormState({ routeMode: 'new' })}
+                  />
+                </CardHeader>
+                {formState.routeMode === 'new' && (
+                  <CardBody>
+                    <div className="kuadrant-mcp-embedded-form">
+                      <HTTPRouteCreatePage
+                        requiredParentRef={requiredRouteParentRef}
+                        onFormChange={(resource, isValid) => {
+                          setNewRouteResource(resource);
+                          setNewRouteValid(isValid);
+                          updateFormState({ newRouteName: resource.metadata?.name || '' });
+                        }}
+                      />
+                    </div>
+                  </CardBody>
+                )}
+              </Card>
+            </WizardStep>
+          )}
+
+          {/* Verify configuration */}
           <WizardStep
-            name={t('4. Verify configuration')}
+            name={t(isRouteStepVisible ? '4. Verify configuration' : '3. Verify configuration')}
             id="step-verify"
             footer={{
               nextButtonText: t('Done'),

@@ -76,7 +76,7 @@ export interface MCPServerRegistration extends K8sResourceCommon {
   };
 }
 
-// Setup wizard form state for Steps 1-3, consumed in Step 4 for resource creation
+// Setup wizard form state for Steps 1-2, consumed in Step 3 for resource creation
 export interface MCPWizardFormState {
   // Step 1: Gateway
   gatewayMode: 'existing' | 'new';
@@ -84,19 +84,19 @@ export interface MCPWizardFormState {
   selectedGatewayNamespace: string;
   newGatewayName: string;
 
-  // Step 2: HTTPRoute
+  // Optional HTTPRoute step when automatic HTTPRoute management is disabled
   routeMode: 'existing' | 'new';
   selectedRouteName: string;
   selectedRouteNamespace: string;
   newRouteName: string;
 
-  // Step 3: MCP Extension
+  // MCP Extension
   extensionName: string;
   extensionNamespace: string;
   targetGateway: string;
   sectionName: string;
 
-  // Step 3: Advanced broker settings
+  // Step 2: Advanced broker settings
   overrideHostnames: boolean;
   publicHost: string;
   privateHost: string;
@@ -105,6 +105,7 @@ export interface MCPWizardFormState {
   oauthEnabled: boolean;
   oauthAuthorizationServers: string;
   oauthResourceName: string;
+  httpRouteManagementEnabled: boolean;
 }
 
 export const initialFormState: MCPWizardFormState = {
@@ -131,6 +132,7 @@ export const initialFormState: MCPWizardFormState = {
   oauthEnabled: false,
   oauthAuthorizationServers: '',
   oauthResourceName: '',
+  httpRouteManagementEnabled: true,
 };
 
 // Registration wizard form state

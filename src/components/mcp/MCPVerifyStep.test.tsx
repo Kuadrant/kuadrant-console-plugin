@@ -219,6 +219,69 @@ describe('MCPVerifyStep', () => {
     });
   });
 
+  it('shows a useful Kubernetes cause when the API returns a structured error', async () => {
+    mockK8sCreate.mockRejectedValueOnce({
+      json: {
+        reason: 'Invalid',
+        details: { causes: [{ message: 'spec.targetRef.sectionName: listener not found' }] },
+      },
+    });
+
+    render(<MCPVerifyStep {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByText('spec.targetRef.sectionName: listener not found').length,
+      ).toBeGreaterThan(0);
+    });
+  });
+
+  it('prefers the top-level API message over a Kubernetes cause', async () => {
+    mockK8sCreate.mockRejectedValueOnce({
+      json: {
+        message: 'Top-level API message',
+        details: { causes: [{ message: 'Cause message' }] },
+      },
+    });
+
+    render(<MCPVerifyStep {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Top-level API message').length).toBeGreaterThan(0);
+    });
+    expect(screen.queryByText('Cause message')).not.toBeInTheDocument();
+  });
+
+  it('falls back when structured causes contain invalid entries', async () => {
+    mockK8sCreate.mockRejectedValueOnce({
+      json: {
+        reason: 'Invalid',
+        details: { causes: [null, {}, { message: '' }, 'invalid cause'] },
+      },
+    });
+
+    render(<MCPVerifyStep {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Invalid').length).toBeGreaterThan(0);
+    });
+  });
+
+  it('falls back when structured causes are not an array', async () => {
+    mockK8sCreate.mockRejectedValueOnce({
+      json: {
+        reason: 'Invalid',
+        details: { causes: { message: 'not an array' } },
+      },
+    });
+
+    render(<MCPVerifyStep {...defaultProps} />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('Invalid').length).toBeGreaterThan(0);
+    });
+  });
+
   it('creates HTTPRoute when included in items', async () => {
     const newRoute = {
       apiVersion: 'gateway.networking.k8s.io/v1',

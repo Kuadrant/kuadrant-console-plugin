@@ -5,6 +5,8 @@ import { render, screen, fireEvent, configure } from '@testing-library/react';
 configure({ testIdAttribute: 'data-test' });
 
 const mockNavigate = jest.fn();
+let mockMcpResourceKind: 'none' | 'extension' | 'server' | 'both' = 'none';
+const mockRegistrationWizard = jest.fn(() => null);
 
 // Configurable watch result for the extensions resource: [data, loaded, error].
 // The first useK8sWatchResource call in the component is for extensions.
@@ -30,13 +32,37 @@ jest.mock('react-helmet', () => ({
 }));
 
 jest.mock('@openshift-console/dynamic-plugin-sdk', () => {
-  let callIndex = 0;
   return {
-    useK8sWatchResource: () => {
-      // The component calls this for extensions first, then gateways, then servers.
-      const isExtensionsCall = callIndex % 3 === 0;
-      callIndex += 1;
-      return isExtensionsCall ? mockExtensionsWatch : [[], true, null];
+    useK8sWatchResource: (resource: { groupVersionKind: { kind: string } }) => {
+      if (resource.groupVersionKind.kind === 'MCPGatewayExtension') {
+        if (mockMcpResourceKind === 'extension' || mockMcpResourceKind === 'both') {
+          return [
+            [
+              { metadata: { name: 'mcp-resource', namespace: 'test-ns' } },
+              { metadata: { name: 'another-mcp-resource', namespace: 'test-ns' } },
+            ],
+            true,
+            null,
+          ];
+        }
+        return mockExtensionsWatch;
+      }
+
+      if (
+        resource.groupVersionKind.kind === 'MCPServerRegistration' &&
+        (mockMcpResourceKind === 'server' || mockMcpResourceKind === 'both')
+      ) {
+        return [
+          [
+            { metadata: { name: 'mcp-resource', namespace: 'test-ns' } },
+            { metadata: { name: 'another-mcp-resource', namespace: 'test-ns' } },
+          ],
+          true,
+          null,
+        ];
+      }
+
+      return [[], true, null];
     },
     NamespaceBar: () => <div data-test="namespace-bar" />,
     ResourceLink: ({ name }: { name: string }) => <span>{name}</span>,
@@ -74,7 +100,7 @@ jest.mock('../ResourceList', () => ({
 
 jest.mock('./MCPRegistrationWizard', () => ({
   __esModule: true,
-  default: () => null,
+  default: mockRegistrationWizard,
 }));
 
 import MCPOverviewPage from './MCPOverviewPage';
@@ -82,9 +108,19 @@ import MCPOverviewPage from './MCPOverviewPage';
 describe('MCPOverviewPage', () => {
   beforeEach(() => {
     mockNavigate.mockClear();
-    // Default: user can list extensions, no extensions exist, no error.
+    mockRegistrationWizard.mockClear();
+    mockMcpResourceKind = 'none';
     mockExtensionsWatch = [[], true, null];
-    mockUserRBAC = { 'mcpgatewayextensions-list': true };
+    mockUserRBAC = {
+      'mcpgatewayextensions-list': true,
+      'mcpgatewayextensions-create': true,
+      'mcpserverregistrations-list': true,
+      'mcpserverregistrations-create': true,
+    };
+  });
+
+  afterEach(() => {
+    document.body.classList.remove('pf-v6-theme-light', 'pf-v6-theme-dark');
   });
 
   it('renders the empty state when no extensions exist', () => {
@@ -152,5 +188,62 @@ describe('MCPOverviewPage', () => {
     expect(
       screen.queryByRole('heading', { name: 'MCP management overview' }),
     ).not.toBeInTheDocument();
+  });
+
+  it('renders all three getting-started entries when the overview has multiple MCP resources', () => {
+    mockMcpResourceKind = 'both';
+    render(<MCPOverviewPage />);
+
+    expect(
+      screen.getByRole('heading', { name: /Get started with MCP management/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Get started with MCPGatewayExtensions' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: 'Get started with MCPServerRegistrations' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Configure how a Gateway connects to MCP servers.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Add an MCP server to your Gateway.')).toBeInTheDocument();
+    expect(screen.getByTestId('mcp-getting-started-extension-button')).toHaveTextContent(
+      'Open extension setup wizard',
+    );
+    expect(screen.getByTestId('mcp-getting-started-registration-button')).toHaveTextContent(
+      'Open server registration wizard',
+    );
+  });
+
+  it.each([
+    ['light', 'pf-v6-theme-light'],
+    ['dark', 'pf-v6-theme-dark'],
+  ])('renders getting-started content in the %s theme', (_theme, themeClass) => {
+    document.body.classList.add(themeClass);
+    mockMcpResourceKind = 'both';
+
+    const { container } = render(<MCPOverviewPage />);
+
+    const gettingStartedAlert = container.querySelector('.kuadrant-mcp-getting-started-alert');
+    expect(document.body).toHaveClass(themeClass);
+    expect(gettingStartedAlert).toBeInTheDocument();
+    expect(gettingStartedAlert).toHaveClass('kuadrant-mcp-getting-started-alert');
+    expect(gettingStartedAlert).toHaveTextContent('Get started with MCP management');
+    expect(screen.getByTestId('mcp-getting-started-extension-button')).toBeVisible();
+    expect(screen.getByTestId('mcp-getting-started-registration-button')).toBeVisible();
+  });
+
+  it('uses the existing wizard entry points from the cards', () => {
+    mockMcpResourceKind = 'extension';
+    render(<MCPOverviewPage />);
+
+    fireEvent.click(screen.getByTestId('mcp-getting-started-extension-button'));
+    expect(mockNavigate).toHaveBeenCalledWith('/kuadrant/mcp/setup-wizard');
+
+    fireEvent.click(screen.getByTestId('mcp-getting-started-registration-button'));
+    expect(mockRegistrationWizard).toHaveBeenLastCalledWith(
+      expect.objectContaining({ isOpen: true }),
+      expect.anything(),
+    );
   });
 });
