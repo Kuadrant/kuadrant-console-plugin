@@ -13,7 +13,7 @@
 > **Note:** Replace `oinc-linux-amd64` with your platform (e.g., `oinc-darwin-arm64` for Apple Silicon).
 
 ```bash
-OINC_VERSION="v0.4.3"
+OINC_VERSION="v0.4.6"
 curl -fL -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
 chmod +x oinc
 ./oinc version
@@ -65,7 +65,7 @@ npx playwright test --config=e2e/playwright.config.ts e2e/tests/apikey-lifecycle
 
 ```bash
 # Check if cluster is running
-oinc list
+oinc status
 
 # Check if servers are running
 curl http://localhost:9000  # Console
@@ -92,6 +92,7 @@ npx playwright test --config=e2e/playwright.config.ts
 - `e2e/tests/data-view-regressions.spec.ts` - DataView regressions
 - `e2e/tests/gateway-crud.spec.ts` - Gateway create, edit, and delete operations
 - `e2e/tests/httproute-crud.spec.ts` - HTTPRoute create, edit, and delete operations
+- `e2e/tests/mcp-inspector.spec.ts` - MCP Inspector smoke and live tool-call journeys
 - `e2e/tests/mcp-overview.spec.ts` - MCP Overview dashboard
 - `e2e/tests/mcp-setup-wizard.spec.ts` - MCP Management setup wizard
 - `e2e/tests/mcp-wizard.spec.ts` - MCP server registration wizard
@@ -291,7 +292,7 @@ ls -la test-results/*/test-failed-*.png
 sudo ./e2e/teardown.sh
 
 # Or destroy entire oinc cluster
-oinc destroy
+oinc delete --force
 ```
 
 ## Important Notes

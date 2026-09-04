@@ -43,14 +43,24 @@ Navigate to <http://localhost:9000> and click "Kuadrant" in the left sidebar men
 
 [oinc](https://github.com/jasonmadigan/oinc) (OKD in a container) provides a lightweight OpenShift-compatible cluster locally with the console built in. This sets up a full environment with Kuadrant, Istio, cert-manager, and the OpenShift console, with hot reloading for plugin development.
 
-Prerequisites: [oinc](https://github.com/jasonmadigan/oinc), [kubectl](https://kubernetes.io/docs/tasks/tools/), Docker or podman, Node.js.
+Prerequisites: [oinc v0.4.6 or newer](https://github.com/jasonmadigan/oinc/releases/tag/v0.4.6), [kubectl](https://kubernetes.io/docs/tasks/tools/), Docker or podman, Node.js.
 
 ```bash
-make oinc          # create cluster + start plugin dev server with hot reload
-make oinc-teardown # tear it all down
+make oinc                   # create cluster + start plugin dev server with hot reload
+make oinc-sync-plugin-proxy # manually resync an operator-reconciled backend proxy
+make oinc-teardown          # tear it all down
 ```
 
 Console runs at http://localhost:9000, plugin at http://localhost:9001. If the cluster already exists, `make oinc` skips setup and just starts the plugin server.
+
+oinc runs Console as a standalone development container, so it does not have
+the OpenShift Console operator to consume `ConsolePlugin.spec.proxy`. When the
+Kuadrant Operator has reconciled a proxy, `make oinc` automatically translates
+it into the standalone Console configuration. Use
+`make oinc-sync-plugin-proxy` to resync manually if the backend Service changes
+while the development environment is already running. This is development glue
+only; the Kuadrant Operator remains the source of truth for production plugin
+resources. Set `OINC_BIN` if the required oinc binary is not on `PATH`.
 
 ### Option 3: Docker + VSCode Remote Container
 
@@ -89,8 +99,14 @@ docker buildx build --platform linux/amd64,linux/arm64 -t quay.io/kuadrant/conso
 2. Run the image:
 
 ```bash
-docker run -it --rm -d -p 9001:80 quay.io/kuadrant/console-plugin:latest
+docker run -it --rm -d -p 9001:9443 \
+  -e KUBERNETES_INSECURE_SKIP_TLS_VERIFY=true \
+  quay.io/kuadrant/console-plugin:latest
 ```
+
+The development flag lets the image serve its static assets outside a pod,
+where the Kubernetes service-account CA is not mounted. Do not use it for an
+in-cluster deployment.
 
 NOTE: If you have a Mac with Apple silicon, you will need to add the flag
 `--platform=linux/amd64` when building the image to target the correct platform
