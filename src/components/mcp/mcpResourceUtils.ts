@@ -16,7 +16,6 @@ import {
 import { HTTPRouteResource } from '../httproute/types';
 import { RESOURCES, Secret } from '../../utils/resources';
 import type { GatewayResource } from '../gateway/types';
-import type { HTTPRouteResource } from '../httproute/types';
 import { validateNamespace } from '../../utils/validation';
 
 // Key used within the credential Secret's stringData for the token configured in

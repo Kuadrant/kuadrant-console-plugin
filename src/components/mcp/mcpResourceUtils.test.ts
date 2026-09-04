@@ -458,6 +458,22 @@ describe('isMCPGatewayExtensionValid', () => {
     expect(isMCPGatewayExtensionValid(baseFormState())).toBe(true);
   });
 
+  it('returns false when the selected Gateway does not contain the listener', () => {
+    const gateway = {
+      apiVersion: 'gateway.networking.k8s.io/v1',
+      kind: 'Gateway',
+      metadata: { name: 'my-gw', namespace: 'gw-ns' },
+      spec: {
+        gatewayClassName: 'istio',
+        listeners: [{ name: 'http', port: 80, protocol: 'HTTP' as const }],
+      },
+    };
+
+    expect(isMCPGatewayExtensionValid(baseFormState({ sectionName: 'https' }), gateway)).toBe(
+      false,
+    );
+  });
+
   it.each([
     ['extensionName', { extensionName: '' }],
     ['extensionName (whitespace only)', { extensionName: '   ' }],
