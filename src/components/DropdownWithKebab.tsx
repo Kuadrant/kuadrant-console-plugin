@@ -78,7 +78,6 @@ const DropdownWithKebab: React.FC<DropdownWithKebabProps> = ({ obj, onDeleteClic
         }/${obj.metadata.name}/edit`,
       });
     } else if (
-      obj.kind === 'AuthPolicy' ||
       obj.kind === 'MCPGatewayExtension' ||
       obj.kind === 'MCPServerRegistration' ||
       obj.kind === 'ReferenceGrant'

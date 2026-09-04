@@ -27,6 +27,7 @@
 }
 
 /* YAML editor wrapper */
+.kuadrant-authpolicy-yaml-editor,
 .kuadrant-httproute-yaml-editor,
 .kuadrant-gateway-yaml-editor,
 .kuadrant-dnspolicy-yaml-editor,
@@ -42,6 +43,7 @@
   min-height: 600px;
 }
 
+.kuadrant-authpolicy-yaml-editor .react-monaco-editor-container,
 .kuadrant-httproute-yaml-editor .react-monaco-editor-container,
 .kuadrant-gateway-yaml-editor .react-monaco-editor-container,
 .kuadrant-dnspolicy-yaml-editor .react-monaco-editor-container,
@@ -53,6 +55,7 @@
   min-height: 550px;
 }
 
+.kuadrant-authpolicy-yaml-editor .yaml-editor,
 .kuadrant-httproute-yaml-editor .yaml-editor,
 .kuadrant-gateway-yaml-editor .yaml-editor,
 .kuadrant-dnspolicy-yaml-editor .yaml-editor,

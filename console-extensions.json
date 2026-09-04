@@ -275,6 +275,14 @@
     "type": "console.page/route",
     "properties": {
       "exact": true,
+      "path": "/k8s/ns/:ns/authpolicy/name/:name/edit",
+      "component": { "$codeRef": "KuadrantAuthPolicyCreatePage" }
+    }
+  },
+  {
+    "type": "console.page/route",
+    "properties": {
+      "exact": true,
       "path": "/k8s/ns/:ns/planpolicy/name/:name/edit",
       "component": { "$codeRef": "KuadrantPlanPolicyCreatePage" }
     }
@@ -433,6 +441,17 @@
         "kind": "RateLimitPolicy"
       },
       "provider": { "$codeRef": "useRateLimitPolicyActions" }
+    }
+  },
+  {
+    "type": "console.action/resource-provider",
+    "properties": {
+      "model": {
+        "group": "kuadrant.io",
+        "version": "v1",
+        "kind": "AuthPolicy"
+      },
+      "provider": { "$codeRef": "useAuthPolicyActions" }
     }
   },
   {
