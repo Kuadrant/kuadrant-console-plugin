@@ -6,6 +6,7 @@ set -euo pipefail
 OPENSHIFT_CI=${OPENSHIFT_CI:=false}
 ARTIFACT_DIR=${ARTIFACT_DIR:=/tmp/artifacts}
 
+node --test scripts/*.test.cjs
 yarn i18n
 GIT_STATUS="$(git status --short --untracked-files -- locales)"
 if [ -n "$GIT_STATUS" ]; then

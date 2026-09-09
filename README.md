@@ -46,8 +46,10 @@ Navigate to <http://localhost:9000> and click "Kuadrant" in the left sidebar men
 Prerequisites: [oinc v0.5.3 or newer](https://github.com/jasonmadigan/oinc/releases/tag/v0.5.3), [kubectl](https://kubernetes.io/docs/tasks/tools/), Docker or podman, Node.js.
 
 ```bash
-make oinc          # create cluster + start plugin dev server with hot reload
-make oinc-teardown # tear it all down
+make oinc                   # create cluster + start plugin dev server with hot reload
+make oinc-mcp-demo          # install/refresh stateful + stateless MCP demo servers
+make oinc-sync-plugin-proxy # manually resync an operator-reconciled backend proxy
+make oinc-teardown          # tear it all down
 ```
 
 Console runs at http://localhost:9000, plugin at http://localhost:9001. If the cluster already exists, `make oinc` skips setup and just starts the plugin server.
@@ -76,6 +78,23 @@ infrastructure parameters need recreation because the generated Service class
 must be configured at creation. Follow oinc's [Gateway migration guidance](https://github.com/jasonmadigan/oinc/blob/v0.5.3/docs/addons.md#migration-from-v043)
 when retaining a cluster; for disposable clusters, recreate with the updated setup.
 Save any resources you need before tearing down a cluster.
+
+Fresh setup installs both MCP demo servers. For an existing cluster, run
+`make oinc-mcp-demo`; see [demo servers](docs/mcp-inspector.md#demo-servers) for
+the protocol choices, tools, prompts, and live test commands.
+
+oinc runs Console as a standalone development container, so it does not have
+the OpenShift Console operator to consume `ConsolePlugin.spec.proxy`. When the
+Kuadrant Operator has reconciled a proxy, `make oinc` automatically translates
+it into the standalone Console configuration. Use
+`make oinc-sync-plugin-proxy` to resync manually if the backend Service changes
+while the development environment is already running. This is development glue
+only; the Kuadrant Operator remains the source of truth for production plugin
+resources. The sync command requires the `oinc` context and refreshes a separate
+development-only NetworkPolicy allowing the current Console container IP to the
+backend on TCP 9443. It then checks backend health through Console. Re-run it
+after recreating Console; see [network access](docs/mcp-inspector.md#network-access)
+for runtime/CNI limitations. Set `OINC_BIN` if the required oinc binary is not on `PATH`.
 
 ### Option 3: Docker + VSCode Remote Container
 
@@ -113,9 +132,23 @@ docker buildx build --platform linux/amd64,linux/arm64 -t quay.io/kuadrant/conso
 
 2. Run the image:
 
+Save the Kubernetes API's trusted CA bundle as `kubernetes-ca.crt` in the current
+directory. Use an API URL reachable from the container:
+
 ```bash
-docker run -it --rm -d -p 9001:80 quay.io/kuadrant/console-plugin:latest
+docker run -it --rm -d -p 9001:9443 \
+  --mount type=bind,source="${PWD}/kubernetes-ca.crt",target=/var/kubernetes-ca.crt,readonly \
+  -e KUBERNETES_CA_FILE=/var/kubernetes-ca.crt \
+  -e KUBERNETES_API_URL=https://api.example.com:6443 \
+  quay.io/kuadrant/console-plugin:latest
 ```
+
+For static-asset-only development, you may explicitly opt out of API certificate
+verification with `-e KUBERNETES_INSECURE_SKIP_TLS_VERIFY=true` instead of mounting
+the CA. Do not use that override with real Console credentials or in-cluster.
+MCP proxying uses admin-managed Gateway and extension destinations by default.
+See the [Inspector backend settings](docs/mcp-inspector.md#backend-settings) for
+optional origin restrictions and private-CA support.
 
 NOTE: If you have a Mac with Apple silicon, you will need to add the flag
 `--platform=linux/amd64` when building the image to target the correct platform

@@ -101,6 +101,7 @@ npx playwright test --config=e2e/playwright.config.ts
 - `e2e/tests/data-view-regressions.spec.ts` - DataView regressions
 - `e2e/tests/gateway-crud.spec.ts` - Gateway create, edit, and delete operations
 - `e2e/tests/httproute-crud.spec.ts` - HTTPRoute create, edit, and delete operations
+- `e2e/tests/mcp-inspector.spec.ts` - MCP Inspector smoke and live tool-call journeys
 - `e2e/tests/mcp-overview.spec.ts` - MCP Overview dashboard
 - `e2e/tests/mcp-setup-wizard.spec.ts` - MCP Management setup wizard
 - `e2e/tests/mcp-wizard.spec.ts` - MCP server registration wizard
@@ -110,6 +111,22 @@ npx playwright test --config=e2e/playwright.config.ts
 - `e2e/tests/topology.spec.ts` - Policy topology rendering, filtering, and navigation
 
 See [Test Tags](#test-tags) and [CI Pipeline](#ci-pipeline) for how these are selected and filtered in CI.
+
+## Live MCP Inspector coverage
+
+The shared CI workflow builds this checkout's Inspector backend and a pinned
+revision of operator PR #2206 using `bash e2e/setup-mcp-inspector.sh`, then syncs
+the operator's proxy contract into oinc v0.5.3 or newer. The operator pin can be removed
+once that support ships in a release.
+
+`bash e2e/test-mcp-inspector.sh` runs the live tools/prompts journey for legacy,
+stateless, and Auto protocols, followed by a bearer-authentication journey that
+checks rejection and retry. These run explicitly in both smoke and full CI jobs;
+they cannot silently skip when the CI target is missing. The script temporarily
+protects the demo listener using its own AuthPolicy, grants that gateway access
+to Authorino (TCP 50051) and the WASM endpoint (TCP 8082), and removes those
+fixtures on exit. A data-path check waits for authentication to become ready. Both scripts require the `oinc` context. Local spec invocations still skip
+the live journey unless `MCP_INSPECTOR_E2E_EXTENSION=namespace/name` is provided.
 
 ## Test Tags 
 
@@ -145,14 +162,18 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
   1. Checks out the repo, sets up Node 22, installs `oinc` and Helm
   2. Runs `yarn install` and installs Playwright's Chromium
   3. Starts the plugin dev server (`yarn start`) in the background
-  4. Runs `./e2e/setup.sh` — creates the oinc cluster with addons (gateway-api, cert-manager, MetalLB, Istio, Kuadrant, MCP Gateway), applies RBAC and test fixtures
+  4. Runs `./e2e/setup.sh` — creates the oinc cluster with addons (gateway-api, cert-manager, MetalLB, Istio, Kuadrant, MCP Gateway), configures Istio Gateway Services to use the `oinc.io/metallb` load-balancer class, and applies RBAC and test fixtures
   5. Waits up to 60s for the dev server to be ready
-  6. Runs Playwright tests (see suite router below for how specs are selected)
-  7. Uploads `playwright-report/` and `playwright-results.json` as artifacts
-  8. Tears down the cluster
+  6. Runs `e2e/setup-mcp-inspector.sh` (`setup-inspector`) to build and deploy the Inspector backend and operator with its OIDC, Plan, and Telemetry extensions, then verify shared Gateway readiness
+  7. Runs Playwright tests (see suite router below for how specs are selected)
+  8. Runs `e2e/test-mcp-inspector.sh` (`tests-inspector`) for live legacy, stateless, auto-negotiation and bearer authentication journeys in both smoke and full suites, including after an unrelated test failure when Inspector setup succeeded
+  9. Uploads `playwright-report/` and `playwright-results*.json` from the repository root as artifacts, including separate Inspector journey results. Failed runs also capture Gateway conditions, pods, Services, MetalLB address pools, warning events, and controller logs in `e2e-diagnostics.txt` before teardown.
+  10. Tears down the cluster
 
   On nightly failures, `e2e-nightly.yaml` automatically opens a GitHub issue with the
-  failed test names extracted from `playwright-results.json`.
+  failed test names extracted from `playwright-results.json`. The extractor does
+  not yet read the separate Inspector result files; those remain available in the
+  uploaded artifacts.
 
 ### Failure Classification
 
@@ -161,13 +182,14 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
   | Type | Meaning | Trigger |
   |---|---|---|
   | `none` | All steps passed | — |
-  | `infrastructure` | Cluster setup or dev server failed | `setup` or `wait-server` step failed |
+  | `infrastructure` | Cluster setup, Inspector setup or dev server failed | `setup`, `setup-inspector` or `wait-server` step failed |
   | `test` | Tests themselves failed | Any Playwright test step failed |
 
   Cluster timeouts, network errors during setup, and dev server readiness failures
-  all fall under `infrastructure` because they occur in the `setup` or `wait-server`
-  steps. Only failures in the Playwright test steps (`tests`, `tests-full`,
-  `tests-changed`) are classified as `test`.
+  all fall under `infrastructure` because they occur in the `setup`,
+  `setup-inspector` or `wait-server` steps. Only failures in the Playwright test
+  steps (`tests`, `tests-full`, `tests-changed`, `tests-inspector`) are classified
+  as `test`.
 
   The nightly workflow uses this classification to label auto-opened issues:
   `nightly-infrastructure` for infra errors, `nightly-failure` for test failures.

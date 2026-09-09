@@ -5,7 +5,7 @@
 integration-tests/videos
 integration-tests/screenshots
 playwright-report/
-playwright-results.json
+playwright-results*.json
 test-results/
 
 # npm (this project uses yarn)

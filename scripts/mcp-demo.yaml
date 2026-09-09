@@ -1,4 +1,65 @@
 ---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: gateway-system
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mcp-gateway-system
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: toystore
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: mcp-gateway
+  namespace: gateway-system
+spec:
+  gatewayClassName: istio
+  listeners:
+    - name: mcp
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: mcp-demo-gateway
+  namespace: gateway-system
+spec:
+  from:
+    - group: mcp.kuadrant.io
+      kind: MCPGatewayExtension
+      namespace: mcp-gateway-system
+  to:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: mcp-gateway
+---
+apiVersion: mcp.kuadrant.io/v1
+kind: MCPGatewayExtension
+metadata:
+  name: mcp-gateway-extension
+  namespace: mcp-gateway-system
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: mcp-gateway
+    namespace: gateway-system
+    sectionName: mcp
+  publicHost: mcp.127-0-0-1.sslip.io
+  privateHost: mcp-gateway-istio.gateway-system.svc.cluster.local:80
+---
+# Stateful sample: preserve the existing toystore_* tools and prompt.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -20,21 +81,21 @@ spec:
         - name: mcp-test-server
           image: ghcr.io/kuadrant/mcp-gateway/test-server1:latest
           imagePullPolicy: IfNotPresent
-          command: ["/mcp-test-server"]
-          args: ["--http", "0.0.0.0:9090"]
+          command: ['/mcp-test-server']
+          args: ['--http', '0.0.0.0:9090']
           ports:
             - containerPort: 9090
               name: http
           env:
             - name: LOG_LEVEL
-              value: "info"
+              value: 'info'
           resources:
             limits:
-              memory: "128Mi"
-              cpu: "100m"
+              memory: '128Mi'
+              cpu: '100m'
             requests:
-              memory: "64Mi"
-              cpu: "50m"
+              memory: '64Mi'
+              cpu: '50m'
 ---
 apiVersion: v1
 kind: Service
@@ -58,13 +119,14 @@ metadata:
   name: mcp-test-server-route
   namespace: toystore
   labels:
-    mcp-server: "true"
+    mcp-server: 'true'
 spec:
   parentRefs:
     - name: mcp-gateway
       namespace: gateway-system
+      sectionName: mcp
   hostnames:
-    - "mcp-test-server.mcp.local"
+    - 'mcp-test-server.mcp.local'
   rules:
     - matches:
         - path:
@@ -80,10 +142,95 @@ metadata:
   name: toystore-mcp-server
   namespace: toystore
   labels:
-    mcp.kuadrant.io/managed: "true"
+    mcp.kuadrant.io/managed: 'true'
 spec:
   prefix: toystore_
   targetRef:
     group: gateway.networking.k8s.io
     kind: HTTPRoute
     name: mcp-test-server-route
+---
+# Adapted from mcp-gateway/config/test-servers/stateless-server-*.yaml.
+# Unlike the upstream local-build fixture, pull the published image if absent.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mcp-test-stateless-server
+  namespace: toystore
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mcp-test-stateless-server
+  template:
+    metadata:
+      labels:
+        app: mcp-test-stateless-server
+    spec:
+      containers:
+        - name: mcp-test-stateless-server
+          image: ghcr.io/kuadrant/mcp-gateway/test-stateless-server:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9090
+              name: http
+          env:
+            - name: MCP_TRANSPORT
+              value: http
+            - name: PORT
+              value: '9090'
+          resources:
+            limits:
+              memory: 128Mi
+              cpu: 100m
+            requests:
+              memory: 64Mi
+              cpu: 50m
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mcp-test-stateless-server
+  namespace: toystore
+spec:
+  ports:
+    - name: http
+      port: 9090
+      targetPort: 9090
+  selector:
+    app: mcp-test-stateless-server
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: stateless-server-route
+  namespace: toystore
+spec:
+  parentRefs:
+    - name: mcp-gateway
+      namespace: gateway-system
+      sectionName: mcp
+  hostnames:
+    - stateless-server.mcp.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /mcp
+      backendRefs:
+        - name: mcp-test-stateless-server
+          port: 9090
+---
+apiVersion: mcp.kuadrant.io/v1
+kind: MCPServerRegistration
+metadata:
+  name: stateless-mcp-server
+  namespace: toystore
+  labels:
+    mcp.kuadrant.io/managed: 'true'
+spec:
+  prefix: stateless_
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: stateless-server-route

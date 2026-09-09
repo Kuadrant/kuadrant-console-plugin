@@ -191,6 +191,16 @@ spec:
         from: Same
 `);
 
+    // Finish initial controller reconciliation before opening an existing resource.
+    kubectl([
+      'wait',
+      `gateway/${gatewayName}`,
+      '-n',
+      namespace,
+      '--for=condition=Programmed=True',
+      '--timeout=25s',
+    ]);
+
     await gotoPage(
       page,
       `/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~Gateway/${gatewayName}/edit`,
@@ -237,9 +247,6 @@ spec:
       timeout: 5_000,
     });
 
-    // Brief pause to allow React to finish committing all pending state updates
-    await page.waitForTimeout(150);
-
     // Save the form — use React-compatible event to bypass drawer interception
     const saveButton = page.getByRole('button', { name: 'Save', exact: true });
     await expect(saveButton).toBeEnabled();
@@ -248,7 +255,8 @@ spec:
     );
 
     await expect(page).toHaveURL(
-      new RegExp(`/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~Gateway/${gatewayName}`),
+      (url) =>
+        url.pathname === `/k8s/ns/${namespace}/gateway.networking.k8s.io~v1~Gateway/${gatewayName}`,
       { timeout: 15_000 },
     );
 

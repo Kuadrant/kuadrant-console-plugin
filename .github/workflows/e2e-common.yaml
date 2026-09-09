@@ -25,7 +25,7 @@ on:
 jobs:
   e2e-rbac:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     outputs:
       failure-type: ${{ steps.classify.outputs.type }}
 
@@ -72,7 +72,7 @@ jobs:
         id: wait-server
         run: |
           DEV_SERVER_PID=$(cat /tmp/dev-server.pid)
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             if curl -sf http://localhost:9001 >/dev/null 2>&1; then
               echo "plugin dev server ready"
               exit 0
@@ -87,6 +87,10 @@ jobs:
           echo "plugin dev server not ready after 60s"
           exit 1
 
+      - name: Setup Inspector backend
+        id: setup-inspector
+        run: bash e2e/setup-mcp-inspector.sh
+
       - name: Run E2E tests (smoke)
         id: tests
         if: inputs.suite == 'smoke' && (inputs.specs != '' || inputs.test_specs == '')
@@ -94,7 +98,8 @@ jobs:
           SPEC_FILTER: ${{ inputs.specs }}
         run: |
           if [ -n "$SPEC_FILTER" ]; then
-            npx playwright test --config=e2e/playwright.config.ts --grep @smoke $SPEC_FILTER
+            read -r -a spec_paths <<< "$SPEC_FILTER"
+            npx playwright test --config=e2e/playwright.config.ts --grep @smoke "${spec_paths[@]}"
           else
             npx playwright test --config=e2e/playwright.config.ts --grep @smoke
           fi
@@ -104,31 +109,44 @@ jobs:
         if: inputs.suite == 'smoke' && inputs.test_specs != ''
         env:
           TEST_SPEC_FILTER: ${{ inputs.test_specs }}
-        run: npx playwright test --config=e2e/playwright.config.ts $TEST_SPEC_FILTER
+        run: |
+          read -r -a spec_paths <<< "$TEST_SPEC_FILTER"
+          npx playwright test --config=e2e/playwright.config.ts "${spec_paths[@]}"
 
       - name: Run E2E tests (full)
         id: tests-full
         if: inputs.suite == 'full'
         run: npx playwright test --config=e2e/playwright.config.ts
 
+      - name: Run live Inspector journeys
+        id: tests-inspector
+        if: ${{ !cancelled() && steps.setup-inspector.outcome == 'success' }}
+        run: bash e2e/test-mcp-inspector.sh
+
       - name: Classify failure
         id: classify
         if: always()
         run: |
-          if [[ "${{ steps.setup.outcome }}" == "failure" || "${{ steps.wait-server.outcome }}" == "failure" ]]; then
+          if [[ "${{ steps.setup.outcome }}" == "failure" || "${{ steps.wait-server.outcome }}" == "failure" || "${{ steps.setup-inspector.outcome }}" == "failure" ]]; then
             echo "type=infrastructure" >> "$GITHUB_OUTPUT"
-          elif [[ "${{ steps.tests.outcome }}" == "failure" || "${{ steps.tests-full.outcome }}" == "failure" || "${{ steps.tests-changed.outcome }}" == "failure" ]]; then
+          elif [[ "${{ steps.tests.outcome }}" == "failure" || "${{ steps.tests-full.outcome }}" == "failure" || "${{ steps.tests-changed.outcome }}" == "failure" || "${{ steps.tests-inspector.outcome }}" == "failure" ]]; then
             echo "type=test" >> "$GITHUB_OUTPUT"
           else
             echo "type=none" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Collect cluster diagnostics
+        if: failure()
+        run: bash e2e/collect-diagnostics.sh > e2e-diagnostics.txt 2>&1
 
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # ratchet:actions/upload-artifact@v7.0.1
         with:
           name: playwright-report-${{ inputs.suite }}
-          path: playwright-report/
+          path: |
+            playwright-report/
+            e2e-diagnostics.txt
           retention-days: 7
 
       - name: Upload test results JSON
@@ -136,7 +154,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # ratchet:actions/upload-artifact@v7.0.1
         with:
           name: playwright-results-json
-          path: playwright-results.json
+          path: playwright-results*.json
           retention-days: 7
           if-no-files-found: ignore
 

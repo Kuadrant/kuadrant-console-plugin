@@ -22,6 +22,7 @@ The **MCP management** section provides setup and management for MCP (Model Cont
 
 - **Overview** - when no MCPGatewayExtensions exist, shows a guided setup wizard for creating MCP infrastructure. Once extensions are created, shows a dashboard with summary cards for MCP Gateways (Total, Healthy, Unhealthy) and MCP Servers (Types, Total, Online, Offline). Includes tables for MCP Gateway Extensions, MCP Servers, Reference Grants, and Policies attached to MCP gateways or servers. Each table has toolbar filters and RBAC-aware create actions.
 - **MCP Gateway Setup Wizard** - 4-step wizard that walks through selecting or creating a Gateway, HTTPRoute, and MCPGatewayExtension resource. Supports both existing resource selection and inline creation of new resources. Resources are created sequentially in the final verification step, with live status watching for the MCPGatewayExtension Ready condition.
+- **MCP Inspector** - connects to a Ready MCPGatewayExtension through the Console plugin backend, lists and refreshes tools, creates inputs from each tool's JSON schema, and displays tool results with JSON-RPC request telemetry. See the [MCP Inspector guide](mcp-inspector.md).
 
 Key resources managed on this page:
 

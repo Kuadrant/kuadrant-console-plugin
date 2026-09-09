@@ -1,7 +1,7 @@
 # MCP Inspector: Direct Gateway Access via CORS
 
 **Date:** 2026-08-16 (rev 7, 2026-08-17)
-**Status:** Draft (PoC complete, gateway branches pushed)
+**Status:** Superseded by the Console backend relay in [PR #779](https://github.com/Kuadrant/kuadrant-console-plugin/pull/779) and [issue #776](https://github.com/Kuadrant/kuadrant-console-plugin/issues/776). Retained as a record of the direct-browser PoC.
 **Supersedes:** [PR #674](https://github.com/Kuadrant/kuadrant-console-plugin/pull/674) (MCP client proxy design)
 **Epic:** [#667](https://github.com/Kuadrant/kuadrant-console-plugin/issues/667)
 **Issues:** [#671](https://github.com/Kuadrant/kuadrant-console-plugin/issues/671) Tools, [#672](https://github.com/Kuadrant/kuadrant-console-plugin/issues/672) Prompts, [#673](https://github.com/Kuadrant/kuadrant-console-plugin/issues/673) Setup wizard
