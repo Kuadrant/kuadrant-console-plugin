@@ -20,7 +20,7 @@ jobs:
       image: ${{ steps.meta.outputs.tags }}
     steps:
       - name: Checkout Code
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # ratchet:actions/checkout@v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@1f40c72289eff860ee54a304f1438e3cff362e0a # ratchet:docker/setup-qemu-action@v4.3.0
