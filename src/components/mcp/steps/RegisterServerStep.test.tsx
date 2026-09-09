@@ -29,11 +29,11 @@ describe('RegisterServerStep', () => {
 
   it('populates targetHTTPRouteName from routeName on initial mount', () => {
     const onChange = jest.fn();
-    render(
+    const { container } = render(
       <RegisterServerStep formState={baseFormState} onChange={onChange} routeName="route-a" />,
     );
 
-    expect(onChange).toHaveBeenCalledWith({ ...baseFormState, targetHTTPRouteName: 'route-a' });
+    expect(container.querySelector('#target-httproute')).toHaveValue('route-a');
   });
 
   it('re-syncs targetHTTPRouteName when routeName changes after an earlier selection', () => {
@@ -43,7 +43,7 @@ describe('RegisterServerStep', () => {
       targetHTTPRouteName: 'route-a',
     };
 
-    const { rerender: rerenderComponent } = render(
+    const { container, rerender: rerenderComponent } = render(
       <RegisterServerStep
         formState={formStateWithRouteA}
         onChange={onChange}
@@ -61,10 +61,7 @@ describe('RegisterServerStep', () => {
       />,
     );
 
-    expect(onChange).toHaveBeenCalledWith({
-      ...formStateWithRouteA,
-      targetHTTPRouteName: 'route-b',
-    });
+    expect(container.querySelector('#target-httproute')).toHaveValue('route-b');
   });
 
   it('does not resync when targetHTTPRouteName already matches routeName', () => {
@@ -74,6 +71,43 @@ describe('RegisterServerStep', () => {
     render(<RegisterServerStep formState={formState} onChange={onChange} routeName="route-a" />);
 
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('preserves wizard references when editable fields arrive with stale form state', () => {
+    const onChange = jest.fn();
+    const onValidationChange = jest.fn();
+    const props = {
+      routeName: 'route-a',
+      credentialNamespace: 'cred-ns',
+      onChange,
+      onValidationChange,
+    };
+    const { container, rerender } = render(
+      <RegisterServerStep {...props} formState={initialServerFormState} />,
+    );
+    // An input event can arrive before the parent's reference-sync update.
+    rerender(
+      <RegisterServerStep
+        {...props}
+        formState={{
+          ...initialServerFormState,
+          registrationName: 'my-registration',
+          toolPrefix: 'mcp',
+        }}
+      />,
+    );
+
+    expect(container.querySelector('#target-httproute')).toHaveValue('route-a');
+    expect(onValidationChange).toHaveBeenLastCalledWith(true);
+    fireEvent.change(container.querySelector('#tool-prefix') as Element, {
+      target: { value: 'updated' },
+    });
+    expect(onChange).toHaveBeenLastCalledWith({
+      registrationName: 'my-registration',
+      toolPrefix: 'updated',
+      namespace: 'cred-ns',
+      targetHTTPRouteName: 'route-a',
+    });
   });
 
   it('hides the namespace field when credentialNamespace is supplied (external wizard usage)', () => {
