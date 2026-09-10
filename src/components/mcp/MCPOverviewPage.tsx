@@ -502,10 +502,22 @@ const MCPOverviewPage: React.FC = () => {
     () => ({
       gatewayName: (_column, obj: K8sResourceCommon) => {
         const route = obj as HTTPRouteResource;
+        // Show only the parentRefs that point at an MCP gateway. A route can attach
+        // to several Gateways; the card only lists it because one of them is an MCP
+        // gateway, so the column must not surface the unrelated ones. Mirrors the
+        // Gateway API defaulting + sectionName rules in isHTTPRouteAttachedToGateway.
         const gatewayRefs = (route.spec?.parentRefs ?? []).filter((ref) => {
           const group = ref.group ?? 'gateway.networking.k8s.io';
           const kind = ref.kind ?? 'Gateway';
-          return group === 'gateway.networking.k8s.io' && kind === 'Gateway';
+          if (group !== 'gateway.networking.k8s.io' || kind !== 'Gateway') return false;
+          const refNamespace = ref.namespace ?? route.metadata?.namespace;
+          return mcpGatewayTargets.some((target) => {
+            if (ref.name !== target.name || refNamespace !== target.namespace) return false;
+            if (target.sectionName && ref.sectionName && ref.sectionName !== target.sectionName) {
+              return false;
+            }
+            return true;
+          });
         });
         if (gatewayRefs.length === 0) return '-';
         return (
@@ -523,7 +535,7 @@ const MCPOverviewPage: React.FC = () => {
         );
       },
     }),
-    [],
+    [mcpGatewayTargets],
   );
 
   const policyColumns = React.useMemo(

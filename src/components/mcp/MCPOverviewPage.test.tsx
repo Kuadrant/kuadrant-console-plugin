@@ -174,9 +174,7 @@ describe('MCPOverviewPage', () => {
       mockUserRBAC = { 'mcpgatewayextensions-list': true, 'httproutes-list': false };
       render(<MCPOverviewPage />);
       expect(screen.getByText('HTTPRoutes attached to MCP gateways')).toBeInTheDocument();
-      expect(
-        screen.getByText('You do not have permission to view HTTPRoutes'),
-      ).toBeInTheDocument();
+      expect(screen.getByText('You do not have permission to view HTTPRoutes')).toBeInTheDocument();
     });
   });
 
