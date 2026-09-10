@@ -78,6 +78,9 @@ interface ParentReferencesSelectProps {
   // flag rather than `extraGateways.length` so reconciliation still runs when the
   // wizard removes its last draft Gateway.
   reconcileParentRefs?: boolean;
+  // Optional predicate to restrict which Gateways are offered in the dropdown.
+  // Used e.g. by the MCP overview to suggest only MCP-enabled Gateways.
+  gatewayFilter?: (gateway: GatewayForSelect) => boolean;
 }
 
 const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
@@ -86,6 +89,7 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
   isDisabled = false,
   extraGateways,
   reconcileParentRefs = false,
+  gatewayFilter,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   // Stabilize the optional prop reference. A default `[]` literal would be a new
@@ -235,7 +239,8 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 
   // Sort Gateways: available first, then unavailable
   const getSortedGateways = () => {
-    return [...availableGateways].sort((a, b) => {
+    const gateways = gatewayFilter ? availableGateways.filter(gatewayFilter) : availableGateways;
+    return [...gateways].sort((a, b) => {
       const restrictionA = validateGateway(a);
       const restrictionB = validateGateway(b);
 

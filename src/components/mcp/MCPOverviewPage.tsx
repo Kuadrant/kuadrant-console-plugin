@@ -51,9 +51,13 @@ import { RESOURCES, resourceGVKMapping } from '../../utils/resources';
 import useAccessReviews from '../../utils/resourceRBAC';
 import { getResourceNameFromKind } from '../../utils/getModelFromResource';
 import { GatewayResource } from '../gateway/types';
+import { HTTPRouteResource } from '../httproute/types';
+import { GatewayForSelect } from '../../utils/ParentReferencesSelect';
 import { MCPGatewayExtension, MCPServerRegistration } from './types';
+import { isHTTPRouteAttachedToGateway, GatewayTarget } from './mcpResourceUtils';
 import MCPRegistrationWizard from './MCPRegistrationWizard';
 import MCPExternalRegistrationWizard from './MCPExternalRegistrationWizard';
+import MCPCreateHTTPRouteModal from './MCPCreateHTTPRouteModal';
 
 const mcpResources = [
   {
@@ -69,6 +73,11 @@ const mcpResources = [
   {
     group: RESOURCES.ReferenceGrant.gvk.group,
     kind: getResourceNameFromKind('ReferenceGrant'),
+    namespace: undefined as string | undefined,
+  },
+  {
+    group: RESOURCES.HTTPRoute.gvk.group,
+    kind: getResourceNameFromKind('HTTPRoute'),
     namespace: undefined as string | undefined,
   },
   {
@@ -140,6 +149,7 @@ const MCPOverviewPage: React.FC = () => {
   const [isWizardOpen, setIsWizardOpen] = React.useState(false);
   const [isExternalWizardOpen, setIsExternalWizardOpen] = React.useState(false);
   const [isPolicyCreateOpen, setIsPolicyCreateOpen] = React.useState(false);
+  const [isCreateHTTPRouteOpen, setIsCreateHTTPRouteOpen] = React.useState(false);
   const [isGettingStartedMenuOpen, setIsGettingStartedMenuOpen] = React.useState(false);
   const [hideCard, setHideCard] = React.useState(
     sessionStorage.getItem('hideMCPGettingStarted') === 'true',
@@ -186,6 +196,41 @@ const MCPOverviewPage: React.FC = () => {
     const names = new Set(extensions.map((ext) => ext.spec?.targetRef?.name).filter(Boolean));
     return Array.from(names);
   }, [extensions]);
+
+  // Gateway targets (name/namespace/sectionName) declared by the extensions. Derived
+  // from the extension targetRefs rather than mcpGateways so route matching does not
+  // depend on Gateway list permissions and can narrow by the targeted listener.
+  const mcpGatewayTargets = React.useMemo<GatewayTarget[]>(() => {
+    if (!extensions) return [];
+    return extensions
+      .filter((ext) => ext.spec?.targetRef?.name)
+      .map((ext) => ({
+        name: ext.spec?.targetRef?.name ?? '',
+        namespace: ext.spec?.targetRef?.namespace || ext.metadata?.namespace || '',
+        sectionName: ext.spec?.targetRef?.sectionName,
+      }));
+  }, [extensions]);
+
+  // Set of MCP gateway identities (namespace/name) used to scope the parent Gateway
+  // dropdown when creating an HTTPRoute from the overview.
+  const mcpGatewayKeys = React.useMemo(
+    () => new Set(mcpGatewayTargets.map((target) => `${target.namespace}/${target.name}`)),
+    [mcpGatewayTargets],
+  );
+
+  const httpRouteDataFilter = React.useCallback(
+    (item: K8sResourceCommon) => {
+      const route = item as HTTPRouteResource;
+      return mcpGatewayTargets.some((target) => isHTTPRouteAttachedToGateway(route, target));
+    },
+    [mcpGatewayTargets],
+  );
+
+  const httpRouteGatewayFilter = React.useCallback(
+    (gateway: GatewayForSelect) =>
+      mcpGatewayKeys.has(`${gateway.metadata?.namespace}/${gateway.metadata?.name}`),
+    [mcpGatewayKeys],
+  );
 
   const mcpGatewayHealthyCount = React.useMemo(() => {
     return mcpGateways.filter((gw) => {
@@ -280,6 +325,11 @@ const MCPOverviewPage: React.FC = () => {
   const referenceGrantRBAC = {
     list: userRBAC[`${getResourceNameFromKind('ReferenceGrant')}-list`],
     create: userRBAC[`${getResourceNameFromKind('ReferenceGrant')}-create`],
+  };
+
+  const httpRouteRBAC = {
+    list: userRBAC[`${getResourceNameFromKind('HTTPRoute')}-list`],
+    create: userRBAC[`${getResourceNameFromKind('HTTPRoute')}-create`],
   };
 
   const policyRBAC = mcpPolicies.reduce(
@@ -416,6 +466,64 @@ const MCPOverviewPage: React.FC = () => {
       },
     ],
     [t],
+  );
+
+  const httpRouteColumns = React.useMemo(
+    () => [
+      {
+        title: t('Name'),
+        id: 'name',
+        sort: 'metadata.name',
+      },
+      {
+        title: t('Namespace'),
+        id: 'namespace',
+        sort: 'metadata.namespace',
+      },
+      {
+        title: t('Gateway'),
+        id: 'gatewayName',
+      },
+      {
+        title: t('Status'),
+        id: 'Status',
+        sort: 'status.conditions',
+      },
+      {
+        title: '',
+        id: 'kebab',
+        props: { className: 'pf-v6-c-table__action' },
+      },
+    ],
+    [t],
+  );
+
+  const httpRouteRenderers = React.useMemo(
+    () => ({
+      gatewayName: (_column, obj: K8sResourceCommon) => {
+        const route = obj as HTTPRouteResource;
+        const gatewayRefs = (route.spec?.parentRefs ?? []).filter((ref) => {
+          const group = ref.group ?? 'gateway.networking.k8s.io';
+          const kind = ref.kind ?? 'Gateway';
+          return group === 'gateway.networking.k8s.io' && kind === 'Gateway';
+        });
+        if (gatewayRefs.length === 0) return '-';
+        return (
+          <>
+            {gatewayRefs.map((ref, index) => (
+              <div key={`${ref.namespace ?? route.metadata?.namespace}/${ref.name}-${index}`}>
+                <ResourceLink
+                  groupVersionKind={RESOURCES.Gateway.gvk}
+                  name={ref.name}
+                  namespace={ref.namespace ?? route.metadata?.namespace}
+                />
+              </div>
+            ))}
+          </>
+        );
+      },
+    }),
+    [],
   );
 
   const policyColumns = React.useMemo(
@@ -999,6 +1107,76 @@ const MCPOverviewPage: React.FC = () => {
             </GridItem>
           )}
 
+          {httpRouteRBAC.list ? (
+            <GridItem>
+              <Card>
+                <CardTitle className="kuadrant-resource-create-container">
+                  <Title headingLevel="h2">{t('HTTPRoutes attached to MCP gateways')}</Title>
+                  {!httpRouteRBAC.create || isAllNamespaces ? (
+                    <Tooltip
+                      content={
+                        isAllNamespaces
+                          ? t('Select a namespace to create a resource')
+                          : t('You do not have permission to create a {{policyType}}', {
+                              policyType: 'HTTPRoute',
+                            })
+                      }
+                    >
+                      <Button className="kuadrant-overview-create-button" isAriaDisabled>
+                        {t('Create HTTPRoute')}
+                      </Button>
+                    </Tooltip>
+                  ) : (
+                    <Button
+                      onClick={() => setIsCreateHTTPRouteOpen(true)}
+                      className="kuadrant-overview-create-button"
+                      data-test="mcp-create-httproute-button"
+                    >
+                      {t('Create HTTPRoute')}
+                    </Button>
+                  )}
+                </CardTitle>
+                <CardBody className="pf-v6-u-p-lg">
+                  <ResourceList
+                    resources={[resourceGVKMapping['HTTPRoute']]}
+                    columns={httpRouteColumns}
+                    renderers={httpRouteRenderers}
+                    namespace={watchNamespace}
+                    emptyResourceName={t('HTTPRoutes')}
+                    hideTypeFilter
+                    dataFilter={httpRouteDataFilter}
+                  />
+                </CardBody>
+              </Card>
+            </GridItem>
+          ) : (
+            <GridItem>
+              <Card>
+                <CardBody className="pf-v6-u-p-lg">
+                  <CardTitle>
+                    <Title headingLevel="h2">{t('HTTPRoutes attached to MCP gateways')}</Title>
+                  </CardTitle>
+                  <Bullseye>
+                    <EmptyState
+                      titleText={
+                        <Title headingLevel="h4" size="lg">
+                          {t('Access Denied')}
+                        </Title>
+                      }
+                      icon={LockIcon}
+                    >
+                      <EmptyStateBody>
+                        <Content component="p">
+                          {t('You do not have permission to view HTTPRoutes')}
+                        </Content>
+                      </EmptyStateBody>
+                    </EmptyState>
+                  </Bullseye>
+                </CardBody>
+              </Card>
+            </GridItem>
+          )}
+
           {!cannotListAnyPolicy ? (
             <GridItem>
               <Card>
@@ -1097,6 +1275,11 @@ const MCPOverviewPage: React.FC = () => {
       <MCPExternalRegistrationWizard
         isOpen={isExternalWizardOpen}
         onClose={() => setIsExternalWizardOpen(false)}
+      />
+      <MCPCreateHTTPRouteModal
+        isOpen={isCreateHTTPRouteOpen}
+        onClose={() => setIsCreateHTTPRouteOpen(false)}
+        gatewayFilter={httpRouteGatewayFilter}
       />
     </>
   );

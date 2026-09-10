@@ -77,6 +77,16 @@ jest.mock('./MCPRegistrationWizard', () => ({
   default: () => null,
 }));
 
+jest.mock('./MCPExternalRegistrationWizard', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
+jest.mock('./MCPCreateHTTPRouteModal', () => ({
+  __esModule: true,
+  default: () => null,
+}));
+
 import MCPOverviewPage from './MCPOverviewPage';
 
 describe('MCPOverviewPage', () => {
@@ -136,6 +146,38 @@ describe('MCPOverviewPage', () => {
     expect(screen.getByText('Error loading MCP Gateway Extensions')).toBeInTheDocument();
     expect(screen.getByText('boom')).toBeInTheDocument();
     expect(screen.queryByTestId('mcp-setup-wizard-button')).not.toBeInTheDocument();
+  });
+
+  describe('HTTPRoutes attached to MCP gateways card', () => {
+    const withExtension = () => {
+      mockExtensionsWatch = [
+        [
+          {
+            metadata: { name: 'mcp-ext', namespace: 'test-ns' },
+            spec: { targetRef: { name: 'mcp-gw', namespace: 'test-ns' } },
+          },
+        ],
+        true,
+        null,
+      ];
+    };
+
+    it('renders the HTTPRoutes card when the user can list HTTPRoutes', () => {
+      withExtension();
+      mockUserRBAC = { 'mcpgatewayextensions-list': true, 'httproutes-list': true };
+      render(<MCPOverviewPage />);
+      expect(screen.getByText('HTTPRoutes attached to MCP gateways')).toBeInTheDocument();
+    });
+
+    it('renders Access Denied for the HTTPRoutes card without list permission', () => {
+      withExtension();
+      mockUserRBAC = { 'mcpgatewayextensions-list': true, 'httproutes-list': false };
+      render(<MCPOverviewPage />);
+      expect(screen.getByText('HTTPRoutes attached to MCP gateways')).toBeInTheDocument();
+      expect(
+        screen.getByText('You do not have permission to view HTTPRoutes'),
+      ).toBeInTheDocument();
+    });
   });
 
   it('renders an error alert when the watch errors with stale extensions', () => {

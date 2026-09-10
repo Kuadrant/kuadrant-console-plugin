@@ -143,6 +143,36 @@ export const buildMCPServerRegistration = (
   },
 });
 
+// A Gateway an HTTPRoute may attach to, derived from an MCPGatewayExtension's
+// spec.targetRef. sectionName is optional — when set it narrows matching to routes
+// bound to that specific listener; when unset, matching is gateway-wide.
+export interface GatewayTarget {
+  name: string;
+  namespace: string;
+  sectionName?: string;
+}
+
+// Returns true when the HTTPRoute has a parentRef pointing at the given Gateway
+// target. Applies Gateway API defaulting: parentRef.group defaults to
+// gateway.networking.k8s.io, kind to Gateway, and namespace to the route's own
+// namespace. When both the target and the parentRef specify a sectionName they must
+// match; otherwise the match is at the gateway level (any listener).
+export const isHTTPRouteAttachedToGateway = (
+  route: HTTPRouteResource,
+  target: GatewayTarget,
+): boolean =>
+  (route.spec?.parentRefs ?? []).some((ref) => {
+    const group = ref.group ?? 'gateway.networking.k8s.io';
+    const kind = ref.kind ?? 'Gateway';
+    if (group !== 'gateway.networking.k8s.io' || kind !== 'Gateway') return false;
+    const refNamespace = ref.namespace ?? route.metadata?.namespace;
+    if (ref.name !== target.name || refNamespace !== target.namespace) return false;
+    if (target.sectionName && ref.sectionName && ref.sectionName !== target.sectionName) {
+      return false;
+    }
+    return true;
+  });
+
 export const wireHTTPRouteToExternalHost = (
   resource: HTTPRouteResource,
   host: string,

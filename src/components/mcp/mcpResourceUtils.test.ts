@@ -8,7 +8,9 @@ import {
   mcpServerToFormState,
   isMCPServerRegistrationValid,
   buildMCPServerRegistrationTemplate,
+  isHTTPRouteAttachedToGateway,
 } from './mcpResourceUtils';
+import { HTTPRouteResource } from '../httproute/types';
 import {
   MCPWizardFormState,
   initialFormState,
@@ -163,6 +165,106 @@ describe('buildMCPGatewayExtension', () => {
       namespace: 'route-ns',
     });
     expect(resource.spec.credentialRef).toEqual({ name: 'external-token', key: 'token' });
+  });
+});
+
+describe('isHTTPRouteAttachedToGateway', () => {
+  const route = (
+    parentRefs: NonNullable<HTTPRouteResource['spec']>['parentRefs'],
+    namespace = 'route-ns',
+  ): HTTPRouteResource => ({
+    apiVersion: 'gateway.networking.k8s.io/v1',
+    kind: 'HTTPRoute',
+    metadata: { name: 'my-route', namespace },
+    spec: { parentRefs },
+  });
+
+  it('matches a route whose parentRef points at the target gateway', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(route([{ name: 'mcp-gw', namespace: 'gw-ns' }]), {
+        name: 'mcp-gw',
+        namespace: 'gw-ns',
+      }),
+    ).toBe(true);
+  });
+
+  it('defaults an omitted parentRef namespace to the route namespace', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(route([{ name: 'mcp-gw' }], 'gw-ns'), {
+        name: 'mcp-gw',
+        namespace: 'gw-ns',
+      }),
+    ).toBe(true);
+  });
+
+  it('does not match a different gateway name', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(route([{ name: 'other-gw', namespace: 'gw-ns' }]), {
+        name: 'mcp-gw',
+        namespace: 'gw-ns',
+      }),
+    ).toBe(false);
+  });
+
+  it('does not match a gateway in a different namespace', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(route([{ name: 'mcp-gw', namespace: 'other-ns' }]), {
+        name: 'mcp-gw',
+        namespace: 'gw-ns',
+      }),
+    ).toBe(false);
+  });
+
+  it('ignores parentRefs to non-Gateway kinds', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(
+        route([{ kind: 'Service', name: 'mcp-gw', namespace: 'gw-ns' }]),
+        { name: 'mcp-gw', namespace: 'gw-ns' },
+      ),
+    ).toBe(false);
+  });
+
+  it('ignores parentRefs from a different API group', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(
+        route([{ group: 'example.com', name: 'mcp-gw', namespace: 'gw-ns' }]),
+        { name: 'mcp-gw', namespace: 'gw-ns' },
+      ),
+    ).toBe(false);
+  });
+
+  it('narrows by sectionName when both target and parentRef specify one', () => {
+    const parentRefs = [{ name: 'mcp-gw', namespace: 'gw-ns', sectionName: 'https' }];
+    expect(
+      isHTTPRouteAttachedToGateway(route(parentRefs), {
+        name: 'mcp-gw',
+        namespace: 'gw-ns',
+        sectionName: 'https',
+      }),
+    ).toBe(true);
+    expect(
+      isHTTPRouteAttachedToGateway(route(parentRefs), {
+        name: 'mcp-gw',
+        namespace: 'gw-ns',
+        sectionName: 'http',
+      }),
+    ).toBe(false);
+  });
+
+  it('matches gateway-wide when the parentRef has no sectionName', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(route([{ name: 'mcp-gw', namespace: 'gw-ns' }]), {
+        name: 'mcp-gw',
+        namespace: 'gw-ns',
+        sectionName: 'https',
+      }),
+    ).toBe(true);
+  });
+
+  it('returns false when the route has no parentRefs', () => {
+    expect(
+      isHTTPRouteAttachedToGateway(route(undefined), { name: 'mcp-gw', namespace: 'gw-ns' }),
+    ).toBe(false);
   });
 });
 
