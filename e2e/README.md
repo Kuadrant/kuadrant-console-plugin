@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-1. **oinc** (OpenShift in a Container) - creates local OpenShift cluster with console
+1. **oinc v0.5.3 or newer** (OpenShift in a Container) - creates local OpenShift cluster with console
 2. **Playwright browsers** - for running the tests
 3. **Kuadrant controller** - for API key approval and status updates
 
@@ -13,12 +13,21 @@
 > **Note:** Replace `oinc-linux-amd64` with your platform (e.g., `oinc-darwin-arm64` for Apple Silicon).
 
 ```bash
-OINC_VERSION="v0.4.3"
+OINC_VERSION="v0.5.3"
 curl -fL -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
 chmod +x oinc
 ./oinc version
 sudo mv oinc /usr/local/bin/
 ```
+
+Cluster setup requires v0.5.3 or newer so the `mcp-gateway` addon reuses
+Kuadrant-managed MCP components without a CRD ownership conflict and keeps Helm
+registry messages out of rendered manifests. Version 0.5.3 also fixes the addon's
+Gateway address assignment. Demo and test Gateways use infrastructure ConfigMaps
+to set `oinc.io/metallb` on their generated Services, and setup waits for the
+Gateways to be programmed before starting tests. See the
+[local setup notes](../README.md#option-2-oinc-no-cluster-required) for version
+overrides and existing clusters.
 
 ### Install Playwright browsers
 ```bash
@@ -65,7 +74,7 @@ npx playwright test --config=e2e/playwright.config.ts e2e/tests/apikey-lifecycle
 
 ```bash
 # Check if cluster is running
-oinc list
+oinc status
 
 # Check if servers are running
 curl http://localhost:9000  # Console
@@ -136,7 +145,7 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
   1. Checks out the repo, sets up Node 22, installs `oinc` and Helm
   2. Runs `yarn install` and installs Playwright's Chromium
   3. Starts the plugin dev server (`yarn start`) in the background
-  4. Runs `./e2e/setup.sh` — creates the oinc cluster with addons (gateway-api, cert-manager, MetalLB, Istio, Kuadrant), applies RBAC and test fixtures
+  4. Runs `./e2e/setup.sh` — creates the oinc cluster with addons (gateway-api, cert-manager, MetalLB, Istio, Kuadrant, MCP Gateway), applies RBAC and test fixtures
   5. Waits up to 60s for the dev server to be ready
   6. Runs Playwright tests (see suite router below for how specs are selected)
   7. Uploads `playwright-report/` and `playwright-results.json` as artifacts
@@ -291,7 +300,7 @@ ls -la test-results/*/test-failed-*.png
 sudo ./e2e/teardown.sh
 
 # Or destroy entire oinc cluster
-oinc destroy
+oinc delete --force
 ```
 
 ## Important Notes

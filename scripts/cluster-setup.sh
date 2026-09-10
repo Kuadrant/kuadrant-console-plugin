@@ -20,8 +20,21 @@ KUADRANT_VERSION="${KUADRANT_VERSION:-latest}"
 # default to 4.22; override with OCP_VERSION to pin to a different version
 OCP_VERSION="${OCP_VERSION:-4.22}"
 
-check_command oinc "Install from https://github.com/jasonmadigan/oinc"
+check_command oinc "Install v0.5.3 or newer from https://github.com/jasonmadigan/oinc/releases"
 check_command kubectl "Install from https://kubernetes.io/docs/tasks/tools/"
+
+# Require MCP controller reuse, clean Helm output, and scoped MetalLB
+# Gateway support before creating or changing any cluster resources.
+if ! OINC_VERSION_OUTPUT=$(oinc version); then
+  echo "error: could not determine oinc version" >&2
+  exit 1
+fi
+if [[ ! "${OINC_VERSION_OUTPUT}" =~ oinc[[:space:]]v([0-9]+)\.([0-9]+)\.([0-9]+)([[:space:]]|$) ]] ||
+  (( 10#${BASH_REMATCH[1]} == 0 && (10#${BASH_REMATCH[2]} < 5 ||
+    (10#${BASH_REMATCH[2]} == 5 && 10#${BASH_REMATCH[3]} < 3)) )); then
+  echo "error: oinc v0.5.3 or newer is required for Kuadrant-managed MCP Gateway support, the Helm registry output fix, and scoped MetalLB address assignment. Upgrade from https://github.com/jasonmadigan/oinc/releases" >&2
+  exit 1
+fi
 
 RUNTIME=$(detect_runtime)
 HOST=$(container_host "${RUNTIME}")
@@ -49,20 +62,11 @@ dump_kuadrant_diagnostics() {
 # failed `oinc create` won't abort here - it falls through to the diagnostics
 # dump and an explicit exit instead of dying silently.
 log "creating oinc cluster with addons (kuadrant@${KUADRANT_VERSION})..."
-# NOTE: the `mcp-gateway` addon is intentionally NOT in the default list. kuadrant-operator
-# (latest) now ships the MCP stack itself — it deploys the MCP CRDs
-# (mcpgatewayextensions/mcpserverregistrations/mcpvirtualservers) and the
-# mcp-gateway-controller as part of its KuadrantControlPlane reconcile. Re-adding the
-# standalone Helm addon double-applies the same CRDs and aborts `oinc create` with a
-# server-side-apply ownership conflict on `.spec.versions`. MCP functionality the
-# plugin depends on is fully provided by the operator.
-#
-# If you pin an older, pre-MCP operator (e.g. KUADRANT_VERSION=1.4.4), that operator
-# does NOT provide the MCP CRDs, so setup would fail applying MCPGatewayExtension /
-# MCPServerRegistration. In that case set MCP_GATEWAY_ADDON=mcp-gateway to install the
-# standalone chart (no conflict there, since the old operator doesn't own the CRDs).
-ADDONS="gateway-api,cert-manager,metallb,istio,kuadrant@${KUADRANT_VERSION}"
-[ -n "${MCP_GATEWAY_ADDON:-}" ] && ADDONS="${ADDONS},${MCP_GATEWAY_ADDON}"
+# oinc v0.5.0+ reuses Kuadrant's MCP controller and CRDs while creating the
+# Gateway and MCPGatewayExtension needed by the demo. It falls back to the
+# standalone chart when the selected Kuadrant release does not bundle MCP.
+# MCP_GATEWAY_ADDON can pin the instance chart, e.g. mcp-gateway@0.8.0.
+ADDONS="gateway-api,cert-manager,metallb,istio,kuadrant@${KUADRANT_VERSION},${MCP_GATEWAY_ADDON:-mcp-gateway}"
 if ! oinc create \
 	--version "${OCP_VERSION}" \
 	--addons "${ADDONS}" \
@@ -79,7 +83,18 @@ kubectl patch kuadrant kuadrant -n kuadrant-system --type merge --patch '{"spec"
 
 log "creating gateway..."
 kubectl create namespace gateway-system 2>/dev/null || true
+# Istio must set the Service class at creation so oinc's scoped MetalLB handles it.
 kubectl apply -f - <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metallb-gateway-params
+  namespace: gateway-system
+data:
+  service: |
+    spec:
+      loadBalancerClass: oinc.io/metallb
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -87,6 +102,11 @@ metadata:
   namespace: gateway-system
 spec:
   gatewayClassName: istio
+  infrastructure:
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: metallb-gateway-params
   listeners:
   - name: http
     port: 80
@@ -95,6 +115,13 @@ spec:
       namespaces:
         from: All
 EOF
+
+log "waiting for demo gateway address assignment..."
+if ! kubectl wait gateway.gateway.networking.k8s.io/kuadrant-ingressgateway \
+  -n gateway-system --for=condition=Programmed --timeout=300s; then
+  kubectl get gateway.gateway.networking.k8s.io/kuadrant-ingressgateway -n gateway-system -o yaml >&2 || true
+  exit 1
+fi
 
 log "creating demo MCP resources..."
 kubectl create namespace toystore 2>/dev/null || true

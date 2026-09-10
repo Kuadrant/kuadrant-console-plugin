@@ -41,7 +41,7 @@ jobs:
 
       - name: Install oinc
         run: |
-          OINC_VERSION="${OINC_VERSION:-v0.4.3}"
+          OINC_VERSION="${OINC_VERSION:-v0.5.3}"
           curl -fL -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
           chmod +x oinc
           file oinc | grep -q ELF || { echo "downloaded file is not a valid binary"; exit 1; }
