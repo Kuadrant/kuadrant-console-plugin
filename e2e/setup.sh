@@ -33,6 +33,15 @@ kubectl apply -f "${SCRIPT_DIR}/manifests/test-mcp-resources.yaml"
 log "creating APIKey consumer fixtures (controller will create APIKeyRequests)..."
 kubectl apply -f "${SCRIPT_DIR}/manifests/test-apikey-fixtures.yaml"
 
+log "waiting for test gateway address assignment..."
+for namespace in kuadrant-test kuadrant-test-2; do
+  if ! kubectl wait gateways.gateway.networking.k8s.io --all -n "${namespace}" \
+    --for=condition=Programmed --timeout=300s; then
+    kubectl get gateways.gateway.networking.k8s.io -n "${namespace}" -o yaml >&2 || true
+    exit 1
+  fi
+done
+
 log "waiting for controller to create all 9 APIKeyRequests in kuadrant-test..."
 # Portable wait loop with an explicit 90s wall-clock deadline. Avoids GNU `timeout`,
 # which isn't present on macOS by default (it's coreutils' `gtimeout` there), so local

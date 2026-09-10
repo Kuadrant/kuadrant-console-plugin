@@ -43,7 +43,7 @@ Navigate to <http://localhost:9000> and click "Kuadrant" in the left sidebar men
 
 [oinc](https://github.com/jasonmadigan/oinc) (OKD in a container) provides a lightweight OpenShift-compatible cluster locally with the console built in. This sets up a full environment with Kuadrant, Istio, cert-manager, and the OpenShift console, with hot reloading for plugin development.
 
-Prerequisites: [oinc](https://github.com/jasonmadigan/oinc), [kubectl](https://kubernetes.io/docs/tasks/tools/), Docker or podman, Node.js.
+Prerequisites: [oinc v0.5.3 or newer](https://github.com/jasonmadigan/oinc/releases/tag/v0.5.3), [kubectl](https://kubernetes.io/docs/tasks/tools/), Docker or podman, Node.js.
 
 ```bash
 make oinc          # create cluster + start plugin dev server with hot reload
@@ -51,6 +51,31 @@ make oinc-teardown # tear it all down
 ```
 
 Console runs at http://localhost:9000, plugin at http://localhost:9001. If the cluster already exists, `make oinc` skips setup and just starts the plugin server.
+
+Setup includes the `mcp-gateway` addon to create the demo Gateway and
+MCPGatewayExtension. Since [oinc v0.5.0](https://github.com/jasonmadigan/oinc/pull/33),
+the addon reuses Kuadrant's MCP controller and CRDs when available; older Kuadrant
+releases use a standalone Helm install. `KUADRANT_VERSION` selects the operator
+version (default: `latest`), and `MCP_GATEWAY_ADDON=mcp-gateway@VERSION` can pin the
+MCP chart. With bundled MCP support, Kuadrant controls the controller and broker
+images; the MCP chart configures the instance only.
+
+Version 0.5.2 includes the [fix for MCP setup with Helm 4.2.4](https://github.com/jasonmadigan/oinc/pull/37)
+by downloading the chart before rendering it, keeping registry messages out of
+the Kubernetes manifests.
+
+Version 0.5.3 fixes [MCP Gateway address assignment with scoped MetalLB](https://github.com/jasonmadigan/oinc/pull/39).
+Setup configures the demo Gateway's generated Service with the required
+`oinc.io/metallb` class and waits for the Gateway to be programmed.
+
+For an existing cluster created without the MCP addon, upgrade oinc and run
+`oinc addon install kuadrant@latest,mcp-gateway` to add the missing instance
+(replace `latest` if the cluster uses a pinned Kuadrant version). This does not
+migrate an existing standalone MCP Helm release. Existing Gateways created without
+infrastructure parameters need recreation because the generated Service class
+must be configured at creation. Follow oinc's [Gateway migration guidance](https://github.com/jasonmadigan/oinc/blob/v0.5.3/docs/addons.md#migration-from-v043)
+when retaining a cluster; for disposable clusters, recreate with the updated setup.
+Save any resources you need before tearing down a cluster.
 
 ### Option 3: Docker + VSCode Remote Container
 

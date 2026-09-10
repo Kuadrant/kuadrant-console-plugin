@@ -1,5 +1,15 @@
 # test fixtures for e2e tests
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metallb-gateway-params
+  namespace: kuadrant-test
+data:
+  service: |
+    spec:
+      loadBalancerClass: oinc.io/metallb
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -7,6 +17,11 @@ metadata:
   namespace: kuadrant-test
 spec:
   gatewayClassName: istio
+  infrastructure:
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: metallb-gateway-params
   listeners:
   - name: http
     port: 80
@@ -185,6 +200,16 @@ kind: Namespace
 metadata:
   name: kuadrant-test-2
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: metallb-gateway-params
+  namespace: kuadrant-test-2
+data:
+  service: |
+    spec:
+      loadBalancerClass: oinc.io/metallb
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -192,6 +217,11 @@ metadata:
   namespace: kuadrant-test-2
 spec:
   gatewayClassName: istio
+  infrastructure:
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: metallb-gateway-params
   listeners:
   - name: http
     port: 80
