@@ -36,6 +36,11 @@ plugin:
   topologyConfigMapName: "topology"
   topologyConfigMapNamespace: "kuadrant-system"
   metricsWorkloadSuffix: "-openshift-default"
+  mcpProxy:
+    # Optional exact-origin restriction. Empty uses admin-managed Gateway and extension destinations.
+    allowedOrigins: []
+    # Optional ConfigMap containing ca-bundle.crt for private-CA gateways.
+    caConfigMapName: ""
   jobs:
     patchConsoles:
       enabled: true

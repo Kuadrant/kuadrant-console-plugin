@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # create an oinc cluster with kuadrant, istio, metallb, and a gateway.
-# shared by local dev and e2e — no test fixtures here.
+# shared by local dev and e2e, including the MCP demo backends.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -81,6 +81,23 @@ kubectl patch kuadrant kuadrant -n kuadrant-system --type merge --patch '{"spec"
 
 # --- Gateway ---
 
+# OINC scopes MetalLB to this class so it does not take over MicroShift's
+# ingress Service. Apply defaults before creating any Istio Gateway Services.
+log "configuring Istio Gateways for OINC MetalLB..."
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oinc-gateway-defaults
+  namespace: istio-system
+  labels:
+    gateway.istio.io/defaults-for-class: istio
+data:
+  service: |
+    spec:
+      loadBalancerClass: oinc.io/metallb
+EOF
+
 log "creating gateway..."
 kubectl create namespace gateway-system 2>/dev/null || true
 # Istio must set the Service class at creation so oinc's scoped MetalLB handles it.
@@ -123,8 +140,6 @@ if ! kubectl wait gateway.gateway.networking.k8s.io/kuadrant-ingressgateway \
   exit 1
 fi
 
-log "creating demo MCP resources..."
-kubectl create namespace toystore 2>/dev/null || true
-kubectl apply -f "${REPO_DIR}/scripts/mcp-demo.yaml"
+bash "${SCRIPT_DIR}/setup-mcp-demo.sh"
 
 log "cluster setup complete"

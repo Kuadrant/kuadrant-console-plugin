@@ -1,4 +1,7 @@
 import { defineConfig } from '@playwright/test';
+import { resolve } from 'path';
+
+const repoRoot = resolve(__dirname, '..');
 
 export default defineConfig({
   testDir: './tests',
@@ -8,9 +11,26 @@ export default defineConfig({
   retries: 1,
   workers: 3,
   reporter: [
-    ['html', { open: 'never' }],
+    [
+      'html',
+      {
+        open: 'never',
+        outputFolder: resolve(
+          repoRoot,
+          process.env.PLAYWRIGHT_HTML_OUTPUT_DIR || 'playwright-report',
+        ),
+      },
+    ],
     ['list'],
-    ['json', { outputFile: 'playwright-results.json' }],
+    [
+      'json',
+      {
+        outputFile: resolve(
+          repoRoot,
+          process.env.PLAYWRIGHT_JSON_OUTPUT_NAME || 'playwright-results.json',
+        ),
+      },
+    ],
   ],
   use: {
     baseURL: process.env.CONSOLE_URL || 'http://localhost:9000',

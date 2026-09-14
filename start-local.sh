@@ -35,8 +35,17 @@ PLUGIN_NAME=$(node -p "require('${SCRIPT_DIR}/package.json').consolePlugin.name"
 PLUGIN_URL="http://${HOST}:${PLUGIN_PORT}"
 
 console_has_plugin() {
-  "${RUNTIME}" inspect oinc-console --format '{{json .Config.Cmd}}' 2>/dev/null \
-    | grep -q "${PLUGIN_NAME}"
+  {
+    "${RUNTIME}" inspect oinc-console --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null
+    "${RUNTIME}" inspect oinc-console --format '{{json .Config.Cmd}}' 2>/dev/null
+  } | grep -q "${PLUGIN_NAME}"
+}
+
+console_plugin_has_proxy() {
+  local proxy_count
+  proxy_count=$(kubectl get consoleplugin.console.openshift.io "${PLUGIN_NAME}" \
+    -o go-template='{{len .spec.proxy}}' 2>/dev/null || true)
+  [[ "${proxy_count}" =~ ^[1-9][0-9]*$ ]]
 }
 
 restart_console_with_plugin() {
@@ -97,6 +106,11 @@ for i in $(seq 1 30); do
   fi
   sleep 2
 done
+
+if console_plugin_has_proxy; then
+  log "syncing operator-reconciled Console plugin proxy..."
+  "${SCRIPT_DIR}/scripts/sync-console-plugin-proxy.sh"
+fi
 
 echo ""
 echo "============================================"

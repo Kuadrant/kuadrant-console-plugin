@@ -129,7 +129,8 @@
       "MCPOverviewPage": "./components/mcp/MCPOverviewPage",
       "MCPSetupWizard": "./components/mcp/MCPSetupWizard",
       "MCPGatewayExtensionCreatePage": "./components/mcp/MCPGatewayExtensionCreatePage",
-      "MCPServerRegistrationCreatePage": "./components/mcp/MCPServerRegistrationCreatePage"
+      "MCPServerRegistrationCreatePage": "./components/mcp/MCPServerRegistrationCreatePage",
+      "MCPInspectorPage": "./components/mcp/MCPInspectorPage"
     },
     "dependencies": {
       "@console/pluginAPI": ">=4.22.0-0"

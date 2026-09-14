@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mcp-inspector-e2e
+  namespace: kuadrant-system
+  labels:
+    app: mcp-inspector-e2e
+    authorino.kuadrant.io/managed-by: authorino
+stringData:
+  api_key: inspector-e2e-token
+---
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: mcp-inspector-e2e
+  namespace: gateway-system
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: mcp-gateway
+    sectionName: mcp
+  rules:
+    authentication:
+      bearer-token:
+        apiKey:
+          selector:
+            matchLabels:
+              app: mcp-inspector-e2e
+        credentials:
+          authorizationHeader:
+            prefix: Bearer
+    response:
+      unauthenticated:
+        code: 401
+        headers:
+          WWW-Authenticate:
+            value: Bearer
+---
+# Access required by this demo listener on ingress-isolated test clusters.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mcp-inspector-e2e-authorino
+  namespace: kuadrant-system
+spec:
+  podSelector:
+    matchLabels:
+      authorino-resource: authorino
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: gateway-system
+          podSelector:
+            matchLabels:
+              gateway.networking.k8s.io/gateway-name: mcp-gateway
+      ports:
+        - protocol: TCP
+          port: 50051
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mcp-inspector-e2e-wasm
+  namespace: kuadrant-system
+spec:
+  podSelector:
+    matchLabels:
+      app: kuadrant
+      control-plane: controller-manager
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: gateway-system
+          podSelector:
+            matchLabels:
+              gateway.networking.k8s.io/gateway-name: mcp-gateway
+      ports:
+        - protocol: TCP
+          port: 8082
