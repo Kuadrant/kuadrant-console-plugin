@@ -483,6 +483,14 @@ const MCPInspectorSession: React.FC<{ activeNamespace: string }> = ({ activeName
                             );
                           })}
                         </FormSelect>
+                        {endpoint && (
+                          <Content
+                            component="small"
+                            className="kuadrant-mcp-inspector-page__endpoint"
+                          >
+                            {endpoint}
+                          </Content>
+                        )}
                       </FormGroup>
                       <FormGroup label={t('Protocol')} fieldId="mcp-inspector-protocol">
                         <FormSelect
@@ -503,11 +511,6 @@ const MCPInspectorSession: React.FC<{ activeNamespace: string }> = ({ activeName
                         </Content>
                       </FormGroup>
                     </Form>
-                    {endpoint && (
-                      <Content component="small" className="kuadrant-mcp-inspector-page__endpoint">
-                        {endpoint}
-                      </Content>
-                    )}
                   </GridItem>
                   <GridItem
                     md={6}

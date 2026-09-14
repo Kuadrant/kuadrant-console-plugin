@@ -89,6 +89,26 @@ for (const theme of ['light', 'dark'] as const) {
         async ({ page }, testInfo) => {
           const gateway = await page.getByLabel('Select an MCP gateway extension').boundingBox();
           const protocol = await page.getByLabel('MCP protocol', { exact: true }).boundingBox();
+          const endpoint = await page
+            .locator('.kuadrant-mcp-inspector-page__endpoint')
+            .boundingBox();
+          const protocolHint = await page
+            .getByText('Changing protocol reconnects and may show different tools.', {
+              exact: true,
+            })
+            .boundingBox();
+          for (const [control, helper] of [
+            [gateway, endpoint],
+            [protocol, protocolHint],
+          ]) {
+            expect(control).not.toBeNull();
+            expect(helper).not.toBeNull();
+            expect.soft(Math.abs(helper!.x - control!.x)).toBeLessThanOrEqual(1);
+            const gap = helper!.y - (control!.y + control!.height);
+            expect.soft(gap).toBeGreaterThanOrEqual(0);
+            expect.soft(gap).toBeLessThanOrEqual(8);
+            expect.soft(helper!.width).toBeLessThanOrEqual(control!.width + 1);
+          }
           if (width === 1440) {
             expect.soft(Math.abs(gateway!.y - protocol!.y)).toBeLessThanOrEqual(1);
             expect.soft(protocol!.x).toBeGreaterThan(gateway!.x + gateway!.width);
