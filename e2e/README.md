@@ -102,6 +102,7 @@ npx playwright test --config=e2e/playwright.config.ts
 - `e2e/tests/gateway-crud.spec.ts` - Gateway create, edit, and delete operations
 - `e2e/tests/httproute-crud.spec.ts` - HTTPRoute create, edit, and delete operations
 - `e2e/tests/mcp-inspector.spec.ts` - MCP Inspector smoke and live tool-call journeys
+- `e2e/tests/mcp-inspector-ui.spec.ts` - Inspector layout, searchable menus and output spacing in both themes, using mocked discovery and MCP responses
 - `e2e/tests/mcp-overview.spec.ts` - MCP Overview dashboard
 - `e2e/tests/mcp-setup-wizard.spec.ts` - MCP Management setup wizard
 - `e2e/tests/mcp-wizard.spec.ts` - MCP server registration wizard

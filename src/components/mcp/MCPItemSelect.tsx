@@ -1,13 +1,13 @@
 import * as React from 'react';
 import {
   Button,
+  MenuSearch,
   MenuToggle,
   Select,
   SelectList,
   SelectOption,
   TextInputGroup,
   TextInputGroupMain,
-  TextInputGroupUtilities,
 } from '@patternfly/react-core';
 import { TimesIcon } from '@patternfly/react-icons';
 
@@ -30,7 +30,7 @@ interface MCPItemSelectProps {
   emptyText: string;
 }
 
-// typeahead over tools or prompts, each option subtitled with its server
+// Searchable tools/prompts menu, each option subtitled with its server.
 const MCPItemSelect: React.FC<MCPItemSelectProps> = ({
   items,
   selectedName,
@@ -45,17 +45,21 @@ const MCPItemSelect: React.FC<MCPItemSelectProps> = ({
   emptyText,
 }) => {
   const [isOpen, setIsOpen] = React.useState(false);
-  // inputValue is what the toggle shows, filterValue only what was typed
-  const [inputValue, setInputValue] = React.useState(selectedName);
   const [filterValue, setFilterValue] = React.useState('');
   const [focusedIndex, setFocusedIndex] = React.useState<number | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const toggleRef = React.useRef<HTMLButtonElement>(null);
 
   React.useEffect(() => {
-    setInputValue(selectedName);
     setFilterValue('');
     setFocusedIndex(null);
   }, [selectedName]);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      inputRef.current?.focus();
+    }
+  }, [isOpen]);
 
   const term = filterValue.trim().toLowerCase();
   const filtered = items.filter(
@@ -66,28 +70,28 @@ const MCPItemSelect: React.FC<MCPItemSelectProps> = ({
   );
 
   const choose = (item: MCPSelectableItem) => {
-    setInputValue(item.name);
     setFilterValue('');
     setFocusedIndex(null);
     setIsOpen(false);
     onSelect(item.name);
+    toggleRef.current?.focus();
   };
 
   const clear = () => {
-    setInputValue('');
     setFilterValue('');
     setFocusedIndex(null);
     onClear();
-    inputRef.current?.focus();
+    setIsOpen(false);
+    toggleRef.current?.focus();
   };
 
   const onToggleClick = () => {
     setIsOpen((open) => !open);
-    inputRef.current?.focus();
+    setFilterValue('');
+    setFocusedIndex(null);
   };
 
   const onInputChange = (_event: React.FormEvent<HTMLInputElement>, value: string) => {
-    setInputValue(value);
     setFilterValue(value);
     setFocusedIndex(null);
     setIsOpen(true);
@@ -121,93 +125,97 @@ const MCPItemSelect: React.FC<MCPItemSelectProps> = ({
       }
       case 'Escape':
         setIsOpen(false);
+        toggleRef.current?.focus();
         break;
       default:
         break;
     }
   };
 
-  const toggle = (toggleRef: React.Ref<HTMLButtonElement>) => (
+  const toggle = (
     <MenuToggle
       ref={toggleRef}
-      variant="typeahead"
       onClick={onToggleClick}
       isExpanded={isOpen}
       isFullWidth
       aria-label={toggleLabel}
     >
-      <TextInputGroup isPlain>
-        <TextInputGroupMain
-          value={inputValue}
-          onChange={onInputChange}
-          onKeyDown={onInputKeyDown}
-          id={`${idPrefix}-search`}
-          autoComplete="off"
-          innerRef={inputRef}
-          placeholder={placeholder}
-          role="combobox"
-          isExpanded={isOpen}
-          aria-controls={`${idPrefix}-options`}
-          aria-label={searchLabel}
-          {...(focusedIndex !== null && {
-            'aria-activedescendant': `${idPrefix}-option-${focusedIndex}`,
-          })}
-        />
-        {inputValue && (
-          <TextInputGroupUtilities>
-            <Button
-              variant="plain"
-              onClick={clear}
-              aria-label={clearLabel}
-              icon={<TimesIcon aria-hidden="true" />}
-            />
-          </TextInputGroupUtilities>
-        )}
-      </TextInputGroup>
+      {selectedName || placeholder}
     </MenuToggle>
   );
 
   return (
-    <Select
-      id={`${idPrefix}-select`}
-      isOpen={isOpen}
-      selected={selectedName}
-      onSelect={(_event, value) => {
-        const item = items.find((candidate) => candidate.name === value);
-        if (item) {
-          choose(item);
-        }
-      }}
-      onOpenChange={(open) => {
-        setIsOpen(open);
-        if (!open) {
-          setFocusedIndex(null);
-        }
-      }}
-      toggle={toggle}
-      shouldFocusFirstItemOnOpen={false}
-      isScrollable
-      maxMenuHeight="18rem"
-    >
-      <SelectList id={`${idPrefix}-options`}>
-        {filtered.map((item, index) => (
-          <SelectOption
-            key={item.name}
-            id={`${idPrefix}-option-${index}`}
-            value={item.name}
-            description={serverNameFor?.(item.name)}
-            isFocused={focusedIndex === index}
-          >
-            {item.name}
-          </SelectOption>
-        ))}
-        {filtered.length === 0 && (
-          <SelectOption value="" isDisabled>
-            {emptyText}
-          </SelectOption>
-        )}
-      </SelectList>
-    </Select>
+    <div className="kuadrant-mcp-inspector-page__item-select">
+      <Select
+        id={`${idPrefix}-select`}
+        isOpen={isOpen}
+        selected={selectedName}
+        onSelect={(_event, value) => {
+          const item = items.find((candidate) => candidate.name === value);
+          if (item) {
+            choose(item);
+          }
+        }}
+        onOpenChange={(open) => {
+          setIsOpen(open);
+          if (!open) {
+            setFocusedIndex(null);
+          }
+        }}
+        toggle={{ toggleNode: toggle, toggleRef }}
+        shouldFocusFirstItemOnOpen={false}
+        shouldFocusToggleOnSelect
+        isScrollable
+        maxMenuHeight="18rem"
+      >
+        <MenuSearch>
+          <TextInputGroup>
+            <TextInputGroupMain
+              value={filterValue}
+              onChange={onInputChange}
+              onKeyDown={onInputKeyDown}
+              id={`${idPrefix}-search`}
+              autoComplete="off"
+              innerRef={inputRef}
+              placeholder={placeholder}
+              role="combobox"
+              isExpanded={isOpen}
+              aria-controls={`${idPrefix}-options`}
+              aria-label={searchLabel}
+              {...(focusedIndex !== null && {
+                'aria-activedescendant': `${idPrefix}-option-${focusedIndex}`,
+              })}
+            />
+          </TextInputGroup>
+        </MenuSearch>
+        <SelectList id={`${idPrefix}-options`}>
+          {filtered.map((item, index) => (
+            <SelectOption
+              key={item.name}
+              id={`${idPrefix}-option-${index}`}
+              value={item.name}
+              description={serverNameFor?.(item.name)}
+              isFocused={focusedIndex === index}
+            >
+              {item.name}
+            </SelectOption>
+          ))}
+          {filtered.length === 0 && (
+            <SelectOption value="" isDisabled>
+              {emptyText}
+            </SelectOption>
+          )}
+        </SelectList>
+      </Select>
+      {selectedName && (
+        <Button
+          variant="plain"
+          onClick={clear}
+          aria-label={clearLabel}
+          icon={<TimesIcon aria-hidden="true" />}
+        />
+      )}
+    </div>
   );
 };
 

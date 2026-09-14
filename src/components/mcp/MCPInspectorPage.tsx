@@ -449,8 +449,8 @@ const MCPInspectorSession: React.FC<{ activeNamespace: string }> = ({ activeName
             <Card className="kuadrant-mcp-inspector-page__connection-card">
               <CardBody>
                 <Grid>
-                  <GridItem md={4} className="kuadrant-mcp-inspector-page__connection-segment">
-                    <Form>
+                  <GridItem lg={6} className="kuadrant-mcp-inspector-page__connection-segment">
+                    <Form className="kuadrant-mcp-inspector-page__connection-form">
                       <FormGroup label={t('Gateway')} fieldId="mcp-inspector-extension">
                         <FormSelect
                           id="mcp-inspector-extension"
@@ -502,18 +502,6 @@ const MCPInspectorSession: React.FC<{ activeNamespace: string }> = ({ activeName
                           {t('Changing protocol reconnects and may show different tools.')}
                         </Content>
                       </FormGroup>
-                      <Button
-                        variant="secondary"
-                        isDisabled={!selected || !isReady(selected) || connecting}
-                        isLoading={connecting}
-                        onClick={() => {
-                          if (selected) {
-                            void handleConnect(proxyEndpoint(selected), bearerToken.trim());
-                          }
-                        }}
-                      >
-                        {t('Reconnect')}
-                      </Button>
                     </Form>
                     {endpoint && (
                       <Content component="small" className="kuadrant-mcp-inspector-page__endpoint">
@@ -521,7 +509,11 @@ const MCPInspectorSession: React.FC<{ activeNamespace: string }> = ({ activeName
                       </Content>
                     )}
                   </GridItem>
-                  <GridItem md={4} className="kuadrant-mcp-inspector-page__connection-segment">
+                  <GridItem
+                    md={6}
+                    lg={3}
+                    className="kuadrant-mcp-inspector-page__connection-segment"
+                  >
                     <Content component="p" className="kuadrant-mcp-inspector-page__segment-title">
                       {t('Connection')}
                     </Content>
@@ -574,8 +566,26 @@ const MCPInspectorSession: React.FC<{ activeNamespace: string }> = ({ activeName
                         {t('Session ID')}: <code>{sessionId}</code>
                       </Content>
                     )}
+                    <div className="kuadrant-mcp-inspector-page__reconnect">
+                      <Button
+                        variant="secondary"
+                        isDisabled={!selected || !isReady(selected) || connecting}
+                        isLoading={connecting}
+                        onClick={() => {
+                          if (selected) {
+                            void handleConnect(proxyEndpoint(selected), bearerToken.trim());
+                          }
+                        }}
+                      >
+                        {t('Reconnect')}
+                      </Button>
+                    </div>
                   </GridItem>
-                  <GridItem md={4} className="kuadrant-mcp-inspector-page__connection-segment">
+                  <GridItem
+                    md={6}
+                    lg={3}
+                    className="kuadrant-mcp-inspector-page__connection-segment"
+                  >
                     <Content component="p" className="kuadrant-mcp-inspector-page__segment-title">
                       {t('Status')}
                     </Content>

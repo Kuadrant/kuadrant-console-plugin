@@ -74,6 +74,7 @@ test.describe('MCP Inspector', () => {
     const refreshToolsButton = page.getByRole('button', { name: 'Refresh tools' });
     await refreshToolsButton.click();
     await expect(refreshToolsButton).toBeEnabled();
+    await page.getByRole('button', { name: 'Tool selector', exact: true }).click();
     await page.getByLabel('Search tools').fill(integrationTool);
     await page.getByRole('option', { name: integrationTool }).click();
     await page.getByLabel(integrationArgumentLabel, { exact: true }).fill(integrationArgumentValue);
@@ -99,6 +100,7 @@ test.describe('MCP Inspector', () => {
     await expect(page.getByRole('heading', { name: 'JSON-RPC response' })).toBeVisible();
 
     await page.getByRole('tab', { name: 'Prompts' }).click();
+    await page.getByRole('button', { name: 'Prompt selector', exact: true }).click();
     await page.getByLabel('Search prompts').fill(integrationPrompt);
     await page.getByRole('option', { name: integrationPrompt }).click();
     if (integrationPromptArgumentLabel) {

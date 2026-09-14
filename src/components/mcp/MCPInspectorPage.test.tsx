@@ -82,8 +82,18 @@ const connectToGateway = async () => {
   await waitFor(() => expect(screen.getByText('Connected')).toBeInTheDocument());
 };
 
+const searchItems = (kind: 'Tool' | 'Prompt', search: string) => {
+  const toggle = screen.getByRole('button', { name: `${kind} selector` });
+  if (toggle.getAttribute('aria-expanded') !== 'true') {
+    fireEvent.click(toggle);
+  }
+  fireEvent.change(screen.getByLabelText(`Search ${kind.toLowerCase()}s`), {
+    target: { value: search },
+  });
+};
+
 const pickTool = (search: string, option: RegExp) => {
-  fireEvent.change(screen.getByLabelText('Search tools'), { target: { value: search } });
+  searchItems('Tool', search);
   fireEvent.click(screen.getByRole('option', { name: option }));
 };
 
@@ -197,7 +207,7 @@ describe('MCPInspectorPage', () => {
         pickTool('greet', /toystore_greet/);
       } else {
         fireEvent.click(screen.getByRole('tab', { name: 'Prompts' }));
-        fireEvent.change(screen.getByLabelText('Search prompts'), { target: { value: 'greet' } });
+        searchItems('Prompt', 'greet');
         fireEvent.click(screen.getByRole('option', { name: /toystore_greet/ }));
       }
       fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ada' } });
@@ -355,7 +365,7 @@ describe('MCPInspectorPage', () => {
     render(<MCPInspectorPage />);
     expect(screen.getByText('MCP server names are unavailable')).toBeInTheDocument();
     await connectToGateway();
-    expect(screen.getByLabelText('Search tools')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tool selector' })).toBeInTheDocument();
   });
 
   it('invalidates an expired session and reconnects to the same gateway', async () => {
@@ -390,7 +400,7 @@ describe('MCPInspectorPage', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Run tool' }));
       } else if (operation === 'prompt') {
         mockPromptsGetWithDetails.mockRejectedValueOnce(new MCPUnauthorizedError());
-        fireEvent.change(screen.getByLabelText('Search prompts'), { target: { value: 'greet' } });
+        searchItems('Prompt', 'greet');
         fireEvent.click(screen.getByRole('option', { name: /toystore_greet/ }));
         fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ada' } });
         fireEvent.click(screen.getByRole('button', { name: 'Generate prompt' }));
@@ -597,9 +607,9 @@ describe('MCPInspectorPage', () => {
     );
     expect(screen.getByText('0 requests')).toBeInTheDocument();
     expect(screen.queryByText('stale result')).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Search tools'), { target: { value: 'modern' } });
+    searchItems('Tool', 'modern');
     expect(screen.getByRole('option', { name: /modern_tool/ })).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Search tools'), { target: { value: 'greet' } });
+    searchItems('Tool', 'greet');
     expect(screen.queryByRole('option', { name: /toystore_greet/ })).not.toBeInTheDocument();
   });
 
@@ -609,7 +619,7 @@ describe('MCPInspectorPage', () => {
     await connectToGateway();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Prompts' }));
-    expect(screen.getByLabelText('Search prompts')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Prompt selector' })).toBeInTheDocument();
 
     (MCPClient as jest.Mock).mockImplementationOnce(() => ({
       connect: jest.fn().mockResolvedValue({ protocolVersion: '2026-07-28', sessionId: null }),
@@ -620,7 +630,7 @@ describe('MCPInspectorPage', () => {
 
     await waitFor(() => expect(screen.getByText(/Protocol: 2026-07-28/)).toBeInTheDocument());
     expect(screen.getByRole('tab', { name: 'Prompts' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByLabelText('Search prompts')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Prompt selector' })).toBeInTheDocument();
   });
 
   it.each(['tool', 'prompt'])(
@@ -652,7 +662,7 @@ describe('MCPInspectorPage', () => {
         pickTool('greet', /toystore_greet/);
       } else {
         fireEvent.click(screen.getByRole('tab', { name: 'Prompts' }));
-        fireEvent.change(screen.getByLabelText('Search prompts'), { target: { value: 'greet' } });
+        searchItems('Prompt', 'greet');
         fireEvent.click(screen.getByRole('option', { name: /toystore_greet/ }));
       }
       fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ada' } });
@@ -677,7 +687,7 @@ describe('MCPInspectorPage', () => {
     await waitFor(() => expect(screen.getByText('Connected')).toBeInTheDocument());
     expect(screen.getByRole('tab', { name: 'Tools' })).toBeInTheDocument();
     expect(screen.getByText('No authentication')).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Search tools'), { target: { value: 'toy' } });
+    searchItems('Tool', 'toy');
     expect(screen.getByRole('option', { name: /toystore_greet/ })).toBeInTheDocument();
     expect(screen.queryByLabelText('Bearer token (optional)')).not.toBeInTheDocument();
     expect(screen.getByText('0 requests')).toBeInTheDocument();
@@ -829,7 +839,7 @@ describe('MCPInspectorPage', () => {
     fireEvent.click(refreshButton);
 
     await waitFor(() => expect(mockToolsList).toHaveBeenCalledTimes(2));
-    fireEvent.change(screen.getByLabelText('Search tools'), { target: { value: 'toystore' } });
+    searchItems('Tool', 'toystore');
     expect(await screen.findByRole('option', { name: /toystore_calculate/ })).toBeInTheDocument();
     expect(MCPClient).toHaveBeenCalledTimes(1);
     expect(screen.getByText('1 request')).toBeInTheDocument();
@@ -846,7 +856,7 @@ describe('MCPInspectorPage', () => {
     render(<MCPInspectorPage />);
     await connectToGateway();
 
-    fireEvent.change(screen.getByLabelText('Search tools'), { target: { value: 'greet' } });
+    searchItems('Tool', 'greet');
     const option = screen.getByRole('option', { name: /toystore_greet/ });
     expect(option).toHaveTextContent('toystore-mcp-server');
     fireEvent.click(option);
@@ -868,7 +878,7 @@ describe('MCPInspectorPage', () => {
         'Generating prompts creates text templates only and does not execute commands.',
       ),
     ).toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Search prompts'), { target: { value: 'greet' } });
+    searchItems('Prompt', 'greet');
     fireEvent.click(screen.getByRole('option', { name: /toystore_greet/ }));
     expect(screen.getByRole('heading', { name: 'toystore_greet' })).toBeInTheDocument();
     expect(screen.getByText('greet a person by name')).toBeInTheDocument();
@@ -899,7 +909,7 @@ describe('MCPInspectorPage', () => {
     render(<MCPInspectorPage />);
     await connectToGateway();
 
-    fireEvent.change(screen.getByLabelText('Search tools'), { target: { value: 'toy' } });
+    searchItems('Tool', 'toy');
     expect(screen.getByRole('option', { name: /toystore_greet/ })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: 'Prompts' }));
     expect(screen.getByText('This gateway does not expose prompts.')).toBeInTheDocument();
@@ -936,9 +946,9 @@ describe('MCPInspectorPage', () => {
     finishFirst({ protocolVersion: '2025-11-25', sessionId: 'session-stale' });
     await waitFor(() => expect(firstPromptsList).toHaveBeenCalled());
 
-    fireEvent.change(screen.getByLabelText('Search tools'), { target: { value: 'first' } });
+    searchItems('Tool', 'first');
     expect(screen.queryByRole('option', { name: /first_tool/ })).not.toBeInTheDocument();
-    fireEvent.change(screen.getByLabelText('Search tools'), { target: { value: 'greet' } });
+    searchItems('Tool', 'greet');
     expect(screen.getByRole('option', { name: /toystore_greet/ })).toBeInTheDocument();
     expect(MCPClient).toHaveBeenLastCalledWith(
       '/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/mcpgatewayextensions/test-ns/other-gateway',

@@ -13,8 +13,40 @@
 }
 
 .kuadrant-mcp-inspector-page__connection-segment {
-  min-height: 5.5rem;
-  padding: 0 var(--pf-t--global--spacer--xl, 2rem);
+  min-width: 0;
+  padding: 0 var(--pf-t--global--spacer--md, 1rem);
+}
+
+.kuadrant-mcp-inspector-page__connection-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--pf-t--global--spacer--md, 1rem);
+}
+
+.kuadrant-mcp-inspector-page__connection-form .pf-v6-c-form__group {
+  min-width: 0;
+}
+
+.kuadrant-mcp-inspector-page__connection-form .pf-v6-c-form__group-label {
+  display: flex;
+  justify-content: center;
+}
+
+.kuadrant-mcp-inspector-page__reconnect {
+  margin-top: var(--pf-t--global--spacer--md, 1rem);
+  text-align: center;
+}
+
+.kuadrant-mcp-inspector-page__item-select {
+  display: flex;
+  align-items: center;
+  gap: var(--pf-t--global--spacer--xs, 0.25rem);
+}
+
+.kuadrant-mcp-inspector-page__item-select > :first-child {
+  flex: 1;
+  min-width: 0;
 }
 
 .kuadrant-mcp-inspector-page__connection-segment:first-child {
@@ -175,6 +207,14 @@
   overflow: auto;
 }
 
+.kuadrant-mcp-inspector-page__output .pf-v6-c-tab-content {
+  padding-top: var(--pf-t--global--spacer--md, 1rem);
+}
+
+.kuadrant-mcp-inspector-page__output .pf-v6-c-tab-content > :first-child {
+  margin-top: 0;
+}
+
 .kuadrant-mcp-inspector-page__output pre:not(.pf-v6-c-code-block__pre) {
   max-height: 20rem;
   overflow: auto;
@@ -186,7 +226,7 @@
   word-break: break-word;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 991px) {
   .kuadrant-mcp-inspector-page__connection-segment {
     min-height: auto;
     padding: var(--pf-t--global--spacer--md, 1rem) 0;
@@ -197,7 +237,15 @@
     border-top: 1px solid var(--kuadrant-mcp-inspector-border);
     border-left: 0;
   }
+}
 
+@media (max-width: 575px) {
+  .kuadrant-mcp-inspector-page__connection-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
   .kuadrant-mcp-inspector-page__metadata-row {
     align-items: stretch;
     flex-direction: column;
