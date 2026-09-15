@@ -246,4 +246,66 @@ describe('KuadrantDataView', () => {
     expect(cells[2]).toHaveAttribute('data-label', 'Namespace');
     expect(cells[3]).not.toHaveAttribute('data-label');
   });
+
+  it('preserves sort column when columns reorder', () => {
+    type NamespaceItem = Item & { metadata: { namespace: string } };
+    const namespacedItems = (...names: string[]): NamespaceItem[] =>
+      names.map((name, i) => ({
+        metadata: { name, namespace: i % 2 === 0 ? 'ns-a' : 'ns-z' },
+      }));
+
+    const getNamespacedRow = (item: NamespaceItem) => [item.metadata.name, item.metadata.namespace];
+
+    // Initial render with TWO sortable columns: Name (index 0) and Namespace (index 1)
+    const twoColumns: KuadrantDataViewColumn<NamespaceItem>[] = [
+      { id: 'name', title: 'Name', sort: 'metadata.name' },
+      { id: 'namespace', title: 'Namespace', sort: 'metadata.namespace' },
+    ];
+
+    const { rerender } = render(
+      <KuadrantDataView
+        ariaLabel="Namespaced items"
+        columns={twoColumns}
+        data={namespacedItems('bravo', 'alpha', 'delta', 'charlie')}
+        loaded
+        getRow={getNamespacedRow}
+      />,
+    );
+
+    // Sort by Namespace (second column, index 1)
+    fireEvent.click(screen.getByRole('button', { name: 'Namespace' }));
+
+    // Verify initial sort: items should be ordered by namespace (ns-a items first, then ns-z)
+    let table = screen.getByRole('grid', { name: 'Namespaced items' });
+    let rows = within(table).getAllByRole('row').slice(1); // Skip header row
+    expect(within(rows[0]).getByText('bravo')).toBeInTheDocument(); // ns-a
+    expect(within(rows[1]).getByText('delta')).toBeInTheDocument(); // ns-a
+    expect(within(rows[2]).getByText('alpha')).toBeInTheDocument(); // ns-z
+    expect(within(rows[3]).getByText('charlie')).toBeInTheDocument(); // ns-z
+
+    // Re-render with Name column removed (Namespace shifts from index 1 → index 0)
+    const oneColumn: KuadrantDataViewColumn<NamespaceItem>[] = [
+      { id: 'namespace', title: 'Namespace', sort: 'metadata.namespace' },
+    ];
+
+    rerender(
+      <KuadrantDataView
+        ariaLabel="Namespaced items"
+        columns={oneColumn}
+        data={namespacedItems('bravo', 'alpha', 'delta', 'charlie')}
+        loaded
+        getRow={(item) => [item.metadata.namespace]}
+      />,
+    );
+
+    // BUG: The sort should STILL be by Namespace (same field), not by the new index 0
+    // After the fix, this should pass. Before the fix, it might fail because
+    // the stored index (1) now points to nothing or the wrong column
+    table = screen.getByRole('grid', { name: 'Namespaced items' });
+    rows = within(table).getAllByRole('row').slice(1);
+    expect(within(rows[0]).getByText('ns-a')).toBeInTheDocument();
+    expect(within(rows[1]).getByText('ns-a')).toBeInTheDocument();
+    expect(within(rows[2]).getByText('ns-z')).toBeInTheDocument();
+    expect(within(rows[3]).getByText('ns-z')).toBeInTheDocument();
+  });
 });
