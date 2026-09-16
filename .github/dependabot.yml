@@ -26,6 +26,12 @@ updates:
         update-types:
           - 'minor'
           - 'patch'
+    # react-i18next is a console federation singleton; the sdk pins its peer to
+    # ~16.5.8 and ConsoleRemotePlugin fails the build outside that range. hold
+    # until the sdk widens its peer, then drop this entry.
+    ignore:
+      - dependency-name: 'react-i18next'
+        versions: ['>=16.6.0']
 
   - package-ecosystem: 'github-actions'
     directory: '/'
