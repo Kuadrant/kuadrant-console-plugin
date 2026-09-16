@@ -28,7 +28,7 @@ RUN test -f ./dist/plugin-manifest.json && \
     echo "All required files are present."
 
 # Stage 2: Build the small asset server and MCP relay on the target architecture.
-FROM golang:1.24 AS go-builder
+FROM golang:1.27 AS go-builder
 
 WORKDIR /usr/src/app
 COPY go.mod ./
