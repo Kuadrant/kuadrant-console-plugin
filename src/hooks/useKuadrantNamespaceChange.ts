@@ -28,20 +28,25 @@ import { useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
  */
 export const useKuadrantNamespaceChange = (basePath: string) => {
   const { ns } = useParams<{ ns: string }>();
-  const [activeNamespace, setActiveNamespace] = useActiveNamespace();
+  const [activeNamespace] = useActiveNamespace();
   const navigate = useNavigate();
   const location = useLocation();
   const allNamespacesSubPath = '#ALL_NS#';
 
   // Sync URL namespace parameter with SDK active namespace
-  // The 'ns' param can be either a namespace name or 'all-namespaces'
+  // Priority: activeNamespace changes should trigger URL navigation
+  // This handles the case where NamespaceBar creates a new namespace
+  // and sets activeNamespace directly without calling handleNamespaceChange
   React.useEffect(() => {
-    if (ns && ns !== activeNamespace) {
-      setActiveNamespace(ns);
-    } else if (!ns && activeNamespace !== allNamespacesSubPath) {
-      setActiveNamespace(allNamespacesSubPath);
+    // If activeNamespace changed but URL doesn't match, navigate to match activeNamespace
+    if (activeNamespace && activeNamespace !== allNamespacesSubPath && activeNamespace !== ns) {
+      const targetUrl = `/kuadrant${basePath}/ns/${activeNamespace}`;
+      navigate(targetUrl, { replace: true });
+    } else if (activeNamespace === allNamespacesSubPath && ns !== 'all-namespaces') {
+      const targetUrl = `/kuadrant${basePath}/all-namespaces`;
+      navigate(targetUrl, { replace: true });
     }
-  }, [ns, activeNamespace, setActiveNamespace, allNamespacesSubPath]);
+  }, [activeNamespace, ns, navigate, basePath, allNamespacesSubPath]);
 
   /**
    * Extract current subpath from URL (e.g., active tab)
@@ -88,9 +93,11 @@ export const useKuadrantNamespaceChange = (basePath: string) => {
       const subPath = getCurrentSubPath();
 
       if (newNamespace !== allNamespacesSubPath) {
-        navigate(`/kuadrant${basePath}/ns/${newNamespace}${subPath}`, { replace: true });
+        const targetUrl = `/kuadrant${basePath}/ns/${newNamespace}${subPath}`;
+        navigate(targetUrl, { replace: true });
       } else {
-        navigate(`/kuadrant${basePath}/all-namespaces${subPath}`, { replace: true });
+        const targetUrl = `/kuadrant${basePath}/all-namespaces${subPath}`;
+        navigate(targetUrl, { replace: true });
       }
     },
     [navigate, basePath, allNamespacesSubPath, getCurrentSubPath],

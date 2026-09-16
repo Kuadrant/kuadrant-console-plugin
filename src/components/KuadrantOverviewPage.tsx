@@ -345,7 +345,7 @@ const KuadrantOverviewPage: React.FC = () => {
     };
 
     performRedirect();
-  }, [location.pathname, activeNamespace, navigate]);
+  }, [location.pathname, navigate]);
 
   const resolvedNamespace = watchNamespace === '#ALL_NS#' ? undefined : watchNamespace;
   const rbacResources = resources.map((res) => ({
@@ -395,12 +395,6 @@ const KuadrantOverviewPage: React.FC = () => {
     !resourceRBAC['PlanPolicy']['list'] &&
     !resourceRBAC['DNSPolicy']['list'] &&
     !resourceRBAC['TLSPolicy']['list'];
-
-  React.useEffect(() => {
-    if (ns && ns !== activeNamespace) {
-      handleNamespaceChange(ns);
-    }
-  }, [ns, handleNamespaceChange]);
 
   const handleHideCard = () => {
     setHideCard(true);
