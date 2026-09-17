@@ -365,6 +365,7 @@ const KuadrantOverviewPage: React.FC = () => {
 
     return () => {
       cancelled = true;
+      rbacCheckPerformedRef.current = false; // Reset guard on cleanup
     };
   }, [location.pathname, navigate, activeNamespace]);
 

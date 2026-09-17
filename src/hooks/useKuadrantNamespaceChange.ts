@@ -34,8 +34,9 @@ export const useKuadrantNamespaceChange = (basePath: string) => {
   const allNamespacesSubPath = '#ALL_NS#';
 
   // Track previous values to prevent infinite loops
-  const prevNsRef = React.useRef(ns);
-  const prevActiveNamespaceRef = React.useRef(activeNamespace);
+  // Initialize with sentinels so first render detects changes
+  const prevNsRef = React.useRef<string | undefined>(undefined);
+  const prevActiveNamespaceRef = React.useRef<string | undefined>(undefined);
 
   // Bidirectional sync 1: URL → activeNamespace
   // When URL changes (e.g., deep links, in-app navigation), update activeNamespace
