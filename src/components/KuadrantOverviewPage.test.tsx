@@ -66,3 +66,18 @@ describe('ErrorCodeLabel', () => {
     expect(screen.queryByText('Code: 403')).not.toBeInTheDocument();
   });
 });
+
+/*
+ * Note: Namespace transition and RBAC redirect logic testing
+ *
+ * The namespace transition logic (redirect effect at KuadrantOverviewPage.tsx:320-360)
+ * is covered by E2E tests in e2e/tests/rbac.spec.ts which verify:
+ * - Users with cluster access stay on /all-namespaces
+ * - Users without cluster access redirect to /ns/<namespace>
+ * - Redirect only happens once (no loops)
+ * - Both light and dark theme compatibility
+ *
+ * Unit testing this logic requires mocking extensive OpenShift Console SDK dependencies
+ * (PrometheusEndpoint, useK8sWatchResource, checkAccess, etc.) which would create brittle
+ * tests. The E2E tests provide better coverage by testing actual user workflows.
+ */

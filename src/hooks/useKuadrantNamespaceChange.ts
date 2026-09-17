@@ -28,25 +28,78 @@ import { useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
  */
 export const useKuadrantNamespaceChange = (basePath: string) => {
   const { ns } = useParams<{ ns: string }>();
-  const [activeNamespace] = useActiveNamespace();
+  const [activeNamespace, setActiveNamespace] = useActiveNamespace();
   const navigate = useNavigate();
   const location = useLocation();
   const allNamespacesSubPath = '#ALL_NS#';
 
-  // Sync URL namespace parameter with SDK active namespace
-  // Priority: activeNamespace changes should trigger URL navigation
-  // This handles the case where NamespaceBar creates a new namespace
-  // and sets activeNamespace directly without calling handleNamespaceChange
+  // Track previous values to prevent infinite loops
+  const prevNsRef = React.useRef(ns);
+  const prevActiveNamespaceRef = React.useRef(activeNamespace);
+
+  // Bidirectional sync 1: URL → activeNamespace
+  // When URL changes (e.g., deep links, in-app navigation), update activeNamespace
   React.useEffect(() => {
-    // If activeNamespace changed but URL doesn't match, navigate to match activeNamespace
-    if (activeNamespace && activeNamespace !== allNamespacesSubPath && activeNamespace !== ns) {
-      const targetUrl = `/kuadrant${basePath}/ns/${activeNamespace}`;
-      navigate(targetUrl, { replace: true });
-    } else if (activeNamespace === allNamespacesSubPath && ns !== 'all-namespaces') {
-      const targetUrl = `/kuadrant${basePath}/all-namespaces`;
-      navigate(targetUrl, { replace: true });
+    // Only react if ns changed (not if activeNamespace changed)
+    if (ns === prevNsRef.current) return;
+    prevNsRef.current = ns;
+
+    if (ns && ns !== 'all-namespaces' && ns !== activeNamespace) {
+      setActiveNamespace(ns);
+    } else if (ns === 'all-namespaces' && activeNamespace !== allNamespacesSubPath) {
+      setActiveNamespace(allNamespacesSubPath);
+    } else if (!ns && activeNamespace !== allNamespacesSubPath) {
+      setActiveNamespace(allNamespacesSubPath);
     }
-  }, [activeNamespace, ns, navigate, basePath, allNamespacesSubPath]);
+  }, [ns, activeNamespace, setActiveNamespace, allNamespacesSubPath]);
+
+  // Bidirectional sync 2: activeNamespace → URL
+  // When activeNamespace changes (e.g., NamespaceBar creates namespace), navigate to match
+  React.useEffect(() => {
+    // Only react if activeNamespace changed (not if ns changed)
+    if (activeNamespace === prevActiveNamespaceRef.current) return;
+    prevActiveNamespaceRef.current = activeNamespace;
+
+    const getCurrentSubPath = () => {
+      const pathParts = location.pathname.split('/').filter(Boolean);
+      const basePathSegment = basePath.substring(1);
+      const baseIndex = pathParts.indexOf(basePathSegment);
+      if (baseIndex === -1) return '';
+      const nextSegment = pathParts[baseIndex + 1];
+      if (nextSegment === 'ns') {
+        const tabSegment = pathParts[baseIndex + 3];
+        return tabSegment ? `/${tabSegment}` : '';
+      } else if (nextSegment === 'all-namespaces') {
+        const tabSegment = pathParts[baseIndex + 2];
+        return tabSegment ? `/${tabSegment}` : '';
+      }
+      return '';
+    };
+
+    const subPath = getCurrentSubPath();
+
+    // Build expected URL for current activeNamespace
+    let expectedUrl: string;
+    if (activeNamespace && activeNamespace !== allNamespacesSubPath) {
+      expectedUrl = `/kuadrant${basePath}/ns/${activeNamespace}${subPath}`;
+    } else {
+      expectedUrl = `/kuadrant${basePath}/all-namespaces${subPath}`;
+    }
+
+    // Only navigate if current pathname doesn't match expected URL
+    // Special case: if activeNamespace is #ALL_NS# but we're on a namespace path (e.g., /ns/default),
+    // don't navigate back to /all-namespaces - let the URL→state effect sync activeNamespace instead
+    // This prevents redirect loops when RBAC redirects user to a namespace
+    const isOnNamespacePath = location.pathname.includes(`${basePath}/ns/`);
+    if (activeNamespace === allNamespacesSubPath && isOnNamespacePath) {
+      // Don't navigate - URL→state effect will sync activeNamespace to match the URL
+      return;
+    }
+
+    if (location.pathname !== expectedUrl) {
+      navigate(expectedUrl, { replace: true });
+    }
+  }, [activeNamespace, navigate, basePath, allNamespacesSubPath, location.pathname]);
 
   /**
    * Extract current subpath from URL (e.g., active tab)

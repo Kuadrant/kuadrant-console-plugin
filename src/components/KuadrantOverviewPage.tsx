@@ -318,15 +318,29 @@ const KuadrantOverviewPage: React.FC = () => {
   const watchNamespace = ns || activeNamespace;
 
   // Smart default redirect: check cluster-wide permissions and redirect namespace-scoped users
+  // Track if we've already performed the RBAC check to prevent redirect loops
+  const rbacCheckPerformedRef = React.useRef(false);
+
   React.useEffect(() => {
+    let cancelled = false;
+
     const performRedirect = async () => {
-      if (location.pathname === '/kuadrant/overview/all-namespaces') {
+      // Only check RBAC once when on all-namespaces path
+      if (
+        location.pathname === '/kuadrant/overview/all-namespaces' &&
+        !rbacCheckPerformedRef.current
+      ) {
+        rbacCheckPerformedRef.current = true;
+
         try {
           const result = await checkAccess({
             group: 'gateway.networking.k8s.io',
             resource: 'gateways',
             verb: 'list',
           });
+
+          // If cancelled during async operation, don't navigate
+          if (cancelled) return;
 
           // If user doesn't have cluster-wide access, redirect to namespace-scoped view
           if (!result.status?.allowed) {
@@ -336,6 +350,9 @@ const KuadrantOverviewPage: React.FC = () => {
           }
           // Otherwise, stay on current path (cluster-wide view)
         } catch (_error) {
+          // If cancelled during async operation, don't navigate
+          if (cancelled) return;
+
           // On error, redirect to namespace-scoped view
           const targetNamespace =
             activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
@@ -345,7 +362,11 @@ const KuadrantOverviewPage: React.FC = () => {
     };
 
     performRedirect();
-  }, [location.pathname, navigate]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname, navigate, activeNamespace]);
 
   const resolvedNamespace = watchNamespace === '#ALL_NS#' ? undefined : watchNamespace;
   const rbacResources = resources.map((res) => ({
