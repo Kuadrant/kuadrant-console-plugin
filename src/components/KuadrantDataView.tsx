@@ -27,6 +27,11 @@ export type KuadrantDataViewColumn<T> = {
 type PaginationEvent = React.MouseEvent | React.KeyboardEvent | MouseEvent | undefined;
 type SortEvent = React.MouseEvent | React.KeyboardEvent | MouseEvent | undefined;
 
+type SortState = {
+  columnId: string;
+  direction: SortByDirection;
+};
+
 export const useKuadrantDataViewPagination = (itemCount: number, initialPerPage = 10) => {
   const [page, setPage] = React.useState(1);
   const [perPage, setPerPage] = React.useState(initialPerPage);
@@ -128,31 +133,35 @@ const decorateRowCells = (row: DataViewTr, rowKey: string, labels: (string | und
   return isDataViewTrObject(row) ? { ...row, row: decorated } : decorated;
 };
 
-const getInitialSortBy = <T,>(columns: KuadrantDataViewColumn<T>[], ouiaId: string): ISortBy => {
+const getInitialSortState = <T,>(
+  columns: KuadrantDataViewColumn<T>[],
+  ouiaId: string,
+): SortState | null => {
   const params =
     typeof window === 'undefined' ? undefined : new URLSearchParams(window.location.search);
   const sortByParam = params?.get(`${ouiaId}.sortBy`);
-  const restoredIndex = sortByParam
-    ? columns.findIndex(
-        (column) =>
-          Boolean(column.sort) &&
-          (column.id === sortByParam ||
-            String(column.title) === sortByParam ||
-            column.sort === sortByParam),
-      )
-    : -1;
-  const index =
-    restoredIndex >= 0 ? restoredIndex : columns.findIndex((column) => Boolean(column.sort));
 
-  return index >= 0
-    ? {
-        index,
-        direction:
-          restoredIndex >= 0 && params?.get(`${ouiaId}.orderBy`) === SortByDirection.desc
-            ? SortByDirection.desc
-            : SortByDirection.asc,
-      }
-    : {};
+  // Try to find column by ID, title, or sort property from URL param (for backward compatibility)
+  // Otherwise use first sortable column
+  const column = sortByParam
+    ? columns.find(
+        (col) =>
+          Boolean(col.sort) &&
+          (col.id === sortByParam || String(col.title) === sortByParam || col.sort === sortByParam),
+      )
+    : columns.find((col) => Boolean(col.sort));
+
+  if (!column) {
+    return null;
+  }
+
+  return {
+    columnId: column.id,
+    direction:
+      sortByParam && params?.get(`${ouiaId}.orderBy`) === SortByDirection.desc
+        ? SortByDirection.desc
+        : SortByDirection.asc,
+  };
 };
 
 const KuadrantDataView = <T extends K8sResourceCommon>({
@@ -167,15 +176,29 @@ const KuadrantDataView = <T extends K8sResourceCommon>({
   ouiaId = 'KuadrantDataViewTable',
 }: KuadrantDataViewProps<T>): React.ReactElement => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
-  const [sortBy, setSortBy] = React.useState<ISortBy>(() => getInitialSortBy(columns, ouiaId));
+  const [sortState, setSortState] = React.useState<SortState | null>(() =>
+    getInitialSortState(columns, ouiaId),
+  );
+
+  // Derive the current sort index from the stored column ID and current columns array
+  const sortBy: ISortBy = React.useMemo(() => {
+    if (!sortState) {
+      return {};
+    }
+    const sortIndex = columns.findIndex((col) => col.id === sortState.columnId);
+    return sortIndex >= 0 ? { index: sortIndex, direction: sortState.direction } : {};
+  }, [sortState, columns]);
 
   const onSort = React.useCallback(
     (_event: SortEvent, index: number, direction: SortByDirection) => {
       const column = columns[index];
-      const sortParam = column?.id;
-      if (typeof window !== 'undefined' && sortParam) {
+      if (!column) {
+        return;
+      }
+
+      if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
-        params.set(`${ouiaId}.sortBy`, sortParam);
+        params.set(`${ouiaId}.sortBy`, column.id);
         params.set(`${ouiaId}.orderBy`, direction);
         window.history.replaceState(
           window.history.state,
@@ -183,7 +206,9 @@ const KuadrantDataView = <T extends K8sResourceCommon>({
           window.location.pathname + '?' + params.toString() + window.location.hash,
         );
       }
-      setSortBy({ index, direction });
+
+      // Store by column ID, not index
+      setSortState({ columnId: column.id, direction });
     },
     [columns, ouiaId],
   );
