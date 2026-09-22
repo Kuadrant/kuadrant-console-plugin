@@ -202,7 +202,9 @@ spec:
           page.getByRole('heading', { name: 'Choose or create an HTTPRoute' }),
         ).toBeVisible();
         await expect(page.getByLabel('Create a new HTTPRoute')).toBeChecked();
-        await expect(page.locator('#parent-gateway-0')).toHaveValue(selectedGatewayName);
+        await expect(page.locator('#parent-gateway-0')).toHaveValue(
+          `${TEST_NAMESPACE}/${selectedGatewayName}`,
+        );
         await expect(page.locator('#parent-gateway-0')).toBeDisabled();
         await expect(page.locator('#parent-section-0')).toHaveValue(selectedSectionName);
 
@@ -655,7 +657,9 @@ spec:
         await spaNavigate(page, '/kuadrant/mcp/setup-wizard');
 
         // Step 1: create a new Gateway with an 'mcp' listener
-        await expect(page.getByLabel('Choose an existing Gateway')).toBeChecked({ timeout: 15_000 });
+        await expect(page.getByLabel('Choose an existing Gateway')).toBeChecked({
+          timeout: 15_000,
+        });
         await page.getByLabel('Create a new Gateway').click();
         await expect(page.locator('#gateway-name')).toBeVisible({ timeout: 15_000 });
         await page.locator('#gateway-name').fill(gwName);

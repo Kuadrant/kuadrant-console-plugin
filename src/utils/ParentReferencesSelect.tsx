@@ -317,6 +317,38 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
     });
   };
 
+  const getGatewayKey = (gateway: GatewayForSelect): string =>
+    `${gateway.metadata.namespace}/${gateway.metadata.name}`;
+
+  // Select a Gateway by its composite namespace/name key. Gateway names are not
+  // unique across namespaces, so resolving by name alone can attach the route to
+  // the wrong Gateway.
+  const updateParentGateway = (id: string, gatewayKey: string) => {
+    const selectedGateway = gatewayKey
+      ? [...availableGateways, ...(requiredGateway ? [requiredGateway] : [])].find(
+          (gateway) => getGatewayKey(gateway) === gatewayKey,
+        )
+      : undefined;
+
+    const updatedRefs = parentRefs.map((ref) => {
+      if (ref.id !== id) return ref;
+
+      if (!selectedGateway) {
+        return { ...ref, gatewayName: '', gatewayNamespace: '', sectionName: '', port: 0 };
+      }
+
+      return {
+        ...ref,
+        gatewayName: selectedGateway.metadata.name,
+        gatewayNamespace: selectedGateway.metadata.namespace,
+        sectionName: '',
+        port: 80,
+      };
+    });
+
+    onChange(updatedRefs);
+  };
+
   // Add new parent reference
   const addParentReference = () => {
     const newParentRef: ParentReference = {
