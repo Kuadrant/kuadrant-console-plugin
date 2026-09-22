@@ -323,6 +323,7 @@ const KuadrantOverviewPage: React.FC = () => {
 
   React.useEffect(() => {
     let cancelled = false;
+    let checkPending = false;
 
     const performRedirect = async () => {
       // Only check RBAC once when on all-namespaces path
@@ -331,6 +332,7 @@ const KuadrantOverviewPage: React.FC = () => {
         !rbacCheckPerformedRef.current
       ) {
         rbacCheckPerformedRef.current = true;
+        checkPending = true;
 
         try {
           const result = await checkAccess({
@@ -357,6 +359,8 @@ const KuadrantOverviewPage: React.FC = () => {
           const targetNamespace =
             activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
           navigate(`/kuadrant/overview/ns/${targetNamespace}`, { replace: true });
+        } finally {
+          checkPending = false;
         }
       } else if (location.pathname !== '/kuadrant/overview/all-namespaces') {
         // Reset guard when leaving all-namespaces path so RBAC check runs again if user returns
@@ -368,8 +372,17 @@ const KuadrantOverviewPage: React.FC = () => {
 
     return () => {
       cancelled = true;
+      // Only reset guard if we're cancelling a pending check (e.g., navigation during async checkAccess).
+      // If the check completed normally, preserve the guard to prevent re-checking.
+      if (checkPending) {
+        rbacCheckPerformedRef.current = false;
+      }
     };
-  }, [location.pathname, navigate, activeNamespace]);
+    // NOTE: activeNamespace intentionally excluded from dependencies - it's only used to
+    // determine the target redirect namespace, not to trigger the effect. Including it would
+    // cause this effect to run on every namespace change across the entire app, interfering
+    // with RBAC checks on other pages (see PR #859).
+  }, [location.pathname, navigate]);
 
   const resolvedNamespace = watchNamespace === '#ALL_NS#' ? undefined : watchNamespace;
   const rbacResources = resources.map((res) => ({
