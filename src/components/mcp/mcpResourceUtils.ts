@@ -152,26 +152,40 @@ export interface GatewayTarget {
   sectionName?: string;
 }
 
-// Returns true when the HTTPRoute has a parentRef pointing at the given Gateway
-// target. Applies Gateway API defaulting: parentRef.group defaults to
-// gateway.networking.k8s.io, kind to Gateway, and namespace to the route's own
-// namespace. When both the target and the parentRef specify a sectionName they must
-// match; otherwise the match is at the gateway level (any listener).
-export const isHTTPRouteAttachedToGateway = (
+// A single entry of an HTTPRoute's spec.parentRefs (the type is declared inline on
+// HTTPRouteResource, so it's derived here rather than imported).
+export type HTTPRouteParentRef = NonNullable<
+  NonNullable<HTTPRouteResource['spec']>['parentRefs']
+>[number];
+
+// Returns the HTTPRoute's parentRefs that point at one of the given Gateway targets.
+// Applies Gateway API defaulting: parentRef.group defaults to gateway.networking.k8s.io,
+// kind to Gateway, and namespace to the route's own namespace. When both the target and
+// the parentRef specify a sectionName they must match; otherwise the match is at the
+// gateway level (any listener).
+export const filterGatewayParentRefs = (
   route: HTTPRouteResource,
-  target: GatewayTarget,
-): boolean =>
-  (route.spec?.parentRefs ?? []).some((ref) => {
+  targets: GatewayTarget[],
+): HTTPRouteParentRef[] =>
+  (route.spec?.parentRefs ?? []).filter((ref) => {
     const group = ref.group ?? 'gateway.networking.k8s.io';
     const kind = ref.kind ?? 'Gateway';
     if (group !== 'gateway.networking.k8s.io' || kind !== 'Gateway') return false;
     const refNamespace = ref.namespace ?? route.metadata?.namespace;
-    if (ref.name !== target.name || refNamespace !== target.namespace) return false;
-    if (target.sectionName && ref.sectionName && ref.sectionName !== target.sectionName) {
-      return false;
-    }
-    return true;
+    return targets.some((target) => {
+      if (ref.name !== target.name || refNamespace !== target.namespace) return false;
+      if (target.sectionName && ref.sectionName && ref.sectionName !== target.sectionName) {
+        return false;
+      }
+      return true;
+    });
   });
+
+// Returns true when the HTTPRoute has a parentRef pointing at the given Gateway target.
+export const isHTTPRouteAttachedToGateway = (
+  route: HTTPRouteResource,
+  target: GatewayTarget,
+): boolean => filterGatewayParentRefs(route, [target]).length > 0;
 
 export const wireHTTPRouteToExternalHost = (
   resource: HTTPRouteResource,
