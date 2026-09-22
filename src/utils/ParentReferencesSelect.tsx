@@ -237,6 +237,38 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
     });
   };
 
+  const getGatewayKey = (gateway: GatewayForSelect): string =>
+    `${gateway.metadata.namespace}/${gateway.metadata.name}`;
+
+  // Select a Gateway by its composite namespace/name key. Gateway names are not
+  // unique across namespaces, so resolving by name alone can attach the route to
+  // the wrong Gateway.
+  const updateParentGateway = (id: string, gatewayKey: string) => {
+    const selectedGateway = gatewayKey
+      ? [...availableGateways, ...(requiredGateway ? [requiredGateway] : [])].find(
+          (gateway) => getGatewayKey(gateway) === gatewayKey,
+        )
+      : undefined;
+
+    const updatedRefs = parentRefs.map((ref) => {
+      if (ref.id !== id) return ref;
+
+      if (!selectedGateway) {
+        return { ...ref, gatewayName: '', gatewayNamespace: '', sectionName: '', port: 0 };
+      }
+
+      return {
+        ...ref,
+        gatewayName: selectedGateway.metadata.name,
+        gatewayNamespace: selectedGateway.metadata.namespace,
+        sectionName: '',
+        port: 80,
+      };
+    });
+
+    onChange(updatedRefs);
+  };
+
   // Add new parent reference
   const addParentReference = () => {
     const newParentRef: ParentReference = {
@@ -264,19 +296,6 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
     const updatedRefs = parentRefs.map((ref) => {
       if (ref.id === id) {
         const updatedRef = { ...ref, [field]: value };
-
-        // If Gateway is changed, automatically update namespace and reset section
-        if (field === 'gatewayName') {
-          const selectedGateway = [
-            ...availableGateways,
-            ...(requiredGateway ? [requiredGateway] : []),
-          ].find((gw) => gw.metadata.name === value);
-          if (selectedGateway) {
-            updatedRef.gatewayNamespace = selectedGateway.metadata.namespace;
-            updatedRef.sectionName = '';
-            updatedRef.port = 80;
-          }
-        }
 
         // If Section is changed, update port
         if (field === 'sectionName') {
@@ -376,10 +395,12 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
                 <FormGroup label={t('Gateway name')} isRequired fieldId={`parent-gateway-${index}`}>
                   <FormSelect
                     id={`parent-gateway-${index}`}
-                    value={parentRef.gatewayName}
-                    onChange={(_, value) =>
-                      updateParentReference(parentRef.id, 'gatewayName', value)
+                    value={
+                      parentRef.gatewayName
+                        ? `${parentRef.gatewayNamespace}/${parentRef.gatewayName}`
+                        : ''
                     }
+                    onChange={(_, value) => updateParentGateway(parentRef.id, value)}
                     aria-label={t('Select Gateway')}
                     isDisabled={isDisabled || parentRef.id === requiredParentRef?.id}
                   >
@@ -389,8 +410,8 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 
                       return (
                         <FormSelectOption
-                          key={`${gateway.metadata.name}-${gateway.metadata.namespace}`}
-                          value={gateway.metadata.name}
+                          key={getGatewayKey(gateway)}
+                          value={getGatewayKey(gateway)}
                           label={
                             restriction
                               ? `${gateway.metadata.name} (${gateway.metadata.namespace}) — ${restriction}`
