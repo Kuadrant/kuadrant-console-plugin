@@ -358,6 +358,9 @@ const KuadrantOverviewPage: React.FC = () => {
             activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
           navigate(`/kuadrant/overview/ns/${targetNamespace}`, { replace: true });
         }
+      } else if (location.pathname !== '/kuadrant/overview/all-namespaces') {
+        // Reset guard when leaving all-namespaces path so RBAC check runs again if user returns
+        rbacCheckPerformedRef.current = false;
       }
     };
 
@@ -365,7 +368,6 @@ const KuadrantOverviewPage: React.FC = () => {
 
     return () => {
       cancelled = true;
-      rbacCheckPerformedRef.current = false; // Reset guard on cleanup
     };
   }, [location.pathname, navigate, activeNamespace]);
 
