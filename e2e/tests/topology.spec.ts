@@ -109,4 +109,25 @@ test.describe('Policy Topology', () => {
       { timeout: 15_000 },
     );
   });
+
+  test('node context menu creates a policy targeting that resource', { tag: '@nightly' }, async ({ page }) => {
+    const routeNode = nodeByLabel(page, ROUTE_NODE_LABEL).first();
+    await expect(routeNode).toBeVisible({ timeout: 20_000 });
+    await routeNode.click({ button: 'right' });
+
+    const createPolicy = page.getByRole('menuitem', { name: 'Create RateLimit Policy' });
+    await expect(createPolicy).toBeVisible({ timeout: 10_000 });
+    await createPolicy.click();
+
+    // created in the route's namespace, not the console's current one
+    await expect(page).toHaveURL(
+      /\/k8s\/ns\/kuadrant-test\/kuadrant\.io~v1~RateLimitPolicy\/~new\?targetKind=HTTPRoute&targetName=test-route$/,
+      { timeout: 15_000 },
+    );
+    await expect(page.getByRole('heading', { name: 'Create RateLimit Policy' })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.locator('#target-type-radio-httproute')).toBeChecked();
+    await expect(page.locator('#httproute-select')).toContainText('kuadrant-test/test-route');
+  });
 });

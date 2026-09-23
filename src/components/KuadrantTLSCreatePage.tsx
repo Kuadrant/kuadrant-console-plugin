@@ -40,13 +40,19 @@ import GatewaySelect from './gateway/GatewaySelect';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { K8sResourceCommon } from '@openshift-console/dynamic-plugin-sdk';
 import { resourceGVKMapping } from '../utils/resources';
+import { usePolicyTargetPrefill } from '../hooks/usePolicyTargetPrefill';
 
 const KuadrantTLSCreatePage: React.FC = () => {
   const navigate = useNavigate();
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>(
-    {} as GatewayResource,
+  const prefilledTarget = usePolicyTargetPrefill('TLSPolicy');
+  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>(() =>
+    prefilledTarget
+      ? ({
+          metadata: { name: prefilledTarget.name, namespace: selectedNamespace },
+        } as GatewayResource)
+      : ({} as GatewayResource),
   );
   const [selectedClusterIssuers, setSelectedClusterIssuers] = React.useState<ClusterIssuer>({
     name: '',

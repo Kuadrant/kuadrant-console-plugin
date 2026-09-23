@@ -39,6 +39,7 @@ import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
 import { resourceGVKMapping, RESOURCES, isSupportedTargetRef } from '../utils/resources';
 import { validateRequired, validateK8sName } from '../utils/validation';
+import { usePolicyTargetPrefill } from '../hooks/usePolicyTargetPrefill';
 
 const GATEWAY_API_GROUP = RESOURCES.Gateway.gvk.group;
 
@@ -55,11 +56,13 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
   // from and update this state atomically — name and kind are never set
   // through separate setters, which prevents saving a Gateway name under an
   // HTTPRoute/GRPCRoute kind (or vice versa).
-  const [targetRef, setTargetRef] = React.useState<TargetRef>({
+  const prefilledTarget = usePolicyTargetPrefill('RateLimitPolicy');
+  const [targetRef, setTargetRef] = React.useState<TargetRef>(() => ({
     group: GATEWAY_API_GROUP,
-    kind: 'Gateway',
-    name: '',
-  });
+    kind: prefilledTarget?.kind ?? 'Gateway',
+    name: prefilledTarget?.name ?? '',
+    ...(prefilledTarget ? { namespace: selectedNamespace } : {}),
+  }));
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
   const [resourceVersion, setResourceVersion] = React.useState('');
   const [formDisabled, setFormDisabled] = React.useState(false);

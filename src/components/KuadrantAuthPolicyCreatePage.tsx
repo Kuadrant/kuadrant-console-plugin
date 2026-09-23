@@ -11,10 +11,12 @@ import {
 import { useTranslation } from 'react-i18next';
 import { ResourceYAMLEditor, useActiveNamespace } from '@openshift-console/dynamic-plugin-sdk';
 import { resourceGVKMapping } from '../utils/resources';
+import { usePolicyTargetPrefill } from '../hooks/usePolicyTargetPrefill';
 
 const KuadrantAuthPolicyCreatePage: React.FC = () => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [selectedNamespace] = useActiveNamespace();
+  const prefilledTarget = usePolicyTargetPrefill('AuthPolicy');
 
   const yamlResource = {
     apiVersion:
@@ -55,8 +57,8 @@ const KuadrantAuthPolicyCreatePage: React.FC = () => {
       },
       targetRef: {
         group: 'gateway.networking.k8s.io',
-        kind: 'Gateway',
-        name: 'prod-web',
+        kind: prefilledTarget?.kind ?? 'Gateway',
+        name: prefilledTarget?.name ?? 'prod-web',
       },
     },
   };

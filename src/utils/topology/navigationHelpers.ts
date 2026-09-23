@@ -1,4 +1,5 @@
 import { ResourceKind, RESOURCES, getPoliciesForResource } from '../resources';
+import { canPolicyTarget, getCreatePolicyUrl } from '../policyTarget';
 
 export interface PolicyConfig {
   key: ResourceKind;
@@ -14,6 +15,12 @@ export const getPolicyConfigsForResource = (resourceType: string): PolicyConfig[
       key: policyKind,
       displayName: `Create ${policyKind.replace(/Policy$/, ' Policy')}`,
     }));
+};
+
+// node labels are "namespace/name", or just "name" for cluster-scoped resources
+const parseNodeLabel = (label: string): { namespace: string | null; name: string } => {
+  const [namespace, name] = label.includes('/') ? label.split('/') : [null, label];
+  return { namespace, name };
 };
 
 // navigate to a resource detail page
@@ -35,9 +42,7 @@ export const goToResource = (resourceType: string, resourceName: string) => {
     return;
   }
 
-  const [namespace, name] = resourceName.includes('/')
-    ? resourceName.split('/')
-    : [null, resourceName];
+  const { namespace, name } = parseNodeLabel(resourceName);
 
   const url = namespace
     ? `/k8s/ns/${namespace}/${finalGVK.group}~${finalGVK.version}~${finalGVK.kind}/${name}`
@@ -46,14 +51,33 @@ export const goToResource = (resourceType: string, resourceName: string) => {
   window.location.href = url;
 };
 
+// create page for a policy targeting the node's resource, in that resource's namespace
+export const getCreatePolicyUrlForNode = (
+  policyType: string,
+  resourceType: string,
+  resourceName: string,
+): string | null => {
+  const policyKind = policyType as ResourceKind;
+  if (!RESOURCES[policyKind] || !canPolicyTarget(policyKind, resourceType)) {
+    return null;
+  }
+  const { namespace, name } = parseNodeLabel(resourceName);
+  if (!namespace) {
+    return null;
+  }
+  return getCreatePolicyUrl(policyKind, namespace, { kind: resourceType, name });
+};
+
 // navigate to policy creation page
-export const navigateToCreatePolicy = (policyType: string) => {
-  const resourceKind = policyType as ResourceKind;
-  const resource = RESOURCES[resourceKind];
-  if (!resource) {
-    console.error(`Resource not found for policy type: ${policyType}`);
+export const navigateToCreatePolicy = (
+  policyType: string,
+  resourceType: string,
+  resourceName: string,
+) => {
+  const url = getCreatePolicyUrlForNode(policyType, resourceType, resourceName);
+  if (!url) {
+    console.error(`Cannot create ${policyType} for ${resourceType} '${resourceName}'`);
     return;
   }
-  const url = `/k8s/ns/default/${resource.gvk.group}~${resource.gvk.version}~${resource.gvk.kind}/~new`;
   window.location.href = url;
 };

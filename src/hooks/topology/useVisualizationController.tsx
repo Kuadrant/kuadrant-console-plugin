@@ -45,7 +45,7 @@ const createComponentFactory = () => {
           {policyConfigs.map((policy) => (
             <ContextMenuItem
               key={`create-${policy.key.toLowerCase()}`}
-              onClick={() => navigateToCreatePolicy(policy.key)}
+              onClick={() => navigateToCreatePolicy(policy.key, resourceType, resourceName)}
             >
               {policy.displayName}
             </ContextMenuItem>

@@ -47,6 +47,7 @@ import {
   getTargetKindsForPolicy,
   isSupportedTargetRef,
 } from '../utils/resources';
+import { usePolicyTargetPrefill } from '../hooks/usePolicyTargetPrefill';
 
 const GATEWAY_API_GROUP = RESOURCES.Gateway.gvk.group;
 const SUPPORTED_TARGET_KINDS = getTargetKindsForPolicy('TokenRateLimitPolicy');
@@ -77,11 +78,12 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [targetRef, setTargetRef] = React.useState<TargetRef>({
+  const prefilledTarget = usePolicyTargetPrefill('TokenRateLimitPolicy');
+  const [targetRef, setTargetRef] = React.useState<TargetRef>(() => ({
     group: GATEWAY_API_GROUP,
-    kind: 'Gateway',
-    name: '',
-  });
+    kind: prefilledTarget?.kind ?? 'Gateway',
+    name: prefilledTarget?.name ?? '',
+  }));
   const [limits, setLimits] = React.useState<TokenLimitMap>({});
   const [creationTimestamp, setCreationTimestamp] = React.useState('');
   const [resourceVersion, setResourceVersion] = React.useState('');
