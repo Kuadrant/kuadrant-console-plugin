@@ -33,75 +33,6 @@ export const useKuadrantNamespaceChange = (basePath: string) => {
   const location = useLocation();
   const allNamespacesSubPath = '#ALL_NS#';
 
-  // Track previous values to prevent infinite loops
-  // Initialize with sentinels so first render detects changes
-  const prevNsRef = React.useRef<string | undefined>(undefined);
-  const prevActiveNamespaceRef = React.useRef<string | undefined>(undefined);
-
-  // Bidirectional sync 1: URL → activeNamespace
-  // When URL changes (e.g., deep links, in-app navigation), update activeNamespace
-  React.useEffect(() => {
-    // Only react if ns changed (not if activeNamespace changed)
-    if (ns === prevNsRef.current) return;
-    prevNsRef.current = ns;
-
-    if (ns && ns !== 'all-namespaces' && ns !== activeNamespace) {
-      setActiveNamespace(ns);
-    } else if (ns === 'all-namespaces' && activeNamespace !== allNamespacesSubPath) {
-      setActiveNamespace(allNamespacesSubPath);
-    } else if (!ns && activeNamespace !== allNamespacesSubPath) {
-      setActiveNamespace(allNamespacesSubPath);
-    }
-  }, [ns, activeNamespace, setActiveNamespace, allNamespacesSubPath]);
-
-  // Bidirectional sync 2: activeNamespace → URL
-  // When activeNamespace changes (e.g., NamespaceBar creates namespace), navigate to match
-  React.useEffect(() => {
-    // Only react if activeNamespace changed (not if ns changed)
-    if (activeNamespace === prevActiveNamespaceRef.current) return;
-    prevActiveNamespaceRef.current = activeNamespace;
-
-    const getCurrentSubPath = () => {
-      const pathParts = location.pathname.split('/').filter(Boolean);
-      const basePathSegment = basePath.substring(1);
-      const baseIndex = pathParts.indexOf(basePathSegment);
-      if (baseIndex === -1) return '';
-      const nextSegment = pathParts[baseIndex + 1];
-      if (nextSegment === 'ns') {
-        const tabSegment = pathParts[baseIndex + 3];
-        return tabSegment ? `/${tabSegment}` : '';
-      } else if (nextSegment === 'all-namespaces') {
-        const tabSegment = pathParts[baseIndex + 2];
-        return tabSegment ? `/${tabSegment}` : '';
-      }
-      return '';
-    };
-
-    const subPath = getCurrentSubPath();
-
-    // Build expected URL for current activeNamespace
-    let expectedUrl: string;
-    if (activeNamespace && activeNamespace !== allNamespacesSubPath) {
-      expectedUrl = `/kuadrant${basePath}/ns/${activeNamespace}${subPath}`;
-    } else {
-      expectedUrl = `/kuadrant${basePath}/all-namespaces${subPath}`;
-    }
-
-    // Only navigate if current pathname doesn't match expected URL
-    // Special case: if activeNamespace is #ALL_NS# but we're on a namespace path (e.g., /ns/default),
-    // don't navigate back to /all-namespaces - let the URL→state effect sync activeNamespace instead
-    // This prevents redirect loops when RBAC redirects user to a namespace
-    const isOnNamespacePath = location.pathname.includes(`${basePath}/ns/`);
-    if (activeNamespace === allNamespacesSubPath && isOnNamespacePath) {
-      // Don't navigate - URL→state effect will sync activeNamespace to match the URL
-      return;
-    }
-
-    if (location.pathname !== expectedUrl) {
-      navigate(expectedUrl, { replace: true });
-    }
-  }, [activeNamespace, navigate, basePath, allNamespacesSubPath, location.pathname]);
-
   /**
    * Extract current subpath from URL (e.g., active tab)
    * Handles three patterns:
@@ -132,6 +63,52 @@ export const useKuadrantNamespaceChange = (basePath: string) => {
       return tabSegment ? `/${tabSegment}` : '';
     }
   }, [location.pathname, basePath]);
+
+  // namespace the url expresses: /ns/:ns, otherwise all namespaces
+  const urlNamespace = ns || allNamespacesSubPath;
+
+  // last namespace url and console state agreed on
+  const syncedRef = React.useRef<string | undefined>(undefined);
+  // url namespace already re-asserted once against a console reset
+  const reassertedRef = React.useRef<string | undefined>(undefined);
+
+  React.useEffect(() => {
+    if (urlNamespace !== syncedRef.current) {
+      // url changed: deep link, tab, rbac redirect, NamespaceBar select. url wins
+      syncedRef.current = urlNamespace;
+      reassertedRef.current = undefined;
+      if (activeNamespace !== urlNamespace) {
+        setActiveNamespace(urlNamespace);
+      }
+      return;
+    }
+
+    if (activeNamespace === urlNamespace) return;
+
+    if (activeNamespace === allNamespacesSubPath) {
+      // console fell back to all namespaces (namespace get failed). re-assert url once,
+      // then accept the console's decision rather than loop against it
+      if (reassertedRef.current !== urlNamespace) {
+        reassertedRef.current = urlNamespace;
+        setActiveNamespace(urlNamespace);
+      }
+      return;
+    }
+
+    // namespace created or selected outside handleNamespaceChange: follow it
+    syncedRef.current = activeNamespace;
+    navigate(`/kuadrant${basePath}/ns/${activeNamespace}${getCurrentSubPath()}`, {
+      replace: true,
+    });
+  }, [
+    urlNamespace,
+    activeNamespace,
+    setActiveNamespace,
+    navigate,
+    basePath,
+    allNamespacesSubPath,
+    getCurrentSubPath,
+  ]);
 
   /**
    * Handle namespace changes from the NamespaceBar

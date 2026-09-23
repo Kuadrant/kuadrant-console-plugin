@@ -318,70 +318,27 @@ const KuadrantOverviewPage: React.FC = () => {
   const watchNamespace = ns || activeNamespace;
 
   // Smart default redirect: check cluster-wide permissions and redirect namespace-scoped users
-  // Track if we've already performed the RBAC check to prevent redirect loops
-  const rbacCheckPerformedRef = React.useRef(false);
+  const activeNamespaceRef = React.useRef(activeNamespace);
+  activeNamespaceRef.current = activeNamespace;
 
   React.useEffect(() => {
+    if (location.pathname !== '/kuadrant/overview/all-namespaces') return;
     let cancelled = false;
-    let checkPending = false;
-
-    const performRedirect = async () => {
-      // Only check RBAC once when on all-namespaces path
-      if (
-        location.pathname === '/kuadrant/overview/all-namespaces' &&
-        !rbacCheckPerformedRef.current
-      ) {
-        rbacCheckPerformedRef.current = true;
-        checkPending = true;
-
-        try {
-          const result = await checkAccess({
-            group: 'gateway.networking.k8s.io',
-            resource: 'gateways',
-            verb: 'list',
-          });
-
-          // If cancelled during async operation, don't navigate
-          if (cancelled) return;
-
-          // If user doesn't have cluster-wide access, redirect to namespace-scoped view
-          if (!result.status?.allowed) {
-            const targetNamespace =
-              activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
-            navigate(`/kuadrant/overview/ns/${targetNamespace}`, { replace: true });
-          }
-          // Otherwise, stay on current path (cluster-wide view)
-        } catch (_error) {
-          // If cancelled during async operation, don't navigate
-          if (cancelled) return;
-
-          // On error, redirect to namespace-scoped view
-          const targetNamespace =
-            activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
-          navigate(`/kuadrant/overview/ns/${targetNamespace}`, { replace: true });
-        } finally {
-          checkPending = false;
-        }
-      } else if (location.pathname !== '/kuadrant/overview/all-namespaces') {
-        // Reset guard when leaving all-namespaces path so RBAC check runs again if user returns
-        rbacCheckPerformedRef.current = false;
-      }
+    const redirect = () => {
+      const current = activeNamespaceRef.current;
+      const target = current && current !== '#ALL_NS#' ? current : 'default';
+      navigate(`/kuadrant/overview/ns/${target}`, { replace: true });
     };
-
-    performRedirect();
-
+    checkAccess({ group: 'gateway.networking.k8s.io', resource: 'gateways', verb: 'list' })
+      .then((result) => {
+        if (!cancelled && !result.status?.allowed) redirect();
+      })
+      .catch(() => {
+        if (!cancelled) redirect();
+      });
     return () => {
       cancelled = true;
-      // Only reset guard if we're cancelling a pending check (e.g., navigation during async checkAccess).
-      // If the check completed normally, preserve the guard to prevent re-checking.
-      if (checkPending) {
-        rbacCheckPerformedRef.current = false;
-      }
     };
-    // NOTE: activeNamespace intentionally excluded from dependencies - it's only used to
-    // determine the target redirect namespace, not to trigger the effect. Including it would
-    // cause this effect to run on every namespace change across the entire app, interfering
-    // with RBAC checks on other pages (see PR #859).
   }, [location.pathname, navigate]);
 
   const resolvedNamespace = watchNamespace === '#ALL_NS#' ? undefined : watchNamespace;
