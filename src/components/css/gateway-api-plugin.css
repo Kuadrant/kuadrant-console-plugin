@@ -26,6 +26,14 @@
   min-height: 400px;
 }
 
+/* When the HTTPRoute create form is embedded in the MCP "Create HTTPRoute" modal,
+   the YAML editor's negative top margin (used to align the editor with the form on
+   the standalone page) would pull the Monaco editor over the Form/YAML tab bar,
+   making the tabs unclickable inside the thin ModalBody. Reset it here. */
+.kuadrant-mcp-create-httproute-modal .kuadrant-httproute-yaml-editor {
+  margin-top: 0;
+}
+
 /* YAML editor wrapper */
 .kuadrant-httproute-yaml-editor,
 .kuadrant-gateway-yaml-editor,
