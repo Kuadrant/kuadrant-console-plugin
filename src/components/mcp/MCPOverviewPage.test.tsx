@@ -30,14 +30,14 @@ jest.mock('react-helmet', () => ({
 }));
 
 jest.mock('@openshift-console/dynamic-plugin-sdk', () => {
-  let callIndex = 0;
   return {
-    useK8sWatchResource: () => {
-      // The component calls this for extensions first, then gateways, then servers.
-      const isExtensionsCall = callIndex % 3 === 0;
-      callIndex += 1;
-      return isExtensionsCall ? mockExtensionsWatch : [[], true, null];
-    },
+    // Distinguish watches by resource kind rather than call order: the component
+    // watches MCPGatewayExtension twice (namespace-scoped and cluster-wide), plus
+    // Gateway and MCPServerRegistration. Both extension watches return the mock.
+    useK8sWatchResource: (resource?: { groupVersionKind?: { kind?: string } }) =>
+      resource?.groupVersionKind?.kind === 'MCPGatewayExtension'
+        ? mockExtensionsWatch
+        : [[], true, null],
     NamespaceBar: () => <div data-test="namespace-bar" />,
     ResourceLink: ({ name }: { name: string }) => <span>{name}</span>,
     GreenCheckCircleIcon: () => <span>check</span>,

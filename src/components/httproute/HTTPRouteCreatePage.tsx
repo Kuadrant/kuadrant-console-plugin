@@ -372,6 +372,29 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
     return !!(validateRouteName(routeName) === null && hasValidParentRef && hasValidRules);
   };
 
+  // Build and validate an HTTPRoute directly from the YAML editor's current content.
+  // Used to report the active editor's resource via onFormChange: form state and YAML
+  // are only synced on a view switch, so consumers driving creation from onFormChange
+  // (e.g. the MCP Create HTTPRoute modal) would otherwise miss edits made in YAML.
+  const buildResourceFromYAML = (): { resource: HTTPRouteResource | null; isValid: boolean } => {
+    if (!yamlContent) return { resource: null, isValid: false };
+    try {
+      const parsed = (
+        typeof yamlContent === 'string' ? yaml.load(yamlContent) : yamlContent
+      ) as HTTPRouteResource;
+      if (!parsed || typeof parsed !== 'object') return { resource: null, isValid: false };
+      const nameValid = validateRouteName(parsed.metadata?.name ?? '') === null;
+      const hasParentRef = (parsed.spec?.parentRefs ?? []).some((ref) => !!ref.name);
+      const rules = parsed.spec?.rules ?? [];
+      const hasRules =
+        rules.length > 0 &&
+        rules.every((rule) => (rule.backendRefs ?? []).some((b) => !!b.name && (b.port ?? 0) > 0));
+      return { resource: parsed, isValid: nameValid && hasParentRef && hasRules };
+    } catch {
+      return { resource: null, isValid: false };
+    }
+  };
+
   // Hydrate the form once from a previously built resource when embedded in a wizard
   // step that unmounts on navigation. Only in create mode — edit mode hydrates from
   // the live cluster watch above.
@@ -398,10 +421,17 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
       skipInitialEmit.current = false;
       return;
     }
-    if (onFormChangeRef.current) {
-      onFormChangeRef.current(httpRouteObject as HTTPRouteResource, formValidation());
+    const emit = onFormChangeRef.current;
+    if (!emit) return;
+    // Report whichever editor is active. In YAML view emit the parsed YAML resource so
+    // edits there reach the consumer; in Form view emit the form-built object.
+    if (createView === 'yaml') {
+      const { resource, isValid } = buildResourceFromYAML();
+      if (resource) emit(resource, isValid);
+    } else {
+      emit(httpRouteObject as HTTPRouteResource, formValidation());
     }
-  }, [httpRouteObject]);
+  }, [httpRouteObject, yamlContent, createView]);
 
   const redirectNamespace = originalMetadata?.namespace ?? namespaceEdit ?? selectedNamespace;
   const redirectPath = `/k8s/ns/${redirectNamespace}/${httpRouteModel?.apiGroup}~${httpRouteModel?.apiVersion}~${httpRouteModel?.kind}/${routeName}`;

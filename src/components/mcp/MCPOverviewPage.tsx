@@ -182,6 +182,17 @@ const MCPOverviewPage: React.FC = () => {
     namespace: resolvedNamespace,
   });
 
+  // MCP gateway targets are discovered cluster-wide (namespace: undefined) rather than
+  // from the namespace-scoped `extensions` watch above. An HTTPRoute can live in an app
+  // namespace while the Gateway and its MCPGatewayExtension live in a system namespace;
+  // scoping target discovery to the selected namespace would hide those routes. The
+  // route list itself stays scoped to the selected namespace (see the ResourceList).
+  const [allExtensions] = useK8sWatchResource<MCPGatewayExtension[]>({
+    groupVersionKind: RESOURCES.MCPGatewayExtension.gvk,
+    isList: true,
+    namespace: undefined,
+  });
+
   const mcpGateways = React.useMemo(() => {
     if (!extensions || !gateways) return [];
     const targetRefs = new Set(
@@ -202,18 +213,19 @@ const MCPOverviewPage: React.FC = () => {
   }, [extensions]);
 
   // Gateway targets (name/namespace/sectionName) declared by the extensions. Derived
-  // from the extension targetRefs rather than mcpGateways so route matching does not
-  // depend on Gateway list permissions and can narrow by the targeted listener.
+  // from the cluster-wide extension targetRefs rather than mcpGateways so route matching
+  // does not depend on Gateway list permissions, can narrow by the targeted listener,
+  // and finds MCP gateways declared in a different namespace than the routes.
   const mcpGatewayTargets = React.useMemo<GatewayTarget[]>(() => {
-    if (!extensions) return [];
-    return extensions
+    if (!allExtensions) return [];
+    return allExtensions
       .filter((ext) => ext.spec?.targetRef?.name)
       .map((ext) => ({
         name: ext.spec?.targetRef?.name ?? '',
         namespace: ext.spec?.targetRef?.namespace || ext.metadata?.namespace || '',
         sectionName: ext.spec?.targetRef?.sectionName,
       }));
-  }, [extensions]);
+  }, [allExtensions]);
 
   // Set of MCP gateway identities (namespace/name) used to scope the parent Gateway
   // dropdown when creating an HTTPRoute from the overview.
