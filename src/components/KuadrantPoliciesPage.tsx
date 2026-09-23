@@ -395,74 +395,65 @@ const KuadrantPoliciesPage: React.FC = () => {
 
   const policyRBACNil = policyKinds.every((policy) => !resourceRBAC[policy]?.list);
 
-  // Memoize pages array to prevent HorizontalNav from remounting tabs on every render
-  // Only recreate when activePerspective changes (which changes the tabs shown)
-  const pages = React.useMemo(() => {
-    let pagesArray = [
+  // Use stable component references - these don't change on re-render
+  let pages = [
+    {
+      href: '',
+      name: t('All Policies'),
+      component: AllPoliciesTab,
+    },
+  ];
+
+  if (activePerspective === 'admin') {
+    pages = [
+      ...pages,
       {
-        href: '',
-        name: t('All Policies'),
-        component: AllPoliciesTab,
+        href: 'dns',
+        name: t('DNS'),
+        component: DNSPolicyTab,
+      },
+      {
+        href: 'tls',
+        name: t('TLS'),
+        component: TLSPolicyTab,
       },
     ];
+  }
 
-    if (activePerspective === 'admin') {
-      pagesArray = [
-        ...pagesArray,
-        {
-          href: 'dns',
-          name: t('DNS'),
-          component: DNSPolicyTab,
-        },
-        {
-          href: 'tls',
-          name: t('TLS'),
-          component: TLSPolicyTab,
-        },
-      ];
-    }
+  pages = [
+    ...pages,
+    {
+      href: 'auth',
+      name: t('Auth'),
+      component: AuthPolicyTab,
+    },
+    {
+      href: 'ratelimit',
+      name: t('RateLimit'),
+      component: RateLimitPolicyTab,
+    },
+    {
+      href: 'tokenratelimit',
+      name: t('TokenRateLimit'),
+      component: TokenRateLimitPolicyTab,
+    },
+    {
+      href: 'oidc',
+      name: t('OIDC'),
+      component: OIDCPolicyTab,
+    },
+    {
+      href: 'plan',
+      name: t('Plan'),
+      component: PlanPolicyTab,
+    },
+  ];
 
-    pagesArray = [
-      ...pagesArray,
-      {
-        href: 'auth',
-        name: t('Auth'),
-        component: AuthPolicyTab,
-      },
-      {
-        href: 'ratelimit',
-        name: t('RateLimit'),
-        component: RateLimitPolicyTab,
-      },
-      {
-        href: 'tokenratelimit',
-        name: t('TokenRateLimit'),
-        component: TokenRateLimitPolicyTab,
-      },
-      {
-        href: 'oidc',
-        name: t('OIDC'),
-        component: OIDCPolicyTab,
-      },
-      {
-        href: 'plan',
-        name: t('Plan'),
-        component: PlanPolicyTab,
-      },
-    ];
-
-    return pagesArray;
-  }, [activePerspective, t]);
-
-  // Memoize context value to prevent unnecessary re-renders of tab components
-  const contextValue = React.useMemo(
-    () => ({
-      activeNamespace,
-      defaultColumns,
-      resourceRBAC,
-    }),
-    [activeNamespace, defaultColumns, resourceRBAC],
-  );
+  const contextValue = {
+    activeNamespace,
+    defaultColumns,
+    resourceRBAC,
+  };
 
   return (
     <>

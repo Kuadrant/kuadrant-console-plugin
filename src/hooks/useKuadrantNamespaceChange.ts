@@ -124,11 +124,9 @@ export const useKuadrantNamespaceChange = (basePath: string) => {
       const subPath = getCurrentSubPath();
 
       if (newNamespace !== allNamespacesSubPath) {
-        const targetUrl = `/kuadrant${basePath}/ns/${newNamespace}${subPath}`;
-        navigate(targetUrl, { replace: true });
+        navigate(`/kuadrant${basePath}/ns/${newNamespace}${subPath}`, { replace: true });
       } else {
-        const targetUrl = `/kuadrant${basePath}/all-namespaces${subPath}`;
-        navigate(targetUrl, { replace: true });
+        navigate(`/kuadrant${basePath}/all-namespaces${subPath}`, { replace: true });
       }
     },
     [navigate, basePath, allNamespacesSubPath, getCurrentSubPath],

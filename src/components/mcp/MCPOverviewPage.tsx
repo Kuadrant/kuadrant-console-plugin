@@ -313,12 +313,6 @@ const MCPOverviewPage: React.FC = () => {
     setIsPolicyCreateOpen(false);
   };
 
-  React.useEffect(() => {
-    if (ns && ns !== activeNamespace) {
-      handleNamespaceChange(ns);
-    }
-  }, [ns, handleNamespaceChange, activeNamespace]);
-
   const handleHideCard = () => {
     setHideCard(true);
     sessionStorage.setItem('hideMCPGettingStarted', 'true');
