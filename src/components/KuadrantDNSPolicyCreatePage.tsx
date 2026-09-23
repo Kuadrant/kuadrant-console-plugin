@@ -39,6 +39,7 @@ import * as yaml from 'js-yaml';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
 import { resourceGVKMapping } from '../utils/resources';
+import { usePolicyTargetPrefill } from '../hooks/usePolicyTargetPrefill';
 
 // Default weight applied to weighted load-balancing endpoints (matches the CRD default).
 const DEFAULT_LOAD_BALANCING_WEIGHT = 120;
@@ -48,8 +49,13 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>(
-    {} as GatewayResource,
+  const prefilledTarget = usePolicyTargetPrefill('DNSPolicy');
+  const [selectedGateway, setSelectedGateway] = React.useState<GatewayResource>(() =>
+    prefilledTarget
+      ? ({
+          metadata: { name: prefilledTarget.name, namespace: selectedNamespace },
+        } as GatewayResource)
+      : ({} as GatewayResource),
   );
   const [loadBalancing, setLoadBalancing] = React.useState<LoadBalancing>({
     geo: '',

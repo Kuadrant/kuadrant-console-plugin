@@ -44,6 +44,7 @@ import {
   getTargetKindsForPolicy,
   isSupportedTargetRef,
 } from '../utils/resources';
+import { usePolicyTargetPrefill } from '../hooks/usePolicyTargetPrefill';
 
 const GATEWAY_API_GROUP = RESOURCES.Gateway.gvk.group;
 const SUPPORTED_TARGET_KINDS = getTargetKindsForPolicy('PlanPolicy');
@@ -73,11 +74,12 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
   const [policyName, setPolicyName] = React.useState('');
   const [selectedNamespace] = useActiveNamespace();
-  const [targetRef, setTargetRef] = React.useState<TargetRef>({
+  const prefilledTarget = usePolicyTargetPrefill('PlanPolicy');
+  const [targetRef, setTargetRef] = React.useState<TargetRef>(() => ({
     group: GATEWAY_API_GROUP,
-    kind: 'HTTPRoute',
-    name: '',
-  });
+    kind: prefilledTarget?.kind ?? 'HTTPRoute',
+    name: prefilledTarget?.name ?? '',
+  }));
   const [plans, setPlans] = React.useState<Plan[]>([
     { tier: '', predicate: '', limits: { daily: null } },
   ]);
