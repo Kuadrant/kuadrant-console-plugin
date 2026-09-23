@@ -592,13 +592,11 @@ const MCPSetupWizard: React.FC = () => {
 
           {/* Verify configuration */}
           <WizardStep
-            name={t(isRouteStepVisible ? '4. Verify configuration' : '3. Verify configuration')}
+            name={t('{{step}}. Verify configuration', {
+              step: isRouteStepVisible ? 4 : 3,
+            })}
             id="step-verify"
-            footer={{
-              nextButtonText: t('Done'),
-              onNext: () => navigate(`/kuadrant/mcp/overview/ns/${selectedNamespace}`),
-              isBackHidden: true,
-            }}
+            footer={<div />}
           >
             <MCPVerifyStep
               items={verifyItems}

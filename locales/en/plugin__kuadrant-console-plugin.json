@@ -15,6 +15,7 @@
   "{{field}} must be one of the listed values": "{{field}} must be one of the listed values",
   "{{field}} must be valid JSON": "{{field}} must be valid JSON",
   "{{limit}} per {{window}}": "{{limit}} per {{window}}",
+  "{{step}}. Verify configuration": "{{step}}. Verify configuration",
   "{{successText}} approved, {{failText}}": "{{successText}} approved, {{failText}}",
   "{{successText}} denied, {{failText}}": "{{successText}} denied, {{failText}}",
   "{{value}} requests": "{{value}} requests",
