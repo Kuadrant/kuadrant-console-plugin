@@ -62,10 +62,19 @@ interface ParentReference {
   port: number;
 }
 
+export interface RequiredParentReference {
+  id: string;
+  gatewayName: string;
+  gatewayNamespace: string;
+  sectionName: string;
+  port: number;
+}
+
 interface ParentReferencesSelectProps {
   parentRefs: ParentReference[];
   onChange: (parentRefs: ParentReference[]) => void;
   isDisabled?: boolean;
+  requiredParentRef?: RequiredParentReference;
   // Additional Gateways to include in the selector that aren't yet persisted in
   // the cluster (e.g. a draft Gateway defined earlier in a wizard). Merged with
   // the live watch results, deduped by namespace/name (real Gateways win).
@@ -90,6 +99,7 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
   extraGateways,
   reconcileParentRefs = false,
   gatewayFilter,
+  requiredParentRef,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   // Stabilize the optional prop reference. A default `[]` literal would be a new
@@ -99,6 +109,28 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
   const [activeNamespace] = useActiveNamespace();
   const isAllNamespaces = !activeNamespace || activeNamespace === '#ALL_NS#';
   const selectedNamespace = isAllNamespaces ? undefined : activeNamespace;
+
+  const requiredGateway = React.useMemo<GatewayForSelect | undefined>(
+    () =>
+      requiredParentRef
+        ? ({
+            metadata: {
+              name: requiredParentRef.gatewayName,
+              namespace: requiredParentRef.gatewayNamespace,
+            },
+            spec: {
+              listeners: [
+                {
+                  name: requiredParentRef.sectionName,
+                  port: requiredParentRef.port,
+                  protocol: 'HTTP',
+                },
+              ],
+            },
+          } as GatewayForSelect)
+        : undefined,
+    [requiredParentRef],
+  );
 
   // Load all available Gateways
   const gatewayResource = {
@@ -124,8 +156,12 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
     const keyOf = (gw: GatewayForSelect) => `${gw.metadata?.namespace}/${gw.metadata?.name}`;
     const watchedKeys = new Set(watched.map(keyOf));
     const drafts = stableExtraGateways.filter((gw) => !watchedKeys.has(keyOf(gw)));
-    return [...watched, ...drafts];
-  }, [gatewayData, gatewayLoaded, gatewayError, stableExtraGateways]);
+    const available = [...watched, ...drafts];
+    if (requiredGateway && !available.some((gw) => keyOf(gw) === keyOf(requiredGateway))) {
+      available.push(requiredGateway);
+    }
+    return available;
+  }, [gatewayData, gatewayLoaded, gatewayError, stableExtraGateways, requiredGateway]);
 
   // Reconcile parentRefs against the available Gateways in wizard context. When a
   // draft Gateway from an earlier wizard step changes, stale selections are cleaned
@@ -239,7 +275,20 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 
   // Sort Gateways: available first, then unavailable
   const getSortedGateways = () => {
-    const gateways = gatewayFilter ? availableGateways.filter(gatewayFilter) : availableGateways;
+    const filteredGateways = gatewayFilter
+      ? availableGateways.filter(gatewayFilter)
+      : availableGateways;
+    const requiredGatewayOption = requiredParentRef
+      ? availableGateways.find(
+          (gateway) =>
+            gateway.metadata?.name === requiredParentRef.gatewayName &&
+            gateway.metadata?.namespace === requiredParentRef.gatewayNamespace,
+        )
+      : undefined;
+    const gateways =
+      requiredGatewayOption && !filteredGateways.includes(requiredGatewayOption)
+        ? [...filteredGateways, requiredGatewayOption]
+        : filteredGateways;
     return [...gateways].sort((a, b) => {
       const restrictionA = validateGateway(a);
       const restrictionB = validateGateway(b);
@@ -390,7 +439,8 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
                 }}
                 titleDescription={description}
                 actions={
-                  !isDisabled && (
+                  !isDisabled &&
+                  parentRef.id !== requiredParentRef?.id && (
                     <Button
                       variant="plain"
                       onClick={() => removeParentReference(parentRef.id)}
@@ -427,7 +477,7 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
                     }
                     onChange={(_, value) => updateParentGateway(parentRef.id, value)}
                     aria-label={t('Select Gateway')}
-                    isDisabled={isDisabled}
+                    isDisabled={isDisabled || parentRef.id === requiredParentRef?.id}
                   >
                     <FormSelectOption key="empty" value="" label={t('Select Gateway')} />
                     {getSortedGateways().map((gateway) => {
@@ -471,7 +521,9 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
                       updateParentReference(parentRef.id, 'sectionName', value)
                     }
                     aria-label={t('Select Section')}
-                    isDisabled={isDisabled || !parentRef.gatewayName}
+                    isDisabled={
+                      isDisabled || !parentRef.gatewayName || parentRef.id === requiredParentRef?.id
+                    }
                   >
                     <FormSelectOption key="empty" value="" label={t('Select Section')} />
                     {getSortedSections(parentRef.gatewayName, parentRef.gatewayNamespace).map(
