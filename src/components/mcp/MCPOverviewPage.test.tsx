@@ -160,7 +160,7 @@ describe('MCPOverviewPage', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/kuadrant/mcp/setup-wizard');
   });
 
-  it('renders Access Denied when the user cannot list extensions', () => {
+  it('renders Access Denied when the user cannot list either MCP resource', () => {
     mockUserRBAC = {};
     render(<MCPOverviewPage />);
     expect(screen.getByText('Access Denied')).toBeInTheDocument();
@@ -168,6 +168,34 @@ describe('MCPOverviewPage', () => {
       screen.getByText('You do not have permission to view MCP Gateway Extensions'),
     ).toBeInTheDocument();
     expect(screen.queryByTestId('mcp-setup-wizard-button')).not.toBeInTheDocument();
+  });
+
+  it('shows MCP servers while denying only the extensions card for server-only access', () => {
+    mockMcpResourceKind = 'server';
+    mockUserRBAC['mcpgatewayextensions-list'] = false;
+    mockUserRBAC['mcpgatewayextensions-create'] = false;
+
+    render(<MCPOverviewPage />);
+
+    expect(screen.getByRole('heading', { name: 'MCP management overview' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'MCP Servers' }).length).toBeGreaterThan(0);
+    expect(
+      screen.getByText('You do not have permission to view MCP Gateway Extensions'),
+    ).toBeInTheDocument();
+  });
+
+  it('shows extensions while denying only the servers card for extension-only access', () => {
+    mockMcpResourceKind = 'extension';
+    mockUserRBAC['mcpserverregistrations-list'] = false;
+    mockUserRBAC['mcpserverregistrations-create'] = false;
+
+    render(<MCPOverviewPage />);
+
+    expect(screen.getByRole('heading', { name: 'MCP management overview' })).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('heading', { name: 'MCP Gateway Extensions' }).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText('You do not have permission to view MCP Servers')).toBeInTheDocument();
   });
 
   it('renders an error alert when the extensions watch fails', () => {

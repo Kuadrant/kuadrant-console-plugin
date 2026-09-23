@@ -477,7 +477,7 @@ const MCPOverviewPage: React.FC = () => {
     return <div>{t('Loading permissions...')}</div>;
   }
 
-  if (!extensionRBAC.list) {
+  if (!extensionRBAC.list && !serverRBAC.list) {
     return (
       <MCPOverviewPageShell title={t('MCP management')} onNamespaceChange={handleNamespaceChange}>
         <Bullseye>

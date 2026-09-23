@@ -179,7 +179,7 @@ spec:
         await page.getByRole('button', { name: 'Next', exact: true }).click();
         await page.getByText('Advanced broker settings').click();
         await expect(page.locator('[data-test="mcp-http-route-management"]')).not.toBeChecked();
-        await page.getByLabel('Disable automatic HTTPRoute management').click();
+        await page.locator('[data-test="mcp-http-route-management"]').click({ force: true });
 
         await expect(page.getByRole('button', { name: '3. HTTPRoute' })).toBeVisible();
         await expect(page.getByRole('heading', { name: 'Configure MCP Extension' })).toBeVisible();
@@ -649,6 +649,7 @@ spec:
       { tag: '@smoke' },
       async ({ page }) => {
         const gwName = `e2e-draft-gw-${uid()}`;
+        const extensionName = `e2e-draft-ext-${uid()}`;
         const routeName = `e2e-draft-route-${uid()}`;
 
         await page.goto(`/k8s/ns/${namespace}`);
@@ -670,7 +671,20 @@ spec:
         await expect(nextButton).toBeEnabled({ timeout: 15_000 });
         await nextButton.click();
 
-        // Step 2: create a new HTTPRoute and select the draft Gateway as parentRef
+        // HTTPRoute creation is optional when automatic HTTPRoute management is enabled.
+        // Disable it in the extension step so the manual HTTPRoute step is available.
+        await page.getByText('Advanced broker settings').click();
+        await page.locator('[data-test="mcp-http-route-management"]').click({ force: true });
+        await page.locator('[data-test="mcp-extension-name"]').fill(extensionName);
+        const sectionSelect = page.locator('[data-test="mcp-section-name"]');
+        if (await sectionSelect.isVisible().catch(() => false)) {
+          await sectionSelect.selectOption('mcp');
+        } else {
+          await page.locator('[data-test="mcp-section-name-input"]').fill('mcp');
+        }
+        await nextButton.click();
+
+        // HTTPRoute step: create a new route and select the draft Gateway as parentRef
         await expect(page.getByLabel('Create a new HTTPRoute')).toBeVisible({ timeout: 15_000 });
         await page.getByLabel('Create a new HTTPRoute').click();
         await expect(page.locator('#httproute-name')).toBeVisible({ timeout: 15_000 });
