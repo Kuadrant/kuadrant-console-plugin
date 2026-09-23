@@ -427,7 +427,11 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
     // edits there reach the consumer; in Form view emit the form-built object.
     if (createView === 'yaml') {
       const { resource, isValid } = buildResourceFromYAML();
-      if (resource) emit(resource, isValid);
+      // When the YAML is unparseable buildResourceFromYAML returns a null resource. Still
+      // emit (with isValid: false) so a previously reported valid resource can't linger in
+      // the consumer and get created; fall back to the form object to keep resource
+      // non-null for consumers that dereference it.
+      emit(resource ?? (httpRouteObject as HTTPRouteResource), isValid);
     } else {
       emit(httpRouteObject as HTTPRouteResource, formValidation());
     }

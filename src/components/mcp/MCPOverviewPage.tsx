@@ -187,11 +187,34 @@ const MCPOverviewPage: React.FC = () => {
   // namespace while the Gateway and its MCPGatewayExtension live in a system namespace;
   // scoping target discovery to the selected namespace would hide those routes. The
   // route list itself stays scoped to the selected namespace (see the ResourceList).
-  const [allExtensions] = useK8sWatchResource<MCPGatewayExtension[]>({
-    groupVersionKind: RESOURCES.MCPGatewayExtension.gvk,
-    isList: true,
-    namespace: undefined,
-  });
+  //
+  // Cluster-wide listing needs its own access review: a namespace-scoped user can pass the
+  // page's namespace RBAC yet be forbidden cluster-wide. Without list permission we skip
+  // the cluster watch and fall back to the namespace-scoped `extensions`, so target
+  // discovery degrades to same-namespace matching instead of silently finding nothing.
+  const clusterExtensionReview = React.useMemo(
+    () => [
+      {
+        group: RESOURCES.MCPGatewayExtension.gvk.group,
+        kind: getResourceNameFromKind('MCPGatewayExtension'),
+        namespace: undefined as string | undefined,
+      },
+    ],
+    [],
+  );
+  const { userRBAC: clusterExtensionRBAC } = useAccessReviews(clusterExtensionReview);
+  const canListExtensionsClusterWide =
+    clusterExtensionRBAC[`${getResourceNameFromKind('MCPGatewayExtension')}-list`];
+
+  const [allExtensions] = useK8sWatchResource<MCPGatewayExtension[]>(
+    canListExtensionsClusterWide
+      ? {
+          groupVersionKind: RESOURCES.MCPGatewayExtension.gvk,
+          isList: true,
+          namespace: undefined,
+        }
+      : null,
+  );
 
   const mcpGateways = React.useMemo(() => {
     if (!extensions || !gateways) return [];
@@ -212,20 +235,22 @@ const MCPOverviewPage: React.FC = () => {
     return Array.from(names);
   }, [extensions]);
 
-  // Gateway targets (name/namespace/sectionName) declared by the extensions. Derived
-  // from the cluster-wide extension targetRefs rather than mcpGateways so route matching
-  // does not depend on Gateway list permissions, can narrow by the targeted listener,
-  // and finds MCP gateways declared in a different namespace than the routes.
+  // Gateway targets (name/namespace/sectionName) declared by the extensions. Prefer the
+  // cluster-wide list so routes attached to MCP gateways in other namespaces are found;
+  // fall back to the namespace-scoped `extensions` when the user lacks cluster-wide list
+  // permission. Derived from targetRefs rather than mcpGateways so route matching does not
+  // depend on Gateway list permissions and can narrow by the targeted listener.
   const mcpGatewayTargets = React.useMemo<GatewayTarget[]>(() => {
-    if (!allExtensions) return [];
-    return allExtensions
+    const source = canListExtensionsClusterWide ? allExtensions : extensions;
+    if (!source) return [];
+    return source
       .filter((ext) => ext.spec?.targetRef?.name)
       .map((ext) => ({
         name: ext.spec?.targetRef?.name ?? '',
         namespace: ext.spec?.targetRef?.namespace || ext.metadata?.namespace || '',
         sectionName: ext.spec?.targetRef?.sectionName,
       }));
-  }, [allExtensions]);
+  }, [canListExtensionsClusterWide, allExtensions, extensions]);
 
   // Set of MCP gateway identities (namespace/name) used to scope the parent Gateway
   // dropdown when creating an HTTPRoute from the overview.
