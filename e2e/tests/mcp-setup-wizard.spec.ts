@@ -734,7 +734,7 @@ spec:
         await nextButton.click();
 
         // On Step 2 — navigate back to Step 1 via the step nav
-        await expect(page.getByText('Choose or create an HTTPRoute')).toBeVisible({
+        await expect(page.getByText('Configure MCP Extension')).toBeVisible({
           timeout: 15_000,
         });
         await page.getByRole('button', { name: '1. Create Gateway' }).click();
@@ -745,60 +745,6 @@ spec:
         await expect(page.locator('#gateway-name')).toHaveValue(gwName);
         await expect(page.getByRole('gridcell', { name: 'mcp', exact: true })).toBeVisible();
         await expect(page.getByRole('gridcell', { name: '8080', exact: true })).toBeVisible();
-      },
-    );
-
-    test(
-      'HTTPRoute draft state (incl. parentRef) is preserved when navigating back to Step 2',
-      { tag: '@nightly' },
-      async ({ page }) => {
-        const gwName = `e2e-back-gw2-${uid()}`;
-        const routeName = `e2e-back-route-${uid()}`;
-
-        await page.goto(`/k8s/ns/${namespace}`);
-        await page.waitForLoadState('networkidle');
-        await dismissConsoleTour(page);
-        await spaNavigate(page, '/kuadrant/mcp/setup-wizard');
-
-        // Step 1: create a new Gateway (draft) — reliably selectable as a parentRef
-        // since it has no status conditions.
-        await page.getByLabel('Create a new Gateway').click();
-        await expect(page.locator('#gateway-name')).toBeVisible({ timeout: 15_000 });
-        await page.locator('#gateway-name').fill(gwName);
-        await page.getByRole('button', { name: 'Add listener' }).click();
-        await addListenerViaWizard(page, { name: 'mcp', port: '8080', protocol: 'HTTP' });
-
-        const nextButton = page.getByRole('button', { name: 'Next', exact: true });
-        await expect(nextButton).toBeEnabled({ timeout: 15_000 });
-        await nextButton.click();
-
-        // Step 2: create a new HTTPRoute, name it, and select the draft Gateway as parentRef
-        await expect(page.getByLabel('Create a new HTTPRoute')).toBeVisible({ timeout: 15_000 });
-        await page.getByLabel('Create a new HTTPRoute').click();
-        await expect(page.locator('#httproute-name')).toBeVisible({ timeout: 15_000 });
-        await page.locator('#httproute-name').fill(routeName);
-
-        await page.getByRole('button', { name: 'Add parent reference' }).click();
-        // Options are keyed by a `namespace/name` composite; match the unique draft
-        // name suffix and read the exact value for selection/assertions.
-        const draftOption = page.locator(`#parent-gateway-0 option[value$="/${gwName}"]`);
-        await expect(draftOption).toBeAttached({ timeout: 15_000 });
-        const gwValue = await draftOption.getAttribute('value');
-        await page.locator('#parent-gateway-0').selectOption(gwValue);
-        const sectionOption = page.locator('#parent-section-0 option[value="mcp"]');
-        await expect(sectionOption).toBeAttached({ timeout: 15_000 });
-        await page.locator('#parent-section-0').selectOption('mcp');
-
-        // Round-trip: back to Step 1, then return to Step 2
-        await page.getByRole('button', { name: '1. Create Gateway' }).click();
-        await expect(page.getByText('Choose or create a Gateway')).toBeVisible({ timeout: 15_000 });
-        await page.getByRole('button', { name: '2. Route for Gateway' }).click();
-
-        // Draft form state — including the nested parentRef selection — must survive.
-        await expect(page.getByLabel('Create a new HTTPRoute')).toBeChecked({ timeout: 15_000 });
-        await expect(page.locator('#httproute-name')).toHaveValue(routeName);
-        await expect(page.locator('#parent-gateway-0')).toHaveValue(gwValue);
-        await expect(page.locator('#parent-section-0')).toHaveValue('mcp');
       },
     );
   });

@@ -392,11 +392,6 @@ const MCPOverviewPage: React.FC = () => {
     create: userRBAC[`${getResourceNameFromKind('ReferenceGrant')}-create`],
   };
 
-  const httpRouteRBAC = {
-    list: userRBAC[`${getResourceNameFromKind('HTTPRoute')}-list`],
-    create: userRBAC[`${getResourceNameFromKind('HTTPRoute')}-create`],
-  };
-
   const policyRBAC = mcpPolicies.reduce(
     (acc, policy) => ({
       ...acc,

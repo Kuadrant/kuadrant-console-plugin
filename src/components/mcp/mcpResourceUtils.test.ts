@@ -12,7 +12,6 @@ import {
   mcpServerToFormState,
   isMCPServerRegistrationValid,
   buildMCPServerRegistrationTemplate,
-  isHTTPRouteAttachedToGateway,
 } from './mcpResourceUtils';
 import { HTTPRouteResource } from '../httproute/types';
 import {

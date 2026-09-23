@@ -4,10 +4,7 @@ import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import * as yaml from 'js-yaml';
 import { MCPWizardFormState, MCPGatewayExtension } from './types';
-import {
-  buildMCPGatewayExtension,
-  getMCPGatewayExtensionValidationError,
-} from './mcpResourceUtils';
+import { buildMCPGatewayExtension, MCPGatewayExtensionValidationError } from './mcpResourceUtils';
 import MCPExtensionFormFields from './MCPExtensionFormFields';
 import '../css/gateway-api-plugin.css';
 import { GatewayResource } from '../gateway/types';
@@ -17,7 +14,7 @@ interface MCPExtensionStepProps {
   updateFormState: (updates: Partial<MCPWizardFormState>) => void;
   selectedGateway?: GatewayResource;
   selectedNamespace: string;
-  onValidationChange?: (isValid: boolean) => void;
+  validationError?: MCPGatewayExtensionValidationError | null;
 }
 
 const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
@@ -25,7 +22,7 @@ const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
   updateFormState,
   selectedGateway,
   selectedNamespace,
-  onValidationChange,
+  validationError,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const [createView, setCreateView] = React.useState<'form' | 'yaml'>('form');
@@ -36,12 +33,6 @@ const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
     () => buildMCPGatewayExtension(formState, selectedNamespace),
     [formState, selectedNamespace],
   );
-  const validationError = getMCPGatewayExtensionValidationError(formState, selectedGateway);
-  const handleValidationChange = React.useCallback(
-    (isValid: boolean) => onValidationChange?.(isValid && !validationError),
-    [onValidationChange, validationError],
-  );
-
   // Handle YAML changes and sync back to form
   const handleYamlChange = (yamlInput: string) => {
     try {
@@ -104,7 +95,6 @@ const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
             selectedGateway={selectedGateway}
             selectedNamespace={selectedNamespace}
             validationError={validationError}
-            onValidationChange={handleValidationChange}
           />
         </>
       ) : (

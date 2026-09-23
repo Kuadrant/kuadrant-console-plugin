@@ -481,6 +481,7 @@ const MCPSetupWizard: React.FC = () => {
               updateFormState={updateFormState}
               selectedGateway={selectedGateway}
               selectedNamespace={selectedNamespace}
+              validationError={extensionValidationError}
             />
           </WizardStep>
 

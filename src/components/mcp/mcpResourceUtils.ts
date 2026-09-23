@@ -62,39 +62,6 @@ export interface MCPGatewayExtensionValidationError {
   messageParams?: Record<string, string>;
 }
 
-export interface HTTPRouteGatewayTarget {
-  name: string;
-  namespace: string;
-  sectionName: string;
-  port?: number;
-}
-
-/**
- * Returns whether an HTTPRoute has a parent reference for the selected
- * Gateway. A missing namespace means the route's own namespace, and a
- * missing sectionName or port means the reference applies to the Gateway
- * generally for that selector.
- */
-export const isHTTPRouteAttachedToGateway = (
-  route: HTTPRouteResource,
-  target: HTTPRouteGatewayTarget,
-  routeNamespace = route.metadata?.namespace || '',
-): boolean =>
-  (route.spec?.parentRefs || []).some((parentRef) => {
-    const parentNamespace = parentRef.namespace || routeNamespace;
-    const parentGroup = parentRef.group || 'gateway.networking.k8s.io';
-    const parentKind = parentRef.kind || 'Gateway';
-
-    return (
-      parentRef.name === target.name &&
-      parentNamespace === target.namespace &&
-      parentGroup === 'gateway.networking.k8s.io' &&
-      parentKind === 'Gateway' &&
-      (!parentRef.sectionName || parentRef.sectionName === target.sectionName) &&
-      (!parentRef.port || parentRef.port === target.port)
-    );
-  });
-
 export const getMCPGatewayExtensionValidationError = (
   formState: MCPWizardFormState,
   selectedGateway?: GatewayResource,
@@ -318,6 +285,7 @@ export interface GatewayTarget {
   name: string;
   namespace: string;
   sectionName?: string;
+  port?: number;
 }
 
 // A single entry of an HTTPRoute's spec.parentRefs (the type is declared inline on
@@ -334,15 +302,19 @@ export type HTTPRouteParentRef = NonNullable<
 export const filterGatewayParentRefs = (
   route: HTTPRouteResource,
   targets: GatewayTarget[],
+  routeNamespace = route.metadata?.namespace || '',
 ): HTTPRouteParentRef[] =>
   (route.spec?.parentRefs ?? []).filter((ref) => {
     const group = ref.group ?? 'gateway.networking.k8s.io';
     const kind = ref.kind ?? 'Gateway';
     if (group !== 'gateway.networking.k8s.io' || kind !== 'Gateway') return false;
-    const refNamespace = ref.namespace ?? route.metadata?.namespace;
+    const refNamespace = ref.namespace ?? routeNamespace;
     return targets.some((target) => {
       if (ref.name !== target.name || refNamespace !== target.namespace) return false;
       if (target.sectionName && ref.sectionName && ref.sectionName !== target.sectionName) {
+        return false;
+      }
+      if (target.port !== undefined && ref.port !== undefined && ref.port !== target.port) {
         return false;
       }
       return true;
@@ -353,7 +325,8 @@ export const filterGatewayParentRefs = (
 export const isHTTPRouteAttachedToGateway = (
   route: HTTPRouteResource,
   target: GatewayTarget,
-): boolean => filterGatewayParentRefs(route, [target]).length > 0;
+  routeNamespace = route.metadata?.namespace || '',
+): boolean => filterGatewayParentRefs(route, [target], routeNamespace).length > 0;
 
 export const wireHTTPRouteToExternalHost = (
   resource: HTTPRouteResource,

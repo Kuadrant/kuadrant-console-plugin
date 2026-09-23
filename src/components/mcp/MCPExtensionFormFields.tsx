@@ -42,7 +42,6 @@ interface MCPExtensionFormFieldsProps {
   // console's namespace picker instead.
   showNamespaceField?: boolean;
   validationError?: MCPGatewayExtensionValidationError | null;
-  onValidationChange?: (isValid: boolean) => void;
 }
 
 // The MCPGatewayExtension form body, shared between the setup wizard step and the
@@ -56,7 +55,6 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
   gatewayNames = [],
   showNamespaceField = true,
   validationError,
-  onValidationChange,
 }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const validationMessage = validationError
@@ -127,30 +125,6 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
     },
     [t],
   );
-
-  // Notify parent when validation state changes. This effect must NOT call
-  // setErrors — the error state shown to the user is driven by the blur
-  // handlers. Setting state here would re-run the effect whenever the memoised
-  // validators change identity (they depend on `t`, which is a fresh reference
-  // on every render under some i18n setups), causing an infinite render loop.
-  React.useEffect(() => {
-    const isValid =
-      validateExtensionName(formState.extensionName) === null &&
-      validateExtensionNamespace(formState.extensionNamespace) === null &&
-      validateTargetGateway(formState.targetGateway) === null &&
-      validateSectionName(formState.sectionName) === null;
-    onValidationChange?.(isValid);
-  }, [
-    formState.extensionName,
-    formState.extensionNamespace,
-    formState.targetGateway,
-    formState.sectionName,
-    validateExtensionName,
-    validateExtensionNamespace,
-    validateTargetGateway,
-    validateSectionName,
-    onValidationChange,
-  ]);
 
   // Blur handlers
   const handleExtensionNameBlur = () => {

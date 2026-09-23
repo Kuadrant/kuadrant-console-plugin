@@ -275,7 +275,9 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
 
   // Sort Gateways: available first, then unavailable
   const getSortedGateways = () => {
-    const filteredGateways = gatewayFilter ? availableGateways.filter(gatewayFilter) : availableGateways;
+    const filteredGateways = gatewayFilter
+      ? availableGateways.filter(gatewayFilter)
+      : availableGateways;
     const requiredGatewayOption = requiredParentRef
       ? availableGateways.find(
           (gateway) =>
@@ -315,38 +317,6 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
       if (restrictionA && !restrictionB) return 1;
       return a.name.localeCompare(b.name);
     });
-  };
-
-  const getGatewayKey = (gateway: GatewayForSelect): string =>
-    `${gateway.metadata.namespace}/${gateway.metadata.name}`;
-
-  // Select a Gateway by its composite namespace/name key. Gateway names are not
-  // unique across namespaces, so resolving by name alone can attach the route to
-  // the wrong Gateway.
-  const updateParentGateway = (id: string, gatewayKey: string) => {
-    const selectedGateway = gatewayKey
-      ? [...availableGateways, ...(requiredGateway ? [requiredGateway] : [])].find(
-          (gateway) => getGatewayKey(gateway) === gatewayKey,
-        )
-      : undefined;
-
-    const updatedRefs = parentRefs.map((ref) => {
-      if (ref.id !== id) return ref;
-
-      if (!selectedGateway) {
-        return { ...ref, gatewayName: '', gatewayNamespace: '', sectionName: '', port: 0 };
-      }
-
-      return {
-        ...ref,
-        gatewayName: selectedGateway.metadata.name,
-        gatewayNamespace: selectedGateway.metadata.namespace,
-        sectionName: '',
-        port: 80,
-      };
-    });
-
-    onChange(updatedRefs);
   };
 
   // Add new parent reference
@@ -469,7 +439,8 @@ const ParentReferencesSelect: React.FC<ParentReferencesSelectProps> = ({
                 }}
                 titleDescription={description}
                 actions={
-                  !isDisabled && parentRef.id !== requiredParentRef?.id && (
+                  !isDisabled &&
+                  parentRef.id !== requiredParentRef?.id && (
                     <Button
                       variant="plain"
                       onClick={() => removeParentReference(parentRef.id)}
