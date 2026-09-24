@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate, useLocation, useParams } from 'react-router';
+import { useNavigate, useLocation } from 'react-router';
 import { useTranslation } from 'react-i18next';
 import Helmet from 'react-helmet';
 import { Link } from 'react-router';
@@ -116,7 +116,6 @@ const APIKeyActions: React.FC<APIKeyActionsProps> = ({
 const MyAPIKeysPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { ns } = useParams<{ ns: string }>();
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
   const { handleNamespaceChange, activeNamespace } = useKuadrantNamespaceChange('/apikeys');
 
@@ -182,41 +181,32 @@ const MyAPIKeysPage: React.FC = () => {
   );
 
   // Smart default redirect: check cluster-wide permissions and redirect namespace-scoped users
-  React.useEffect(() => {
-    const performRedirect = async () => {
-      if (location.pathname === '/kuadrant/apikeys/all-namespaces') {
-        try {
-          const result = await checkAccess({
-            group: RESOURCES.APIKey.gvk.group,
-            resource: getResourceNameFromKind(RESOURCES.APIKey.gvk.kind),
-            verb: 'list',
-            namespace: activeNamespace,
-          });
+  const activeNamespaceRef = React.useRef(activeNamespace);
+  activeNamespaceRef.current = activeNamespace;
 
-          // If user doesn't have cluster-wide access, redirect to namespace-scoped view
-          if (!result.status?.allowed) {
-            const targetNamespace =
-              activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
-            navigate(`/kuadrant/apikeys/ns/${targetNamespace}`, { replace: true });
-          }
-          // Otherwise, stay on current path (cluster-wide view)
-        } catch (_error) {
-          // On error, redirect to namespace-scoped view
-          const targetNamespace =
-            activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
-          navigate(`/kuadrant/apikeys/ns/${targetNamespace}`, { replace: true });
-        }
-      }
+  React.useEffect(() => {
+    if (location.pathname !== '/kuadrant/apikeys/all-namespaces') return;
+    let cancelled = false;
+    const redirect = () => {
+      const current = activeNamespaceRef.current;
+      const target = current && current !== '#ALL_NS#' ? current : 'default';
+      navigate(`/kuadrant/apikeys/ns/${target}`, { replace: true });
     };
-
-    performRedirect();
-  }, [location.pathname, activeNamespace, navigate]);
-
-  React.useEffect(() => {
-    if (ns && ns !== activeNamespace) {
-      handleNamespaceChange(ns);
-    }
-  }, [ns, handleNamespaceChange]);
+    checkAccess({
+      group: RESOURCES.APIKey.gvk.group,
+      resource: getResourceNameFromKind(RESOURCES.APIKey.gvk.kind),
+      verb: 'list',
+    })
+      .then((result) => {
+        if (!cancelled && !result.status?.allowed) redirect();
+      })
+      .catch(() => {
+        if (!cancelled) redirect();
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname, navigate]);
 
   // Fetch current username (works in both MicroShift and OpenShift)
   React.useEffect(() => {
