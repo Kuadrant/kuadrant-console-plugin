@@ -257,14 +257,14 @@ Update `settings.json` (File > Preferences > Settings):
 | OpenShift console | Image    | Branch        |
 | ----------------- | -------- | ------------- |
 | 4.21 and earlier  | `v0.6.0` | `release-0.x` |
-| 4.22 and later    | `latest` | `main`        |
+| 4.22 and later    | `v0.7.0` | `main`        |
 
 `v0.6.0` declares `latestSupportedOpenshiftVersion: "4.19"`, but is supported
 through 4.21. The `release-0.x` branch corrects the metadata and receives
 backports.
 
-`latest` is the unreleased 4.22 build from `main`. Choose the image by OpenShift
-version, not by which tag looks newest.
+`v0.7.0` is the stable 4.22+ release; `latest` tracks development on `main`.
+Choose the image by OpenShift version, not by which tag looks newest.
 
 See [Versioning and OpenShift compatibility](docs/versioning.md) for runtime
 versions and loading rules.
