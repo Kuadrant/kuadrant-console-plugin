@@ -3,9 +3,10 @@ set -euo pipefail
 
 # start a local kuadrant dev environment using oinc (OKD in a container).
 # sets up a cluster with kuadrant, istio, metallb, and the openshift console
-# pointing at the plugin dev server for hot reloading.
+# pointing at the plugin dev server for hot reloading. the MCP Inspector
+# backend runs the published plugin image, not the working tree.
 #
-# prerequisites: oinc, kubectl, node
+# prerequisites: oinc, kubectl, jq, node
 #
 # usage:
 #   make oinc          # setup cluster + start plugin with hot reload
@@ -106,6 +107,8 @@ for i in $(seq 1 30); do
   fi
   sleep 2
 done
+
+"${SCRIPT_DIR}/scripts/setup-inspector-backend.sh"
 
 if console_plugin_has_proxy; then
   log "syncing operator-reconciled Console plugin proxy..."

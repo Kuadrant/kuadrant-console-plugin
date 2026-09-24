@@ -81,7 +81,7 @@ plugin:
     caConfigMapName: mcp-gateway-ca # ConfigMap key: ca-bundle.crt
 ```
 
-For the plain-HTTP oinc demo, use these development settings before syncing the Console proxy:
+`make oinc` deploys the backend through the operator's `CONSOLE_PLUGIN_IMAGE_OVERRIDE` (oinc has no ClusterVersion) and applies these development settings for the plain-HTTP demo before syncing the Console proxy:
 
 ```bash
 kubectl --context=oinc set env deployment/kuadrant-console-plugin -n kuadrant-system \

@@ -43,7 +43,7 @@ Navigate to <http://localhost:9000> and click "Kuadrant" in the left sidebar men
 
 [oinc](https://github.com/jasonmadigan/oinc) (OKD in a container) provides a lightweight OpenShift-compatible cluster locally with the console built in. This sets up a full environment with Kuadrant, Istio, cert-manager, and the OpenShift console, with hot reloading for plugin development.
 
-Prerequisites: [oinc v0.5.3 or newer](https://github.com/jasonmadigan/oinc/releases/tag/v0.5.3), [kubectl](https://kubernetes.io/docs/tasks/tools/), Docker or podman, Node.js.
+Prerequisites: [oinc v0.5.3 or newer](https://github.com/jasonmadigan/oinc/releases/tag/v0.5.3), [kubectl](https://kubernetes.io/docs/tasks/tools/), [jq](https://jqlang.org/download/), Docker or podman, Node.js.
 
 ```bash
 make oinc                   # create cluster + start plugin dev server with hot reload
@@ -82,6 +82,23 @@ Save any resources you need before tearing down a cluster.
 Fresh setup installs both MCP demo servers. For an existing cluster, run
 `make oinc-mcp-demo`; see [demo servers](docs/mcp-inspector.md#demo-servers) for
 the protocol choices, tools, prompts, and live test commands.
+
+The MCP Inspector backend (`cmd/plugin-server`) does not run in the dev server.
+oinc has no ClusterVersion, so `make oinc` sets the operator's
+`CONSOLE_PLUGIN_IMAGE_OVERRIDE` to `CONSOLE_PLUGIN_IMAGE` (default
+`quay.io/kuadrant/console-plugin:latest`) and applies the plain-HTTP relay
+settings for the demo gateway. The backend runs that image, not your working
+tree. This needs `KUADRANT_VERSION=latest`; released operators do not support
+the override yet. To try backend changes:
+
+```bash
+docker build -t localhost/kuadrant/console-plugin:dev1 .
+oinc load-image localhost/kuadrant/console-plugin:dev1
+CONSOLE_PLUGIN_IMAGE=localhost/kuadrant/console-plugin:dev1 make oinc
+```
+
+The override uses `IfNotPresent`, so use a new tag for each build; `latest` is
+pulled once per cluster.
 
 oinc runs Console as a standalone development container, so it does not have
 the OpenShift Console operator to consume `ConsolePlugin.spec.proxy`. When the
