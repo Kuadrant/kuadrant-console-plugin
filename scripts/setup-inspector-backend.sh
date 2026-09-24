@@ -10,9 +10,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=lib.sh
 source "${SCRIPT_DIR}/lib.sh"
 
-CONSOLE_PLUGIN_IMAGE="${CONSOLE_PLUGIN_IMAGE:-quay.io/kuadrant/console-plugin:latest}"
 NAMESPACE=kuadrant-system
 PLUGIN=kuadrant-console-plugin
+# the operator container in the CSV install strategy
+MANAGER='def manager: .spec.install.spec.deployments[]
+  | select(.name == "kuadrant-operator-controller-manager")
+  | .spec.template.spec.containers[] | select(.name == "manager");'
 
 check_command kubectl "Install from https://kubernetes.io/docs/tasks/tools/"
 check_command jq "Install from https://jqlang.org/download/"
@@ -30,16 +33,22 @@ if [ -z "${CSV}" ]; then
   exit 0
 fi
 
+# keep the current backend, such as one loaded by make oinc-backend, unless an
+# image is given
+if [ -z "${CONSOLE_PLUGIN_IMAGE:-}" ]; then
+  CONSOLE_PLUGIN_IMAGE=$(kubectl --context=oinc get csv "${CSV}" -n "${NAMESPACE}" -o json |
+    jq -r "${MANAGER}"' manager | (.env // [])[] | select(.name == "CONSOLE_PLUGIN_IMAGE_OVERRIDE") | .value')
+  CONSOLE_PLUGIN_IMAGE="${CONSOLE_PLUGIN_IMAGE:-quay.io/kuadrant/console-plugin:latest}"
+fi
+
 log "deploying the MCP Inspector backend (${CONSOLE_PLUGIN_IMAGE})..."
 # OLM owns the operator Deployment, so the override belongs on the CSV. retry
 # when OLM updates the CSV between the read and the replace.
 for attempt in $(seq 1 5); do
   if kubectl --context=oinc get csv "${CSV}" -n "${NAMESPACE}" -o json |
-    jq --arg image "${CONSOLE_PLUGIN_IMAGE}" '
-      (.spec.install.spec.deployments[] | select(.name == "kuadrant-operator-controller-manager")
-        | .spec.template.spec.containers[] | select(.name == "manager") | .env) |=
-        ((. // [] | map(select(.name != "CONSOLE_PLUGIN_IMAGE_OVERRIDE")))
-          + [{name: "CONSOLE_PLUGIN_IMAGE_OVERRIDE", value: $image}])' |
+    jq --arg image "${CONSOLE_PLUGIN_IMAGE}" "${MANAGER}"'
+      (manager | .env) |= ((. // [] | map(select(.name != "CONSOLE_PLUGIN_IMAGE_OVERRIDE")))
+        + [{name: "CONSOLE_PLUGIN_IMAGE_OVERRIDE", value: $image}])' |
     kubectl --context=oinc replace -f -; then
     break
   fi

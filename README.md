@@ -47,6 +47,7 @@ Prerequisites: [oinc v0.5.3 or newer](https://github.com/jasonmadigan/oinc/relea
 
 ```bash
 make oinc                   # create cluster + start plugin dev server with hot reload
+make oinc-backend           # rebuild the MCP Inspector backend from the working tree
 make oinc-mcp-demo          # install/refresh stateful + stateless MCP demo servers
 make oinc-sync-plugin-proxy # manually resync an operator-reconciled backend proxy
 make oinc-teardown          # tear it all down
@@ -85,20 +86,15 @@ the protocol choices, tools, prompts, and live test commands.
 
 The MCP Inspector backend (`cmd/plugin-server`) does not run in the dev server.
 oinc has no ClusterVersion, so `make oinc` sets the operator's
-`CONSOLE_PLUGIN_IMAGE_OVERRIDE` to `CONSOLE_PLUGIN_IMAGE` (default
-`quay.io/kuadrant/console-plugin:latest`) and applies the plain-HTTP relay
-settings for the demo gateway. The backend runs that image, not your working
-tree. This needs `KUADRANT_VERSION=latest`; released operators do not support
-the override yet. To try backend changes:
+`CONSOLE_PLUGIN_IMAGE_OVERRIDE` and applies the plain-HTTP relay settings for
+the demo gateway. A new cluster gets `quay.io/kuadrant/console-plugin:latest`,
+pulled once per cluster. This needs `KUADRANT_VERSION=latest`; released
+operators do not support the override yet.
 
-```bash
-docker build -t localhost/kuadrant/console-plugin:dev1 .
-oinc load-image localhost/kuadrant/console-plugin:dev1
-CONSOLE_PLUGIN_IMAGE=localhost/kuadrant/console-plugin:dev1 make oinc
-```
-
-The override uses `IfNotPresent`, so use a new tag for each build; `latest` is
-pulled once per cluster.
+The backend does not hot reload. `make oinc-backend` builds the plugin image
+from the working tree, loads it into oinc and switches the backend to it;
+later `make oinc` runs keep it. To return to a published image, run
+`CONSOLE_PLUGIN_IMAGE=quay.io/kuadrant/console-plugin:latest make oinc`.
 
 oinc runs Console as a standalone development container, so it does not have
 the OpenShift Console operator to consume `ConsolePlugin.spec.proxy`. When the

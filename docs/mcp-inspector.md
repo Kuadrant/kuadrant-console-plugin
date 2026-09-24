@@ -89,6 +89,8 @@ kubectl --context=oinc set env deployment/kuadrant-console-plugin -n kuadrant-sy
   MCP_PROXY_ALLOW_INSECURE_AUTH=true
 ```
 
+To run backend changes on oinc, use `make oinc-backend`. It builds the plugin image from the working tree, loads it into oinc and switches the backend to it.
+
 ## Network access
 
 The companion [Kuadrant operator PR #2206](https://github.com/Kuadrant/kuadrant-operator/pull/2206)
