@@ -115,10 +115,12 @@ See [Test Tags](#test-tags) and [CI Pipeline](#ci-pipeline) for how these are se
 
 ## Live MCP Inspector coverage
 
-The shared CI workflow builds this checkout's Inspector backend and a pinned
-revision of operator PR #2206 using `bash e2e/setup-mcp-inspector.sh`, then syncs
-the operator's proxy contract into oinc v0.5.3 or newer. The operator pin can be removed
-once that support ships in a release.
+The shared CI workflow builds this checkout's Inspector backend with
+`bash e2e/setup-mcp-inspector.sh` and deploys it through the catalog operator's
+`CONSOLE_PLUGIN_IMAGE_OVERRIDE` (`scripts/setup-inspector-backend.sh`, as `make oinc`
+does), then syncs the operator's proxy contract into oinc v0.5.3 or newer. The
+operator itself is not replaced, so its MCP and developer portal components match
+the catalog's CRDs.
 
 `bash e2e/test-mcp-inspector.sh` runs the live tools/prompts journey for legacy,
 stateless, and Auto protocols, followed by a bearer-authentication journey that
@@ -165,7 +167,7 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
   3. Starts the plugin dev server (`yarn start`) in the background
   4. Runs `./e2e/setup.sh` — creates the oinc cluster with addons (gateway-api, cert-manager, MetalLB, Istio, Kuadrant, MCP Gateway), configures Istio Gateway Services to use the `oinc.io/metallb` load-balancer class, and applies RBAC and test fixtures
   5. Waits up to 60s for the dev server to be ready
-  6. Runs `e2e/setup-mcp-inspector.sh` (`setup-inspector`) to build and deploy the Inspector backend and operator with its OIDC, Plan, and Telemetry extensions, then verify shared Gateway readiness
+  6. Runs `e2e/setup-mcp-inspector.sh` (`setup-inspector`) to build this checkout's Inspector backend, deploy it through the catalog operator's override, then verify shared Gateway readiness
   7. Runs Playwright tests (see suite router below for how specs are selected)
   8. Runs `e2e/test-mcp-inspector.sh` (`tests-inspector`) for live legacy, stateless, auto-negotiation and bearer authentication journeys in both smoke and full suites, including after an unrelated test failure when Inspector setup succeeded
   9. Uploads `playwright-report/` and `playwright-results*.json` from the repository root as artifacts, including separate Inspector journey results. Failed runs also capture Gateway conditions, pods, Services, MetalLB address pools, warning events, and controller logs in `e2e-diagnostics.txt` before teardown.
