@@ -43,10 +43,11 @@ Navigate to <http://localhost:9000> and click "Kuadrant" in the left sidebar men
 
 [oinc](https://github.com/jasonmadigan/oinc) (OKD in a container) provides a lightweight OpenShift-compatible cluster locally with the console built in. This sets up a full environment with Kuadrant, Istio, cert-manager, and the OpenShift console, with hot reloading for plugin development.
 
-Prerequisites: [oinc v0.5.3 or newer](https://github.com/jasonmadigan/oinc/releases/tag/v0.5.3), [kubectl](https://kubernetes.io/docs/tasks/tools/), Docker or podman, Node.js.
+Prerequisites: [oinc v0.5.3 or newer](https://github.com/jasonmadigan/oinc/releases/tag/v0.5.3), [kubectl](https://kubernetes.io/docs/tasks/tools/), [jq](https://jqlang.org/download/), Docker or podman, Node.js.
 
 ```bash
 make oinc                   # create cluster + start plugin dev server with hot reload
+make oinc-backend           # rebuild the MCP Inspector backend from the working tree
 make oinc-mcp-demo          # install/refresh stateful + stateless MCP demo servers
 make oinc-sync-plugin-proxy # manually resync an operator-reconciled backend proxy
 make oinc-teardown          # tear it all down
@@ -82,6 +83,18 @@ Save any resources you need before tearing down a cluster.
 Fresh setup installs both MCP demo servers. For an existing cluster, run
 `make oinc-mcp-demo`; see [demo servers](docs/mcp-inspector.md#demo-servers) for
 the protocol choices, tools, prompts, and live test commands.
+
+The MCP Inspector backend (`cmd/plugin-server`) does not run in the dev server.
+oinc has no ClusterVersion, so `make oinc` sets the operator's
+`CONSOLE_PLUGIN_IMAGE_OVERRIDE` and applies the plain-HTTP relay settings for
+the demo gateway. A new cluster gets `quay.io/kuadrant/console-plugin:latest`,
+pulled once per cluster. This needs `KUADRANT_VERSION=latest`; released
+operators do not support the override yet.
+
+The backend does not hot reload. `make oinc-backend` builds the plugin image
+from the working tree, loads it into oinc and switches the backend to it;
+later `make oinc` runs keep it. To return to a published image, run
+`CONSOLE_PLUGIN_IMAGE=quay.io/kuadrant/console-plugin:latest make oinc`.
 
 oinc runs Console as a standalone development container, so it does not have
 the OpenShift Console operator to consume `ConsolePlugin.spec.proxy`. When the

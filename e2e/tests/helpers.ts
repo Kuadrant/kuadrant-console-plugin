@@ -2,6 +2,10 @@ import { Page, expect } from '@playwright/test';
 
 const TEST_NAMESPACE = 'kuadrant-test';
 
+// how long a pushState navigation must survive before spaNavigate returns; the
+// console's landing page has undone one about 0.4s after the push in CI
+const SPA_NAVIGATION_SETTLE_MS = 1_000;
+
 // the guided tour can render after dismissConsoleTour has returned (slow console
 // boot, retries). its backdrop blocks clicks and aria-hides the nav, so getByRole
 // waits never match. a locator handler dismisses the tour whenever it blocks a
@@ -141,15 +145,39 @@ export async function spaNavigate(page: Page, path: string): Promise<void> {
   // Wait for plugin to be ready before navigating to plugin routes
   await waitForKuadrantPlugin(page);
 
-  await page.evaluate((p) => {
-    window.history.pushState({}, '', p);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }, path);
+  const push = () =>
+    page.evaluate((target) => {
+      window.history.pushState({}, '', target);
+      window.dispatchEvent(new PopStateEvent('popstate'));
+    }, path);
+  // first path segment, such as search, k8s or kuadrant
+  const area = (url: string) => new URL(url, page.url()).pathname.split('/')[1];
+  const target = area(path);
+  if (area(page.url()) === target) {
+    await push();
+    return;
+  }
+
+  // the console's landing page (/ redirects to /search/all-namespaces) replaces
+  // its URL shortly after mounting, which can drag the router back to /search
+  // after a push. push again until the target's area sticks; redirects within
+  // it, such as a namespace fallback, are left alone.
+  await expect(async () => {
+    if (area(page.url()) !== target) {
+      await push();
+    }
+    await page.waitForTimeout(SPA_NAVIGATION_SETTLE_MS);
+    expect(area(page.url()), `navigation to ${path} was undone`).toBe(target);
+  }).toPass({ timeout: 15_000 });
 }
 
 // Scroll through all pagination pages looking for a row matching `text`.
 // Retries up to `maxAttempts` times, waiting for the watch stream between pages.
-export async function findRowWithPagination(page: Page, text: string, maxAttempts = 10): Promise<boolean> {
+export async function findRowWithPagination(
+  page: Page,
+  text: string,
+  maxAttempts = 10,
+): Promise<boolean> {
   const row = page.locator(`tr:has-text("${text}")`);
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     if (await row.isVisible()) return true;
