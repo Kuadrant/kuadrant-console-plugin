@@ -44,7 +44,7 @@ name.
 
 | Stream  | OCP              | Branch        | Release  | Image tags                                              | `pluginAPI`  | `latestSupportedOpenshiftVersion` |
 | ------- | ---------------- | ------------- | -------- | ------------------------------------------------------- | ------------ | --------------------------------- |
-| Current | 4.22+            | `main`        | none yet | `latest`, `<git sha>`                                   | `>=4.22.0-0` | `4.22`                            |
+| Current | 4.22+            | `main`        | `v0.7.0` | `v0.7.0`, `latest`, `<git sha>`                                   | `>=4.22.0-0` | `4.22`                            |
 | Legacy  | 4.21 and earlier | `release-0.x` | `v0.6.0` | `v0.6.0`, `release-0.x-latest`, `release-0.x-<git sha>` | `*`          | `4.21`                            |
 
 `main` builds against React Router 7.13.x, matching OCP 4.22.
