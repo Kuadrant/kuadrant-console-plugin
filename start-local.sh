@@ -36,10 +36,14 @@ PLUGIN_NAME=$(node -p "require('${SCRIPT_DIR}/package.json').consolePlugin.name"
 PLUGIN_URL="http://${HOST}:${PLUGIN_PORT}"
 
 console_has_plugin() {
-  {
-    "${RUNTIME}" inspect oinc-console --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null
-    "${RUNTIME}" inspect oinc-console --format '{{json .Config.Cmd}}' 2>/dev/null
-  } | grep -q "${PLUGIN_NAME}"
+  # read everything first: under pipefail, grep -q exiting early makes the
+  # second inspect fail with SIGPIPE and reports a wired console as missing
+  local config
+  config=$(
+    "${RUNTIME}" inspect oinc-console --format '{{range .Config.Env}}{{println .}}{{end}}' 2>/dev/null || true
+    "${RUNTIME}" inspect oinc-console --format '{{json .Config.Cmd}}' 2>/dev/null || true
+  )
+  grep -q "${PLUGIN_NAME}" <<<"${config}"
 }
 
 console_plugin_has_proxy() {
