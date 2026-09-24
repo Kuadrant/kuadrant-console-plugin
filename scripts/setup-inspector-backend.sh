@@ -43,9 +43,11 @@ fi
 
 log "deploying the MCP Inspector backend (${CONSOLE_PLUGIN_IMAGE})..."
 # OLM owns the operator Deployment, so the override belongs on the CSV. retry
-# when OLM updates the CSV between the read and the replace.
+# when OLM updates or replaces the CSV between the read and the replace.
 for attempt in $(seq 1 5); do
-  if kubectl --context=oinc get csv "${CSV}" -n "${NAMESPACE}" -o json |
+  if CSV=$(kubectl --context=oinc get subscription kuadrant-operator -n "${NAMESPACE}" \
+    -o jsonpath='{.status.installedCSV}') &&
+    kubectl --context=oinc get csv "${CSV}" -n "${NAMESPACE}" -o json |
     jq --arg image "${CONSOLE_PLUGIN_IMAGE}" "${MANAGER}"'
       (manager | .env) |= ((. // [] | map(select(.name != "CONSOLE_PLUGIN_IMAGE_OVERRIDE")))
         + [{name: "CONSOLE_PLUGIN_IMAGE_OVERRIDE", value: $image}])' |
