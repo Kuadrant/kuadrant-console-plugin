@@ -48,7 +48,7 @@ Prerequisites: [oinc v0.5.3 or newer](https://github.com/jasonmadigan/oinc/relea
 ```bash
 make oinc                   # create cluster + start plugin dev server with hot reload
 make oinc-backend           # rebuild the MCP Inspector backend from the working tree
-make oinc-mcp-demo          # install/refresh stateful + stateless MCP demo servers
+make oinc-mcp-demo          # install/refresh open + bearer-auth MCP gateways and demo servers
 make oinc-sync-plugin-proxy # manually resync an operator-reconciled backend proxy
 make oinc-teardown          # tear it all down
 ```
@@ -80,14 +80,17 @@ must be configured at creation. Follow oinc's [Gateway migration guidance](https
 when retaining a cluster; for disposable clusters, recreate with the updated setup.
 Save any resources you need before tearing down a cluster.
 
-Fresh setup installs both MCP demo servers. For an existing cluster, run
+Fresh setup installs an open MCP gateway and a second gateway requiring
+`Authorization: Bearer token`, both exposing the stateful and stateless demo
+servers. In the Inspector, select `mcp-gateway-extension` for anonymous access or
+`mcp-gateway-auth-extension` and enter `token` when prompted. For an existing cluster, run
 `make oinc-mcp-demo`; see [demo servers](docs/mcp-inspector.md#demo-servers) for
 the protocol choices, tools, prompts, and live test commands.
 
 The MCP Inspector backend (`cmd/plugin-server`) does not run in the dev server.
 oinc has no ClusterVersion, so `make oinc` sets the operator's
 `CONSOLE_PLUGIN_IMAGE_OVERRIDE` and applies the plain-HTTP relay settings for
-the demo gateway. A new cluster gets `quay.io/kuadrant/console-plugin:latest`,
+the demo gateways. A new cluster gets `quay.io/kuadrant/console-plugin:latest`,
 pulled once per cluster. This needs `KUADRANT_VERSION=latest`; released
 operators do not support the override yet.
 
