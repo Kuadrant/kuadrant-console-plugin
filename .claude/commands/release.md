@@ -9,8 +9,9 @@ disable-model-invocation: true
 Arguments supplied by the user: `$ARGUMENTS`
 
 Publish an already-reviewed stable release from `main`. This command tags the
-current commit, creates the GitHub Release, and verifies the Quay.io image
-build. It does not edit versions, create release commits, or push a branch.
+current commit, ensures the upstream `release-X.Y` branch exists, creates the
+GitHub Release, and verifies the Quay.io image build. It does not edit versions
+or create release commits. Existing release branches keep their current heads.
 
 Follow every gate below in order. Treat an unexpected or ambiguous result as a
 failure. Do not repair, force, delete, or bypass anything unless the recovery
@@ -51,7 +52,7 @@ Do all of this before creating a local tag.
 
 1. Verify the tools `git`, `gh`, and `node` are available, and run from the
    repository root.
-2. Set the repository to `Kuadrant/console-plugin`. Confirm the `upstream`
+2. Set `REPO=Kuadrant/kuadrant-console-plugin`. Confirm the `upstream`
    remote points to that repository. Do not silently substitute `origin`.
 3. If either `GH_TOKEN` or `GITHUB_TOKEN` is set, stop and ask the user to unset
    it. Then run:
@@ -76,14 +77,25 @@ Do all of this before creating a local tag.
    Record it as `HEAD_SHA`.
 
 7. Read the versions from `package.json`:
+
    - `version` (top-level)
    - `consolePlugin.version`
 
    Require them to be identical canonical `X.Y.Z` values. Reject `-dev` and all
    other prerelease/build suffixes. Require `X.Y` to be consistent with the
    release type. Require `Z == 0` for `minor` and `Z > 0` for `patch`. If the
-   user supplied a version, require an exact match. Set `TAG=vX.Y.Z` only after
-   these checks.
+   user supplied a version, require an exact match. Set `VERSION` to that
+   validated value and `TAG=v${VERSION}` only after these checks.
+
+   Set `RELEASE_BRANCH=release-${VERSION%.*}` from the validated version (for example,
+   `v0.7.0` uses `release-0.7`). Query that exact branch on `upstream`:
+
+   ```shell
+   git ls-remote --heads upstream "refs/heads/${RELEASE_BRANCH}"
+   ```
+
+   Record whether it exists. A failed query is a failed gate. An existing
+   branch is retained at its current head, even when it differs from `HEAD_SHA`.
 
 8. Require the tag to be absent locally and on `upstream`. Use exact refs, and
    check both the tag object and its peeled form:
@@ -136,8 +148,10 @@ Print a compact plan containing:
 - required CI results;
 - `upstream` URL;
 - authenticated GitHub login;
-- Quay.io image: `quay.io/kuadrant/console-plugin:${TAG}`; and
-- the only ref that will be pushed: `refs/tags/$TAG`.
+- Quay.io image: `quay.io/kuadrant/console-plugin:${TAG}`;
+- the only Git ref that will be pushed: `refs/tags/$TAG`; and
+- the upstream release branch and whether it will be created at `HEAD_SHA`
+  or retained at its existing head.
 
 Ask the user for explicit confirmation. The command invocation itself is not
 confirmation. Stop without changing anything if they do not confirm.
@@ -173,7 +187,26 @@ git push upstream "refs/tags/${TAG}:refs/tags/${TAG}"
 Never retry with force. Verify that the remote tag object equals the local tag
 object and that its peeled commit equals `HEAD_SHA` using `git ls-remote`.
 
-## 5. Publish the GitHub Release
+## 5. Ensure the upstream release branch exists
+
+After verifying the pushed tag, query the exact `refs/heads/$RELEASE_BRANCH`
+again. If it exists, retain it without moving it. If absent, create it in
+`Kuadrant/kuadrant-console-plugin` at the signed tag's verified `HEAD_SHA`:
+
+```shell
+gh api --method POST "repos/${REPO}/git/refs" \
+  -f "ref=refs/heads/${RELEASE_BRANCH}" \
+  -f "sha=${HEAD_SHA}"
+```
+
+This is a create-only request: a concurrent branch creation cannot advance an
+existing branch. If the request fails, re-query the exact branch once. Continue
+only if it now exists; otherwise stop and report the failure. After a successful
+creation, verify its remote head equals `HEAD_SHA`. Use this same step when
+resuming after a failed release publication. Applicable fixes reach an existing
+release branch through pull requests.
+
+## 6. Publish the GitHub Release
 
 Reconfirm that `GH_TOKEN` and `GITHUB_TOKEN` are unset and that the
 authenticated login still matches the one recorded in the confirmed plan; stop
@@ -181,7 +214,7 @@ on any mismatch. Create a non-draft GitHub Release from the existing remote tag:
 
 ```shell
 gh release create "$TAG" \
-  --repo Kuadrant/console-plugin \
+  --repo "$REPO" \
   --verify-tag \
   --generate-notes
 ```
@@ -189,7 +222,7 @@ gh release create "$TAG" \
 Do not pass `--target`; the tag is the source of truth. Read the release back
 with `gh release view` and report its URL.
 
-## 6. Monitor Quay.io image build
+## 7. Monitor Quay.io image build
 
 The tag push triggers `.github/workflows/build-push.yaml`. Poll for the run
 matching all of these values, rather than selecting the latest run:
@@ -203,7 +236,7 @@ matching all of these values, rather than selecting the latest run:
 appear, require exactly one matching run, then wait for it:
 
 ```shell
-gh run watch "$RUN_ID" --repo Kuadrant/console-plugin --compact --exit-status
+gh run watch "$RUN_ID" --repo "$REPO" --compact --exit-status
 ```
 
 If it fails, show `gh run view "$RUN_ID" --log-failed`, inspect Quay.io state,
@@ -219,9 +252,10 @@ curl -sf "https://quay.io/api/v1/repository/kuadrant/console-plugin/tag/?specifi
 Require the `tags` array to be non-empty and contain the expected tag. Report the
 workflow URL and verified image tag.
 
-## 7. Finish
+## 8. Finish
 
-Report the tag, release URL, workflow URL, and verified Quay.io image. Then
+Report the tag, upstream release branch (created or retained), release URL,
+workflow URL, and verified Quay.io image. Then
 remind the user to run `/bump-dev` to prepare the next development version;
 never make or push that change from this command.
 
