@@ -1,8 +1,10 @@
 # Releasing kuadrant-console-plugin
 
 Stable releases are tagged on `main` after a reviewed release PR is merged.
-Version changes go through a pull request and CI; the release step never commits
-or pushes a branch.
+Version changes go through a pull request and CI; the release step never creates
+commits. It creates the matching `release-X.Y` branch in
+`Kuadrant/kuadrant-console-plugin` at the signed release tag's commit if missing.
+Existing release branches keep their current heads; backports go through PRs.
 
 There are two publication points:
 
@@ -98,6 +100,7 @@ A minor release is `X.Y.0` with `Y` incremented and patch reset to `0`.
    ```
 
 2. Remove the `-dev` suffix from both version fields in `package.json`:
+
    - `version`
    - `consolePlugin.version`
 
@@ -179,10 +182,11 @@ version an additional assertion; the command never edits any file.
 
 Before changing anything, the command checks the branch, upstream
 synchronization, stable versions, release PR, required CI, tag/release absence,
-and Quay.io state. It prints the one tag ref it will push and asks for
-confirmation. It then creates and verifies a signed tag, pushes only that tag,
-creates the GitHub Release with generated notes, waits for the Quay.io image
-build, and verifies the image exists.
+and Quay.io state. It prints the one tag ref it will push and whether the matching
+`release-X.Y` branch will be created or retained, then asks for confirmation.
+It creates and verifies a signed tag, pushes only that tag, ensures the upstream
+release branch exists, creates the GitHub Release with generated notes, waits
+for the Quay.io image build, and verifies the image exists.
 
 ## Equivalent manual release
 
@@ -321,7 +325,28 @@ test "$(git ls-remote --tags upstream "refs/tags/${TAG}^{}" | awk '{print $1}')"
   "$HEAD_SHA"
 ```
 
-### 3. Publish the GitHub Release
+### 3. Ensure the upstream release branch exists
+
+Create the matching release branch at the verified tag commit only if absent.
+An existing branch keeps its current head:
+
+```shell
+RELEASE_BRANCH=release-${VERSION%.*}
+RELEASE_BRANCH_REF=$(git ls-remote --heads upstream \
+  "refs/heads/${RELEASE_BRANCH}") || exit 1
+if test -z "$RELEASE_BRANCH_REF"; then
+  gh api --method POST "repos/${REPO}/git/refs" \
+    -f "ref=refs/heads/${RELEASE_BRANCH}" \
+    -f "sha=${HEAD_SHA}" || exit 1
+  test "$(git ls-remote --heads upstream "refs/heads/${RELEASE_BRANCH}" | awk '{print $1}')" = \
+    "$HEAD_SHA" || exit 1
+fi
+```
+
+If creation fails, inspect the exact remote branch before resuming. The
+create-only API request preserves any branch created concurrently.
+
+### 4. Publish the GitHub Release
 
 The existing remote tag is the source of truth. Do not pass `--target`:
 
@@ -334,7 +359,7 @@ gh release view "$TAG" --repo "$REPO" \
   --json tagName,isDraft,isPrerelease,publishedAt,url
 ```
 
-### 4. Wait for the Quay.io image build
+### 5. Wait for the Quay.io image build
 
 Allow up to two minutes for the tag-push event to appear. Repeat this query
 until it returns exactly one run whose branch is `$TAG` and SHA is `$HEAD_SHA`:
