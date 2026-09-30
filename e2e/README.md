@@ -128,7 +128,9 @@ checks rejection and retry. These run explicitly in both smoke and full CI jobs;
 they cannot silently skip when the CI target is missing. The script temporarily
 protects the demo listener using its own AuthPolicy, grants that gateway access
 to Authorino (TCP 50051) and the WASM endpoint (TCP 8082), and removes those
-fixtures on exit. A data-path check waits for authentication to become ready. Both scripts require the `oinc` context. Local spec invocations still skip
+fixtures on exit. Before the journeys, a discovery check waits for the gateway to
+advertise both expected protocol versions; a data-path check also waits for
+authentication to become ready. Both scripts require the `oinc` context. Local spec invocations still skip
 the live journey unless `MCP_INSPECTOR_E2E_EXTENSION=namespace/name` is provided.
 
 ## Test Tags 
