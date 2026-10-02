@@ -255,15 +255,14 @@ Update `settings.json` (File > Preferences > Settings):
 
 ## Version matrix
 
-Upstream images selected by the Kuadrant operator:
+Upstream release images for the console versions listed below:
 
-| OpenShift console        | Image tag  | React | Server | Release branch   |
-| ------------------------ | ---------- | ----- | ------ | ---------------- |
-| Below 4.20 (legacy tier) | `v0.1.5-2` | 17    | nginx  | `release-v0.1.5` |
-| 4.20–4.21                | `v0.6.0`   | 17    | nginx  | `release-0.x`    |
-| 4.22                     | `v0.7.0`   | 18    | Go     | `release-0.7`    |
-| 4.23 (future)            | `v0.7.0`   | 18    | Go     | `release-0.7`    |
-| 5.0 (future)             | `v0.7.0`   | 18    | Go     | `release-0.7`    |
+| OpenShift console | Image tag | React | Server | Release branch |
+| ----------------- | --------- | ----- | ------ | -------------- |
+| 4.20–4.21         | `v0.6.0`  | 17    | nginx  | `release-0.x`  |
+| 4.22              | `v0.7.0`  | 18    | Go     | `release-0.7`  |
+| 4.23 (future)     | `v0.7.0`  | 18    | Go     | `release-0.7`  |
+| 5.0 (future)      | `v0.7.0`  | 18    | Go     | `release-0.7`  |
 
 4.23 and 5.0 target the same upcoming console generation; final-release
 validation is pending. Use release tags for stable images; `latest` tracks development.
@@ -273,13 +272,12 @@ migration history and loading requirements.
 
 ### Operator image environment variables
 
-Set these on the `kuadrant-operator` Deployment:
+Set these on the `kuadrant-operator` Deployment for the release streams above:
 
-| Environment variable                  | Selected on    | Upstream release image                     |
-| ------------------------------------- | -------------- | ------------------------------------------ |
-| `RELATED_IMAGE_CONSOLE_PLUGIN_LATEST` | OCP 4.22+      | `quay.io/kuadrant/console-plugin:v0.7.0`   |
-| `RELATED_IMAGE_CONSOLE_PLUGIN_SDK1`   | OCP 4.20–4.21  | `quay.io/kuadrant/console-plugin:v0.6.0`   |
-| `RELATED_IMAGE_CONSOLE_PLUGIN_PF5`    | Below OCP 4.20 | `quay.io/kuadrant/console-plugin:v0.1.5-2` |
+| Environment variable                  | Selected on   | Upstream release image                   |
+| ------------------------------------- | ------------- | ---------------------------------------- |
+| `RELATED_IMAGE_CONSOLE_PLUGIN_LATEST` | OCP 4.22+     | `quay.io/kuadrant/console-plugin:v0.7.0` |
+| `RELATED_IMAGE_CONSOLE_PLUGIN_SDK1`   | OCP 4.20–4.21 | `quay.io/kuadrant/console-plugin:v0.6.0` |
 
 See [operator image configuration](docs/versioning.md#operator-image-environment-variables)
 for tier names, release pinning and downstream RHCL image mapping.

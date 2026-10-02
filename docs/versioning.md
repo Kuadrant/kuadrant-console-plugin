@@ -23,13 +23,6 @@ plugin's enforced requirements are separate decisions:
   using the router compatibility alias. Introducing the new host runtime did
   not immediately make that build unusable.
 
-PatternFly has a similar distinction: the
-[4.19 console already declares PatternFly 6](https://github.com/openshift/console/blob/release-4.19/frontend/package.json),
-while the operator selects our PF6 image from 4.20 and retains PF5 below
-that boundary. Red Hat's [4.22 migration guide](https://developers.redhat.com/articles/2026/07/14/red-hat-openshift-4-22-what-dynamic-plugin-developers-need-know)
-identifies 4.22 as the release that removes PF5 support. The operator's 4.20
-selection boundary is therefore distinct from both introduction and removal.
-
 ## Loading checks
 
 | Setting                                            | Effect                                                                    |
@@ -49,8 +42,6 @@ confirms the React 17 to 18 and React Router 5 to 7 transitions.
 
 | OCP           | SDK                   | React | React Router            | PF Topology | react-i18next |
 | ------------- | --------------------- | ----- | ----------------------- | ----------- | ------------- |
-| 4.17          | `1.6.0`               | 17    | 5.3.x                   | 5.3.0       | 11.x          |
-| 4.18          | `4.18.0`              | 17    | 5.3.x (+ v5-compat 6.x) | 5.3.0       | 11.x          |
 | 4.19          | `4.19.1`              | 17    | 5.3.x (+ v5-compat 6.x) | 6.2.x       | 11.x          |
 | 4.20          | `4.20.0`              | 17    | 5.3.x (+ v5-compat 6.x) | 6.2.x       | 11.x          |
 | 4.21          | `4.21.0`              | 17    | 5.3.x (+ v5-compat 6.x) | 6.2.x       | 11.x          |
@@ -78,11 +69,10 @@ build compatible with older consoles.
 
 ## Plugin streams
 
-| Stream                  | OCP                                  | Release branch   | Release    | `pluginAPI`  |
-| ----------------------- | ------------------------------------ | ---------------- | ---------- | ------------ |
-| React 18                | 4.22; 4.23 and 5.0 as future targets | `release-0.7`    | `v0.7.0`   | `>=4.22.0-0` |
-| React 17 / PatternFly 6 | 4.20–4.21                            | `release-0.x`    | `v0.6.0`   | `*`          |
-| React 17 / PatternFly 5 | Below 4.20 (legacy tier)             | `release-v0.1.5` | `v0.1.5-2` | `*`          |
+| Stream                  | OCP                                  | Release branch | Release  | `pluginAPI`  |
+| ----------------------- | ------------------------------------ | -------------- | -------- | ------------ |
+| React 18                | 4.22; 4.23 and 5.0 as future targets | `release-0.7`  | `v0.7.0` | `>=4.22.0-0` |
+| React 17 / PatternFly 6 | 4.20–4.21                            | `release-0.x`  | `v0.6.0` | `*`          |
 
 This follows the operator's [version-based image selection](https://github.com/Kuadrant/kuadrant-operator/pull/2183).
 
@@ -100,7 +90,8 @@ compatibility with the 4.22 host's 7.13.x router.
 The operator reads the cluster's OpenShift version and selects one of the
 image references configured on its Deployment. The README's
 [environment variable matrix](../README.md#operator-image-environment-variables)
-matches the [operator v1.6.0-rc1 bundle](https://github.com/Kuadrant/kuadrant-operator/blob/v1.6.0-rc1/bundle/manifests/kuadrant-operator.clusterserviceversion.yaml).
+lists the variables for the release streams above, using the
+[operator v1.6.0-rc1 bundle](https://github.com/Kuadrant/kuadrant-operator/blob/v1.6.0-rc1/bundle/manifests/kuadrant-operator.clusterserviceversion.yaml).
 This is upstream image selection; RHCL's product support matrix defines its
 supported OCP versions separately.
 
@@ -111,19 +102,16 @@ The variable suffixes name compatibility tiers:
   release tag or digest; the moving `:latest` image is for development.
 - `RELATED_IMAGE_CONSOLE_PLUGIN_SDK1`: the SDK 1.x / React 17 / PatternFly 6
   build for OCP 4.20–4.21.
-- `RELATED_IMAGE_CONSOLE_PLUGIN_PF5`: the legacy PatternFly 5 build selected
-  below OCP 4.20.
 
 For RHCL releases, use the corresponding downstream build's image digest
 in each variable. Include the same image references in the bundle's
-`relatedImages` so disconnected installations can mirror all three tiers.
+`relatedImages` so disconnected installations can mirror the release images.
 
 ## Deployment manifests
 
 `install.yaml` on `main` uses the development Go-server image for OCP 4.22+.
 For a stable install, use the manifest from the same release tag as the
-image: [v0.1.5-2](https://github.com/Kuadrant/kuadrant-console-plugin/blob/v0.1.5-2/install.yaml),
-[v0.6.0](https://github.com/Kuadrant/kuadrant-console-plugin/blob/v0.6.0/install.yaml)
+image: [v0.6.0](https://github.com/Kuadrant/kuadrant-console-plugin/blob/v0.6.0/install.yaml)
 or [v0.7.0](https://github.com/Kuadrant/kuadrant-console-plugin/blob/v0.7.0/install.yaml),
 according to the [version matrix](../README.md#version-matrix).
 
@@ -131,7 +119,7 @@ These tagged manifests still reference `quay.io/kuadrant/console-plugin:latest`.
 Before applying one, replace that image with its matching release tag or
 digest, such as `quay.io/kuadrant/console-plugin:v0.6.0` for the v0.6.0 manifest.
 
-The nginx-based v0.1.5-2 and v0.6.0 images need their nginx ConfigMap mounted
-to serve HTTPS on port 9443. The v0.7.0 Go server uses the serving certificate
+The nginx-based v0.6.0 image needs its nginx ConfigMap mounted to serve HTTPS
+on port 9443. The v0.7.0 Go server uses the serving certificate
 through `TLS_CERTIFICATE_FILE` and `TLS_KEY_FILE`. Match the deployment
 configuration to the selected image when installing or upgrading.
