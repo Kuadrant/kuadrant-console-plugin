@@ -1,6 +1,7 @@
 # Releasing kuadrant-console-plugin
 
-Stable releases are tagged on `main` after a reviewed release PR is merged.
+Minor releases are tagged on `main`; patches are tagged on `release-X.Y`.
+Both require a reviewed release PR merged into the selected branch.
 Version changes go through a pull request and CI; the release step never commits
 or pushes a branch.
 
@@ -62,9 +63,28 @@ Send applicable bug fixes and SDK-independent changes to `release-0.x` in a PR
 with a `[backport]` title. Do not backport code that needs React 18, React Router
 7 or SDK 4.22. Review cherry-picks normally; the branches have diverged.
 
+### Maintenance branches
+
+After each minor release, preserve `release-X.Y` at the verified `vX.Y.0` tag
+before preparing the next minor on `main`. For example, `release-0.7` preserves
+the 0.7 stream. If the branch already exists, inspect it and keep its history;
+never reset it to the tag. If absent, create only that branch from the tag's
+verified commit:
+
+```shell
+git push upstream "${HEAD_SHA}:refs/heads/release-${VERSION%.*}"
+```
+
+Use this only after verifying the release tag and confirming the branch is
+absent with a successful `git ls-remote --heads upstream` query. Patch release
+PRs and their backports target this maintenance branch. The legacy
+`release-0.x` branch remains the older console-generation stream; do not move
+or repurpose it. The guarded command below handles `main` and `release-X.Y`;
+releasing from the legacy stream requires a separately reviewed release plan.
+
 ## Prerequisites
 
-- Push access to `Kuadrant/console-plugin`
+- Push access to `Kuadrant/kuadrant-console-plugin`
 - A signing key configured for `git tag -s`
 - `git`, `gh`, and `node`
 - A human GitHub login stored by `gh auth`
@@ -110,7 +130,7 @@ A minor release is `X.Y.0` with `Y` incremented and patch reset to `0`.
 5. Open a PR targeting `main`:
 
    ```shell
-   gh pr create --repo Kuadrant/console-plugin \
+   gh pr create --repo Kuadrant/kuadrant-console-plugin \
      --base main --title "vX.Y.0" --body "Release vX.Y.0"
    ```
 
@@ -121,11 +141,11 @@ A minor release is `X.Y.0` with `Y` incremented and patch reset to `0`.
 
 A patch release is `X.Y.Z` where `Z > 0`.
 
-1. Create a release branch from the current `upstream/main`:
+1. Create a release branch from the current `upstream/release-X.Y`:
 
    ```shell
-   git fetch upstream main
-   git checkout -b release/vX.Y.Z upstream/main
+   git fetch upstream release-X.Y
+   git checkout -b release/vX.Y.Z upstream/release-X.Y
    ```
 
 2. Set both version fields in `package.json` to the patch version (e.g.,
@@ -145,11 +165,11 @@ A patch release is `X.Y.Z` where `Z > 0`.
    git push origin release/vX.Y.Z
    ```
 
-5. Open a PR targeting `main`:
+5. Open a PR targeting `release-X.Y`:
 
    ```shell
-   gh pr create --repo Kuadrant/console-plugin \
-     --base main --title "vX.Y.Z" --body "Release vX.Y.Z"
+   gh pr create --repo Kuadrant/kuadrant-console-plugin \
+     --base release-X.Y --title "vX.Y.Z" --body "Release vX.Y.Z"
    ```
 
 6. Merge only after all required CI checks pass.
@@ -157,7 +177,7 @@ A patch release is `X.Y.Z` where `Z > 0`.
 ## Command-driven release
 
 After the preparation PR is merged, check out the merge commit at the tip of
-`main` with a clean worktree, then run one of:
+`main` (minor) or `release-X.Y` (patch) with a clean worktree, then run one of:
 
 ```text
 /release minor
@@ -183,20 +203,25 @@ Set `RELEASE_TYPE` to `minor` or `patch` and omit the leading `v` from
 `VERSION`.
 
 ```shell
-REPO=Kuadrant/console-plugin
+REPO=Kuadrant/kuadrant-console-plugin
 RELEASE_TYPE=minor
 VERSION=X.Y.Z
 TAG=v${VERSION}
+case "$RELEASE_TYPE" in
+  minor) BRANCH=main ;;
+  patch) BRANCH=release-${VERSION%.*} ;;
+  *) exit 1 ;;
+esac
 HEAD_SHA=$(git rev-parse HEAD)
 ```
 
 ### 1. Preflight
 
-Require a clean, synchronized `main` branch and human `gh` credentials:
+Require a clean, synchronized `$BRANCH` and human `gh` credentials:
 
 ```shell
 test -z "$(git status --porcelain=v1)"
-test "$(git branch --show-current)" = "main"
+test "$(git branch --show-current)" = "$BRANCH"
 test -z "${GH_TOKEN:-}"
 test -z "${GITHUB_TOKEN:-}"
 
@@ -205,8 +230,8 @@ gh auth status --hostname github.com
 gh api user --jq .login
 
 git fetch --no-tags upstream \
-  "refs/heads/main:refs/remotes/upstream/main"
-test "$HEAD_SHA" = "$(git rev-parse "refs/remotes/upstream/main")"
+  "refs/heads/${BRANCH}:refs/remotes/upstream/${BRANCH}"
+test "$HEAD_SHA" = "$(git rev-parse "refs/remotes/upstream/${BRANCH}")"
 ```
 
 Read and compare the two version fields:
@@ -253,7 +278,7 @@ fi
 ```
 
 Find the PR associated with the exact commit. The output must contain exactly
-one merged PR targeting `main`, with `merge_commit_sha` equal to `HEAD_SHA`:
+one merged PR targeting `$BRANCH`, with `merge_commit_sha` equal to `HEAD_SHA`:
 
 ```shell
 gh api "repos/${REPO}/commits/${HEAD_SHA}/pulls" \
@@ -261,13 +286,16 @@ gh api "repos/${REPO}/commits/${HEAD_SHA}/pulls" \
 ```
 
 Set `PR` to that number and verify its state and required checks. The required
-checks must include passing `build`, `lint`, `i18n`, `unit`, and `e2e` jobs:
+checks must pass. Also inspect all checks and require passing `build`, `lint`,
+`i18n`, `unit`, and `e2e-smoke / e2e-rbac` jobs (some may not be required by the
+branch rules):
 
 ```shell
 PR=<release-pr-number>
 gh pr view "$PR" --repo "$REPO" \
   --json state,mergedAt,baseRefName,mergeCommit,url
 gh pr checks "$PR" --repo "$REPO" --required
+gh pr checks "$PR" --repo "$REPO"
 ```
 
 Verify the image tag is absent from Quay.io:
@@ -368,11 +396,11 @@ git fetch --no-tags upstream \
 ```
 
 - If it exists only locally and was created by a failed release attempt, reuse
-  it only when it is signed, annotated, and points to the synchronized `main`
-  tip. Otherwise, after confirming the exact tag name, remove only the local tag
+  it only when it is signed, annotated, and points to the synchronized selected
+  branch tip. Otherwise, after confirming the exact tag name, remove only the local tag
   with `git tag -d $TAG` and rerun the full preflight.
 - If the remote tag is correct but no GitHub Release exists, verify that the tag
-  is signed and points to the synchronized `main` tip, rerun the remaining
+  is signed and points to the synchronized selected branch tip, rerun the remaining
   read-only preflight checks while skipping the tag-absence gate, and resume
   with `gh release create --verify-tag`.
 - If the remote tag points anywhere unexpected, stop. Do not delete or replace
@@ -394,11 +422,13 @@ from the command. If the image already exists at the expected tag, do not rebuil
 
 ## Post-release development version
 
-After the release is complete, run `/bump-dev` to prepare the next development
-version. This creates a PR to `main` with the `-dev` suffix added to both
-version fields in `package.json`.
+After the release and maintenance branch are verified, run `/bump-dev minor`
+when `main` moves to the next minor, or `/bump-dev patch` when the next planned
+release on `main` is a patch. This creates a PR to `main` with the `-dev` suffix
+added to both version fields in `package.json`.
 
 Choose the next version deliberately: `X.Y.(Z+1)-dev` is appropriate when the
 next planned release is another patch; `X.(Y+1).0-dev` is appropriate when main
 moves to the next minor. The release command does not make this commit and
-nothing in this process pushes directly to `main`.
+nothing in this process pushes directly to `main`. After a patch from an older
+stream, inspect `upstream/main` first and preserve any newer development version.
