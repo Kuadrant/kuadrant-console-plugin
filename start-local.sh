@@ -9,12 +9,30 @@ set -euo pipefail
 # prerequisites: oinc, kubectl, jq, node
 #
 # usage:
-#   make oinc          # setup cluster + start plugin with hot reload
-#   make oinc-teardown # tear it all down
+#   make oinc              # setup cluster + start plugin with hot reload
+#   make oinc ARGS=--demo  # also install sample APIs and policies
+#   make oinc-teardown     # tear it all down
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 source "${SCRIPT_DIR}/scripts/lib.sh"
+
+DEMO=false
+for arg in "$@"; do
+  case "${arg}" in
+    --demo) DEMO=true ;;
+    -h|--help)
+      echo "Usage: ./start-local.sh [--demo]"
+      echo "  --demo  Install sample Gateway API, Kuadrant policies, and developer portal resources."
+      echo "          With make: make oinc ARGS=--demo"
+      exit 0
+      ;;
+    *)
+      echo "error: unknown argument '${arg}'. Use --help for usage." >&2
+      exit 1
+      ;;
+  esac
+done
 
 CONSOLE_PORT="${CONSOLE_PORT:-9000}"
 PLUGIN_PORT="${PLUGIN_PORT:-9001}"
@@ -88,6 +106,10 @@ if kubectl get nodes &>/dev/null 2>&1; then
 else
   log "setting up local cluster with kuadrant..."
   "${SCRIPT_DIR}/scripts/cluster-setup.sh"
+fi
+
+if [ "${DEMO}" = true ]; then
+  bash "${SCRIPT_DIR}/scripts/setup-demo.sh"
 fi
 
 # kill any leftover process on the plugin port

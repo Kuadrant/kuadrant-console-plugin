@@ -1,0 +1,124 @@
+# The Petstore OpenAPI document is illustrative; the demo backends return talker responses.
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: toystore
+  namespace: kuadrant-demo-toystore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+  annotations:
+    backstage.io/owner: group:default/toystore-team
+spec:
+  displayName: Toystore API
+  description: API-key protected toy catalog with manual access approval and gold, silver, and bronze plans.
+  version: v1
+  approvalMode: manual
+  publishStatus: Published
+  tags:
+    - demo
+    - retail
+    - toys
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://docs.kuadrant.io/latest/
+    gitRepository: https://github.com/Kuadrant/kuadrant-console-plugin
+  contact:
+    team: toystore-team
+    email: toystore@example.com
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: gamestore
+  namespace: kuadrant-demo-gamestore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+  annotations:
+    backstage.io/owner: group:default/gamestore-team
+spec:
+  displayName: Gamestore API
+  description: API-key protected game catalog with automatic access approval and tiered usage plans.
+  version: v1
+  approvalMode: automatic
+  publishStatus: Published
+  tags:
+    - demo
+    - retail
+    - games
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: gamestore
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://docs.kuadrant.io/latest/
+    gitRepository: https://github.com/Kuadrant/kuadrant-console-plugin
+  contact:
+    team: gamestore-team
+    email: gamestore@example.com
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: inventory
+  namespace: kuadrant-demo-gamestore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+  annotations:
+    backstage.io/owner: group:default/gamestore-team
+spec:
+  displayName: Inventory API
+  description: Public inventory sample with a 10-request limit per 10 seconds and a cross-namespace backend.
+  version: v1
+  approvalMode: manual
+  publishStatus: Published
+  tags:
+    - demo
+    - inventory
+    - logistics
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: inventory
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://docs.kuadrant.io/latest/
+    gitRepository: https://github.com/Kuadrant/kuadrant-console-plugin
+  contact:
+    team: gamestore-team
+    email: gamestore@example.com
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIProduct
+metadata:
+  name: analytics
+  namespace: kuadrant-demo-gamestore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+  annotations:
+    backstage.io/owner: group:default/gamestore-team
+spec:
+  displayName: Analytics API (Draft)
+  description: Work-in-progress reporting API for trying the draft-to-published workflow.
+  version: v1
+  approvalMode: manual
+  publishStatus: Draft
+  tags:
+    - demo
+    - analytics
+    - reporting
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: analytics
+  documentation:
+    openAPISpecURL: https://raw.githubusercontent.com/Kuadrant/kuadrantctl/main/examples/oas3/petstore.yaml
+    docsURL: https://docs.kuadrant.io/latest/
+    gitRepository: https://github.com/Kuadrant/kuadrant-console-plugin
+  contact:
+    team: gamestore-team
+    email: gamestore@example.com

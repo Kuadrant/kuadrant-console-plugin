@@ -1,0 +1,342 @@
+# Adapted from the toystore/gamestore demos in kuadrant-backstage-plugin; all backends use the sample talker API.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: talker
+  namespace: kuadrant-demo-toystore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: talker
+  template:
+    metadata:
+      labels:
+        app: talker
+        app.kubernetes.io/part-of: kuadrant-console-demo
+    spec:
+      containers:
+        - name: talker
+          image: quay.io/kuadrant/authorino-examples:talker-api
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: PORT
+              value: '3000'
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: talker
+  namespace: kuadrant-demo-toystore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  selector:
+    app: talker
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: talker
+  namespace: kuadrant-demo-gamestore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: talker
+  template:
+    metadata:
+      labels:
+        app: talker
+        app.kubernetes.io/part-of: kuadrant-console-demo
+    spec:
+      containers:
+        - name: talker
+          image: quay.io/kuadrant/authorino-examples:talker-api
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: PORT
+              value: '3000'
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: talker
+  namespace: kuadrant-demo-gamestore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  selector:
+    app: talker
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: toystore
+  namespace: kuadrant-demo-toystore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  parentRefs:
+    - name: demo
+      namespace: kuadrant-demo-gateway
+  hostnames:
+    - toystore.demo.kuadrant.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: talker
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: gamestore
+  namespace: kuadrant-demo-gamestore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  parentRefs:
+    - name: demo
+      namespace: kuadrant-demo-gateway
+  hostnames:
+    - gamestore.demo.kuadrant.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: talker
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: inventory
+  namespace: kuadrant-demo-gamestore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  parentRefs:
+    - name: demo
+      namespace: kuadrant-demo-gateway
+  hostnames:
+    - inventory.demo.kuadrant.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: talker
+          namespace: kuadrant-demo-toystore
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: analytics
+  namespace: kuadrant-demo-gamestore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  parentRefs:
+    - name: demo
+      namespace: kuadrant-demo-gateway
+  hostnames:
+    - analytics.demo.kuadrant.local
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: talker
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: inventory-backend
+  namespace: kuadrant-demo-toystore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: kuadrant-demo-gamestore
+  to:
+    - group: ''
+      kind: Service
+      name: talker
+---
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: toystore
+  namespace: kuadrant-demo-toystore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
+  rules:
+    authentication:
+      api-key-users:
+        apiKey:
+          selector:
+            matchLabels:
+              demo.kuadrant.io/api: toystore
+          allNamespaces: true
+        credentials:
+          authorizationHeader:
+            prefix: APIKEY
+---
+apiVersion: extensions.kuadrant.io/v1alpha1
+kind: PlanPolicy
+metadata:
+  name: toystore-plans
+  namespace: kuadrant-demo-toystore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: toystore
+  plans:
+    - tier: gold
+      predicate: >-
+        has(auth.identity) && auth.identity.metadata.annotations["secret.kuadrant.io/plan-id"] ==
+        "gold"
+      limits:
+        daily: 10000
+    - tier: silver
+      predicate: >-
+        has(auth.identity) && auth.identity.metadata.annotations["secret.kuadrant.io/plan-id"] ==
+        "silver"
+      limits:
+        daily: 1000
+    - tier: bronze
+      predicate: >-
+        has(auth.identity) && auth.identity.metadata.annotations["secret.kuadrant.io/plan-id"] ==
+        "bronze"
+      limits:
+        daily: 100
+---
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: gamestore
+  namespace: kuadrant-demo-gamestore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: gamestore
+  rules:
+    authentication:
+      api-key-users:
+        apiKey:
+          selector:
+            matchLabels:
+              demo.kuadrant.io/api: gamestore
+          allNamespaces: true
+        credentials:
+          authorizationHeader:
+            prefix: APIKEY
+---
+apiVersion: extensions.kuadrant.io/v1alpha1
+kind: PlanPolicy
+metadata:
+  name: gamestore-plans
+  namespace: kuadrant-demo-gamestore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: gamestore
+  plans:
+    - tier: gold
+      predicate: >-
+        has(auth.identity) && auth.identity.metadata.annotations["secret.kuadrant.io/plan-id"] ==
+        "gold"
+      limits:
+        daily: 10000
+    - tier: silver
+      predicate: >-
+        has(auth.identity) && auth.identity.metadata.annotations["secret.kuadrant.io/plan-id"] ==
+        "silver"
+      limits:
+        daily: 1000
+    - tier: bronze
+      predicate: >-
+        has(auth.identity) && auth.identity.metadata.annotations["secret.kuadrant.io/plan-id"] ==
+        "bronze"
+      limits:
+        daily: 100
+---
+apiVersion: kuadrant.io/v1
+kind: RateLimitPolicy
+metadata:
+  name: inventory
+  namespace: kuadrant-demo-gamestore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: inventory
+  limits:
+    public:
+      rates:
+        - limit: 10
+          window: 10s
