@@ -12,7 +12,22 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
+  name: mcp-gateway-auth-system
+---
+apiVersion: v1
+kind: Namespace
+metadata:
   name: toystore
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mcp-demo-gateway-params
+  namespace: gateway-system
+data:
+  service: |
+    spec:
+      loadBalancerClass: oinc.io/metallb
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -21,6 +36,11 @@ metadata:
   namespace: gateway-system
 spec:
   gatewayClassName: istio
+  infrastructure:
+    parametersRef:
+      group: ''
+      kind: ConfigMap
+      name: mcp-demo-gateway-params
   listeners:
     - name: mcp
       port: 80
@@ -58,6 +78,141 @@ spec:
     sectionName: mcp
   publicHost: mcp.127-0-0-1.sslip.io
   privateHost: mcp-gateway-istio.gateway-system.svc.cluster.local:80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: mcp-gateway-auth
+  namespace: gateway-system
+spec:
+  gatewayClassName: istio
+  infrastructure:
+    parametersRef:
+      group: ''
+      kind: ConfigMap
+      name: mcp-demo-gateway-params
+  listeners:
+    - name: mcp
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: mcp-demo-gateway-auth
+  namespace: gateway-system
+spec:
+  from:
+    - group: mcp.kuadrant.io
+      kind: MCPGatewayExtension
+      namespace: mcp-gateway-auth-system
+  to:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: mcp-gateway-auth
+---
+# Each extension needs its own namespace because broker resource names are fixed.
+apiVersion: mcp.kuadrant.io/v1
+kind: MCPGatewayExtension
+metadata:
+  name: mcp-gateway-auth-extension
+  namespace: mcp-gateway-auth-system
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: mcp-gateway-auth
+    namespace: gateway-system
+    sectionName: mcp
+  publicHost: mcp-auth.127-0-0-1.sslip.io
+  privateHost: mcp-gateway-auth-istio.gateway-system.svc.cluster.local:80
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mcp-demo-token
+  namespace: kuadrant-system
+  labels:
+    app: mcp-demo-auth
+    authorino.kuadrant.io/managed-by: authorino
+stringData:
+  api_key: token
+---
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: mcp-demo-auth
+  namespace: gateway-system
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: mcp-gateway-auth
+    sectionName: mcp
+  rules:
+    authentication:
+      bearer-token:
+        apiKey:
+          selector:
+            matchLabels:
+              app: mcp-demo-auth
+        credentials:
+          authorizationHeader:
+            prefix: Bearer
+    response:
+      unauthenticated:
+        code: 401
+        headers:
+          WWW-Authenticate:
+            value: Bearer
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mcp-demo-auth-authorino
+  namespace: kuadrant-system
+spec:
+  podSelector:
+    matchLabels:
+      authorino-resource: authorino
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: gateway-system
+          podSelector:
+            matchLabels:
+              gateway.networking.k8s.io/gateway-name: mcp-gateway-auth
+      ports:
+        - protocol: TCP
+          port: 50051
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mcp-demo-auth-wasm
+  namespace: kuadrant-system
+spec:
+  podSelector:
+    matchLabels:
+      app: kuadrant
+      control-plane: controller-manager
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: gateway-system
+          podSelector:
+            matchLabels:
+              gateway.networking.k8s.io/gateway-name: mcp-gateway-auth
+      ports:
+        - protocol: TCP
+          port: 8082
 ---
 # Stateful sample: preserve the existing toystore_* tools and prompt.
 apiVersion: apps/v1
@@ -123,6 +278,9 @@ metadata:
 spec:
   parentRefs:
     - name: mcp-gateway
+      namespace: gateway-system
+      sectionName: mcp
+    - name: mcp-gateway-auth
       namespace: gateway-system
       sectionName: mcp
   hostnames:
@@ -208,6 +366,9 @@ metadata:
 spec:
   parentRefs:
     - name: mcp-gateway
+      namespace: gateway-system
+      sectionName: mcp
+    - name: mcp-gateway-auth
       namespace: gateway-system
       sectionName: mcp
   hostnames:
