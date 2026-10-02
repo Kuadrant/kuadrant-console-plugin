@@ -1,7 +1,10 @@
-.PHONY: oinc oinc-backend oinc-mcp-demo oinc-sync-plugin-proxy oinc-teardown
+.PHONY: oinc oinc-backend oinc-demo oinc-mcp-demo oinc-sync-plugin-proxy oinc-teardown
 
 oinc:
-	./start-local.sh
+	./start-local.sh $(ARGS)
+
+oinc-demo:
+	bash ./scripts/setup-demo.sh
 
 oinc-backend:
 	./scripts/build-inspector-backend.sh
