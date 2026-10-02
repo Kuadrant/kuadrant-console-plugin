@@ -134,6 +134,43 @@ esac`,
   assert.doesNotMatch(result.stdout, /demo installed/);
 });
 
+for (const mcpExitCode of [0, 1]) {
+  test(`demo installer ${
+    mcpExitCode
+      ? 'stops when MCP setup fails'
+      : 'refreshes the shared MCP samples before API samples'
+  }`, (t) => {
+    const s = sandbox(t);
+    s.stub(
+      'scripts/setup-mcp-demo.sh',
+      `echo shared-mcp-demo >> "$DEMO_TEST_LOG"\nexit ${mcpExitCode}`,
+    );
+    s.stub(
+      'bin/kubectl',
+      `
+echo "$*" >> "$DEMO_TEST_LOG"
+case "$*" in
+  'config current-context') echo oinc ;;
+  *'get apikeyrequests -n kuadrant-demo-toystore'*)
+    printf '%s\\n' kuadrant-demo-consumer/alice-toystore kuadrant-demo-consumer/bob-toystore ;;
+  *'get apikeyrequests -n kuadrant-demo-gamestore'*)
+    echo kuadrant-demo-consumer/gamestore-client ;;
+esac`,
+    );
+    const result = s.run('scripts/setup-demo.sh');
+    const commands = s.commands();
+    assert.equal(commands.split('\n').filter((line) => line === 'shared-mcp-demo').length, 1);
+    assert.equal(result.status, mcpExitCode, result.stderr);
+    if (mcpExitCode) {
+      assert.doesNotMatch(commands, /apply -f/);
+      assert.doesNotMatch(result.stdout, /demo installed/);
+    } else {
+      assert.ok(commands.indexOf('shared-mcp-demo') < commands.indexOf('apply -f'));
+      assert.match(result.stdout, /demo installed/);
+    }
+  });
+}
+
 test('sample references resolve and consumer plans match their product policies', () => {
   const resources = ['namespaces', 'gateway', 'apis', 'products', 'consumers'].flatMap((file) =>
     yaml.loadAll(readFileSync(join(__dirname, 'demo', `${file}.yaml`), 'utf8')),

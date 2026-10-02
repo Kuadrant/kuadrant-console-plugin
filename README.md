@@ -47,8 +47,8 @@ Prerequisites: [oinc v0.5.3 or newer](https://github.com/jasonmadigan/oinc/relea
 
 ```bash
 make oinc                   # create cluster + start plugin dev server with hot reload
-make oinc ARGS=--demo       # also seed sample APIs, policies, products, and key requests
-make oinc-demo              # install/refresh those samples on an existing oinc cluster
+make oinc ARGS=--demo       # seed sample APIs, products, and keys; refresh MCP demos
+make oinc-demo              # install/refresh all demos on an existing oinc cluster
 make oinc-backend           # rebuild the MCP Inspector backend from the working tree
 make oinc-mcp-demo          # install/refresh stateful + stateless MCP demo servers
 make oinc-sync-plugin-proxy # manually resync an operator-reconciled backend proxy
@@ -64,6 +64,11 @@ four HTTPRoutes, AuthPolicies, PlanPolicies, a RateLimitPolicy, four APIProducts
 flows. Resources live in dedicated `kuadrant-demo-*` namespaces. No DNS provider
 or TLS configuration is needed. See [the demo guide](docs/oinc-demo.md) for the
 resource inventory, traffic examples, and cleanup.
+
+Both commands also run the shared MCP demo installer used by `make oinc-mcp-demo`,
+so existing clusters receive the current MCP samples.
+See [MCP demo servers](docs/mcp-inspector.md#demo-servers) for the extensions,
+protocols, and authentication options included by that installer.
 
 Setup includes the `mcp-gateway` addon to create the demo Gateway and
 MCPGatewayExtension. Since [oinc v0.5.0](https://github.com/jasonmadigan/oinc/pull/33),

@@ -37,6 +37,9 @@ done
 kube wait --for=create deployment/developer-portal-controller -n kuadrant-system --timeout=180s
 kube rollout status deployment/developer-portal-controller -n kuadrant-system --timeout=180s
 
+log "refreshing the shared MCP demo resources..."
+bash "${SCRIPT_DIR}/setup-mcp-demo.sh"
+
 log "installing the demo Gateway, backends, and policies..."
 kube apply -f "${SCRIPT_DIR}/demo/namespaces.yaml"
 kube apply -f "${SCRIPT_DIR}/demo/gateway.yaml"

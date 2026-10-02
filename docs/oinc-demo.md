@@ -17,6 +17,12 @@ be rerun: manifests are applied by name and existing approval decisions are
 preserved. Plain `make oinc` leaves this optional demo set alone. The existing
 MCP demo remains part of the standard cluster setup.
 
+Both `make oinc ARGS=--demo` and `make oinc-demo` also refresh the shared MCP
+samples through `scripts/setup-mcp-demo.sh`, including on existing clusters.
+MCP configuration stays in its existing setup scripts. See
+[MCP demo servers](mcp-inspector.md#demo-servers) for the available extensions
+and credentials.
+
 ## Resources
 
 All sample backends use Kuadrant's talker API image, which returns information
@@ -99,6 +105,8 @@ kubectl --context=oinc delete namespace \
   kuadrant-demo-consumer kuadrant-demo-gamestore \
   kuadrant-demo-toystore kuadrant-demo-gateway
 ```
+
+The shared MCP samples live in separate namespaces and remain installed.
 
 Run `make oinc-demo` again for a fresh set of pending requests, or
 `make oinc-teardown` to remove the entire development cluster.
