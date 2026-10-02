@@ -173,8 +173,9 @@ Two easy ways to deploy.
 
 ### Via `kubectl` or `oc`
 
-`install.yaml` uses the 4.22+ `latest` image. For OCP 4.21 and earlier, replace
-it with `quay.io/kuadrant/console-plugin:v0.6.0` before applying the manifest.
+`install.yaml` on `main` uses the development `latest` image for OCP 4.22+.
+For stable releases or older consoles, follow the
+[release image and manifest guidance](docs/versioning.md#deployment-manifests).
 
 `oc apply -f install.yaml`
 
@@ -254,20 +255,34 @@ Update `settings.json` (File > Preferences > Settings):
 
 ## Version matrix
 
-| OpenShift console | Image    | Branch        |
-| ----------------- | -------- | ------------- |
-| 4.21 and earlier  | `v0.6.0` | `release-0.x` |
-| 4.22 and later    | `v0.7.0` | `main`        |
+Upstream images selected by the Kuadrant operator:
 
-`v0.6.0` declares `latestSupportedOpenshiftVersion: "4.19"`, but is supported
-through 4.21. The `release-0.x` branch corrects the metadata and receives
-backports.
+| OpenShift console        | Image tag  | React | Server | Release branch   |
+| ------------------------ | ---------- | ----- | ------ | ---------------- |
+| Below 4.20 (legacy tier) | `v0.1.5-2` | 17    | nginx  | `release-v0.1.5` |
+| 4.20–4.21                | `v0.6.0`   | 17    | nginx  | `release-0.x`    |
+| 4.22                     | `v0.7.0`   | 18    | Go     | `release-0.7`    |
+| 4.23 (future)            | `v0.7.0`   | 18    | Go     | `release-0.7`    |
+| 5.0 (future)             | `v0.7.0`   | 18    | Go     | `release-0.7`    |
 
-`v0.7.0` is the stable 4.22+ release; `latest` tracks development on `main`.
-Choose the image by OpenShift version, not by which tag looks newest.
+4.23 and 5.0 target the same upcoming console generation; final-release
+validation is pending. Use release tags for stable images; `latest` tracks development.
 
-See [Versioning and OpenShift compatibility](docs/versioning.md) for runtime
-versions and loading rules.
+See [OpenShift compatibility](docs/versioning.md) for runtime versions,
+migration history and loading requirements.
+
+### Operator image environment variables
+
+Set these on the `kuadrant-operator` Deployment:
+
+| Environment variable                  | Selected on    | Upstream release image                     |
+| ------------------------------------- | -------------- | ------------------------------------------ |
+| `RELATED_IMAGE_CONSOLE_PLUGIN_LATEST` | OCP 4.22+      | `quay.io/kuadrant/console-plugin:v0.7.0`   |
+| `RELATED_IMAGE_CONSOLE_PLUGIN_SDK1`   | OCP 4.20–4.21  | `quay.io/kuadrant/console-plugin:v0.6.0`   |
+| `RELATED_IMAGE_CONSOLE_PLUGIN_PF5`    | Below OCP 4.20 | `quay.io/kuadrant/console-plugin:v0.1.5-2` |
+
+See [operator image configuration](docs/versioning.md#operator-image-environment-variables)
+for tier names, release pinning and downstream RHCL image mapping.
 
 ## Maintenance
 
