@@ -47,9 +47,9 @@ jobs:
             type=raw,value=${{ github.sha }},enable={{is_default_branch}}
             # Dev: latest tag on push to main
             type=raw,value=latest,enable={{is_default_branch}}
-            # Release branch: branch-name-latest (e.g. release-0.x-latest)
+            # Release branch: branch-name-latest (e.g. release-0.6-latest)
             type=raw,value=${{ github.ref_name }}-latest,enable=${{ startsWith(github.ref_name, 'release-') }}
-            # Release branch: branch-name-sha (e.g. release-0.x-abc1234)
+            # Release branch: branch-name-sha (e.g. release-0.6-abc1234)
             type=raw,value=${{ github.ref_name }}-${{ github.sha }},enable=${{ startsWith(github.ref_name, 'release-') }}
             # Release: semver tag (e.g. v0.4.0)
             type=semver,pattern={{raw}}

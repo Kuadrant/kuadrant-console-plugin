@@ -123,34 +123,36 @@ If you want to submit code changes to the project, here are some guidelines:
 
 ## Branch Model and Backport Policy
 
-The project maintains two long-lived branches:
+Maintenance branches use the `release-X.Y` name matching their minor release:
 
 - **`main`** -- tracks the latest OpenShift Console SDK and serves OCP 4.22+.
-- **`release-0.x`** -- supports OCP <=4.21 (pre-SDK 4.22, React 17, react-router 5).
+- **`release-0.6`** -- maintains v0.6 for OCP 4.20–4.21 (SDK 1.x, React 17, react-router 5).
+- **`release-0.7`** -- maintains v0.7 for OCP 4.22 (SDK 4.22, React 18, react-router 7).
+- **`release-0.3`** and **`release-0.4`** -- retain the earlier release streams for applicable backports.
 
-### Why two branches?
+### Console compatibility
 
-The OpenShift Console uses Module Federation singletons (`react`, `react-router`) with `allowFallback: false`. A plugin built against SDK 4.22 (React 18, react-router 7) will fail at runtime on consoles that provide the older singletons. The `release-0.x` branch keeps the plugin compatible with those older consoles.
+The OpenShift Console uses Module Federation singletons (`react`, `react-router`) with `allowFallback: false`. The v0.7 plugin requires SDK 4.22 and cannot load on older consoles. The `release-0.6` branch preserves the SDK 1.x / React 17 build selected by the operator on OCP 4.20–4.21.
 
 ### Backport policy
 
-Bug fixes and non-SDK-dependent features should be backported from `main` to `release-0.x` when they apply. To backport:
+Backport applicable fixes from `main` to the branch matching the affected minor release. For v0.6:
 
-1. Open a PR targeting `release-0.x` with the cherry-picked commits.
+1. Check that `release-0.6` contains the affected feature and is missing the fix, then open a PR with the cherry-picked commits.
 2. Prefix the PR title with `[backport]` for traceability.
-3. CI runs the same checks on both branches.
+3. Run the checks configured for the target branch; release streams have different features and test suites.
 
-SDK-dependent changes (anything requiring React 18, react-router 7, or SDK 4.22+ APIs) cannot be backported.
+Changes requiring React 18, react-router 7, or SDK 4.22+ APIs cannot be backported to v0.6 or earlier streams.
 
 ### Image tags
 
-Each branch publishes distinct container images to Quay.io:
+This branch's build workflow publishes distinct container images to Quay.io:
 
-| Branch | Image tags |
-|---|---|
-| `main` | `latest`, `<sha>` |
-| `release-0.x` | `release-0.x-latest`, `release-0.x-<sha>` |
-| Tags (`vX.Y.Z`) | `vX.Y.Z` |
+| Branch          | Image tags                                |
+| --------------- | ----------------------------------------- |
+| `main`          | `latest`, `<sha>`                         |
+| `release-0.6`   | `release-0.6-latest`, `release-0.6-<sha>` |
+| Tags (`vX.Y.Z`) | `vX.Y.Z`                                  |
 
 ## Commit Messages
 
