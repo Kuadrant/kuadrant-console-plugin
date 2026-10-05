@@ -10,7 +10,7 @@ The plugin adds three main sections to the OpenShift console:
 
 The **Kuadrant** section provides gateway and policy management with the following pages:
 
-- **Overview** - dashboard showing Gateway health, policy counts, and HTTPRoutes in the selected namespace or across the cluster
+- **Overview** - dashboard showing Gateway health, a paginated policy list, and HTTPRoutes in the selected namespace or across the cluster
 - **Gateways** - create and edit Gateways using forms or YAML. Forms cover GatewayClass, listeners, hostnames, TLS, and allowed routes.
 - **HTTPRoutes** - create and edit HTTPRoutes using forms or YAML. Forms cover parent Gateways, hostnames, request matching, filters, and backend services.
 - **Attached resources** - Gateway and HTTPRoute detail pages show related routing resources and the Kuadrant policies that apply to them
