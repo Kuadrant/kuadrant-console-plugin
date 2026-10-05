@@ -95,8 +95,11 @@ spec:
     name: ${gateway}
   rules:
     authentication:
-      apiKey:
-        allNamespaces: true
+      "api-key-auth":
+        apiKey:
+          selector:
+            matchLabels:
+              app: test
 `);
   });
 
@@ -114,10 +117,10 @@ spec:
       await expect(attachedTab).toBeVisible({ timeout: 15_000 });
       await attachedTab.click();
 
-      await expect(page.getByRole('heading', { name: 'Attached Resources' })).toBeVisible({
+      await expect(page.getByText('Attached Resources')).toBeVisible({
         timeout: 15_000,
       });
-      await expect(page.getByRole('heading', { name: 'Attached Policies' })).toBeVisible();
+      await expect(page.getByText('Attached Policies')).toBeVisible();
 
       await expect(page.locator(`a[data-test="${httproute}"]`).first()).toBeVisible({
         timeout: 15_000,
@@ -131,7 +134,9 @@ spec:
       await expect(httprouteRow.locator('text=HTTPRoute')).toBeVisible();
 
       const authpolicyRow = page.locator(`tr:has(a[data-test="${authpolicy}"])`);
-      await expect(authpolicyRow.locator('text=AuthPolicy')).toBeVisible();
+      await expect(
+        authpolicyRow.getByRole('gridcell', { name: 'AuthPolicy', exact: true }),
+      ).toBeVisible();
     },
   );
 
@@ -145,10 +150,10 @@ spec:
     await expect(attachedTab).toBeVisible({ timeout: 15_000 });
     await attachedTab.click();
 
-    await expect(page.getByRole('heading', { name: 'Attached Resources' })).toBeVisible({
+    await expect(page.getByText('Attached Resources')).toBeVisible({
       timeout: 15_000,
     });
-    await expect(page.getByRole('heading', { name: 'Attached Policies' })).toBeVisible();
+    await expect(page.getByText('Attached Policies')).toBeVisible();
 
     await expect(page.locator(`a[data-test="${gateway}"]`).first()).toBeVisible({
       timeout: 15_000,
