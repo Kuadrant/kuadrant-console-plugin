@@ -24,9 +24,9 @@ The **Kuadrant** section provides gateway and policy management with the followi
 Use the **MCP management** section to set up MCP (Model Context Protocol) gateways, monitor registered servers, and test tools and prompts:
 
 - **Overview** - summary cards show MCP Gateway health and server readiness. Filterable tables show Gateways, gateway extensions, registered servers, attached HTTPRoutes, ReferenceGrants, and associated Kuadrant policies in the selected namespace or across the cluster.
-- **Gateway setup** - set up an MCP gateway using existing or new Gateway, HTTPRoute, and MCPGatewayExtension resources. Setup verifies resource creation and reports extension readiness.
-- **Server registration** - register an MCP server against an existing or new HTTPRoute, with a prefix for its tools
-- **External server registration** - connect to MCP servers outside the cluster by configuring Istio ServiceEntry and DestinationRule resources, an HTTPRoute, a credential Secret, and an MCPServerRegistration
+- **Gateway setup wizard** - set up an MCP gateway using existing or new Gateway, HTTPRoute, and MCPGatewayExtension resources. Setup verifies resource creation and reports extension readiness.
+- **Server registration wizard** - register an MCP server against an existing or new HTTPRoute, with a prefix for its tools
+- **External server registration wizard** - connect to MCP servers outside the cluster by configuring Istio ServiceEntry and DestinationRule resources, an HTTPRoute, a credential Secret, and an MCPServerRegistration
 - **Policy management** - create authentication, rate limiting, DNS, and TLS policies for MCP Gateways and server routes
 - **MCP Inspector** - discover and search tools and prompts exposed by a Ready MCPGatewayExtension, run tools, and generate prompt text. See the [MCP Inspector guide](mcp-inspector.md).
 
