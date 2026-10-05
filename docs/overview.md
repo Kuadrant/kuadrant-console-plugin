@@ -11,8 +11,9 @@ The plugin adds three main sections to the OpenShift console:
 The **Kuadrant** section provides gateway and policy management with the following pages:
 
 - **Overview** - dashboard showing Gateway health, policy counts, and HTTPRoutes in the selected namespace or across the cluster
-- **Gateway and HTTPRoute management** - create and edit routing resources using forms or YAML. Gateway forms cover GatewayClass, listeners, hostnames, TLS, and allowed routes. HTTPRoute forms cover parent Gateways, hostnames, request matching, filters, and backend services.
-- **Attached resources** - Gateway and HTTPRoute detail pages show related routing resources and attached Kuadrant policies, helping you understand which policies apply to traffic
+- **Gateways** - create and edit Gateways using forms or YAML. Forms cover GatewayClass, listeners, hostnames, TLS, and allowed routes.
+- **HTTPRoutes** - create and edit HTTPRoutes using forms or YAML. Forms cover parent Gateways, hostnames, request matching, filters, and backend services.
+- **Attached resources** - Gateway and HTTPRoute detail pages show related routing resources and the Kuadrant policies that apply to them
 - **Policies** - tabbed list of all Kuadrant policy types (AuthPolicy, RateLimitPolicy, DNSPolicy, TLSPolicy, and extension policies). Supports create, edit, and delete with RBAC-aware UI controls.
 - **API Products** - manage published API products that can be consumed through the API Catalog
 - **Policy Topology** - visual graph of the relationships between Gateways, HTTPRoutes, and the Kuadrant policies attached to them
@@ -20,15 +21,18 @@ The **Kuadrant** section provides gateway and policy management with the followi
 
 ### MCP management section
 
-The **MCP management** section provides setup, monitoring, and testing for MCP (Model Context Protocol) gateway infrastructure. It brings the Gateway, its routing configuration, and registered MCP servers into one view:
+Use the **MCP management** section to set up MCP (Model Context Protocol) gateways, monitor registered servers, and test tools and prompts:
 
 - **Overview** - summary cards show MCP Gateway health and server readiness. Filterable tables show Gateways, gateway extensions, registered servers, attached HTTPRoutes, ReferenceGrants, and associated Kuadrant policies in the selected namespace or across the cluster.
-- **Gateway setup** - assemble MCP infrastructure using existing or newly created Gateway, HTTPRoute, and MCPGatewayExtension resources. Setup verifies resource creation and reports extension readiness.
-- **Server registration** - register an MCP server against an existing or newly created HTTPRoute, with a tool prefix and optional credentials. External server registration also configures Istio ServiceEntry and DestinationRule resources and a credential Secret for connecting to servers outside the cluster.
+- **Gateway setup** - set up an MCP gateway using existing or new Gateway, HTTPRoute, and MCPGatewayExtension resources. Setup verifies resource creation and reports extension readiness.
+- **Server registration** - register an MCP server against an existing or new HTTPRoute, with a prefix for its tools
+- **External server registration** - connect to MCP servers outside the cluster by configuring Istio ServiceEntry and DestinationRule resources, an HTTPRoute, a credential Secret, and an MCPServerRegistration
 - **Policy management** - create authentication, rate limiting, DNS, and TLS policies for MCP Gateways and server routes
-- **MCP Inspector** - discover and search tools and prompts exposed by a Ready MCPGatewayExtension. Tool inputs are generated from JSON schemas and can be validated before execution. You can run tools, generate prompts, and inspect results alongside the JSON-RPC request and response. The Inspector supports automatic protocol discovery, explicit protocol selection, and bearer tokens for gateways that require authentication. See the [MCP Inspector guide](mcp-inspector.md).
+- **MCP Inspector** - discover and search tools and prompts exposed by a Ready MCPGatewayExtension, run tools, and generate prompt text. See the [MCP Inspector guide](mcp-inspector.md).
 
-The Inspector relays requests through the Console plugin backend to the selected gateway. The backend uses your OpenShift credentials to discover the Gateway and extension; gateway bearer tokens are separate and remain in browser memory along with MCP session IDs.
+The Inspector builds tool input forms from JSON schemas and validates inputs before execution. Results appear alongside the JSON-RPC request and response. It supports automatic protocol discovery or an explicit protocol version, and bearer tokens for gateways that require authentication.
+
+Inspector requests pass through the Console plugin backend to the selected gateway. The backend uses your OpenShift credentials to discover the Gateway and extension. Gateway bearer tokens and MCP session IDs stay in browser memory.
 
 Key resources managed on this page:
 
