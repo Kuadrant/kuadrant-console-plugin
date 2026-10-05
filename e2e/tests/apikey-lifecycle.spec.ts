@@ -502,11 +502,11 @@ EOF
       await spaNavigate(page, `/kuadrant/apikeys/ns/${consumerNs}`);
       await page.waitForLoadState('domcontentloaded');
       const expiredRow = page.locator(`tr:has-text("${keyName}")`);
+      await expect(expiredRow.getByRole('gridcell', { name: 'Expired', exact: true })).toBeVisible({
+        timeout: 15_000,
+      });
       await expect(
-        expiredRow.locator('td[data-label="Status"]:has-text("Expired")'),
-      ).toBeVisible({ timeout: 15_000 });
-      await expect(
-        expiredRow.locator(`td[data-label="Expires"]:has-text("${PAST_LABEL}")`),
+        expiredRow.getByRole('gridcell', { name: `Expired (${PAST_LABEL})`, exact: true }),
       ).toBeVisible();
     },
   );

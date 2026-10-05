@@ -35,6 +35,14 @@ async function gotoPage(page: Page, path: string): Promise<void> {
   await dismissConsoleTour(page);
 }
 
+async function selectEditorView(page: Page, name: 'Form' | 'YAML'): Promise<void> {
+  // Supported plugin versions use either tabs or radio buttons.
+  await page
+    .getByRole('tab', { name, exact: true })
+    .or(page.getByRole('radio', { name, exact: true }))
+    .click();
+}
+
 async function expectEditorContains(page: Page, text: string): Promise<void> {
   await page.waitForSelector('.monaco-editor .view-lines', {
     state: 'visible',
@@ -296,14 +304,14 @@ spec:
     // Switch to YAML and verify the listener is reflected in the editor before proceeding.
     // This acts as a deterministic sync point: the editor only contains 'https' once
     // the yamlContent useEffect has re-run with the updated gatewayObject.
-    await page.getByRole('tab', { name: 'YAML' }).click();
+    await selectEditorView(page, 'YAML');
     await expectEditorContains(page, 'https');
 
     // Switch back to form, then to YAML for the full assertion pass
-    await page.getByRole('tab', { name: 'Form' }).click();
+    await selectEditorView(page, 'Form');
 
     // Switch to YAML
-    await page.getByRole('tab', { name: 'YAML' }).click();
+    await selectEditorView(page, 'YAML');
 
     await expectEditorContains(page, gatewayName);
     await expectEditorContains(page, 'istio');
@@ -312,7 +320,7 @@ spec:
     await expectEditorContains(page, 'HTTPS');
 
     // Switch back to form
-    await page.getByRole('tab', { name: 'Form' }).click();
+    await selectEditorView(page, 'Form');
 
     await expect(page.locator('#gateway-name')).toHaveValue(gatewayName);
     await expect(page.locator('#gateway-class')).toHaveValue('istio');
