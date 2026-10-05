@@ -121,6 +121,39 @@ If you want to submit code changes to the project, here are some guidelines:
 
     Go to the original repository and click on **New Pull Request**. Fill in the PR template with a clear description, the issue it fixes, and your test plan.
 
+## Branch Model and Backport Policy
+
+Maintenance branches use the `release-X.Y` name matching their minor release:
+
+- **`main`** -- tracks the latest OpenShift Console SDK and serves OCP 4.22+.
+- **`release-0.6`** -- maintains v0.6 for OCP 4.20–4.21 (SDK 1.x, React 17, react-router 5).
+- **`release-0.7`** -- maintains v0.7 for OCP 4.22 (SDK 4.22, React 18, react-router 7).
+- **`release-0.3`** and **`release-0.4`** -- retain the earlier release streams for applicable backports.
+
+### Console compatibility
+
+The OpenShift Console uses Module Federation singletons (`react`, `react-router`) with `allowFallback: false`. The v0.7 plugin requires SDK 4.22 and cannot load on older consoles. The `release-0.6` branch preserves the SDK 1.x / React 17 build selected by the operator on OCP 4.20–4.21.
+
+### Backport policy
+
+Backport applicable fixes from `main` to the branch matching the affected minor release. For v0.6:
+
+1. Check that `release-0.6` contains the affected feature and is missing the fix, then open a PR with the cherry-picked commits.
+2. Prefix the PR title with `[backport]` for traceability.
+3. Run the checks configured for the target branch; release streams have different features and test suites.
+
+Changes requiring React 18, react-router 7, or SDK 4.22+ APIs cannot be backported to v0.6 or earlier streams.
+
+### Image tags
+
+This branch's build workflow publishes distinct container images to Quay.io:
+
+| Branch          | Image tags                                |
+| --------------- | ----------------------------------------- |
+| `main`          | `latest`, `<sha>`                         |
+| `release-0.6`   | `release-0.6-latest`, `release-0.6-<sha>` |
+| Tags (`vX.Y.Z`) | `vX.Y.Z`                                  |
+
 ## Commit Messages
 
 Follow the [Conventional Commits](https://www.conventionalcommits.org/) specification:
