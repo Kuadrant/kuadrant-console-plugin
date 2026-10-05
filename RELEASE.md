@@ -82,7 +82,11 @@ never reset it to the tag. If absent, create only that branch from the tag's
 verified commit:
 
 ```shell
-git push upstream "${HEAD_SHA}:refs/heads/release-${VERSION%.*}"
+: "${VERSION:?Set VERSION to the verified release version}"
+TAG="v${VERSION}"
+git verify-tag "$TAG" &&
+  HEAD_SHA=$(git rev-parse "${TAG}^{commit}") &&
+  git push upstream "${HEAD_SHA}:refs/heads/release-${VERSION%.*}"
 ```
 
 Use this only after verifying the release tag and confirming the branch is

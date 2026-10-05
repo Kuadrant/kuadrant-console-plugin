@@ -8,6 +8,9 @@ disable-model-invocation: true
 
 Arguments supplied by the user: `$ARGUMENTS`
 
+Require Git 2.48 or later for relative worktrees; check `git --version` before
+proceeding.
+
 Follow the post-release guidance in `RELEASE.md`. Accept `minor` or `patch`,
 with an optional canonical `X.Y.Z-dev` assertion. If the release plan already
 specifies the next version, use it; otherwise ask which increment is intended.
@@ -19,9 +22,10 @@ Reject extra arguments and never evaluate unvalidated input in a shell.
 2. Read both version fields from `upstream/main` and the release tag. Calculate
    the next version from that stable release: `X.(Y+1).0-dev` for `minor`, or
    `X.Y.(Z+1)-dev` for `patch`. Require any supplied assertion to match. If main
-   already has that version, report no change needed. If main has a newer
-   development version, preserve it; an older maintenance release must not
-   downgrade main. Stop on mismatched manifest fields or ambiguous versions.
+   already has that version or a newer development version, report no change
+   needed and stop before creating a worktree or commit. An older maintenance
+   release must not downgrade main. Stop on mismatched manifest fields or
+   ambiguous versions.
 3. Create a topic branch from `upstream/main` in a clean worktree. Place task
    worktrees inside the repository under `.worktrees/<task>` and use
    `git worktree add --relative-paths`. Preserve existing local work.
