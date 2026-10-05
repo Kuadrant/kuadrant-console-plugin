@@ -669,7 +669,6 @@ const MCPInspectorSession: React.FC<{ activeNamespace: string }> = ({ activeName
               >
                 <Tab eventKey={0} title={<TabTitleText>{t('Tools')}</TabTitleText>} />
                 <Tab eventKey={1} title={<TabTitleText>{t('Prompts')}</TabTitleText>} />
-                <Tab eventKey={2} title={<TabTitleText>{t('Logs')}</TabTitleText>} />
               </Tabs>
               {activeSection === 0 && (
                 <Stack hasGutter className="kuadrant-mcp-inspector-page__section">
@@ -749,11 +748,6 @@ const MCPInspectorSession: React.FC<{ activeNamespace: string }> = ({ activeName
                     )}
                   </StackItem>
                 </Stack>
-              )}
-              {activeSection === 2 && (
-                <EmptyState headingLevel="h2" titleText={t('Logs')}>
-                  <EmptyStateBody>{t('Session logs are not available yet.')}</EmptyStateBody>
-                </EmptyState>
               )}
             </StackItem>
           )}
