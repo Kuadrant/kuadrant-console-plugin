@@ -259,7 +259,7 @@ Upstream release images for the console versions listed below:
 
 | OpenShift console | Image tag | React | Server | Release branch |
 | ----------------- | --------- | ----- | ------ | -------------- |
-| 4.20–4.21         | `v0.6.0`  | 17    | nginx  | `release-0.x`  |
+| 4.20–4.21         | `v0.6.0`  | 17    | nginx  | `release-0.6`  |
 | 4.22              | `v0.7.0`  | 18    | Go     | `release-0.7`  |
 | 4.23 (future)     | `v0.7.0`  | 18    | Go     | `release-0.7`  |
 | 5.0 (future)      | `v0.7.0`  | 18    | Go     | `release-0.7`  |
