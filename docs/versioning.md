@@ -72,12 +72,12 @@ build compatible with older consoles.
 | Stream                  | OCP                                  | Release branch | Release  | `pluginAPI`  |
 | ----------------------- | ------------------------------------ | -------------- | -------- | ------------ |
 | React 18                | 4.22; 4.23 and 5.0 as future targets | `release-0.7`  | `v0.7.0` | `>=4.22.0-0` |
-| React 17 / PatternFly 6 | 4.20–4.21                            | `release-0.x`  | `v0.6.0` | `*`          |
+| React 17 / PatternFly 6 | 4.20–4.21                            | `release-0.6`  | `v0.6.0` | `*`          |
 
 This follows the operator's [version-based image selection](https://github.com/Kuadrant/kuadrant-operator/pull/2183).
 
 Although `v0.6.0` declares `latestSupportedOpenshiftVersion: "4.19"`, it
-supports 4.20–4.21; that field does not gate loading. The `release-0.x`
+supports 4.20–4.21; that field does not gate loading. The `release-0.6`
 branch corrects the metadata to 4.21.
 
 `main` develops the next release and publishes `latest`. Its local React
