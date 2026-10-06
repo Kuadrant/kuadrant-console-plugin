@@ -2,7 +2,10 @@ import * as React from 'react';
 import {
   Toolbar,
   ToolbarContent,
-  ToolbarFilter,
+  ToolbarGroup,
+  LabelGroup,
+  Label,
+  Button,
   ToolbarItem,
   Badge,
   Select,
@@ -12,7 +15,7 @@ import {
   MenuToggleElement,
   Popover,
 } from '@patternfly/react-core';
-import { HelpIcon } from '@patternfly/react-icons';
+import { HelpIcon, TimesCircleIcon } from '@patternfly/react-icons';
 import { useTranslation } from 'react-i18next';
 
 interface ResourceFilterToolbarProps {
@@ -31,6 +34,50 @@ interface ResourceFilterToolbarProps {
   onClearAll: () => void;
 }
 
+interface FilterLabelsProps {
+  id: string;
+  category: string;
+  labels: string[];
+  onDelete: (label: string) => void;
+  onClear: () => void;
+}
+
+const FilterLabels: React.FC<FilterLabelsProps> = ({ id, category, labels, onDelete, onClear }) => {
+  const { t } = useTranslation('plugin__kuadrant-console-plugin');
+  if (labels.length === 0) {
+    return null;
+  }
+
+  // Render the category ourselves to avoid PF 6.2's generated IDs colliding with the console.
+  return (
+    <ToolbarItem variant="label-group">
+      <div className="pf-v6-c-label-group pf-m-category">
+        <div className="pf-v6-c-label-group__main">
+          <span id={id} className="pf-v6-c-label-group__label" aria-hidden="true">
+            {category}
+          </span>
+          <LabelGroup aria-labelledby={id}>
+            {labels.map((label) => (
+              <Label key={label} variant="outline" onClose={() => onDelete(label)}>
+                {label}
+              </Label>
+            ))}
+          </LabelGroup>
+        </div>
+        <div className="pf-v6-c-label-group__close">
+          <Button
+            variant="plain"
+            hasNoPadding
+            aria-label={t('Close label group {{category}}', { category })}
+            onClick={onClear}
+            icon={<TimesCircleIcon />}
+          />
+        </div>
+      </div>
+    </ToolbarItem>
+  );
+};
+
 export const ResourceFilterToolbar: React.FC<ResourceFilterToolbarProps> = ({
   allResourceTypes,
   selectedResourceTypes,
@@ -47,7 +94,7 @@ export const ResourceFilterToolbar: React.FC<ResourceFilterToolbarProps> = ({
   const [isOpen, setIsOpen] = React.useState(false);
   const [isNamespaceOpen, setIsNamespaceOpen] = React.useState(false);
 
-  // Dedupe for label chips, badge count, and Select value — duplicates break ToolbarFilter keys and inflate the badge.
+  // Dedupe for label chips, badge count, and Select value.
   const uniqueSelectedResourceTypes = React.useMemo(
     () => [...new Set(selectedResourceTypes)],
     [selectedResourceTypes],
@@ -60,97 +107,75 @@ export const ResourceFilterToolbar: React.FC<ResourceFilterToolbarProps> = ({
     onSelect(event, selection);
   };
 
-  const handleDeleteLabel = (category: string, chip: string) => {
-    if (chip) {
-      onDeleteFilter(category, chip);
-    }
-  };
+  const showNamespaceFilter = allNamespaces?.length > 0 && !!onNamespaceSelect;
+  const namespaceLabels = showNamespaceFilter && selectedNamespace ? [selectedNamespace] : [];
+  const filterCount = uniqueSelectedResourceTypes.length + namespaceLabels.length;
 
   return (
-    <Toolbar
-      id="resource-filter-toolbar"
-      className="pf-m-toggle-group-container"
-      collapseListedFiltersBreakpoint="xl"
-      clearAllFilters={onClearAll}
-      clearFiltersButtonText={t('Reset Filters')}
-    >
+    <Toolbar id="resource-filter-toolbar" className="pf-m-toggle-group-container">
       <ToolbarContent>
         <ToolbarItem variant="label-group">
-          <ToolbarFilter
-            categoryName="Resource"
-            labels={uniqueSelectedResourceTypes}
-            deleteLabel={handleDeleteLabel}
-            deleteLabelGroup={onDeleteGroup}
+          <Select
+            aria-label="Resource filter"
+            role="menu"
+            isOpen={isOpen}
+            onOpenChange={setIsOpen}
+            onSelect={handleSelect}
+            selected={uniqueSelectedResourceTypes}
+            toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
+              <MenuToggle ref={toggleRef} onClick={() => setIsOpen(!isOpen)} isExpanded={isOpen}>
+                Resource{' '}
+                {uniqueSelectedResourceTypes.length > 0 && (
+                  <Badge isRead>{uniqueSelectedResourceTypes.length}</Badge>
+                )}
+              </MenuToggle>
+            )}
           >
+            <SelectList>
+              {allResourceTypes.map((type) => (
+                <SelectOption
+                  key={type}
+                  value={type}
+                  hasCheckbox
+                  isSelected={uniqueSelectedResourceTypes.includes(type)}
+                >
+                  {type}
+                </SelectOption>
+              ))}
+            </SelectList>
+          </Select>
+        </ToolbarItem>
+        {showNamespaceFilter && (
+          <ToolbarItem variant="label-group">
             <Select
-              aria-label="Resource filter"
+              aria-label="Namespace filter"
               role="menu"
-              isOpen={isOpen}
-              onOpenChange={setIsOpen}
-              onSelect={handleSelect}
-              selected={uniqueSelectedResourceTypes}
+              isOpen={isNamespaceOpen}
+              onOpenChange={setIsNamespaceOpen}
+              onSelect={(event, selection) => {
+                const ns = selection as string;
+                onNamespaceSelect(event, ns === selectedNamespace ? null : ns);
+                setIsNamespaceOpen(false);
+              }}
+              selected={selectedNamespace || ''}
               toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                <MenuToggle ref={toggleRef} onClick={() => setIsOpen(!isOpen)} isExpanded={isOpen}>
-                  Resource{' '}
-                  {uniqueSelectedResourceTypes.length > 0 && (
-                    <Badge isRead>{uniqueSelectedResourceTypes.length}</Badge>
-                  )}
+                <MenuToggle
+                  ref={toggleRef}
+                  onClick={() => setIsNamespaceOpen(!isNamespaceOpen)}
+                  isExpanded={isNamespaceOpen}
+                >
+                  Namespace {selectedNamespace && <Badge isRead>1</Badge>}
                 </MenuToggle>
               )}
             >
               <SelectList>
-                {allResourceTypes.map((type) => (
-                  <SelectOption
-                    key={type}
-                    value={type}
-                    hasCheckbox
-                    isSelected={uniqueSelectedResourceTypes.includes(type)}
-                  >
-                    {type}
+                {allNamespaces.map((ns) => (
+                  <SelectOption key={ns} value={ns} isSelected={selectedNamespace === ns}>
+                    {ns}
                   </SelectOption>
                 ))}
               </SelectList>
             </Select>
-          </ToolbarFilter>
-        </ToolbarItem>
-        {allNamespaces && allNamespaces.length > 0 && onNamespaceSelect && (
-          <ToolbarItem variant="label-group">
-            <ToolbarFilter
-              categoryName="Namespace"
-              labels={selectedNamespace ? [selectedNamespace] : []}
-              deleteLabel={() => onDeleteNamespace?.()}
-              deleteLabelGroup={() => onDeleteNamespace?.()}
-            >
-              <Select
-                aria-label="Namespace filter"
-                role="menu"
-                isOpen={isNamespaceOpen}
-                onOpenChange={setIsNamespaceOpen}
-                onSelect={(event, selection) => {
-                  const ns = selection as string;
-                  onNamespaceSelect(event, ns === selectedNamespace ? null : ns);
-                  setIsNamespaceOpen(false);
-                }}
-                selected={selectedNamespace || ''}
-                toggle={(toggleRef: React.Ref<MenuToggleElement>) => (
-                  <MenuToggle
-                    ref={toggleRef}
-                    onClick={() => setIsNamespaceOpen(!isNamespaceOpen)}
-                    isExpanded={isNamespaceOpen}
-                  >
-                    Namespace {selectedNamespace && <Badge isRead>1</Badge>}
-                  </MenuToggle>
-                )}
-              >
-                <SelectList>
-                  {allNamespaces.map((ns) => (
-                    <SelectOption key={ns} value={ns} isSelected={selectedNamespace === ns}>
-                      {ns}
-                    </SelectOption>
-                  ))}
-                </SelectList>
-              </Select>
-            </ToolbarFilter>
           </ToolbarItem>
         )}
         {allNamespaces && allNamespaces.length > 0 && (
@@ -174,6 +199,36 @@ export const ResourceFilterToolbar: React.FC<ResourceFilterToolbarProps> = ({
           </ToolbarItem>
         )}
       </ToolbarContent>
+      {filterCount > 0 && (
+        <div className="pf-v6-c-toolbar__content">
+          <ToolbarGroup visibility={{ default: 'hidden', xl: 'visible' }}>
+            <FilterLabels
+              id="kuadrant-topology-resource-label"
+              category={t('Resource')}
+              labels={uniqueSelectedResourceTypes}
+              onDelete={(label) => onDeleteFilter('Resource', label)}
+              onClear={onDeleteGroup}
+            />
+            <FilterLabels
+              id="kuadrant-topology-namespace-label"
+              category={t('Namespace')}
+              labels={namespaceLabels}
+              onDelete={() => onDeleteNamespace?.()}
+              onClear={() => onDeleteNamespace?.()}
+            />
+          </ToolbarGroup>
+          <ToolbarGroup variant="action-group-inline">
+            <ToolbarItem visibility={{ default: 'visible', xl: 'hidden' }}>
+              {t('{{count}} filters applied', { count: filterCount })}
+            </ToolbarItem>
+            <ToolbarItem>
+              <Button variant="link" isInline onClick={onClearAll}>
+                {t('Reset Filters')}
+              </Button>
+            </ToolbarItem>
+          </ToolbarGroup>
+        </div>
+      )}
     </Toolbar>
   );
 };
