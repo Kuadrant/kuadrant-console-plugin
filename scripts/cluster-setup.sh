@@ -111,27 +111,8 @@ data:
   service: |
     spec:
       loadBalancerClass: oinc.io/metallb
----
-apiVersion: gateway.networking.k8s.io/v1
-kind: Gateway
-metadata:
-  name: kuadrant-ingressgateway
-  namespace: gateway-system
-spec:
-  gatewayClassName: istio
-  infrastructure:
-    parametersRef:
-      group: ""
-      kind: ConfigMap
-      name: metallb-gateway-params
-  listeners:
-  - name: http
-    port: 80
-    protocol: HTTP
-    allowedRoutes:
-      namespaces:
-        from: All
 EOF
+render_http_route_gateway oinc | kubectl apply -f -
 
 log "waiting for demo gateway address assignment..."
 if ! kubectl wait gateway.gateway.networking.k8s.io/kuadrant-ingressgateway \

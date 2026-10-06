@@ -32,6 +32,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: consumer-alice
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 ---
 apiVersion: v1
 kind: Secret
@@ -63,6 +65,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: consumer-alice2
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 ---
 apiVersion: v1
 kind: Secret
@@ -94,6 +98,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: consumer-bob
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 ---
 apiVersion: v1
 kind: Secret
@@ -125,6 +131,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: consumer-bob2
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 ---
 apiVersion: v1
 kind: Secret
@@ -156,6 +164,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: consumer-carol
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 ---
 apiVersion: v1
 kind: Secret
@@ -187,6 +197,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: consumer-dave
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 ---
 apiVersion: v1
 kind: Secret
@@ -218,6 +230,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: consumer-ellen
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 ---
 apiVersion: v1
 kind: Secret
@@ -249,6 +263,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: consumer-frank
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 ---
 apiVersion: v1
 kind: Secret
@@ -280,6 +296,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: consumer-george
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 ---
 apiVersion: v1
 kind: Secret

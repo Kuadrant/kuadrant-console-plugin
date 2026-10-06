@@ -201,3 +201,19 @@ MCP_INSPECTOR_E2E_EXTENSION=mcp-gateway-system/mcp-gateway-extension \
 
 Use the same stateless arguments with `MCP_INSPECTOR_E2E_PROTOCOL=auto` to check
 automatic negotiation on the dual-protocol demo. The UI itself still defaults to Auto.
+
+### Run against an installed Console on an existing cluster
+
+The installed-console E2E runner skips the live journey unless
+`MCP_INSPECTOR_E2E_EXTENSION` points to a preexisting, Ready
+MCPGatewayExtension with a reachable MCP server. Set it to the extension's
+`namespace/name`, then run `yarn test:e2e:installed e2e/tests/mcp-inspector.spec.ts
+--grep 'connects to a live gateway'`. The runner does not install a live MCP
+target on an existing cluster. The standard `kuadrant-test/mcp-gateway-extension`
+fixture is for UI coverage and has no backend MCP server.
+
+Use `E2E_CONSOLE_IDENTITY_PROVIDER` when the Console has multiple login
+providers; its value must match the displayed provider name. Set
+`E2E_IGNORE_HTTPS_ERRORS=true` only for a Console route with an untrusted
+certificate; it affects browser TLS checks, while `oc` and `kubectl` still
+verify the API server certificate.
