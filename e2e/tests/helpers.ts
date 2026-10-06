@@ -132,9 +132,9 @@ async function waitForKuadrantPlugin(page: Page): Promise<void> {
   // expect rather than waitFor: locator handlers only run before actions and
   // auto-retrying assertion checks, so a late tour modal (which aria-hides the
   // nav) can be dismissed while this wait is in progress
-  await expect(page.getByRole('button', { name: 'Kuadrant', exact: true })).toBeVisible({
-    timeout: 30_000,
-  });
+  await expect(
+    page.getByRole('button', { name: /^(Kuadrant|Connectivity Link)$/, exact: true }),
+  ).toBeVisible({ timeout: 30_000 });
 }
 
 // SPA navigation using pushState - preserves redux state (including impersonation)
