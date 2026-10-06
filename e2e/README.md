@@ -38,6 +38,12 @@ npx playwright install chromium
 
 ## Running E2E Tests
 
+> **Release validation:** A release-cluster workflow is available for
+> release testing. Depending on the target cluster, it may require VPN access
+> and permission to access the release OpenShift cluster. Contributors should
+> use the normal local workflow below. See the
+> [release validation instructions](release/README.md) when required.
+
 ### Full Setup (First Time)
 
 ```bash
