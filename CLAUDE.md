@@ -92,18 +92,22 @@ All policy creation forms follow a similar structure:
 ### 3. Error Handling
 ```typescript
 const [errorAlertMsg, setErrorAlertMsg] = React.useState('');
+const navigate = useNavigate(); // from react-router
 try {
   await k8sCreate({ model, data: resource });
-  history.push(redirectUrl);
+  navigate(redirectUrl);
 } catch (error) {
   setErrorAlertMsg(error.message);
 }
 ```
 
 ### 4. RBAC Checks
+The project hook in `src/utils/resourceRBAC.tsx` returns `{ userRBAC, loading }`. Its `kind` input uses the plural resource name, and permissions are keyed by `<resource>-<verb>`.
 ```typescript
-const accessReviews = useAccessReviews(resourceAttributes);
-const canRead = accessReviews[0];
+const { userRBAC, loading } = useAccessReviews([
+  { group: 'kuadrant.io', kind: 'authpolicies', namespace: activeNamespace },
+]);
+const canListPolicies = !loading && userRBAC['authpolicies-list'] === true;
 ```
 
 ### 5. Configuration
@@ -142,10 +146,10 @@ METRICS_WORKLOAD_SUFFIX: "-openshift-default"
 - **APIProductAPIKeysTab**: API keys tab showing approved keys for the product
 - **APIKeyApprovalPage**: Admin interface for reviewing and approving API key requests
 - **MyAPIKeysPage**: User interface for requesting and managing API keys
-- **MCPOverviewPage**: Empty state entry point for MCP Management with link to setup wizard
-- **MCPSetupWizard**: 4-step wizard for creating MCP infrastructure (Gateway, HTTPRoute, MCPGatewayExtension)
-  - `MCPExtensionStep`: Step 3 form with Form/YAML tabs for configuring the MCPGatewayExtension targetRef
-  - `MCPVerifyStep`: Step 4 sequential resource creation with live status watching
+- **MCPOverviewPage**: MCP management dashboard with resource tables, status summaries, and a setup entry point
+- **MCPSetupWizard**: Gateway and MCPGatewayExtension setup, with an optional HTTPRoute step when automatic HTTPRoute management is disabled
+  - `MCPExtensionStep`: Step 2 form with Form/YAML tabs for configuring the MCPGatewayExtension
+  - `MCPVerifyStep`: Final step (3 or 4) for sequential resource creation with live status watching
 
 ## Policy Topology Architecture
 
@@ -171,7 +175,7 @@ The Policy Topology view is built on PatternFly React Topology and visualises re
 - Component factory and layout factory are registered once at creation time
 
 **4. State Management**
-- GVK mapping and selected resource types use React state (`useState`), not module-level variables
+- Selected resource types and namespace use React state (`useState`); GVK metadata is read synchronously from the static `src/utils/resources.ts` registry
 - Module-level object mutations don't trigger React re-renders, causing initialisation failures
 - Always use state for values that affect rendering or hook dependencies
 
@@ -273,11 +277,11 @@ Steps:
 
 | Changed files | `specs` | `test_specs` | Tests run |
 |---|---|---|---|
-| `src/components/apikey/` | 3 apikey files | — | 3 files × @smoke only |
+| `src/components/apikey/` | mapped API key specs | — | mapped specs × @smoke only |
 | `e2e/tests/apikey-lifecycle.spec.ts` | — | 1 file | all tags in that file |
-| both above | 2 apikey files | 1 file | 2 files × @smoke + 1 file × all tags |
+| both above | remaining mapped API key specs | 1 file | remaining specs × @smoke + edited file × all tags |
 | `src/utils/` (shared) | — | — | all @smoke (fallback) |
-| Unrecognised path | — | — | all @smoke (fallback) |
+| Unrecognised path only | — | — | all @smoke (fallback) |
 
 **When adding a new spec file** you must do two things:
 
@@ -294,7 +298,7 @@ yarn check:spec-map
 # all specs mapped ✓
 ```
 
-If you forget, the suite router falls back to running all smoke tests — no tests will be skipped incorrectly, but the optimisation won't apply.
+A missing spec mapping makes `check:spec-map` fail. The router falls back to all smoke tests when a shared path changes or both output lists are empty. An unmapped component changed alongside a mapped component does not itself force that fallback, so keep the mapping complete.
 
 ## Important Notes
 
@@ -333,7 +337,7 @@ If you forget, the suite router falls back to running all smoke tests — no tes
 8. **Race conditions in React hooks**: Use `useRef` with initialisation flags to prevent re-creation of expensive objects
 9. **Dynamic values in factory functions**: Pass getter functions instead of values to ensure current state is accessed
 10. **Topology fit-to-screen not working**: Check for controller recreation due to changing dependencies
-11. **Topology not rendering after refactor**: CRITICAL - GVK mapping must be stored in React state (`useState`), not module-level variables. Module-level object mutations don't trigger React re-renders, causing the controller to never initialize when the mapping is populated asynchronously
+11. **Topology metadata**: Read GVK metadata from the static `src/utils/resources.ts` registry. Keep asynchronously loaded data that affects rendering in React state; module-level mutations do not trigger re-renders.
 
 ## PatternFly 6 Upgrade Notes
 
