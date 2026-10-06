@@ -124,6 +124,7 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
   };
   const [rules, setRules] = React.useState<RuleUI[]>([]);
   const [isRuleModalOpen, setIsRuleModalOpen] = React.useState(false);
+  const ruleModalContainerRef = React.useRef<HTMLDivElement>(null);
 
   const [currentRule, setCurrentRule] = React.useState<RuleUI>({
     id: 'rule-1',
@@ -831,21 +832,31 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
           </Tab>
         </Tabs>
       </PageSection>
-      <Modal
-        variant="large"
-        title={editingRuleIndex !== null ? t('Edit rule') : t('Add rule')}
-        isOpen={isRuleModalOpen}
-      >
-        <HTTPRouteRuleWizard
-          isOpen={isRuleModalOpen}
-          onClose={handleRuleModalClose}
-          onSave={handleRuleSave}
-          currentRule={currentRule}
-          setCurrentRule={setCurrentRule}
-          editingRuleIndex={editingRuleIndex}
-          t={t}
-        />
-      </Modal>
+      <div ref={ruleModalContainerRef}>
+        {isRuleModalOpen && (
+          <Modal
+            variant="large"
+            aria-label={editingRuleIndex !== null ? t('Edit rule') : t('Add rule')}
+            isOpen
+            // An enclosing modal hides its body-level siblings on every update.
+            // Keep the rule dialog inside it when this form is embedded.
+            appendTo={() =>
+              ruleModalContainerRef.current?.closest<HTMLElement>('[role="dialog"]') ||
+              document.body
+            }
+          >
+            <HTTPRouteRuleWizard
+              isOpen={isRuleModalOpen}
+              onClose={handleRuleModalClose}
+              onSave={handleRuleSave}
+              currentRule={currentRule}
+              setCurrentRule={setCurrentRule}
+              editingRuleIndex={editingRuleIndex}
+              t={t}
+            />
+          </Modal>
+        )}
+      </div>
     </>
   );
 };
