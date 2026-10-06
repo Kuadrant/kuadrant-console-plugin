@@ -1,0 +1,39 @@
+diff --git a/dist/esm/components/Label/LabelGroup.js b/dist/esm/components/Label/LabelGroup.js
+index 3ef832f1fd0c2867e0b70fdd15ca25f4febd9668..d8c737fa0aafcaaeb120e8b7c97d74787dd68e7a 100644
+--- a/dist/esm/components/Label/LabelGroup.js
++++ b/dist/esm/components/Label/LabelGroup.js
+@@ -53,7 +53,7 @@ class LabelGroup extends Component {
+             const close = (_jsx("div", { className: css(styles.labelGroupClose), children: _jsx(Button, { variant: "plain", hasNoPadding: true, "aria-label": closeBtnAriaLabel, onClick: onClick, id: `remove_group_${id}`, "aria-labelledby": `remove_group_${id} ${id}`, icon: _jsx(TimesCircleIcon, {}) }) }));
+             return (_jsxs("div", { className: css(styles.labelGroup, className, categoryName && styles.modifiers.category, isVertical && styles.modifiers.vertical, isEditable && styles.modifiers.editable), children: [_jsx("div", { className: css(styles.labelGroupMain), children: content }), isClosable && close] }));
+         };
+-        return numChildren === 0 && addLabelControl === undefined ? null : (_jsx(GenerateId, { children: (randomId) => renderLabelGroup(this.props.id || randomId) }));
++        return numChildren === 0 && addLabelControl === undefined ? null : (_jsx(GenerateId, { prefix: "kuadrant-label-group-", children: (randomId) => renderLabelGroup(this.props.id || randomId) }));
+     }
+ }
+ LabelGroup.displayName = 'LabelGroup';
+diff --git a/dist/js/components/Label/LabelGroup.js b/dist/js/components/Label/LabelGroup.js
+index ca0fbf8f5984fb4da9df575ac1e7631c8fdf1564..dc4a765ecd4b7e1c24137318bd14249d4212b13d 100644
+--- a/dist/js/components/Label/LabelGroup.js
++++ b/dist/js/components/Label/LabelGroup.js
+@@ -56,7 +56,7 @@ class LabelGroup extends react_1.Component {
+             const close = ((0, jsx_runtime_1.jsx)("div", { className: (0, react_styles_1.css)(label_group_1.default.labelGroupClose), children: (0, jsx_runtime_1.jsx)(Button_1.Button, { variant: "plain", hasNoPadding: true, "aria-label": closeBtnAriaLabel, onClick: onClick, id: `remove_group_${id}`, "aria-labelledby": `remove_group_${id} ${id}`, icon: (0, jsx_runtime_1.jsx)(times_circle_icon_1.default, {}) }) }));
+             return ((0, jsx_runtime_1.jsxs)("div", { className: (0, react_styles_1.css)(label_group_1.default.labelGroup, className, categoryName && label_group_1.default.modifiers.category, isVertical && label_group_1.default.modifiers.vertical, isEditable && label_group_1.default.modifiers.editable), children: [(0, jsx_runtime_1.jsx)("div", { className: (0, react_styles_1.css)(label_group_1.default.labelGroupMain), children: content }), isClosable && close] }));
+         };
+-        return numChildren === 0 && addLabelControl === undefined ? null : ((0, jsx_runtime_1.jsx)(GenerateId_1.GenerateId, { children: (randomId) => renderLabelGroup(this.props.id || randomId) }));
++        return numChildren === 0 && addLabelControl === undefined ? null : ((0, jsx_runtime_1.jsx)(GenerateId_1.GenerateId, { prefix: "kuadrant-label-group-", children: (randomId) => renderLabelGroup(this.props.id || randomId) }));
+     }
+ }
+ exports.LabelGroup = LabelGroup;
+diff --git a/src/components/Label/LabelGroup.tsx b/src/components/Label/LabelGroup.tsx
+index c3a293d1eacf1adb6cfa624618d6bd946269af7d..e2a170cb172253539337d53eae5fd465d041b767 100644
+--- a/src/components/Label/LabelGroup.tsx
++++ b/src/components/Label/LabelGroup.tsx
+@@ -232,7 +232,7 @@ class LabelGroup extends Component<LabelGroupProps, LabelGroupState> {
+     };
+ 
+     return numChildren === 0 && addLabelControl === undefined ? null : (
+-      <GenerateId>{(randomId) => renderLabelGroup(this.props.id || randomId)}</GenerateId>
++      <GenerateId prefix="kuadrant-label-group-">{(randomId) => renderLabelGroup(this.props.id || randomId)}</GenerateId>
+     );
+   }
+ }
