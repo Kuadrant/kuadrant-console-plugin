@@ -97,6 +97,15 @@ const config: Configuration = {
   plugins: [
     new ConsoleRemotePlugin({
       extensions: allExtensions,
+      sharedDynamicModuleSettings: {
+        // DataView filters and toolbars must use the same PatternFly context.
+        // Sharing them separately can mix Console and plugin implementations.
+        packageSpecs: {
+          '@patternfly/react-core': {},
+          '@patternfly/react-icons': {},
+          '@patternfly/react-table': {},
+        },
+      },
     }),
     new CopyWebpackPlugin({
       patterns: [{ from: path.resolve(__dirname, 'locales'), to: 'locales' }],
