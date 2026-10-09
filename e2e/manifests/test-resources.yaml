@@ -52,6 +52,8 @@ apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: test-selfsigned
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 spec:
   selfSigned: {}
 ---
@@ -199,6 +201,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: kuadrant-test-2
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 ---
 apiVersion: v1
 kind: ConfigMap

@@ -1,5 +1,76 @@
 # E2E Tests
 
+## Test an installed Console plugin or release candidate
+
+Use a dedicated OpenShift test cluster. The runner leaves fixtures, including
+`test-admin-kuadrant` RBAC grants, in place until you run teardown manually.
+Install dependencies with `yarn install` and Chromium with
+`npx playwright install chromium`.
+
+The cluster needs an Accepted `istio` GatewayClass, working LoadBalancer
+services, cert-manager, Kuadrant, developer portal and MCP gateway controllers
+and CRDs. The active `oc` and `kubectl` contexts must point to the same cluster,
+and that account must be able to create the fixtures. The Console user must be
+allowed to impersonate the test users.
+
+`yarn test:e2e:installed` discovers the installed Console route for the pinned
+kubeconfig context, prompts for Console credentials, applies fixtures when they
+are absent, and runs Playwright against the installed plugin. It reuses fixtures
+only after setup has marked them complete. It does not start a local plugin
+development server or remove fixtures automatically.
+
+```bash
+yarn test:e2e:installed
+yarn test:e2e:installed e2e/tests/overview.spec.ts
+yarn test:e2e:installed --grep @smoke
+E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:teardown
+```
+
+For a cluster with an untrusted Console HTTPS certificate and multiple login
+providers, set both options when running the installed Console tests:
+
+```bash
+E2E_IGNORE_HTTPS_ERRORS=true E2E_CONSOLE_IDENTITY_PROVIDER=HTPasswd yarn test:e2e:installed
+```
+
+`HTPasswd` is an example. Identity provider names can differ between clusters;
+use the name shown on the selected cluster's Console login page.
+
+For noninteractive runs, provide both `E2E_CONSOLE_USERNAME` and
+`E2E_CONSOLE_PASSWORD`, or set `PLAYWRIGHT_STORAGE_STATE` to an existing
+Playwright storage-state file. The runner leaves a supplied storage-state file
+and its session active; it disables traces for these runs so reports do not
+retain the live session cookie. Runs using prompted credentials log out after
+testing to revoke their session. `CONSOLE_URL` overrides route discovery.
+`E2E_CONSOLE_IDENTITY_PROVIDER` selects a provider on a multi-provider login
+page. Set `E2E_IGNORE_HTTPS_ERRORS=true` only when the Console route has an
+untrusted certificate; `oc` and `kubectl` still verify the API server.
+
+The live MCP Inspector journey also needs a preexisting Ready
+`MCPGatewayExtension` with a reachable MCP server. See
+[the installed-Console Inspector instructions](../docs/mcp-inspector.md#run-against-an-installed-console-on-an-existing-cluster).
+Set `MCP_INSPECTOR_E2E_REQUIRED=true` alongside
+`MCP_INSPECTOR_E2E_EXTENSION=namespace/name` to make a missing target fail the
+run instead of skipping the live test.
+
+### Test this checkout against an existing cluster
+
+Set `E2E_USE_EXISTING_CLUSTER=true` in **each terminal** used for setup,
+`yarn start-console`, Playwright, and teardown. Prefixing each command is one
+way to do that:
+
+```bash
+E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:setup
+yarn start # separate terminal: plugin development server
+E2E_USE_EXISTING_CLUSTER=true yarn start-console # another terminal
+E2E_USE_EXISTING_CLUSTER=true yarn test:e2e
+E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:teardown
+```
+
+If setup stops partway, inspect the fixture namespace and run teardown before
+retrying. The installed-Console runner refuses to reuse an incomplete or
+unowned fixture set.
+
 ## Prerequisites
 
 1. **oinc v0.5.3 or newer** (OpenShift in a Container) - creates local OpenShift cluster with console
@@ -42,7 +113,7 @@ npx playwright install chromium
 
 ```bash
 # 1. Setup cluster with console, Kuadrant, and test fixtures
-sudo ./e2e/setup.sh
+./e2e/setup.sh
 
 # 2. Start the plugin development server (in another terminal or background)
 yarn start
@@ -131,7 +202,7 @@ to Authorino (TCP 50051) and the WASM endpoint (TCP 8082), and removes those
 fixtures on exit. A data-path check waits for authentication to become ready. Both scripts require the `oinc` context. Local spec invocations still skip
 the live journey unless `MCP_INSPECTOR_E2E_EXTENSION=namespace/name` is provided.
 
-## Test Tags 
+## Test Tags
 
 Every test must be tagged with exactly one of `@smoke` or `@nightly`:
 
@@ -226,8 +297,8 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
 
   Files that appear in both lists are removed from `specs` to avoid running them twice.
 
-### Component mapping 
-  
+### Component mapping
+
   The router maps source paths to spec files:
 
   | Changed path | Spec files triggered |
@@ -322,7 +393,7 @@ ls -la test-results/*/test-failed-*.png
 
 ```bash
 # Teardown test environment
-sudo ./e2e/teardown.sh
+./e2e/teardown.sh
 
 # Or destroy entire oinc cluster
 oinc delete --force
@@ -338,4 +409,3 @@ oinc delete --force
 6. CI may run the full smoke suite when:
   - The changed files do not match any `component-to-spec` mapping, which triggers the full smoke fallback
   - Modifications to shared modules (`src/utils/`, `src/hooks/`, `src/constants/`, etc.) trigger the full smoke fallback
-  

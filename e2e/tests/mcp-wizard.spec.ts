@@ -8,6 +8,7 @@ import {
 } from './helpers';
 
 const uid = () => `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+const createdRoutes: { name: string; namespace: string }[] = [];
 
 function kubectl(args: string[], input?: string): string {
   return execFileSync('kubectl', args, {
@@ -15,10 +16,6 @@ function kubectl(args: string[], input?: string): string {
     timeout: 30_000,
     ...(input !== undefined ? { input } : {}),
   }).trim();
-}
-
-function applyResource(manifest: string): void {
-  kubectl(['apply', '-f', '-'], manifest);
 }
 
 function resourceExists(kind: string, name: string, namespace: string): boolean {
@@ -72,13 +69,23 @@ async function fillStep1ViaYAML(
     namespace: string;
   },
 ): Promise<void> {
-  // Create HTTPRoute via kubectl
-  applyResource(`
+  createTestRoute(opts.routeName, opts.namespace);
+
+  // Then select it in the wizard
+  await fillStep1UsingExisting(page, { routeName: opts.routeName });
+}
+
+function createTestRoute(name: string, namespace: string): void {
+  // Track before applying so afterEach also cleans up after a partial failure.
+  createdRoutes.push({ name, namespace });
+  kubectl(
+    ['apply', '-f', '-'],
+    `
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: ${opts.routeName}
-  namespace: ${opts.namespace}
+  name: ${name}
+  namespace: ${namespace}
 spec:
   parentRefs:
     - name: test-gateway
@@ -86,10 +93,8 @@ spec:
     - backendRefs:
         - name: test-service
           port: 8080
-`);
-
-  // Then select it in the wizard
-  await fillStep1UsingExisting(page, { routeName: opts.routeName });
+`,
+  );
 }
 
 async function fillStep2(
@@ -108,6 +113,12 @@ async function fillStep2(
 }
 
 test.describe('MCP Registration Wizard', () => {
+  test.afterEach(() => {
+    for (const { name, namespace } of createdRoutes.splice(0)) {
+      kubectl(['delete', 'httproute', name, '-n', namespace, '--ignore-not-found', '--wait=false']);
+    }
+  });
+
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
@@ -132,20 +143,7 @@ test.describe('MCP Registration Wizard', () => {
     const regName = `e2e-reg-${uid()}`;
 
     // Create HTTPRoute first
-    applyResource(`
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: ${routeName}
-  namespace: ${TEST_NAMESPACE}
-spec:
-  parentRefs:
-    - name: test-gateway
-  rules:
-    - backendRefs:
-        - name: test-service
-          port: 8080
-`);
+    createTestRoute(routeName, TEST_NAMESPACE);
 
     await openWizard(page);
 
@@ -187,7 +185,6 @@ spec:
     } finally {
       // Clean up resources that were created
       deleteResource('mcpserverregistration', regName, TEST_NAMESPACE);
-      deleteResource('httproute', routeName, TEST_NAMESPACE);
     }
   });
 
@@ -243,20 +240,7 @@ spec:
     const regName = `e2e-reg-${uid()}`;
 
     // Create HTTPRoute first
-    applyResource(`
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: ${routeName}
-  namespace: ${TEST_NAMESPACE}
-spec:
-  parentRefs:
-    - name: test-gateway
-  rules:
-    - backendRefs:
-        - name: test-service
-          port: 8080
-`);
+    createTestRoute(routeName, TEST_NAMESPACE);
 
     await openWizard(page);
 
@@ -332,7 +316,6 @@ spec:
     } finally {
       // Cleanup
       deleteResource('mcpserverregistration', regName, TEST_NAMESPACE);
-      deleteResource('httproute', routeName, TEST_NAMESPACE);
     }
   });
 
