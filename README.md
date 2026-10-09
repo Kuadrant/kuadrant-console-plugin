@@ -13,6 +13,10 @@ Based on https://github.com/openshift/console-plugin-template
 - `yarn run start` # start webpack
 - `yarn run start-console` # start local ocp console + proxy
 
+These commands run the plugin source from this checkout. To test a plugin or RC
+already installed in a cluster, use the
+[installed-console E2E workflow](e2e/README.md#test-an-installed-console-plugin-or-rc).
+
 # Requirements for running locally
 
 [Node.js](https://nodejs.org/en/) and [yarn](https://yarnpkg.com) are required
