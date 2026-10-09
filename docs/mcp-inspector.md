@@ -131,8 +131,8 @@ production policy or use `0.0.0.0/0` to make development work.
 4. Fill the schema-generated inputs. Complex object and array inputs accept JSON. Optional booleans offer **Not set**, **True**, and **False**; **Not set** omits the argument so the server can apply its own default.
 5. Optionally add MCP `_meta` key-value pairs.
 6. Use **Validate only** to check the input locally, or **Run tool** to execute it.
-7. Inspect the server result, JSON-RPC request and response, HTTP status, and elapsed time in the Output card.
-8. Switch to **Prompts** to render a prompt template. Pick a prompt, fill its arguments and use **Generate prompt**. The Output card shows the rendered messages with a copy action and a size estimate; the token count is an estimate at four characters per token, not a model tokenizer. Gateways that do not expose prompts show "This gateway does not expose prompts."
+7. The Output card opens on **Server result**, with a copy action for each result block, a result status, HTTP status, and elapsed time. Switch to **Console** to inspect the JSON-RPC request and response.
+8. Switch to **Prompts** to render a prompt template. Pick a prompt, fill its arguments and use **Generate prompt**. The Output card opens on **Prompt** with the same status summary and copy controls; **Console** shows the JSON-RPC exchange. The rendered messages include a size estimate; the token count is an estimate at four characters per token, not a model tokenizer. Gateways that do not expose prompts show "This gateway does not expose prompts."
 
 Changing gateways clears the current token, MCP session, selected tool, output, and session statistics.
 
