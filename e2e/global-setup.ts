@@ -68,10 +68,34 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
     await passwordInput.fill(password);
     await page.locator('button[type="submit"], input[type="submit"]').first().click();
 
-    await page.locator('[data-test="user-dropdown-toggle"]').waitFor({
-      state: 'visible',
-      timeout: 60_000,
-    });
+    const userDropdown = page.locator('[data-test="user-dropdown-toggle"]');
+    const loginError = page.locator('.pf-v6-c-helper-text__item.pf-m-error').first();
+    try {
+      const outcome = await Promise.race([
+        userDropdown.waitFor({ state: 'visible', timeout: 60_000 }).then(() => 'logged-in'),
+        loginError.waitFor({ state: 'visible', timeout: 60_000 }).then(() => 'login-error'),
+      ]);
+      if (outcome === 'login-error') {
+        throw new Error('Console login page reported an error.');
+      }
+    } catch (error) {
+      const currentURL = new URL(page.url());
+      const alerts = await page
+        .locator('[role="alert"], .alert-danger, .pf-v6-c-helper-text__item.pf-m-error')
+        .allTextContents();
+      const visibleError = alerts
+        .map((alert) => alert.trim())
+        .filter(Boolean)
+        .join(' ')
+        .slice(0, 500);
+      const loginFormVisible = await usernameInput.isVisible();
+      throw new Error(
+        `Console login did not reach the user menu at ${currentURL.origin}${currentURL.pathname}.` +
+          (visibleError ? ` Page error: ${visibleError}` : '') +
+          (loginFormVisible ? ' The login form is still visible.' : ''),
+        { cause: error },
+      );
+    }
 
     mkdirSync(dirname(generatedStorageState), { recursive: true, mode: 0o700 });
     chmodSync(dirname(generatedStorageState), 0o700);

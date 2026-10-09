@@ -47,6 +47,30 @@ case "${E2E_USE_EXISTING_CLUSTER}" in
       exit 1
     fi
 
+    # Check every custom kind used by the fixture manifests before creating
+    # the gateway namespace or writing any test resources.
+    missing_crds=()
+    for crd in \
+      gateways.gateway.networking.k8s.io \
+      httproutes.gateway.networking.k8s.io \
+      referencegrants.gateway.networking.k8s.io \
+      clusterissuers.cert-manager.io \
+      authpolicies.kuadrant.io \
+      planpolicies.extensions.kuadrant.io \
+      apiproducts.devportal.kuadrant.io \
+      apikeys.devportal.kuadrant.io \
+      apikeyrequests.devportal.kuadrant.io \
+      mcpgatewayextensions.mcp.kuadrant.io \
+      mcpserverregistrations.mcp.kuadrant.io; do
+      if ! kubectl get crd "${crd}" >/dev/null 2>&1; then
+        missing_crds+=("${crd}")
+      fi
+    done
+    if [[ ${#missing_crds[@]} -gt 0 ]]; then
+      echo "ERROR: E2E fixtures need these CRDs (or permission to read them): ${missing_crds[*]}" >&2
+      exit 1
+    fi
+
     GATEWAY_CLASS_NAME=istio
     if ! kubectl get gatewayclass "${GATEWAY_CLASS_NAME}" >/dev/null 2>&1; then
       echo "ERROR: GatewayClass 'istio' was not found in the active cluster" >&2
@@ -184,5 +208,9 @@ while [ "$(apikeyrequest_count)" -lt 9 ]; do
   fi
   sleep 2
 done
+
+if [[ "${CLUSTER_MODE}" == "existing" ]]; then
+  kubectl annotate namespace kuadrant-test kuadrant.io/e2e-setup-complete=true --overwrite
+fi
 
 log "e2e setup complete"

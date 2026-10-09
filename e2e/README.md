@@ -1,10 +1,23 @@
-# E2E tests
+# E2E Tests
 
-Playwright tests either the plugin installed on the selected OpenShift cluster or the plugin in this checkout. Install dependencies with `yarn install` and Chromium with `npx playwright install chromium`.
+## Test an installed Console plugin or release candidate
 
-## Test an installed console plugin or RC
+Use a dedicated OpenShift test cluster. The runner leaves fixtures, including
+`test-admin-kuadrant` RBAC grants, in place until you run teardown manually.
+Install dependencies with `yarn install` and Chromium with
+`npx playwright install chromium`.
 
-Select the same cluster in `oc` and `kubectl`. The runner prompts for Console credentials, applies fixtures if needed, and leaves them in place.
+The cluster needs an Accepted `istio` GatewayClass, working LoadBalancer
+services, cert-manager, Kuadrant, developer portal and MCP gateway controllers
+and CRDs. The active `oc` and `kubectl` contexts must point to the same cluster,
+and that account must be able to create the fixtures. The Console user must be
+allowed to impersonate the test users.
+
+`yarn test:e2e:installed` discovers the installed Console route for the pinned
+kubeconfig context, prompts for Console credentials, applies fixtures when they
+are absent, and runs Playwright against the installed plugin. It reuses fixtures
+only after setup has marked them complete. It does not start a local plugin
+development server or remove fixtures automatically.
 
 ```bash
 yarn test:e2e:installed
@@ -13,13 +26,386 @@ yarn test:e2e:installed --grep @smoke
 E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:teardown
 ```
 
-## Test the plugin in this checkout
+For a cluster with an untrusted Console HTTPS certificate and multiple login
+providers, set both options when running the installed Console tests:
 
 ```bash
-yarn test:e2e:setup
-yarn start # separate terminal
-yarn test:e2e
-yarn test:e2e:teardown
+E2E_IGNORE_HTTPS_ERRORS=true E2E_CONSOLE_IDENTITY_PROVIDER=HTPasswd yarn test:e2e:installed
 ```
 
-Setup uses oinc by default. To use an existing cluster, export `E2E_USE_EXISTING_CLUSTER=true` and start `yarn start-console` in another terminal.
+`HTPasswd` is an example. Identity provider names can differ between clusters;
+use the name shown on the selected cluster's Console login page.
+
+For noninteractive runs, provide both `E2E_CONSOLE_USERNAME` and
+`E2E_CONSOLE_PASSWORD`, or set `PLAYWRIGHT_STORAGE_STATE` to an existing
+Playwright storage-state file. The runner leaves a supplied storage-state file
+and its session active; it disables traces for these runs so reports do not
+retain the live session cookie. Runs using prompted credentials log out after
+testing to revoke their session. `CONSOLE_URL` overrides route discovery.
+`E2E_CONSOLE_IDENTITY_PROVIDER` selects a provider on a multi-provider login
+page. Set `E2E_IGNORE_HTTPS_ERRORS=true` only when the Console route has an
+untrusted certificate; `oc` and `kubectl` still verify the API server.
+
+The live MCP Inspector journey also needs a preexisting Ready
+`MCPGatewayExtension` with a reachable MCP server. See
+[the installed-Console Inspector instructions](../docs/mcp-inspector.md#run-against-an-installed-console-on-an-existing-cluster).
+Set `MCP_INSPECTOR_E2E_REQUIRED=true` alongside
+`MCP_INSPECTOR_E2E_EXTENSION=namespace/name` to make a missing target fail the
+run instead of skipping the live test.
+
+### Test this checkout against an existing cluster
+
+Set `E2E_USE_EXISTING_CLUSTER=true` in **each terminal** used for setup,
+`yarn start-console`, Playwright, and teardown. Prefixing each command is one
+way to do that:
+
+```bash
+E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:setup
+yarn start # separate terminal: plugin development server
+E2E_USE_EXISTING_CLUSTER=true yarn start-console # another terminal
+E2E_USE_EXISTING_CLUSTER=true yarn test:e2e
+E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:teardown
+```
+
+If setup stops partway, inspect the fixture namespace and run teardown before
+retrying. The installed-Console runner refuses to reuse an incomplete or
+unowned fixture set.
+
+## Prerequisites
+
+1. **oinc v0.5.3 or newer** (OpenShift in a Container) - creates local OpenShift cluster with console
+2. **Playwright browsers** - for running the tests
+3. **Kuadrant controller** - for API key approval and status updates
+
+## Installation
+
+### Install oinc
+
+> **Note:** Replace `oinc-linux-amd64` with your platform (e.g., `oinc-darwin-arm64` for Apple Silicon).
+
+```bash
+OINC_VERSION="v0.5.3"
+curl -fL -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
+chmod +x oinc
+./oinc version
+sudo mv oinc /usr/local/bin/
+```
+
+Cluster setup requires v0.5.3 or newer so the `mcp-gateway` addon reuses
+Kuadrant-managed MCP components without a CRD ownership conflict and keeps Helm
+registry messages out of rendered manifests. Version 0.5.3 also fixes the addon's
+Gateway address assignment. Demo and test Gateways use infrastructure ConfigMaps
+to set `oinc.io/metallb` on their generated Services, and setup waits for the
+Gateways to be programmed before starting tests. See the
+[local setup notes](../README.md#option-2-oinc-no-cluster-required) for version
+overrides and existing clusters.
+
+### Install Playwright browsers
+```bash
+npx playwright install chromium --with-deps
+# If you get sudo errors, install without system deps:
+npx playwright install chromium
+```
+
+## Running E2E Tests
+
+### Full Setup (First Time)
+
+```bash
+# 1. Setup cluster with console, Kuadrant, and test fixtures
+./e2e/setup.sh
+
+# 2. Start the plugin development server (in another terminal or background)
+yarn start
+
+# 3. Wait for both servers to be ready
+curl http://localhost:9000  # Console should respond
+curl http://localhost:9001  # Plugin dev server should respond
+
+# 4. Run all e2e tests
+npx playwright test --config=e2e/playwright.config.ts
+
+# 5. Run specific test file
+npx playwright test --config=e2e/playwright.config.ts e2e/tests/apikey-lifecycle.spec.ts
+
+# 6. Run only smoke tests
+npx playwright test --config=e2e/playwright.config.ts --grep @smoke
+
+# 7. Run only nightly tests
+npx playwright test --config=e2e/playwright.config.ts --grep @nightly
+
+# 8. Run with headed browser (visible UI)
+npx playwright test --config=e2e/playwright.config.ts e2e/tests/apikey-lifecycle.spec.ts --headed
+
+# 9. Run with debug mode
+npx playwright test --config=e2e/playwright.config.ts e2e/tests/apikey-lifecycle.spec.ts --debug
+```
+
+### Quick Start (If Already Set Up)
+
+```bash
+# Check if cluster is running
+oinc status
+
+# Check if servers are running
+curl http://localhost:9000  # Console
+curl http://localhost:9001  # Plugin
+
+# If not running, start plugin dev server
+yarn start
+
+# Run tests
+npx playwright test --config=e2e/playwright.config.ts
+```
+
+## Test Files
+
+- `e2e/tests/apikey-approvals.spec.ts` - API key request approval and rejection
+- `e2e/tests/apikey-lifecycle.spec.ts` - Full API key lifecycle (request, reveal, delete)
+- `e2e/tests/apiproduct-apikeys-tab.spec.ts` - API product API keys tab
+- `e2e/tests/apiproduct-crud.spec.ts` - API product CRUD operations
+- `e2e/tests/apiproduct-details-tabs.spec.ts` - API product details tabs
+- `e2e/tests/apiproduct-overview-tab.spec.ts` - API product overview tab
+- `e2e/tests/apiproduct-rbac.spec.ts` - API product RBAC
+- `e2e/tests/api-product-list.spec.ts` - API product list page
+- `e2e/tests/attached-tab.spec.ts` - Attached tab for Gateway, HTTPRoute, and GRPCRoute detail views
+- `e2e/tests/data-view-regressions.spec.ts` - DataView regressions
+- `e2e/tests/gateway-crud.spec.ts` - Gateway create, edit, and delete operations
+- `e2e/tests/httproute-crud.spec.ts` - HTTPRoute create, edit, and delete operations
+- `e2e/tests/mcp-inspector.spec.ts` - MCP Inspector smoke and live tool-call journeys
+- `e2e/tests/mcp-inspector-ui.spec.ts` - Inspector layout, searchable menus and output spacing in both themes, using mocked discovery and MCP responses
+- `e2e/tests/mcp-overview.spec.ts` - MCP Overview dashboard
+- `e2e/tests/mcp-setup-wizard.spec.ts` - MCP Management setup wizard
+- `e2e/tests/mcp-wizard.spec.ts` - MCP server registration wizard
+- `e2e/tests/overview.spec.ts` - Overview dashboard cards, stats, and navigation
+- `e2e/tests/policy-forms.spec.ts` - Policy creation forms (DNS, TLS, Auth, RateLimit, etc.)
+- `e2e/tests/rbac.spec.ts` - RBAC permission tests
+- `e2e/tests/topology.spec.ts` - Policy topology rendering, filtering, and navigation
+
+See [Test Tags](#test-tags) and [CI Pipeline](#ci-pipeline) for how these are selected and filtered in CI.
+
+## Live MCP Inspector coverage
+
+The shared CI workflow builds this checkout's Inspector backend with
+`bash e2e/setup-mcp-inspector.sh` and deploys it through the catalog operator's
+`CONSOLE_PLUGIN_IMAGE_OVERRIDE` (`scripts/setup-inspector-backend.sh`, as `make oinc`
+does), then syncs the operator's proxy contract into oinc v0.5.3 or newer. The
+operator itself is not replaced, so its MCP and developer portal components match
+the catalog's CRDs.
+
+`bash e2e/test-mcp-inspector.sh` runs the live tools/prompts journey for legacy,
+stateless, and Auto protocols, followed by a bearer-authentication journey that
+checks rejection and retry. These run explicitly in both smoke and full CI jobs;
+they cannot silently skip when the CI target is missing. The script temporarily
+protects the demo listener using its own AuthPolicy, grants that gateway access
+to Authorino (TCP 50051) and the WASM endpoint (TCP 8082), and removes those
+fixtures on exit. A data-path check waits for authentication to become ready. Both scripts require the `oinc` context. Local spec invocations still skip
+the live journey unless `MCP_INSPECTOR_E2E_EXTENSION=namespace/name` is provided.
+
+## Test Tags
+
+Every test must be tagged with exactly one of `@smoke` or `@nightly`:
+
+  ```typescript
+  test('approve request', { tag: '@smoke' }, async ({ page }) => { ... })
+  test('validate empty title shows error', { tag: '@nightly' }, async ({ page }) => { ... })
+  ```
+
+  | Tag | When it runs | What to tag |
+  |---|---|---|
+  | `@smoke` | Every PR (via suite router) | Critical-path flows that are fast and reliable |
+  | `@nightly` | Daily at 02:00 UTC (full suite, all tags) | Edge cases, validation, slower flows, duplicate coverage, UI |
+
+  **Rules:**
+  - Every test must have exactly one tag — untagged tests are skipped during smoke runs but run in nightly
+  - Directly-edited test files (in `test_specs`) run with all tags, including untagged tests
+  - Default to `@nightly` when adding a new test; only use `@smoke` for critical, reliable flows
+
+## CI Pipeline
+
+  Three GitHub Actions workflows manage e2e testing:
+
+  | Workflow | Trigger | What runs |
+  |---|---|---|
+  | `e2e.yaml` | PRs to `main`/`release-*`, `merge_group`, `workflow_dispatch` | Runs the suite router, then calls `e2e-common.yaml` with `suite: smoke` |
+  | `e2e-nightly.yaml` | Cron daily at 02:00 UTC | Calls `e2e-common.yaml` with `suite: full` (all specs, all tags) |
+  | `e2e-common.yaml` | Called by the above two | Reusable workflow that does the actual work (see below) |
+
+### What `e2e-common.yaml` does
+
+  1. Checks out the repo, sets up Node 22, installs `oinc` and Helm
+  2. Runs `yarn install` and installs Playwright's Chromium
+  3. Starts the plugin dev server (`yarn start`) in the background
+  4. Runs `./e2e/setup.sh` — creates the oinc cluster with addons (gateway-api, cert-manager, MetalLB, Istio, Kuadrant, MCP Gateway), configures Istio Gateway Services to use the `oinc.io/metallb` load-balancer class, and applies RBAC and test fixtures
+  5. Waits up to 60s for the dev server to be ready
+  6. Runs `e2e/setup-mcp-inspector.sh` (`setup-inspector`) to build this checkout's Inspector backend, deploy it through the catalog operator's override, then verify shared Gateway readiness
+  7. Runs Playwright tests (see suite router below for how specs are selected)
+  8. Runs `e2e/test-mcp-inspector.sh` (`tests-inspector`) for live legacy, stateless, auto-negotiation and bearer authentication journeys in both smoke and full suites, including after an unrelated test failure when Inspector setup succeeded
+  9. Uploads `playwright-report/` and `playwright-results*.json` from the repository root as artifacts, including separate Inspector journey results. Failed runs also capture Gateway conditions, pods, Services, MetalLB address pools, warning events, and controller logs in `e2e-diagnostics.txt` before teardown.
+  10. Tears down the cluster
+
+  On nightly failures, `e2e-nightly.yaml` automatically opens a GitHub issue with the
+  failed test names extracted from `playwright-results.json`. The extractor does
+  not yet read the separate Inspector result files; those remain available in the
+  uploaded artifacts.
+
+### Failure Classification
+
+  `e2e-common.yaml` classifies every run into one of three failure types:
+
+  | Type | Meaning | Trigger |
+  |---|---|---|
+  | `none` | All steps passed | — |
+  | `infrastructure` | Cluster setup, Inspector setup or dev server failed | `setup`, `setup-inspector` or `wait-server` step failed |
+  | `test` | Tests themselves failed | Any Playwright test step failed |
+
+  Cluster timeouts, network errors during setup, and dev server readiness failures
+  all fall under `infrastructure` because they occur in the `setup`,
+  `setup-inspector` or `wait-server` steps. Only failures in the Playwright test
+  steps (`tests`, `tests-full`, `tests-changed`, `tests-inspector`) are classified
+  as `test`.
+
+  The nightly workflow uses this classification to label auto-opened issues:
+  `nightly-infrastructure` for infra errors, `nightly-failure` for test failures.
+  Test results are only downloaded when `type=test`, so infrastructure-only failures
+  skip the results download and failed-test extraction — avoiding noise from cluster
+  setup failures where no tests ran.
+
+### Paths Filter (build, lint, i18n)
+
+  `build.yaml`, `lint.yaml`, and `i18n.yaml` each have a `changes` job that skips
+  the check for **non-code PRs.** If every changed file matches a skip pattern
+  (`.md`, `docs/`, `.github/`, `charts/`, `config/`, `kuadrant-dev-setup/`,
+  `.devcontainer/`, `LICENSE`), the build/lint/i18n jobs are skipped entirely.
+  Non-PR events (`merge_group`, `workflow_dispatch`) always run.
+
+### Suite Router (`build/suite-router.sh`)
+
+  The suite router optimises PR CI by running only the e2e specs relevant to changed
+  files instead of the full suite. In CI, it diffs against the PR base branch
+  (`origin/${GITHUB_BASE_REF}`); locally, it defaults to `origin/main` (with a
+  `HEAD~1` fallback). It produces **two separate lists**:
+
+  | Output | Contains | How it runs in CI |
+  |---|---|---|
+  | `specs` | Spec files mapped from changed **source** components | `--grep @smoke` (smoke tests only) |
+  | `test_specs` | Spec files that were **directly edited** | No `--grep` filter (all tags run) |
+
+  **Why two lists?** If you edited a test file, you want all its tests to run —
+  including any `@nightly` tests you may have just written. But if you only touched
+  source code, running `@smoke` is enough to validate nothing broke.
+
+  Files that appear in both lists are removed from `specs` to avoid running them twice.
+
+### Component mapping
+
+  The router maps source paths to spec files:
+
+  | Changed path | Spec files triggered |
+  |---|---|
+  | `src/components/apikey/` | `apikey-lifecycle`, `apikey-approvals`, `apiproduct-apikeys-tab`, `data-view-regressions` |
+  | `src/components/apiproduct/APIProductsListPage` | `api-product-list` |
+  | `src/components/apiproduct/APIProductAPIKeysTab` | `apiproduct-apikeys-tab`, `data-view-regressions` |
+  | `src/components/apiproduct/APIProductDefinitionTab` or `APIProductPoliciesTab` | `apiproduct-details-tabs` |
+  | `src/components/apiproduct/APIProductOverviewTab`, `ContactInfoEdit`, etc. | `apiproduct-overview-tab` |
+  | `src/components/apiproduct/` (catch-all) | `apiproduct-crud`, `apiproduct-overview-tab`, `api-product-list`, `apiproduct-rbac` |
+  | `src/components/topology/` | `topology`, `rbac` |
+  | `src/components/gateway/` | `gateway-crud`, `overview`, `rbac`, `data-view-regressions` |
+  | `src/components/(KuadrantOverview\|KuadrantPolicies\|ResourceList\|DropdownWithKebab)` | `overview`, `rbac`, `data-view-regressions` |
+  | `src/components/KuadrantDataView` | `data-view-regressions` |
+  | `src/components/(dnspolicy\|tlspolicy\|ratelimitpolicy\|authpolicy)/` | `policy-forms`, `rbac` |
+  | `src/components/(httproute\|issuer)/` | `rbac`, `httproute-crud` |
+  | `src/components/mcp/` | `mcp-setup-wizard`, `mcp-overview`, `mcp-wizard` |
+  | `src/components/(AttachedResources\|gateway/GatewaySingleOverview\|httproute/HTTPRouteSingleOverview\|grpcroute/)` | `attached-tab` |
+  | `src/components/NoPermissionsView` | `apiproduct-rbac`, `rbac` |
+
+  **Shared-file fallback** — if any of these paths changed, the router outputs empty
+  lists and CI falls back to running **all** `@smoke` tests:
+
+  `src/utils/`, `src/hooks/`, `src/constants/`, `e2e/tests/helpers.ts`,
+  `e2e/manifests/`, `e2e/setup.sh`, `e2e/teardown.sh`, `scripts/`, `package.json`,
+  `yarn.lock`, `.github/workflows/`
+
+  If nothing matches at all (unrecognised paths, no component mapping hit), it also
+  falls back to the full smoke suite.
+
+### Spec Map Check (`build/check-spec-map.sh`)
+
+  This script verifies that every `*.spec.ts` file in `e2e/tests/` is referenced
+  somewhere in `suite-router.sh`. It runs as a CI gate (the `check-spec-map` job in
+  `e2e.yaml`) and locally via:
+
+  ```bash
+  yarn check:spec-map
+  ```
+
+  Prevents new spec files from silently dodging the suite router.
+
+### Adding new tests
+
+  - Tag the test with exactly one of `@smoke` or `@nightly` (default to `@nightly`)
+  - Add or update an `if` block in `build/suite-router.sh` mapping the relevant component
+  - Run `yarn check:spec-map` to verify that the spec is referenced by `suite-router.sh`
+  - Verify separately that the new component path matches the intended router mapping
+  - Add the file to the [Test Files](#test-files) list above
+  - **Run locally** to verify: `npx playwright test --config=e2e/playwright.config.ts e2e/tests/your-file.spec.ts`
+
+## Test Environment
+
+- **Console URL**: http://localhost:9000 (created by oinc)
+- **Plugin Dev Server**: http://localhost:9001 (created by yarn start)
+- **Test Namespace**: kuadrant-test
+- **Test Fixtures**:
+  - `e2e/manifests/test-rbac.yaml` - Test users and permissions
+  - `e2e/manifests/test-resources.yaml` - API products, PlanPolicy
+  - `e2e/manifests/test-apiproduct-fixtures.yaml` - Additional API products
+
+## Troubleshooting
+
+### Tests fail with "Cannot navigate to invalid URL"
+- Make sure you use `--config=e2e/playwright.config.ts`
+- Check that console is running: `curl http://localhost:9000`
+
+### Tests timeout looking for elements
+- Check that plugin dev server is running: `curl http://localhost:9001`
+- Check test screenshots in `test-results/` directory
+
+### API key not approved automatically
+- Check if Kuadrant controller is running:
+  ```bash
+  kubectl get pods -n kuadrant-system
+  ```
+- Check if payment-api has `discoveredPlans`:
+  ```bash
+  kubectl get apiproduct payment-api -n kuadrant-test -o jsonpath='{.status.discoveredPlans}'
+  ```
+
+### View test results
+```bash
+# Open HTML report
+npx playwright show-report
+
+# View screenshots
+ls -la test-results/*/test-failed-*.png
+```
+
+## Cleanup
+
+```bash
+# Teardown test environment
+./e2e/teardown.sh
+
+# Or destroy entire oinc cluster
+oinc delete --force
+```
+
+## Important Notes
+
+1. **Always use `--config=e2e/playwright.config.ts`** when running tests manually
+2. The Kuadrant controller must be running to approve API keys and populate status.discoveredPlans
+3. Tests use automatic approval via payment-api (approvalMode: automatic)
+4. Each test run creates unique resource names to avoid conflicts
+5. Tests run with retries=1 (will retry once if failed)
+6. CI may run the full smoke suite when:
+  - The changed files do not match any `component-to-spec` mapping, which triggers the full smoke fallback
+  - Modifications to shared modules (`src/utils/`, `src/hooks/`, `src/constants/`, etc.) trigger the full smoke fallback
