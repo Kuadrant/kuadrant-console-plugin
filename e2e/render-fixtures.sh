@@ -67,7 +67,7 @@ function emit_document(    i, kind, name, line, has_namespace, skip_infrastructu
 
   if (for_teardown != "true" && use_existing_cluster == "true" &&
       load_balancer_class == "" && kind == "ConfigMap" &&
-      (name == "metallb-gateway-params" || name == "mcp-gateway-params")) {
+      name == "metallb-gateway-params") {
     document_line_count = 0
     return
   }

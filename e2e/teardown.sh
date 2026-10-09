@@ -134,11 +134,6 @@ case "${E2E_USE_EXISTING_CLUSTER:-false}" in
     # Reverse fixture installation order; namespaced resources are only deleted
     # after their containing namespaces have passed the ownership check.
     delete_fixture_manifest "${SCRIPT_DIR}/manifests/test-apikey-fixtures.yaml"
-    # The extension finalizer needs its target Gateway to exist while it cleans up.
-    kubectl delete --ignore-not-found --wait=true --timeout=120s \
-      mcpgatewayextensions.mcp.kuadrant.io/mcp-gateway-extension \
-      --namespace kuadrant-test
-    delete_fixture_manifest "${SCRIPT_DIR}/manifests/test-mcp-resources.yaml"
     delete_fixture_manifest "${SCRIPT_DIR}/manifests/test-apiproduct-fixtures.yaml"
     delete_fixture_manifest "${SCRIPT_DIR}/manifests/test-resources.yaml"
     delete_owned_cluster_fixture "clusterissuers.cert-manager.io/test-selfsigned"

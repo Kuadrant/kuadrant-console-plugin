@@ -105,7 +105,42 @@ if ! EXISTING_E2E_NAMESPACE="$(kubectl get namespace kuadrant-test --ignore-not-
 fi
 
 if [[ "${EXISTING_E2E_NAMESPACE}" == "namespace/kuadrant-test" ]]; then
-  echo "[e2e] found namespace/kuadrant-test; reusing existing fixtures and skipping setup"
+  fixture_namespaces=(
+    kuadrant-test kuadrant-test-2
+    consumer-alice consumer-alice2 consumer-bob consumer-bob2
+    consumer-carol consumer-dave consumer-ellen consumer-frank consumer-george
+  )
+  for namespace in "${fixture_namespaces[@]}"; do
+    if ! owner="$(kubectl get namespace "${namespace}" -o jsonpath='{.metadata.labels.kuadrant\.io/e2e-owned}' 2>/dev/null)"; then
+      echo "ERROR: existing E2E fixture namespace '${namespace}' is missing or unreadable; run E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:teardown before retrying" >&2
+      exit 1
+    fi
+    if [[ "${owner}" != "console-plugin" ]]; then
+      echo "ERROR: namespace '${namespace}' is not E2E-owned; inspect it before running E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:teardown" >&2
+      exit 1
+    fi
+  done
+
+  if ! setup_complete="$(kubectl get namespace kuadrant-test -o jsonpath='{.metadata.annotations.kuadrant\.io/e2e-setup-complete}')"; then
+    echo "ERROR: could not read the E2E setup marker; run E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:teardown before retrying" >&2
+    exit 1
+  fi
+  if [[ "${setup_complete}" != "true" ]]; then
+    echo "ERROR: E2E setup did not finish; run E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:teardown before retrying" >&2
+    exit 1
+  fi
+
+  for resource in \
+    gateway/test-gateway \
+    httproute/test-route \
+    apiproduct/payment-api \
+    planpolicy/test-plan-policy; do
+    if ! kubectl get "${resource}" -n kuadrant-test >/dev/null 2>&1; then
+      echo "ERROR: E2E fixture '${resource}' is missing; run E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:teardown before retrying" >&2
+      exit 1
+    fi
+  done
+  echo "[e2e] found completed, E2E-owned fixtures; reusing them and skipping setup"
 else
   echo "[e2e] namespace/kuadrant-test not found; applying E2E fixtures"
   FIXTURE_SETUP_ATTEMPTED=true

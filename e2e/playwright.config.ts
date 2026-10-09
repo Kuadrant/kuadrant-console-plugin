@@ -13,8 +13,9 @@ if (!['true', 'false'].includes(ignoreHTTPSErrorsValue)) {
 const loginToConsole = shouldLoginToConsole();
 const useInstalledConsole = process.env.E2E_USE_INSTALLED_CONSOLE === 'true';
 const generatedStorageState = resolve(__dirname, '.auth', 'installed-console.json');
-const storageState = process.env.PLAYWRIGHT_STORAGE_STATE
-  ? resolve(process.cwd(), process.env.PLAYWRIGHT_STORAGE_STATE)
+const suppliedStorageState = process.env.PLAYWRIGHT_STORAGE_STATE;
+const storageState = suppliedStorageState
+  ? resolve(process.cwd(), suppliedStorageState)
   : loginToConsole && hasConsoleCredentials()
   ? generatedStorageState
   : undefined;
@@ -81,23 +82,8 @@ export default defineConfig({
     ...(storageState ? { storageState } : {}),
     ignoreHTTPSErrors: ignoreHTTPSErrorsValue === 'true',
     screenshot: 'only-on-failure',
-    trace: 'on-first-retry',
+    // A supplied state remains valid after the run, so traces must not retain its session cookie.
+    trace: suppliedStorageState ? 'off' : 'on-first-retry',
     actionTimeout: 10_000,
   },
-  projects: [
-    {
-      name: 'default',
-      testIgnore: '**/mcp-external-wizard.spec.ts',
-    },
-    {
-      name: 'light',
-      testMatch: '**/mcp-external-wizard.spec.ts',
-      use: { colorScheme: 'light' },
-    },
-    {
-      name: 'dark',
-      testMatch: '**/mcp-external-wizard.spec.ts',
-      use: { colorScheme: 'dark' },
-    },
-  ],
 });
