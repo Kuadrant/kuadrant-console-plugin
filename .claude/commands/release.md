@@ -51,7 +51,7 @@ Do all of this before creating a local tag.
 
 1. Verify the tools `git`, `gh`, and `node` are available, and run from the
    repository root.
-2. Set the repository to `Kuadrant/console-plugin`. Confirm the `upstream`
+2. Set the repository to `Kuadrant/kuadrant-console-plugin`. Confirm the `upstream`
    remote points to that repository. Do not silently substitute `origin`.
 3. If either `GH_TOKEN` or `GITHUB_TOKEN` is set, stop and ask the user to unset
    it. Then run:
@@ -112,9 +112,11 @@ Do all of this before creating a local tag.
    the reviewed release PR; an unassociated or direct commit is not releasable.
 
 10. Run `gh pr checks "$PR" --required --repo "$REPO"`. Require it to exit
-    successfully and specifically show all five repository CI jobs passing:
-    `build`, `lint`, `i18n`, `unit`, and `e2e`. Pending, skipped, missing,
-    cancelled, or failed required checks are failures.
+    successfully and every configured required check to pass. Also inspect
+    `gh pr checks "$PR" --repo "$REPO"` and require passing `build`, `lint`,
+    `i18n`, `unit`, and `e2e-smoke / e2e-rbac` checks, including any that are
+    not required by the ruleset. Pending, skipped, missing, cancelled, or
+    failed checks in either set are failures.
 
 11. Verify the tag version does not already exist on Quay.io:
 
@@ -181,7 +183,7 @@ on any mismatch. Create a non-draft GitHub Release from the existing remote tag:
 
 ```shell
 gh release create "$TAG" \
-  --repo Kuadrant/console-plugin \
+  --repo Kuadrant/kuadrant-console-plugin \
   --verify-tag \
   --generate-notes
 ```
@@ -203,7 +205,7 @@ matching all of these values, rather than selecting the latest run:
 appear, require exactly one matching run, then wait for it:
 
 ```shell
-gh run watch "$RUN_ID" --repo Kuadrant/console-plugin --compact --exit-status
+gh run watch "$RUN_ID" --repo Kuadrant/kuadrant-console-plugin --compact --exit-status
 ```
 
 If it fails, show `gh run view "$RUN_ID" --log-failed`, inspect Quay.io state,
