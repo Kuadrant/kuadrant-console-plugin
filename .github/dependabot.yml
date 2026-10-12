@@ -32,6 +32,11 @@ updates:
     ignore:
       - dependency-name: 'react-i18next'
         versions: ['>=16.6.0']
+      # @types/node must match the node major that ci and the image build run
+      # (currently 22). newer majors type apis node 22 lacks, such as the
+      # URLPattern global. raise this bound when that runtime moves.
+      - dependency-name: '@types/node'
+        versions: ['>=23.0.0']
 
   - package-ecosystem: 'github-actions'
     directory: '/'
