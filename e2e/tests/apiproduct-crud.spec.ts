@@ -302,7 +302,7 @@ test.describe('APIProduct CRUD Operations', () => {
     await httpRouteOption.click();
 
     // Wait for form state to update (Create button enables once HTTPRoute is selected)
-    await expect(page.locator('button:has-text("Create")')).toBeEnabled({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeEnabled({ timeout: 5000 });
 
     // Form -> YAML: verify YAML reflects form values
     await page.locator('button:has-text("YAML View")').click();

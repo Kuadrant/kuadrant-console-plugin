@@ -80,9 +80,4 @@ until backend_reconciled; do
   sleep 2
 done
 
-# the demo gateway listener is plain HTTP, and its public host resolves to
-# loopback inside the cluster
-kubectl --context=oinc set env deployment/"${PLUGIN}" -n "${NAMESPACE}" \
-  MCP_PROXY_DIAL_ADDRESS=mcp-gateway-istio.gateway-system.svc.cluster.local:80 \
-  MCP_PROXY_ALLOW_INSECURE_AUTH=true
-kubectl --context=oinc rollout status deployment/"${PLUGIN}" -n "${NAMESPACE}" --timeout=5m
+bash "${SCRIPT_DIR}/setup-mcp-demo-proxy.sh"

@@ -10,6 +10,52 @@ fi
 export MCP_INSPECTOR_E2E_EXTENSION=mcp-gateway-system/mcp-gateway-extension
 export MCP_INSPECTOR_E2E_REQUIRED=true
 
+probe_log=$(mktemp)
+auth_fixture_applied=false
+cleanup() {
+  if [ -n "${probe_pid:-}" ]; then
+    kill "${probe_pid}" 2>/dev/null || true
+    wait "${probe_pid}" 2>/dev/null || true
+  fi
+  rm -f "${probe_log}"
+  if [ "${auth_fixture_applied}" = true ]; then
+    kubectl --context=oinc delete -f e2e/manifests/mcp-inspector-auth.yaml --ignore-not-found
+  fi
+}
+trap cleanup EXIT
+
+kubectl --context=oinc port-forward --address=127.0.0.1 -n gateway-system service/mcp-gateway-istio :80 >"${probe_log}" 2>&1 &
+probe_pid=$!
+
+# Registration Ready means config was written, not that the broker has discovered
+# the upstream versions. Verify the same discovery response the Inspector uses.
+probe_deadline=$((SECONDS + 120))
+while true; do
+  probe_port=$(sed -n 's/^Forwarding from 127.0.0.1:\([0-9]*\) .*/\1/p' "${probe_log}" | head -1)
+  if [ -n "${probe_port}" ]; then
+    discovery=$(curl --silent --max-time 5 \
+      -H 'Host: mcp.127-0-0-1.sslip.io' -H 'Content-Type: application/json' \
+      -H 'Accept: application/json, text/event-stream' -H 'MCP-Protocol-Version: 2026-07-28' \
+      -H 'Mcp-Method: server/discover' \
+      --data '{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{},"io.modelcontextprotocol/clientInfo":{"name":"inspector-readiness","version":"1"}}}}' \
+      "http://127.0.0.1:${probe_port}/mcp" || true)
+    if [[ "${discovery}" == event:* || "${discovery}" == data:* ]]; then
+      discovery=$(sed -n 's/^data: *//p' <<<"${discovery}")
+    fi
+    if jq -e '.result.supportedVersions | contains(["2025-11-25", "2026-07-28"])' \
+      >/dev/null 2>&1 <<<"${discovery}"; then
+      break
+    fi
+  fi
+  if [ "${SECONDS}" -ge "${probe_deadline}" ] || ! kill -0 "${probe_pid}" 2>/dev/null; then
+    echo "error: demo gateway did not advertise both MCP protocol versions" >&2
+    jq -c '.result.supportedVersions // .error' <<<"${discovery:-null}" >&2 || true
+    cat "${probe_log}" >&2
+    exit 1
+  fi
+  sleep 2
+done
+
 # Retain results separately for each protocol and authentication journey.
 journey() {
   PLAYWRIGHT_HTML_OUTPUT_DIR="playwright-report/inspector-$1" \
@@ -28,23 +74,12 @@ for protocol in 2026-07-28 auto; do
 done
 
 # This fixture and credential belong only to the disposable E2E gateway.
-probe_log=$(mktemp)
-cleanup() {
-  if [ -n "${probe_pid:-}" ]; then
-    kill "${probe_pid}" 2>/dev/null || true
-    wait "${probe_pid}" 2>/dev/null || true
-  fi
-  rm -f "${probe_log}"
-  kubectl --context=oinc delete -f e2e/manifests/mcp-inspector-auth.yaml --ignore-not-found
-}
-trap cleanup EXIT
+auth_fixture_applied=true
 kubectl --context=oinc apply -f e2e/manifests/mcp-inspector-auth.yaml
 kubectl --context=oinc wait authpolicy/mcp-inspector-e2e -n gateway-system --for=condition=Enforced --timeout=2m
 
 # Enforced can precede Envoy/Authorino propagation. Check both anonymous rejection
 # and valid authentication on the listener before starting the browser journey.
-kubectl --context=oinc port-forward --address=127.0.0.1 -n gateway-system service/mcp-gateway-istio :80 >"${probe_log}" 2>&1 &
-probe_pid=$!
 probe_deadline=$((SECONDS + 120))
 while true; do
   probe_port=$(sed -n 's/^Forwarding from 127.0.0.1:\([0-9]*\) .*/\1/p' "${probe_log}" | head -1)
