@@ -4828,10 +4828,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/node@npm:*, @types/node@npm:^18.0.0":
-  version: 18.0.0
-  resolution: "@types/node@npm:18.0.0"
-  checksum: 10c0/1481061b322bc72544944cd038cc1b037b013336fb63775638d48231a3e9ddf5f99af6f8719b970ccfff60701d86afd0cecfc27cd7ccf78c845f53079dc78ed4
+"@types/node@npm:*, @types/node@npm:^22.20.5":
+  version: 22.20.5
+  resolution: "@types/node@npm:22.20.5"
+  dependencies:
+    undici-types: "npm:~6.21.0"
+  checksum: 10c0/0cf61a89c6a69917ab49f976a6bb11a29e3b348a6ae19f5827ceb91d3ade781faab58dcf3b8fa625f975f5d7536b9166ff94e8250c29272c667164f77c28fa88
   languageName: node
   linkType: hard
 
@@ -11783,7 +11785,7 @@ __metadata:
     "@testing-library/user-event": "npm:^14.6.7"
     "@types/jest": "npm:^30.0.0"
     "@types/js-yaml": "npm:^4.0.9"
-    "@types/node": "npm:^18.0.0"
+    "@types/node": "npm:^22.20.5"
     "@types/react": "npm:^18.0.0"
     "@types/react-helmet": "npm:^6.1.11"
     "@typescript-eslint/eslint-plugin": "npm:^8.71.1"
@@ -16349,6 +16351,13 @@ __metadata:
     sprintf-js: "npm:^1.1.1"
     util-deprecate: "npm:^1.0.2"
   checksum: 10c0/172319c7ef5436587e6f0fb5afe0b2e6b50f723a4070c7fb3454c5dfa5398ed3b7042c049eac2826bdd44d37cbd16b2b965d0ccc1597fde354b1d3a846fd4a39
+  languageName: node
+  linkType: hard
+
+"undici-types@npm:~6.21.0":
+  version: 6.21.0
+  resolution: "undici-types@npm:6.21.0"
+  checksum: 10c0/c01ed51829b10aa72fc3ce64b747f8e74ae9b60eafa19a7b46ef624403508a54c526ffab06a14a26b3120d055e1104d7abe7c9017e83ced038ea5cf52f8d5e04
   languageName: node
   linkType: hard
 
