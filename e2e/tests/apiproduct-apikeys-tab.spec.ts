@@ -135,7 +135,7 @@ async function navigateToAPIProductAPIKeysTab(
 
   // Wait for Kuadrant plugin to load
   await page
-    .getByRole('button', { name: 'Kuadrant', exact: true })
+    .getByRole('button', { name: /^(Kuadrant|Connectivity Link)$/, exact: true })
     .waitFor({ state: 'visible', timeout: 30_000 });
 
   // Navigate using SPA navigation to preserve impersonation

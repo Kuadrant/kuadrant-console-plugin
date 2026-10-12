@@ -1,5 +1,63 @@
 # E2E Tests
 
+## Test an installed Console plugin or RC
+
+Use a dedicated OpenShift test cluster. The runner leaves fixtures, including
+the `test-admin-kuadrant` RBAC grants, in place until you run teardown. Install
+dependencies with `yarn install` and Chromium with
+`npx playwright install chromium`.
+
+The cluster needs an Accepted `istio` GatewayClass, working LoadBalancer
+services, cert-manager, Kuadrant, and the Developer Portal controller and CRDs.
+The active `oc` and `kubectl` contexts must point to the same cluster, and the
+account running setup must be allowed to create the fixtures. The Console user
+must be allowed to impersonate the test users.
+
+`yarn test:e2e:installed` discovers the Console route for the active kubeconfig
+context, prompts for Console credentials, applies fixtures when they are absent,
+and runs Playwright against the installed plugin. It reuses fixtures only after
+setup has marked them complete. It does not start a local plugin development
+server or remove fixtures automatically.
+
+```bash
+yarn test:e2e:installed
+yarn test:e2e:installed e2e/tests/overview.spec.ts
+yarn test:e2e:installed --grep @smoke
+E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:teardown
+```
+
+For clusters with an untrusted Console HTTPS certificate and multiple login
+providers, set both options:
+
+```bash
+E2E_IGNORE_HTTPS_ERRORS=true E2E_CONSOLE_IDENTITY_PROVIDER=HTPasswd yarn test:e2e:installed
+```
+
+`HTPasswd` is an example. Use the provider name shown on the selected cluster's
+Console login page. For noninteractive runs, provide both
+`E2E_CONSOLE_USERNAME` and `E2E_CONSOLE_PASSWORD`, or set
+`PLAYWRIGHT_STORAGE_STATE` to an existing storage-state file. Supplied state is
+left active and traces are disabled so reports do not retain its session
+cookie. Runs using generated credentials log out after testing. `CONSOLE_URL`
+overrides route discovery.
+
+### Test this checkout against an existing cluster
+
+Set `E2E_USE_EXISTING_CLUSTER=true` in each terminal used for setup,
+`yarn start-console`, Playwright, and teardown. Prefix each command as needed:
+
+```bash
+E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:setup
+yarn start # separate terminal: plugin development server
+E2E_USE_EXISTING_CLUSTER=true yarn start-console # another terminal
+E2E_USE_EXISTING_CLUSTER=true yarn test:e2e
+E2E_USE_EXISTING_CLUSTER=true yarn test:e2e:teardown
+```
+
+If setup stops partway, inspect the fixture namespaces and run teardown before
+retrying. The installed-Console runner refuses to reuse incomplete or unowned
+fixtures.
+
 ## Prerequisites
 
 1. **oinc** (OpenShift in a Container) - creates local OpenShift cluster with console
@@ -29,7 +87,7 @@ npx playwright install chromium
 
 ```bash
 # 1. Setup cluster with console, Kuadrant, and test fixtures
-sudo ./e2e/setup.sh
+./e2e/setup.sh
 
 # 2. Start the plugin development server (in another terminal or background)
 yarn start
@@ -129,7 +187,7 @@ ls -la test-results/*/test-failed-*.png
 
 ```bash
 # Teardown test environment
-sudo ./e2e/teardown.sh
+./e2e/teardown.sh
 
 # Or destroy entire oinc cluster
 oinc destroy
