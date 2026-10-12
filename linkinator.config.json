@@ -1,5 +1,10 @@
 {
-	"skip": ["^https?://localhost:(9000|9001)"],
+	"skip": [
+		"^https?://localhost:(9000|9001)",
+		"^https?://docs\\.redhat\\.com",
+        "^https?://developers\\.redhat\\.com",
+        "^https?://docs\\.google\\.com"
+	],
 	"recurse": true,
 	"directoryListing": true,
 	"markdown": true
