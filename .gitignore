@@ -8,6 +8,7 @@ playwright-report/
 playwright-results*.json
 playwright-storage-state.json
 test-results/
+e2e/.auth/
 
 # npm (this project uses yarn)
 package-lock.json

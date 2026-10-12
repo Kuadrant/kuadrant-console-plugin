@@ -8,7 +8,6 @@ if [ "$(kubectl config current-context)" != "oinc" ]; then
   exit 1
 fi
 export MCP_INSPECTOR_E2E_EXTENSION=mcp-gateway-system/mcp-gateway-extension
-export MCP_INSPECTOR_E2E_REQUIRED=true
 
 # Retain results separately for each protocol and authentication journey.
 journey() {

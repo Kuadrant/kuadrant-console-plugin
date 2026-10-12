@@ -81,13 +81,15 @@ plugin:
     caConfigMapName: mcp-gateway-ca # ConfigMap key: ca-bundle.crt
 ```
 
-For the plain-HTTP oinc demo, use these development settings before syncing the Console proxy:
+`make oinc` deploys the backend through the operator's `CONSOLE_PLUGIN_IMAGE_OVERRIDE` (oinc has no ClusterVersion) and applies these development settings for the plain-HTTP demo before syncing the Console proxy:
 
 ```bash
 kubectl --context=oinc set env deployment/kuadrant-console-plugin -n kuadrant-system \
   MCP_PROXY_DIAL_ADDRESS=mcp-gateway-istio.gateway-system.svc.cluster.local:80 \
   MCP_PROXY_ALLOW_INSECURE_AUTH=true
 ```
+
+To run backend changes on oinc, use `make oinc-backend`. It builds the plugin image from the working tree, loads it into oinc and switches the backend to it.
 
 ## Network access
 
@@ -199,3 +201,19 @@ MCP_INSPECTOR_E2E_EXTENSION=mcp-gateway-system/mcp-gateway-extension \
 
 Use the same stateless arguments with `MCP_INSPECTOR_E2E_PROTOCOL=auto` to check
 automatic negotiation on the dual-protocol demo. The UI itself still defaults to Auto.
+
+### Run against an installed Console on an existing cluster
+
+The installed-console E2E runner skips the live journey unless
+`MCP_INSPECTOR_E2E_EXTENSION` points to a preexisting, Ready
+MCPGatewayExtension with a reachable MCP server. Set it to the extension's
+`namespace/name`, then run `yarn test:e2e:installed e2e/tests/mcp-inspector.spec.ts
+--grep 'connects to a live gateway'`. The runner does not install a live MCP
+target on an existing cluster. The standard `kuadrant-test/mcp-gateway-extension`
+fixture is for UI coverage and has no backend MCP server.
+
+Use `E2E_CONSOLE_IDENTITY_PROVIDER` when the Console has multiple login
+providers; its value must match the displayed provider name. Set
+`E2E_IGNORE_HTTPS_ERRORS=true` only for a Console route with an untrusted
+certificate; it affects browser TLS checks, while `oc` and `kubectl` still
+verify the API server certificate.

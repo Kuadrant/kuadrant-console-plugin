@@ -8,11 +8,15 @@ Based on https://github.com/openshift/console-plugin-template
 
 ![Overview](docs/images/overview.gif)
 
-## Running
+## Local plugin development
 
 - Target a running OCP with `oc login`
 - `yarn run start` # start webpack
 - `yarn run start-console` # start local ocp console + proxy
+
+These commands run the plugin source from this checkout. To test a plugin or RC
+already installed in a cluster, use the
+[installed-console E2E workflow](e2e/README.md#test-an-installed-console-plugin-or-rc).
 
 # Requirements for running locally
 
@@ -43,10 +47,11 @@ Navigate to <http://localhost:9000> and click "Kuadrant" in the left sidebar men
 
 [oinc](https://github.com/jasonmadigan/oinc) (OKD in a container) provides a lightweight OpenShift-compatible cluster locally with the console built in. This sets up a full environment with Kuadrant, Istio, cert-manager, and the OpenShift console, with hot reloading for plugin development.
 
-Prerequisites: [oinc v0.5.3 or newer](https://github.com/jasonmadigan/oinc/releases/tag/v0.5.3), [kubectl](https://kubernetes.io/docs/tasks/tools/), Docker or podman, Node.js.
+Prerequisites: [oinc v0.5.3 or newer](https://github.com/jasonmadigan/oinc/releases/tag/v0.5.3), [kubectl](https://kubernetes.io/docs/tasks/tools/), [jq](https://jqlang.org/download/), Docker or podman, Node.js.
 
 ```bash
 make oinc                   # create cluster + start plugin dev server with hot reload
+make oinc-backend           # rebuild the MCP Inspector backend from the working tree
 make oinc-mcp-demo          # install/refresh stateful + stateless MCP demo servers
 make oinc-sync-plugin-proxy # manually resync an operator-reconciled backend proxy
 make oinc-teardown          # tear it all down
@@ -82,6 +87,18 @@ Save any resources you need before tearing down a cluster.
 Fresh setup installs both MCP demo servers. For an existing cluster, run
 `make oinc-mcp-demo`; see [demo servers](docs/mcp-inspector.md#demo-servers) for
 the protocol choices, tools, prompts, and live test commands.
+
+The MCP Inspector backend (`cmd/plugin-server`) does not run in the dev server.
+oinc has no ClusterVersion, so `make oinc` sets the operator's
+`CONSOLE_PLUGIN_IMAGE_OVERRIDE` and applies the plain-HTTP relay settings for
+the demo gateway. A new cluster gets `quay.io/kuadrant/console-plugin:latest`,
+pulled once per cluster. This needs `KUADRANT_VERSION=latest`; released
+operators do not support the override yet.
+
+The backend does not hot reload. `make oinc-backend` builds the plugin image
+from the working tree, loads it into oinc and switches the backend to it;
+later `make oinc` runs keep it. To return to a published image, run
+`CONSOLE_PLUGIN_IMAGE=quay.io/kuadrant/console-plugin:latest make oinc`.
 
 oinc runs Console as a standalone development container, so it does not have
 the OpenShift Console operator to consume `ConsolePlugin.spec.proxy`. When the
@@ -160,8 +177,9 @@ Two easy ways to deploy.
 
 ### Via `kubectl` or `oc`
 
-`install.yaml` uses the 4.22+ `latest` image. For OCP 4.21 and earlier, replace
-it with `quay.io/kuadrant/console-plugin:v0.6.0` before applying the manifest.
+`install.yaml` on `main` uses the development `latest` image for OCP 4.22+.
+For stable releases or older consoles, follow the
+[release image and manifest guidance](docs/versioning.md#deployment-manifests).
 
 `oc apply -f install.yaml`
 
@@ -241,20 +259,32 @@ Update `settings.json` (File > Preferences > Settings):
 
 ## Version matrix
 
-| OpenShift console | Image    | Branch        |
-| ----------------- | -------- | ------------- |
-| 4.21 and earlier  | `v0.6.0` | `release-0.x` |
-| 4.22 and later    | `latest` | `main`        |
+Upstream release images for the console versions listed below:
 
-`v0.6.0` declares `latestSupportedOpenshiftVersion: "4.19"`, but is supported
-through 4.21. The `release-0.x` branch corrects the metadata and receives
-backports.
+| OpenShift console | Image tag | React | Server | Release branch |
+| ----------------- | --------- | ----- | ------ | -------------- |
+| 4.20–4.21         | `v0.6.0`  | 17    | nginx  | `release-0.6`  |
+| 4.22              | `v0.7.0`  | 18    | Go     | `release-0.7`  |
+| 4.23 (future)     | `v0.7.0`  | 18    | Go     | `release-0.7`  |
+| 5.0 (future)      | `v0.7.0`  | 18    | Go     | `release-0.7`  |
 
-`latest` is the unreleased 4.22 build from `main`. Choose the image by OpenShift
-version, not by which tag looks newest.
+4.23 and 5.0 target the same upcoming console generation; final-release
+validation is pending. Use release tags for stable images; `latest` tracks development.
 
-See [Versioning and OpenShift compatibility](docs/versioning.md) for runtime
-versions and loading rules.
+See [OpenShift compatibility](docs/versioning.md) for runtime versions,
+migration history and loading requirements.
+
+### Operator image environment variables
+
+Set these on the `kuadrant-operator` Deployment for the release streams above:
+
+| Environment variable                  | Selected on   | Upstream release image                   |
+| ------------------------------------- | ------------- | ---------------------------------------- |
+| `RELATED_IMAGE_CONSOLE_PLUGIN_LATEST` | OCP 4.22+     | `quay.io/kuadrant/console-plugin:v0.7.0` |
+| `RELATED_IMAGE_CONSOLE_PLUGIN_SDK1`   | OCP 4.20–4.21 | `quay.io/kuadrant/console-plugin:v0.6.0` |
+
+See [operator image configuration](docs/versioning.md#operator-image-environment-variables)
+for tier names, release pinning and downstream RHCL image mapping.
 
 ## Maintenance
 

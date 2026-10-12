@@ -58,9 +58,17 @@ under `.yarn/patches`. Check the version shipped by the console separately.
 
 ### Backports
 
-Send applicable bug fixes and SDK-independent changes to `release-0.x` in a PR
-with a `[backport]` title. Do not backport code that needs React 18, React Router
-7 or SDK 4.22. Review cherry-picks normally; the branches have diverged.
+Target the `release-X.Y` branch matching the release that needs the fix, using
+a PR with a `[backport]` title. The existing streams are `release-0.3`,
+`release-0.4`, `release-0.6` and `release-0.7`; `main` develops the next release.
+
+`release-0.6` maintains the v0.6 SDK 1.x / React 17 build used on OCP 4.20–4.21.
+`release-0.7` maintains the v0.7 SDK 4.22 / React 18 build. Keep React 18,
+React Router 7 and SDK 4.22-dependent changes out of the older streams.
+
+Check that the target branch contains the affected feature and is missing the
+fix before cherry-picking. Review and test each backport against its target
+branch; the streams have different features and test suites.
 
 ## Prerequisites
 

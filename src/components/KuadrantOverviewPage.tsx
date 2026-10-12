@@ -318,34 +318,28 @@ const KuadrantOverviewPage: React.FC = () => {
   const watchNamespace = ns || activeNamespace;
 
   // Smart default redirect: check cluster-wide permissions and redirect namespace-scoped users
+  const activeNamespaceRef = React.useRef(activeNamespace);
+  activeNamespaceRef.current = activeNamespace;
+
   React.useEffect(() => {
-    const performRedirect = async () => {
-      if (location.pathname === '/kuadrant/overview/all-namespaces') {
-        try {
-          const result = await checkAccess({
-            group: 'gateway.networking.k8s.io',
-            resource: 'gateways',
-            verb: 'list',
-          });
-
-          // If user doesn't have cluster-wide access, redirect to namespace-scoped view
-          if (!result.status?.allowed) {
-            const targetNamespace =
-              activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
-            navigate(`/kuadrant/overview/ns/${targetNamespace}`, { replace: true });
-          }
-          // Otherwise, stay on current path (cluster-wide view)
-        } catch (_error) {
-          // On error, redirect to namespace-scoped view
-          const targetNamespace =
-            activeNamespace && activeNamespace !== '#ALL_NS#' ? activeNamespace : 'default';
-          navigate(`/kuadrant/overview/ns/${targetNamespace}`, { replace: true });
-        }
-      }
+    if (location.pathname !== '/kuadrant/overview/all-namespaces') return;
+    let cancelled = false;
+    const redirect = () => {
+      const current = activeNamespaceRef.current;
+      const target = current && current !== '#ALL_NS#' ? current : 'default';
+      navigate(`/kuadrant/overview/ns/${target}`, { replace: true });
     };
-
-    performRedirect();
-  }, [location.pathname, activeNamespace, navigate]);
+    checkAccess({ group: 'gateway.networking.k8s.io', resource: 'gateways', verb: 'list' })
+      .then((result) => {
+        if (!cancelled && !result.status?.allowed) redirect();
+      })
+      .catch(() => {
+        if (!cancelled) redirect();
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [location.pathname, navigate]);
 
   const resolvedNamespace = watchNamespace === '#ALL_NS#' ? undefined : watchNamespace;
   const rbacResources = resources.map((res) => ({
@@ -395,12 +389,6 @@ const KuadrantOverviewPage: React.FC = () => {
     !resourceRBAC['PlanPolicy']['list'] &&
     !resourceRBAC['DNSPolicy']['list'] &&
     !resourceRBAC['TLSPolicy']['list'];
-
-  React.useEffect(() => {
-    if (ns && ns !== activeNamespace) {
-      handleNamespaceChange(ns);
-    }
-  }, [ns, handleNamespaceChange]);
 
   const handleHideCard = () => {
     setHideCard(true);

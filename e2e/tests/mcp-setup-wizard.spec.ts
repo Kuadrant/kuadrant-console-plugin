@@ -213,9 +213,11 @@ spec:
 
         const ruleModal = page.locator('.pf-v6-c-modal-box');
         await expect(ruleModal).toBeVisible();
+        await ruleModal.locator('#http-method-0').selectOption('POST');
         await ruleModal.getByRole('button', { name: 'Next', exact: true }).click();
         await ruleModal.getByRole('button', { name: 'Next', exact: true }).click();
         await ruleModal.locator('#service-name').fill('test-svc');
+        await ruleModal.locator('#service-port').fill('8080');
         await ruleModal.getByRole('button', { name: 'Next', exact: true }).click();
         await ruleModal.getByRole('button', { name: 'Create', exact: true }).click();
         await page.waitForSelector('.pf-v6-c-modal-box', { state: 'detached', timeout: 10_000 });
