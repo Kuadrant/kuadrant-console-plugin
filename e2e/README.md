@@ -84,7 +84,7 @@ unowned fixture set.
 > **Note:** Replace `oinc-linux-amd64` with your platform (e.g., `oinc-darwin-arm64` for Apple Silicon).
 
 ```bash
-OINC_VERSION="v0.5.3"
+OINC_VERSION="v0.6.1"
 curl -fL -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
 chmod +x oinc
 ./oinc version
