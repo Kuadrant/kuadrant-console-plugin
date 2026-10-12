@@ -1,0 +1,6 @@
+{
+	"skip": ["^https?://localhost:(9000|9001)"],
+	"recurse": true,
+	"directoryListing": true,
+	"markdown": true
+} 
