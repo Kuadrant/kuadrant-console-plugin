@@ -66,8 +66,9 @@ Do all of this before creating a local tag.
 4. Require `git status --porcelain=v1` to be empty, including untracked files.
 5. Set `BRANCH=main` for a minor release. For a patch, derive
    `BRANCH=release-X.Y` from the manifest's canonical stable version. Require
-   the current branch to match `$BRANCH` exactly and not be detached. Legacy
-   `release-0.x` releases need a separate maintainer-reviewed plan.
+   the current branch to match `$BRANCH` exactly and not be detached.
+   `release-0.3` and `release-0.4` lack the `unit` and `e2e-smoke / e2e-rbac`
+   checks; releasing from them needs a separate maintainer-reviewed plan.
 6. Fetch only the selected branch without tags:
 
    ```shell
@@ -79,6 +80,7 @@ Do all of this before creating a local tag.
    Record it as `HEAD_SHA`.
 
 7. Read the versions from `package.json`:
+
    - `version` (top-level)
    - `consolePlugin.version`
 
@@ -130,6 +132,34 @@ Do all of this before creating a local tag.
     exists — stop and report a previous publication. A registry or network error
     is a failed check, not proof of absence.
 
+12. Choose the release notes start tag. GitHub's automatic choice ignores
+    streams; for a `release-0.4` patch after v0.4.3 it picks v0.4.2. List the
+    tags on `upstream`:
+
+    ```shell
+    git ls-remote --tags --refs upstream 'refs/tags/v*'
+    ```
+
+    Take the canonical `vA.B.C` tags lower than the release version, highest
+    first, and select the first that is an ancestor of `HEAD_SHA`:
+
+    ```shell
+    gh api "repos/${REPO}/compare/${CANDIDATE}...${HEAD_SHA}" --jq .status
+    ```
+
+    Only `ahead` means ancestor. A patch normally gets `vX.Y.(Z-1)` and a minor
+    the previous `.0` tag. Record it as `PREVIOUS_TAG`; stop if none qualifies.
+
+13. Read the latest release:
+
+    ```shell
+    gh api "repos/${REPO}/releases/latest" --jq .tag_name
+    ```
+
+    Require a canonical stable tag. Set `LATEST_FLAG=--latest` only when the
+    release version is higher, otherwise `LATEST_FLAG=--latest=false`, so a
+    patch to an older stream never replaces it.
+
 ## 3. Confirm the release plan
 
 Print a compact plan containing:
@@ -138,6 +168,7 @@ Print a compact plan containing:
 - branch and full `HEAD_SHA`;
 - release PR number and URL;
 - required CI results;
+- release notes range `PREVIOUS_TAG...TAG` and whether it becomes latest;
 - `upstream` URL;
 - authenticated GitHub login;
 - Quay.io image: `quay.io/kuadrant/console-plugin:${TAG}`; and
@@ -150,8 +181,8 @@ confirmation. Stop without changing anything if they do not confirm.
 
 Immediately after confirmation, fetch the selected branch again and repeat the
 clean-worktree, branch synchronization, package-version, remote-tag absence, release absence,
-PR/CI, and Quay.io absence checks. This closes the gap between preflight and
-push.
+PR/CI, Quay.io absence, start-tag and latest-release checks. This closes the gap
+between preflight and push.
 
 Create a signed annotated tag at the already-recorded commit:
 
@@ -187,7 +218,9 @@ on any mismatch. Create a non-draft GitHub Release from the existing remote tag:
 gh release create "$TAG" \
   --repo Kuadrant/kuadrant-console-plugin \
   --verify-tag \
-  --generate-notes
+  --generate-notes \
+  --notes-start-tag "$PREVIOUS_TAG" \
+  "$LATEST_FLAG"
 ```
 
 Do not pass `--target`; the tag is the source of truth. Read the release back
@@ -204,7 +237,9 @@ matching all of these values, rather than selecting the latest run:
 - commit: `HEAD_SHA`.
 
 `gh run list` supports all four filters. Allow up to two minutes for the event to
-appear, require exactly one matching run, then wait for it:
+appear, require exactly one matching run, then wait for it. The multi-arch build
+takes about 12 minutes: run the watch in the background rather than under a
+short shell timeout, and do not finish until the image is verified.
 
 ```shell
 gh run watch "$RUN_ID" --repo Kuadrant/kuadrant-console-plugin --compact --exit-status
@@ -220,16 +255,26 @@ registry propagation:
 curl -sf "https://quay.io/api/v1/repository/kuadrant/console-plugin/tag/?specificTag=${TAG}"
 ```
 
-Require the `tags` array to be non-empty and contain the expected tag. Report the
-workflow URL and verified image tag.
+Require the expected tag with no `expiration`; release images never expire.
+Record its `manifest_digest` as `DIGEST` and fetch the manifest:
+
+```shell
+curl -sf "https://quay.io/api/v1/repository/kuadrant/console-plugin/manifest/${DIGEST}"
+```
+
+Require `is_manifest_list` to be true and the `os/architecture` pairs in
+`manifest_data` to match the `platforms` in `build-push.yaml` at `HEAD_SHA`.
 
 ## 7. Finish
 
-Report the tag, release URL, workflow URL, and verified Quay.io image. Then
-remind the user to preserve `release-X.Y` at the verified minor release tag
-before moving `main` to its next development version. Follow `RELEASE.md` for
-maintenance branch creation, then use `/bump-dev minor` or `/bump-dev patch` in a
-separate PR. Never change versions or push a branch from this command.
+Report the tag, release URL, workflow URL, image digest and platforms, and
+<https://quay.io/repository/kuadrant/console-plugin?tab=tags>.
+
+After a minor release, remind the user to preserve `release-X.Y` at the verified
+tag, then prepare the next development version with `/bump-dev` in a separate
+PR (see `RELEASE.md`). After any release, remind them to update the image
+references listed in `RELEASE.md`. Never change versions or push a branch from
+this command.
 
 ## Recovery
 

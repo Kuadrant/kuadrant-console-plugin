@@ -89,10 +89,10 @@ git verify-tag "$TAG" &&
 
 Use this only after verifying the release tag and confirming the branch is
 absent with a successful `git ls-remote --heads upstream` query. Patch release
-PRs and their backports target this maintenance branch. The legacy
-`release-0.x` branch remains the older console-generation stream; do not move
-or repurpose it. The guarded command below handles `main` and `release-X.Y`;
-releasing from the legacy stream requires a separately reviewed release plan.
+PRs and their backports target this maintenance branch. The guarded command
+below handles `main` and `release-X.Y`. `release-0.3` and `release-0.4` lack the
+`unit` and `e2e-smoke / e2e-rbac` checks; releasing from them requires a
+separately reviewed release plan.
 
 ## Prerequisites
 
@@ -203,11 +203,13 @@ The version is normally derived from `package.json`. Supplying it makes the
 version an additional assertion; the command never edits any file.
 
 Before changing anything, the command checks the branch, upstream
-synchronization, stable versions, release PR, required CI, tag/release absence,
-and Quay.io state. It prints the one tag ref it will push and asks for
+synchronization, stable versions, release PR, required CI, tag/release absence
+and Quay.io state, and chooses the release notes start tag and whether the
+release becomes latest. It prints the one tag ref it will push and asks for
 confirmation. It then creates and verifies a signed tag, pushes only that tag,
 creates the GitHub Release with generated notes, waits for the Quay.io image
-build, and verifies the image exists.
+build (about 12 minutes), and verifies the image tag, its platforms and that it
+never expires.
 
 ## Equivalent manual release
 
@@ -323,10 +325,55 @@ QUAY_TAG_COUNT=$(printf '%s' "$QUAY_RESPONSE" | node -e '
 test "$QUAY_TAG_COUNT" -eq 0
 ```
 
+Choose the release notes start tag: the highest stable tag below `VERSION` that
+is an ancestor of `HEAD_SHA`. GitHub's automatic choice ignores streams; for a
+`release-0.4` patch after v0.4.3 it picks v0.4.2.
+
+```shell
+PREVIOUS_TAG=$(git ls-remote --tags --refs upstream 'refs/tags/v*' |
+  sed 's|.*refs/tags/||' |
+  node -e '
+    const parse = (v) => v.replace(/^v/, "").split(".").map(Number);
+    const cmp = (a, b) => (a[0] - b[0]) || (a[1] - b[1]) || (a[2] - b[2]);
+    const target = parse(process.argv[1]);
+    require("fs").readFileSync(0, "utf8").split("\n")
+      .filter((t) => /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(t))
+      .filter((t) => cmp(parse(t), target) < 0)
+      .sort((a, b) => cmp(parse(b), parse(a)))
+      .forEach((t) => console.log(t));
+  ' "$VERSION" |
+  while read -r CANDIDATE; do
+    STATUS=$(gh api "repos/${REPO}/compare/${CANDIDATE}...${HEAD_SHA}" --jq .status) || exit 1
+    if test "$STATUS" = ahead; then
+      echo "$CANDIDATE"
+      break
+    fi
+  done)
+test -n "$PREVIOUS_TAG"
+```
+
+Mark the release latest only when it is newer than the current latest release,
+so a patch to an older stream never replaces it:
+
+```shell
+LATEST_TAG=$(gh api "repos/${REPO}/releases/latest" --jq .tag_name)
+node -e 'process.exit(/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(process.argv[1]) ? 0 : 1)' \
+  "$LATEST_TAG"
+if node -e '
+  const [ours, latest] = process.argv.slice(1).map((v) => v.replace(/^v/, "").split(".").map(Number));
+  process.exit(((ours[0] - latest[0]) || (ours[1] - latest[1]) || (ours[2] - latest[2])) > 0 ? 0 : 1);
+' "$VERSION" "$LATEST_TAG"; then
+  LATEST_FLAG=--latest
+else
+  LATEST_FLAG=--latest=false
+fi
+```
+
 ### 2. Sign and push the tag
 
-Fetch and repeat the branch, version, PR/CI, remote-tag, release, and Quay.io
-checks immediately before tagging. Then create the signed annotated tag:
+Fetch and repeat the branch, version, PR/CI, remote-tag, release, Quay.io,
+start-tag and latest-release checks immediately before tagging. Then create the
+signed annotated tag:
 
 ```shell
 git tag -s "$TAG" "$HEAD_SHA" -m "$TAG"
@@ -358,7 +405,8 @@ The existing remote tag is the source of truth. Do not pass `--target`:
 test -z "${GH_TOKEN:-}"
 test -z "${GITHUB_TOKEN:-}"
 gh api user --jq .login
-gh release create "$TAG" --repo "$REPO" --verify-tag --generate-notes
+gh release create "$TAG" --repo "$REPO" --verify-tag --generate-notes \
+  --notes-start-tag "$PREVIOUS_TAG" "$LATEST_FLAG"
 gh release view "$TAG" --repo "$REPO" \
   --json tagName,isDraft,isPrerelease,publishedAt,url
 ```
@@ -377,21 +425,40 @@ gh run list --repo "$REPO" \
   --json databaseId,headBranch,headSha,status,conclusion,url
 ```
 
-Then wait for that exact run:
+Then wait for that exact run. The multi-arch build takes about 12 minutes:
 
 ```shell
 RUN_ID=<databaseId>
 gh run watch "$RUN_ID" --repo "$REPO" --compact --exit-status
 ```
 
-After it succeeds, poll Quay.io for up to five minutes:
+After it succeeds, poll Quay.io for up to five minutes until the tag appears.
+Require no expiry and a manifest list covering the platforms built by
+`build-push.yaml`:
 
 ```shell
-curl -sf \
-  "https://quay.io/api/v1/repository/kuadrant/console-plugin/tag/?specificTag=${TAG}"
+PLATFORMS=$(git show "${HEAD_SHA}:.github/workflows/build-push.yaml" |
+  sed -n 's/^ *platforms: *//p')
+DIGEST=$(curl -sf \
+  "https://quay.io/api/v1/repository/kuadrant/console-plugin/tag/?specificTag=${TAG}" |
+  node -e '
+    const tag = (JSON.parse(require("fs").readFileSync(0, "utf8")).tags || [])
+      .find((t) => t.name === process.argv[1]);
+    if (!tag || tag.expiration) process.exit(1);
+    console.log(tag.manifest_digest);
+  ' "$TAG")
+test -n "$DIGEST"
+curl -sf "https://quay.io/api/v1/repository/kuadrant/console-plugin/manifest/${DIGEST}" |
+  node -e '
+    const data = JSON.parse(require("fs").readFileSync(0, "utf8"));
+    const found = (JSON.parse(data.manifest_data).manifests || [])
+      .map((m) => `${m.platform.os}/${m.platform.architecture}`).sort().join(",");
+    const expected = process.argv[1].split(",").sort().join(",");
+    process.exit(data.is_manifest_list && found === expected ? 0 : 1);
+  ' "$PLATFORMS"
 ```
 
-Require the `tags` array to be non-empty.
+Published tags: <https://quay.io/repository/kuadrant/console-plugin?tab=tags>.
 
 ## Recovery
 
@@ -432,6 +499,13 @@ Check `gh run view $RUN_ID --log-failed` for the failure details. The user can
 rerun the failed workflow manually via GitHub Actions. Do not automatically rerun
 from the command. If the image already exists at the expected tag, do not rebuild
 — verify and report it.
+
+## Post-release image references
+
+Stable images are pinned by tag. After each release, open a PR to `main`
+updating the README version matrix and operator variable table, and the plugin
+streams table in `docs/versioning.md`. Update the matching
+`RELATED_IMAGE_CONSOLE_PLUGIN_*` value in the Kuadrant operator.
 
 ## Post-release development version
 
