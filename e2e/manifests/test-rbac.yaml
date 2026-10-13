@@ -5,6 +5,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: kuadrant-test
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 ---
 # test-dev: httproutes only (read gateways)
 apiVersion: rbac.authorization.k8s.io/v1
@@ -110,6 +112,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: test-admin-kuadrant
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 rules:
   - apiGroups: ["kuadrant.io"]
     resources: ["authpolicies", "ratelimitpolicies", "dnspolicies", "tlspolicies", "tokenratelimitpolicies"]
@@ -134,6 +138,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: test-admin-kuadrant
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
 subjects:
   - kind: User
     name: test-admin
