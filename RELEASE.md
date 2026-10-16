@@ -533,4 +533,5 @@ Choose the next version deliberately: `X.Y.(Z+1)-dev` is appropriate when the
 next planned release is another patch; `X.(Y+1).0-dev` is appropriate when main
 moves to the next minor. The release command does not make this commit and
 nothing in this process pushes directly to `main`. After a patch from an older
-stream, inspect `upstream/main` first and preserve any newer development version.
+stream, compare `upstream/main` with the target using semantic version precedence.
+Preserve it if equal or later, including stable versions.

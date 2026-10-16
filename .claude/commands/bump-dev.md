@@ -18,14 +18,14 @@ Reject extra arguments and never evaluate unvalidated input in a shell.
 
 1. Fetch `upstream/main` and the intended stable release tag. Verify that the
    release is complete and its `release-X.Y` maintenance branch exists before
-   moving `main` to a new minor.
+   either a minor or patch bump.
 2. Read both version fields from `upstream/main` and the release tag. Calculate
    the next version from that stable release: `X.(Y+1).0-dev` for `minor`, or
-   `X.Y.(Z+1)-dev` for `patch`. Require any supplied assertion to match. If main
-   already has that version or a newer development version, report no change
-   needed and stop before creating a worktree or commit. An older maintenance
-   release must not downgrade main. Stop on mismatched manifest fields or
-   ambiguous versions.
+   `X.Y.(Z+1)-dev` for `patch`. Require any supplied assertion to match. Stop on
+   mismatched manifest fields or ambiguous versions. Compare `upstream/main`
+   with the target using semantic version precedence. If main is equal to or
+   later than the target, including stable versions, report no change needed
+   and stop before creating a worktree or commit.
 3. Create a topic branch from `upstream/main` in a clean worktree. Place task
    worktrees inside the repository under `.worktrees/<task>` and use
    `git worktree add --relative-paths`. Preserve existing local work.
