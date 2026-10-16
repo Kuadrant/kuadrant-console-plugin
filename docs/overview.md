@@ -10,7 +10,10 @@ The plugin adds three main sections to the OpenShift console:
 
 The **Kuadrant** section provides gateway and policy management with the following pages:
 
-- **Overview** - dashboard showing gateway health, policy counts, and HTTPRoute summary across the cluster
+- **Overview** - dashboard showing Gateway health, a paginated policy list, and HTTPRoutes in the selected namespace or across the cluster
+- **Gateways** - create and edit Gateways using forms or YAML. Forms cover GatewayClass, listeners, hostnames, TLS, and allowed routes.
+- **HTTPRoutes** - create and edit HTTPRoutes using forms or YAML. Forms cover parent Gateways, hostnames, request matching, filters, and backend services.
+- **Attached resources** - Gateway and HTTPRoute detail pages show related routing resources and the Kuadrant policies that apply to them
 - **Policies** - tabbed list of all Kuadrant policy types (AuthPolicy, RateLimitPolicy, DNSPolicy, TLSPolicy, and extension policies). Supports create, edit, and delete with RBAC-aware UI controls.
 - **API Products** - manage published API products that can be consumed through the API Catalog
 - **Policy Topology** - visual graph of the relationships between Gateways, HTTPRoutes, and the Kuadrant policies attached to them
@@ -18,19 +21,28 @@ The **Kuadrant** section provides gateway and policy management with the followi
 
 ### MCP management section
 
-The **MCP management** section provides setup and management for MCP (Model Context Protocol) gateway infrastructure:
+Use the **MCP management** section to set up MCP (Model Context Protocol) gateways, monitor registered servers, and test tools and prompts:
 
-- **Overview** - when no MCPGatewayExtensions exist, shows a guided setup wizard for creating MCP infrastructure. Once extensions are created, shows a dashboard with summary cards for MCP Gateways (Total, Healthy, Unhealthy) and MCP Servers (Types, Total, Online, Offline). Includes tables for MCP Gateway Extensions, MCP Servers, Reference Grants, and Policies attached to MCP gateways or servers. Each table has toolbar filters and RBAC-aware create actions.
-- **MCP Gateway Setup Wizard** - 4-step wizard that walks through selecting or creating a Gateway, HTTPRoute, and MCPGatewayExtension resource. Supports both existing resource selection and inline creation of new resources. Resources are created sequentially in the final verification step, with live status watching for the MCPGatewayExtension Ready condition.
-- **MCP Inspector** - connects to a Ready MCPGatewayExtension through the Console plugin backend, lists and refreshes tools, creates inputs from each tool's JSON schema, and displays tool results with JSON-RPC request telemetry. See the [MCP Inspector guide](mcp-inspector.md).
+- **Overview** - summary cards show MCP Gateway health and server readiness. Filterable tables show Gateways, gateway extensions, registered servers, attached HTTPRoutes, ReferenceGrants, and associated Kuadrant policies in the selected namespace or across the cluster.
+- **Gateway setup wizard** - set up an MCP gateway using existing or new Gateway, HTTPRoute, and MCPGatewayExtension resources. Setup verifies resource creation and reports extension readiness.
+- **Server registration wizard** - register an MCP server against an existing or new HTTPRoute, with a prefix for its tools
+- **External server registration wizard** - connect to MCP servers outside the cluster by configuring Istio ServiceEntry and DestinationRule resources, an HTTPRoute, a credential Secret, and an MCPServerRegistration
+- **Policy management** - create authentication, rate limiting, DNS, and TLS policies for MCP Gateways and server routes
+- **MCP Inspector** - discover and search tools and prompts exposed by a Ready MCPGatewayExtension, run tools, and generate prompt text. See the [MCP Inspector guide](mcp-inspector.md).
+
+The Inspector builds tool input forms from JSON schemas and validates inputs before execution. Results appear alongside the JSON-RPC request and response. It supports automatic protocol discovery or an explicit protocol version, and bearer tokens for gateways that require authentication.
+
+Inspector requests pass through the Console plugin backend to the selected gateway. The backend uses your OpenShift credentials to discover the Gateway and extension. Gateway bearer tokens and MCP session IDs stay in browser memory.
 
 Key resources managed on this page:
 
-| Resource | API Group | Purpose |
-|-|-|-|
-| `MCPGatewayExtension` | `mcp.kuadrant.io/v1` | Extends a Gateway with MCP capabilities (public host, OAuth, session store) |
-| `MCPServerRegistration` | `mcp.kuadrant.io/v1` | Registers an MCP server behind an HTTPRoute with prefix routing |
-| `ReferenceGrant` | `gateway.networking.k8s.io/v1beta1` | Allows cross-namespace references between MCPGatewayExtensions and Gateways |
+| Resource                | API Group                           | Purpose                                                                     |
+| ----------------------- | ----------------------------------- | --------------------------------------------------------------------------- |
+| `Gateway`               | `gateway.networking.k8s.io/v1`      | Defines the listeners and entry point for MCP traffic                       |
+| `HTTPRoute`             | `gateway.networking.k8s.io/v1`      | Routes requests through the Gateway to MCP server backends                  |
+| `MCPGatewayExtension`   | `mcp.kuadrant.io/v1`                | Extends a Gateway with MCP capabilities (public host, OAuth, session store) |
+| `MCPServerRegistration` | `mcp.kuadrant.io/v1`                | Registers an MCP server behind an HTTPRoute with prefix routing             |
+| `ReferenceGrant`        | `gateway.networking.k8s.io/v1beta1` | Allows cross-namespace references between MCPGatewayExtensions and Gateways |
 
 MCP Gateways are identified by finding Gateway resources that have an MCPGatewayExtension targeting them via `spec.targetRef`. The summary cards compute health based on the Gateway's `Accepted` and `Programmed` conditions, and server readiness based on the `Ready` condition.
 
@@ -41,7 +53,7 @@ The **Kuadrant API Catalog** section provides developer portal functionality for
 - **API Key Approvals** - manage and approve API key requests for accessing published API products
 - **My API Keys** - view and manage your API keys for accessing published APIs
 
-All pages respect Kubernetes RBAC. UI elements (tabs, buttons, kebab menu actions) are shown, hidden, or disabled based on the impersonated user's permissions.
+All pages respect Kubernetes RBAC. UI elements (tabs, buttons, kebab menu actions) are shown, hidden, or disabled based on your Kubernetes permissions.
 
 ## Installation
 
