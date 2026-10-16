@@ -12881,7 +12881,7 @@ __metadata:
     jest: "npm:^30.5.2"
     jest-environment-jsdom: "npm:^30.5.2"
     js-yaml: "npm:^4.3.2"
-    nanoid: "npm:3.3.18"
+    nanoid: "npm:6.0.2"
     pluralize: "npm:^8.0.0"
     prettier: "npm:^2.7.1"
     prettier-stylelint: "npm:^0.4.2"
@@ -13815,12 +13815,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"nanoid@npm:3.3.18":
-  version: 3.3.18
-  resolution: "nanoid@npm:3.3.18"
+"nanoid@npm:6.0.2":
+  version: 6.0.2
+  resolution: "nanoid@npm:6.0.2"
   bin:
-    nanoid: bin/nanoid.cjs
-  checksum: 10c0/b994b4e396730f8be2520923284e2040d61eaee55cc6d4935ef6d38d34bafdc46133eda4d3faea5073bda545aa6079d82b886caeac5c731cf9ac18bcc1301425
+    nanoid: bin/nanoid.js
+  checksum: 10c0/3c0223d2e658e6bab838af37112731df28eb5146b982e1b89bc1889b7a1476e0a36b4aa37ac6a567e7ebaf22a690d7916a80143a84cef77bd77416d0f1d20b9c
   languageName: node
   linkType: hard
 
