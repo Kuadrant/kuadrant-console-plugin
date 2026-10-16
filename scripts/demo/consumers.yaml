@@ -1,0 +1,90 @@
+# Public development-only credentials. The controller creates APIKeyRequests and automatic APIKeyApprovals.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: alice-toystore
+  namespace: kuadrant-demo-consumer
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+type: Opaque
+stringData:
+  api_key: demo-alice-toystore-key
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: alice-toystore
+  namespace: kuadrant-demo-consumer
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  apiProductRef:
+    name: toystore
+    namespace: kuadrant-demo-toystore
+  secretRef:
+    name: alice-toystore
+  planTier: gold
+  useCase: Toy catalog integration for a storefront (manual approval).
+  requestedBy:
+    userId: alice
+    email: alice@example.com
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: bob-toystore
+  namespace: kuadrant-demo-consumer
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+type: Opaque
+stringData:
+  api_key: demo-bob-toystore-key
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: bob-toystore
+  namespace: kuadrant-demo-consumer
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  apiProductRef:
+    name: toystore
+    namespace: kuadrant-demo-toystore
+  secretRef:
+    name: bob-toystore
+  planTier: bronze
+  useCase: Evaluating the toy catalog in a mobile application (manual approval).
+  requestedBy:
+    userId: bob
+    email: bob@example.com
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gamestore-client
+  namespace: kuadrant-demo-consumer
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+type: Opaque
+stringData:
+  api_key: demo-gamestore-client-key
+---
+apiVersion: devportal.kuadrant.io/v1alpha1
+kind: APIKey
+metadata:
+  name: gamestore-client
+  namespace: kuadrant-demo-consumer
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  apiProductRef:
+    name: gamestore
+    namespace: kuadrant-demo-gamestore
+  secretRef:
+    name: gamestore-client
+  planTier: silver
+  useCase: Game catalog integration (automatically approved).
+  requestedBy:
+    userId: carol
+    email: carol@example.com
