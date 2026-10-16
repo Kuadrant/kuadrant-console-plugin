@@ -123,7 +123,7 @@ test.describe('APIProduct CRUD Operations', () => {
     await page.locator('#description').fill('Test API product for e2e testing');
 
     // Verify Create button is disabled until HTTPRoute is selected
-    await expect(page.locator('button:has-text("Create")')).toBeDisabled();
+    await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeDisabled();
 
     // Select the HTTPRoute that this APIProduct will be associated with
     const httpRouteSelect = page.locator('#httproute-select');
@@ -157,7 +157,7 @@ test.describe('APIProduct CRUD Operations', () => {
     await page.locator('#api-docs-url').fill('https://docs.example.com');
 
     // Verify Create button is now enabled with all required fields filled
-    const saveButton = page.locator('button:has-text("Create")');
+    const saveButton = page.getByRole('button', { name: 'Create', exact: true });
     await expect(saveButton).toBeEnabled();
 
     await saveButton.click();
@@ -185,7 +185,7 @@ test.describe('APIProduct CRUD Operations', () => {
 
     const displayNameInput = page.locator('#display-name');
     const resourceNameInput = page.locator('#resource-name');
-    const saveButton = page.locator('button:has-text("Create")');
+    const saveButton = page.getByRole('button', { name: 'Create', exact: true });
 
     // Fill display name first
     await displayNameInput.fill('Test Product');
@@ -302,7 +302,9 @@ test.describe('APIProduct CRUD Operations', () => {
     await httpRouteOption.click();
 
     // Wait for form state to update (Create button enables once HTTPRoute is selected)
-    await expect(page.locator('button:has-text("Create")')).toBeEnabled({ timeout: 5000 });
+    await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeEnabled({
+      timeout: 5000,
+    });
 
     // Form -> YAML: verify YAML reflects form values
     await page.locator('button:has-text("YAML View")').click();
@@ -705,7 +707,7 @@ EOF`, { stdio: 'inherit' });
     await expect(page.locator('#display-name')).toBeVisible({ timeout: 20000 });
 
     // Leave display name empty and try to proceed
-    const saveButton = page.locator('button:has-text("Create")');
+    const saveButton = page.getByRole('button', { name: 'Create', exact: true });
 
     // Save button should be disabled when required fields are empty
     await expect(saveButton).toBeDisabled();
