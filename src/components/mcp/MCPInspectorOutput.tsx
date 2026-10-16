@@ -1,20 +1,8 @@
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Card,
-  CardBody,
-  CardHeader,
-  CardTitle,
-  Content,
-  Label,
-  Tab,
-  Tabs,
-  TabTitleText,
-  Title,
-  Alert,
-} from '@patternfly/react-core';
 import { MCPCallExchange, ToolsCallResult } from '../../utils/mcp/client';
-import { MCPJsonBlock } from './MCPCodeBlocks';
+import { MCPCodeBlock, MCPJsonBlock } from './MCPCodeBlocks';
+import MCPOutputCard from './MCPOutputCard';
 
 interface MCPInspectorOutputProps {
   exchange: MCPCallExchange<ToolsCallResult> | null;
@@ -22,70 +10,32 @@ interface MCPInspectorOutputProps {
 
 const renderServerResult = (result: ToolsCallResult): React.ReactNode => {
   if (!result.content?.length) {
-    return <pre>{JSON.stringify(result, null, 2)}</pre>;
+    return <MCPJsonBlock id="mcp-inspector-server-result" value={result} />;
   }
-  return result.content.map((content, index) =>
-    content.type === 'text' && content.text ? (
-      <pre key={index}>{content.text}</pre>
+  return result.content.map((content, index) => {
+    const id = `mcp-inspector-server-result-${index}`;
+    return content.type === 'text' && typeof content.text === 'string' ? (
+      <MCPCodeBlock key={index} id={id} text={content.text} />
     ) : (
-      <pre key={index}>{JSON.stringify(content, null, 2)}</pre>
-    ),
-  );
+      <MCPJsonBlock key={index} id={id} value={content} />
+    );
+  });
 };
 
 const MCPInspectorOutput: React.FC<MCPInspectorOutputProps> = ({ exchange }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
-  const [activeTab, setActiveTab] = React.useState<string | number>(0);
-  const succeeded = exchange ? !exchange.result.isError : false;
-  const inputRequired = exchange?.result.resultType === 'input_required';
 
   return (
-    <Card isFullHeight className="kuadrant-mcp-inspector-page__output">
-      <CardHeader>
-        <CardTitle>{t('Output')}</CardTitle>
-      </CardHeader>
-      <CardBody>
-        {exchange && (
-          <div className="kuadrant-mcp-inspector-page__request-summary">
-            <Label color={inputRequired ? 'orange' : succeeded ? 'green' : 'red'}>
-              {inputRequired ? t('Input required') : succeeded ? t('Success') : t('Error')}
-            </Label>
-            <small>
-              {exchange.status} {exchange.statusText}
-            </small>
-            <small>{exchange.durationMs} ms</small>
-          </div>
-        )}
-        {inputRequired && (
-          <Alert variant="warning" isInline title={t('This request is incomplete.')}>
-            {t(
-              'The gateway requested a continuation. Interactive continuation is not supported by this inspector; inspect the JSON-RPC response for details.',
-            )}
-          </Alert>
-        )}
-        <Tabs
-          activeKey={activeTab}
-          onSelect={(_event, key) => setActiveTab(key)}
-          aria-label={t('Tool call output')}
-        >
-          <Tab eventKey={0} title={<TabTitleText>{t('Console')}</TabTitleText>}>
-            {exchange ? (
-              <div className="kuadrant-mcp-inspector-page__console">
-                <Title headingLevel="h3">{t('JSON-RPC request')}</Title>
-                <MCPJsonBlock id="mcp-inspector-jsonrpc-request" value={exchange.request} />
-                <Title headingLevel="h3">{t('JSON-RPC response')}</Title>
-                <MCPJsonBlock id="mcp-inspector-jsonrpc-response" value={exchange.response} />
-              </div>
-            ) : (
-              <Content component="p">{t('No results')}</Content>
-            )}
-          </Tab>
-          <Tab eventKey={1} title={<TabTitleText>{t('Server result')}</TabTitleText>}>
-            {exchange ? renderServerResult(exchange.result) : null}
-          </Tab>
-        </Tabs>
-      </CardBody>
-    </Card>
+    <MCPOutputCard
+      exchange={exchange}
+      resultTitle={t('Server result')}
+      outputLabel={t('Tool call output')}
+      idPrefix="mcp-inspector-jsonrpc"
+      inputRequired={exchange?.result.resultType === 'input_required'}
+      isError={exchange?.result.isError}
+    >
+      {exchange ? renderServerResult(exchange.result) : null}
+    </MCPOutputCard>
   );
 };
 

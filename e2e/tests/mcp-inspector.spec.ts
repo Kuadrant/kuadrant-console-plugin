@@ -97,6 +97,12 @@ test.describe('MCP Inspector', () => {
     expect(Math.max(...summaryTextCenters) - Math.min(...summaryTextCenters)).toBeLessThanOrEqual(
       1,
     );
+    await expect(page.getByRole('tab', { name: 'Server result', exact: true })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await expect(page.getByRole('tabpanel', { name: 'Server result', exact: true })).toBeVisible();
+    await page.getByRole('tab', { name: 'Console', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'JSON-RPC response' })).toBeVisible();
 
     await page.getByRole('tab', { name: 'Prompts' }).click();

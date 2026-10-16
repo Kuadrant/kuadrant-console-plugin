@@ -693,8 +693,46 @@ describe('MCPInspectorPage', () => {
     expect(screen.getByText('0 requests')).toBeInTheDocument();
     expect(screen.getByText('0 warnings')).toBeInTheDocument();
     expect(screen.getByText('0 errors')).toBeInTheDocument();
-    expect(screen.getByText('No results')).toBeInTheDocument();
+    expect(screen.getAllByText('No results')[0]).toBeVisible();
+    expect(screen.getByRole('tab', { name: 'Server result' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
   });
+
+  it.each(['tool', 'prompt'])(
+    'opens the %s result first and copies its rendered text',
+    async (kind) => {
+      const writeText = jest.fn().mockResolvedValue(undefined);
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { writeText },
+        configurable: true,
+      });
+      mockExtensions = [readyExtension];
+      render(<MCPInspectorPage />);
+      await connectToGateway();
+      if (kind === 'tool') {
+        pickTool('greet', /toystore_greet/);
+      } else {
+        fireEvent.click(screen.getByRole('tab', { name: 'Prompts' }));
+        searchItems('Prompt', 'greet');
+        fireEvent.click(screen.getByRole('option', { name: /toystore_greet/ }));
+      }
+      fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'Ada' } });
+      fireEvent.click(
+        screen.getByRole('button', { name: kind === 'tool' ? 'Run tool' : 'Generate prompt' }),
+      );
+      await screen.findByText('Success');
+      expect(
+        screen.getByRole('tab', { name: kind === 'tool' ? 'Server result' : 'Prompt' }),
+      ).toHaveAttribute('aria-selected', 'true');
+      fireEvent.click(screen.getByRole('button', { name: 'Copy to clipboard' }));
+      expect(writeText).toHaveBeenCalledWith(kind === 'tool' ? 'Hello, Ada!' : 'Say hi to Ada');
+      fireEvent.click(screen.getByRole('tab', { name: 'Console' }));
+      expect(screen.getByRole('heading', { name: 'JSON-RPC request' })).toBeVisible();
+      expect(screen.getByRole('heading', { name: 'JSON-RPC response' })).toBeVisible();
+    },
+  );
 
   it('offers an in-memory bearer token after an authentication challenge', async () => {
     (MCPClient as jest.Mock).mockImplementationOnce(() => ({
