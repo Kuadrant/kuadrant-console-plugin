@@ -204,7 +204,7 @@ Priority order:
 ### Branches (pushed to forks, no PRs)
 
 - `mcp-gateway` [`poc/mcp-inspector-cors`](https://github.com/jasonmadigan/mcp-gateway/tree/poc/mcp-inspector-cors) — tip `0bbd6b2a`, five commits: API (`spec.cors` + `status.mcpEndpoint`), controller union + `CORS_*` inject, broker/router enforcement (middleware + shared `internal/cors` + upstream header-strip + response-phase CORS + wildcard-credentials guard), a related inbound strip of the spoofable `x-mcp-resourceuri`, and removal of an unused NetworkPolicy RBAC grant.
-- `kuadrant-console-plugin` [`poc/mcp-inspector-direct`](https://github.com/jasonmadigan/kuadrant-console-plugin/tree/poc/mcp-inspector-direct) — `56a3c80`: the throwaway inspector page + `src/utils/mcp/` client.
+- `kuadrant-console-plugin` `poc/mcp-inspector-direct` (POC branch, later merged to main and deleted) — `56a3c80`: the throwaway inspector page + `src/utils/mcp/` client.
 
 ## Open questions
 
