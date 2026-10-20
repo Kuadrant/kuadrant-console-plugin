@@ -64,7 +64,6 @@
     "jest": "^30.5.0",
     "jest-environment-jsdom": "^30.5.0",
     "prettier": "^2.7.1",
-    "prettier-stylelint": "^0.4.2",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "react-helmet": "^6.1.0",
