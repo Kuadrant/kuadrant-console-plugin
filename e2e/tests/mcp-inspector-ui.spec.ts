@@ -161,21 +161,40 @@ for (const theme of ['light', 'dark'] as const) {
         async ({ page }, testInfo) => {
           const output = page.locator('.kuadrant-mcp-inspector-page__output');
           const gaps: number[] = [];
+          await expect(page.getByRole('tab', { name: 'Logs', exact: true })).toHaveCount(0);
+          await expect(output.getByRole('tab').first()).toHaveText('Server result');
+          await expect(
+            output.getByRole('tab', { name: 'Server result', exact: true }),
+          ).toHaveAttribute('aria-selected', 'true');
           gaps.push(await contentGap(output, output.getByText('No results', { exact: true })));
           await page.getByRole('button', { name: 'Tool selector', exact: true }).click();
           await page.getByRole('option', { name: 'greet', exact: true }).click();
           await page.getByRole('button', { name: 'Run tool', exact: true }).click();
+          await expect(output.getByText('Hello, Ada!', { exact: true })).toBeVisible();
+          await expect(output.getByText('Success', { exact: true })).toBeVisible();
+          await expect(output.getByRole('button', { name: 'Copy to clipboard' })).toBeVisible();
+          gaps.push(await contentGap(output, output.locator('.pf-v6-c-code-block:visible')));
+          await output.getByRole('tab', { name: 'Console', exact: true }).click();
           const request = output.getByRole('heading', { name: 'JSON-RPC request' });
           await expect(request).toBeVisible();
           gaps.push(await contentGap(output, request));
           await output.getByRole('tab', { name: 'Server result', exact: true }).click();
-          gaps.push(await contentGap(output, output.locator('pre:visible')));
+          gaps.push(await contentGap(output, output.locator('.pf-v6-c-code-block:visible')));
           await page.getByRole('tab', { name: 'Prompts', exact: true }).click();
+          await expect(output.getByRole('tab').first()).toHaveText('Prompt');
+          await expect(output.getByRole('tab', { name: 'Prompt', exact: true })).toHaveAttribute(
+            'aria-selected',
+            'true',
+          );
           gaps.push(await contentGap(output, output.getByText('No results', { exact: true })));
           await page.getByRole('button', { name: 'Prompt selector', exact: true }).click();
           await page.getByRole('option', { name: 'greet', exact: true }).click();
           await page.getByRole('button', { name: 'Generate prompt', exact: true }).click();
           await expect(output.getByText('Say hi to Ada', { exact: true })).toBeVisible();
+          await expect(output.getByText('Success', { exact: true })).toBeVisible();
+          await expect(output.getByRole('button', { name: 'Copy to clipboard' })).toBeVisible();
+          await expect(output.getByText('Token count', { exact: false })).toBeVisible();
+          gaps.push(await contentGap(output, output.locator('.pf-v6-c-code-block:visible')));
           await output.getByRole('tab', { name: 'Console', exact: true }).click();
           gaps.push(await contentGap(output, request));
           for (const gap of gaps) expect.soft(gap).toBeGreaterThanOrEqual(16);
