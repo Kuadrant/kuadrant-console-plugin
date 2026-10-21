@@ -2,11 +2,15 @@ name: Unit Tests
 
 on:
   pull_request:
+  push:
+    branches: [main, 'release-*']
   merge_group:
     types: [checks_requested]
+  workflow_dispatch:
 
 concurrency:
-  group: unit-tests-${{ github.head_ref || github.ref }}
+  # only supersede runs for the same pull request
+  group: unit-tests-${{ github.event.pull_request.number || github.run_id }}
   cancel-in-progress: true
 
 jobs:
