@@ -32,6 +32,12 @@ updates:
     ignore:
       - dependency-name: 'react-i18next'
         versions: ['>=16.6.0']
+      # nanoid 4+ is ESM-only; the project's CJS toolchain (stylelint via
+      # v8-compile-cache) cannot require() an ESM module. nanoid is also
+      # pinned in resolutions at 3.3.18, so Dependabot cannot regenerate the
+      # lockfile correctly. hold until the toolchain supports ESM, then drop.
+      - dependency-name: 'nanoid'
+        versions: ['>=4.0.0']
 
   - package-ecosystem: 'github-actions'
     directory: '/'
