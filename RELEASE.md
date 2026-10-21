@@ -72,7 +72,7 @@ branch; the streams have different features and test suites.
 
 ## Prerequisites
 
-- Push access to `Kuadrant/console-plugin`
+- Push access to `Kuadrant/kuadrant-console-plugin`
 - A signing key configured for `git tag -s`
 - `git`, `gh`, and `node`
 - A human GitHub login stored by `gh auth`
@@ -118,7 +118,7 @@ A minor release is `X.Y.0` with `Y` incremented and patch reset to `0`.
 5. Open a PR targeting `main`:
 
    ```shell
-   gh pr create --repo Kuadrant/console-plugin \
+   gh pr create --repo Kuadrant/kuadrant-console-plugin \
      --base main --title "vX.Y.0" --body "Release vX.Y.0"
    ```
 
@@ -156,7 +156,7 @@ A patch release is `X.Y.Z` where `Z > 0`.
 5. Open a PR targeting `main`:
 
    ```shell
-   gh pr create --repo Kuadrant/console-plugin \
+   gh pr create --repo Kuadrant/kuadrant-console-plugin \
      --base main --title "vX.Y.Z" --body "Release vX.Y.Z"
    ```
 
@@ -191,7 +191,7 @@ Set `RELEASE_TYPE` to `minor` or `patch` and omit the leading `v` from
 `VERSION`.
 
 ```shell
-REPO=Kuadrant/console-plugin
+REPO=Kuadrant/kuadrant-console-plugin
 RELEASE_TYPE=minor
 VERSION=X.Y.Z
 TAG=v${VERSION}
@@ -268,14 +268,18 @@ gh api "repos/${REPO}/commits/${HEAD_SHA}/pulls" \
   --jq '.[] | {number, base: .base.ref, merge_commit_sha, merged_at, url: .html_url}'
 ```
 
-Set `PR` to that number and verify its state and required checks. The required
-checks must include passing `build`, `lint`, `i18n`, `unit`, and `e2e` jobs:
+Set `PR` to that number and verify its state and every configured required
+check. Also inspect all checks and require passing `build`, `lint`, `i18n`,
+`unit`, and `e2e-smoke / e2e-rbac` jobs, even when a job is not required by the
+ruleset. Pending, skipped, missing, cancelled, or failed checks in either set
+block the release:
 
 ```shell
 PR=<release-pr-number>
 gh pr view "$PR" --repo "$REPO" \
   --json state,mergedAt,baseRefName,mergeCommit,url
 gh pr checks "$PR" --repo "$REPO" --required
+gh pr checks "$PR" --repo "$REPO"
 ```
 
 Verify the image tag is absent from Quay.io:
