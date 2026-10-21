@@ -32,6 +32,16 @@ updates:
     ignore:
       - dependency-name: 'react-i18next'
         versions: ['>=16.6.0']
+      # @patternfly/react-topology is a console federation singleton; SDK 4.22.0
+      # peers ~6.4.0 and ConsoleRemotePlugin fails the build at 6.5.0+. OCP 4.22
+      # console ships 6.4.x. Remove when an SDK release peers >=6.5.0. See #930.
+      - dependency-name: '@patternfly/react-topology'
+        versions: ['>=6.5.0']
+      # nanoid 4+ is ESM-only; the plugin's CJS toolchain (stylelint via
+      # v8-compile-cache) cannot require() ESM modules. nanoid is also pinned in
+      # resolutions at 3.3.18. Remove when the toolchain supports ESM. See #924.
+      - dependency-name: 'nanoid'
+        versions: ['>=4.0.0']
 
   - package-ecosystem: 'github-actions'
     directory: '/'
