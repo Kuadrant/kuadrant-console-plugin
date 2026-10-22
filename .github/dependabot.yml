@@ -29,9 +29,14 @@ updates:
     # react-i18next is a console federation singleton; the sdk pins its peer to
     # ~16.5.8 and ConsoleRemotePlugin fails the build outside that range. hold
     # until the sdk widens its peer, then drop this entry.
+    # @patternfly/react-topology is a console federation singleton; the sdk
+    # pins its peer to ~6.4.0 and ConsoleRemotePlugin fails the build outside
+    # that range. Remove when the sdk widens its peer to include 6.5+.
     ignore:
       - dependency-name: 'react-i18next'
         versions: ['>=16.6.0']
+      - dependency-name: '@patternfly/react-topology'
+        versions: ['>=6.5.0']
 
   - package-ecosystem: 'github-actions'
     directory: '/'
