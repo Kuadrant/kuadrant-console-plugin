@@ -14,6 +14,12 @@ const integrationPromptArgumentLabel = process.env.MCP_INSPECTOR_E2E_PROMPT_ARGU
 const integrationPromptArgumentValue = process.env.MCP_INSPECTOR_E2E_PROMPT_ARGUMENT_VALUE || 'Ada';
 const integrationPromptOutput = process.env.MCP_INSPECTOR_E2E_PROMPT_OUTPUT || 'Say hi to';
 
+if (process.env.MCP_INSPECTOR_E2E_REQUIRED === 'true' && !integrationExtension) {
+  throw new Error(
+    'MCP_INSPECTOR_E2E_REQUIRED=true needs MCP_INSPECTOR_E2E_EXTENSION=namespace/name.',
+  );
+}
+
 async function openInspector(page, namespace: string): Promise<void> {
   await page.goto(`/k8s/ns/${namespace}`);
   await page.waitForLoadState('networkidle');
@@ -34,12 +40,6 @@ test.describe('MCP Inspector', () => {
   });
 
   test('connects to a live gateway and runs a tool', { tag: '@nightly' }, async ({ page }) => {
-    if (process.env.MCP_INSPECTOR_E2E_REQUIRED === 'true') {
-      expect(
-        integrationExtension,
-        'The required live Inspector target must be configured',
-      ).toBeTruthy();
-    }
     test.skip(
       !integrationExtension,
       'Set MCP_INSPECTOR_E2E_EXTENSION=namespace/name to run the live integration journey.',

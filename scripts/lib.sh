@@ -33,3 +33,48 @@ check_command() {
     exit 1
   fi
 }
+
+# The HTTPRoute CRUD tests select this Gateway in both OINC and existing-cluster runs.
+render_http_route_gateway() {
+  local mode="${1:-}"
+  case "${mode}" in
+    oinc|existing) ;;
+    *) echo "error: gateway mode must be 'oinc' or 'existing'" >&2; return 1 ;;
+  esac
+
+  cat <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: kuadrant-ingressgateway
+  namespace: gateway-system
+EOF
+  if [[ "${mode}" == existing ]]; then
+    cat <<EOF
+  labels:
+    kuadrant.io/e2e-owned: console-plugin
+EOF
+  fi
+  cat <<EOF
+spec:
+  gatewayClassName: istio
+EOF
+  if [[ "${mode}" == oinc ]]; then
+    cat <<EOF
+  infrastructure:
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: metallb-gateway-params
+EOF
+  fi
+  cat <<EOF
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+EOF
+}

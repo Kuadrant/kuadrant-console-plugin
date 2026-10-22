@@ -19,9 +19,9 @@ test.describe('Overview dashboard', () => {
   });
 
   test('renders the dashboard cards', { tag: '@smoke' }, async ({ page }) => {
-    await expect(page.getByRole('heading', { name: 'Kuadrant Overview' })).toBeVisible({
-      timeout: 15_000,
-    });
+    await expect(
+      page.getByRole('heading', { name: /^(Kuadrant|Connectivity Link) Overview$/ }),
+    ).toBeVisible({ timeout: 15_000 });
 
     await expect(page.locator('text=Getting started with')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Gateways', exact: true })).toBeVisible();
