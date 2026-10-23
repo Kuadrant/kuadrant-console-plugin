@@ -1,0 +1,28 @@
+# Dedicated namespaces keep these samples separate from MCP demos and e2e fixtures.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kuadrant-demo-gateway
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kuadrant-demo-toystore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kuadrant-demo-gamestore
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kuadrant-demo-consumer
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo

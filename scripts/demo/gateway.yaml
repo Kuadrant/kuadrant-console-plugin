@@ -1,0 +1,37 @@
+# Configure the Service class before Istio creates the demo Gateway Service.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-parameters
+  namespace: kuadrant-demo-gateway
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+data:
+  service: |
+    spec:
+      loadBalancerClass: oinc.io/metallb
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: demo
+  namespace: kuadrant-demo-gateway
+  labels:
+    app.kubernetes.io/part-of: kuadrant-console-demo
+spec:
+  gatewayClassName: istio
+  infrastructure:
+    parametersRef:
+      group: ''
+      kind: ConfigMap
+      name: gateway-parameters
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              app.kubernetes.io/part-of: kuadrant-console-demo
