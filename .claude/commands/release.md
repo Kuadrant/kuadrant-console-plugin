@@ -1,5 +1,5 @@
 ---
-description: Publish a reviewed stable release from main
+description: Publish a reviewed minor or maintenance release
 argument-hint: <minor|patch> [X.Y.Z]
 disable-model-invocation: true
 ---
@@ -8,10 +8,11 @@ disable-model-invocation: true
 
 Arguments supplied by the user: `$ARGUMENTS`
 
-Publish an already-reviewed stable release from `main`. This command tags the
-current commit, ensures the upstream `release-X.Y` branch exists, creates the
-GitHub Release, and verifies the Quay.io image build. It does not edit versions
-or create release commits. Existing release branches keep their current heads.
+Publish an already-reviewed minor release from `main` or patch release from
+`release-X.Y`. This command tags the current commit, ensures the upstream
+`release-X.Y` branch exists, creates the GitHub Release, and verifies the
+Quay.io image build. It does not edit versions or create release commits.
+Existing release branches keep their current heads.
 
 Follow every gate below in order. Treat an unexpected or ambiguous result as a
 failure. Do not repair, force, delete, or bypass anything unless the recovery
@@ -19,7 +20,7 @@ section explicitly permits it and the user confirms the recovery action.
 
 ## Non-negotiable rules
 
-- Never push to `main`.
+- Never push to `main` or any maintenance branch.
 - Never use `git push --tags`, `git push --follow-tags`, or a force push.
 - Never create a tag through the GitHub Release API. The signed tag must already
   exist on `upstream` before creating the release.
@@ -65,15 +66,19 @@ Do all of this before creating a local tag.
    Record the authenticated human login for the release plan.
 
 4. Require `git status --porcelain=v1` to be empty, including untracked files.
-5. Require the current branch to match exactly `main` and not be detached.
-6. Fetch only main without tags:
+5. Set `BRANCH=main` for a minor release. For a patch, derive
+   `BRANCH=release-X.Y` from the manifest's canonical stable version. Require
+   the current branch to match `$BRANCH` exactly and not be detached.
+   `release-0.3` and `release-0.4` lack the `unit` and `e2e-smoke / e2e-rbac`
+   checks; releasing from them needs a separate maintainer-reviewed plan.
+6. Fetch only the selected branch without tags:
 
    ```shell
    git fetch --no-tags upstream \
-     "refs/heads/main:refs/remotes/upstream/main"
+     "refs/heads/${BRANCH}:refs/remotes/upstream/${BRANCH}"
    ```
 
-   Require local `HEAD` and `refs/remotes/upstream/main` to be the same commit.
+   Require local `HEAD` and `refs/remotes/upstream/$BRANCH` to be the same commit.
    Record it as `HEAD_SHA`.
 
 7. Read the versions from `package.json`:
@@ -82,9 +87,9 @@ Do all of this before creating a local tag.
    - `consolePlugin.version`
 
    Require them to be identical canonical `X.Y.Z` values. Reject `-dev` and all
-   other prerelease/build suffixes. Require `X.Y` to be consistent with the
-   release type. Require `Z == 0` for `minor` and `Z > 0` for `patch`. If the
-   user supplied a version, require an exact match. Set `VERSION` to that
+   other prerelease/build suffixes. For patches, require `X.Y` to match the
+   maintenance branch. Require `Z == 0` for `minor` and `Z > 0` for `patch`.
+   If the user supplied a version, require an exact match. Set `VERSION` to that
    validated value and `TAG=v${VERSION}` only after these checks.
 
    Set `RELEASE_BRANCH=release-${VERSION%.*}` from the validated version (for example,
@@ -119,7 +124,7 @@ Do all of this before creating a local tag.
      --jq '.[] | {number, base: .base.ref, merge_commit_sha, merged_at, url: .html_url}'
    ```
 
-   Require exactly one merged PR whose base is `main` and whose
+   Require exactly one merged PR whose base is `$BRANCH` and whose
    `merge_commit_sha` is `HEAD_SHA`. Verify it again with `gh pr view`. This is
    the reviewed release PR; an unassociated or direct commit is not releasable.
 
@@ -140,6 +145,34 @@ Do all of this before creating a local tag.
     exists — stop and report a previous publication. A registry or network error
     is a failed check, not proof of absence.
 
+12. Choose the release notes start tag. GitHub's automatic choice ignores
+    streams; for a `release-0.4` patch after v0.4.3 it picks v0.4.2. List the
+    tags on `upstream`:
+
+    ```shell
+    git ls-remote --tags --refs upstream 'refs/tags/v*'
+    ```
+
+    Take the canonical `vA.B.C` tags lower than the release version, highest
+    first, and select the first that is an ancestor of `HEAD_SHA`:
+
+    ```shell
+    gh api "repos/${REPO}/compare/${CANDIDATE}...${HEAD_SHA}" --jq .status
+    ```
+
+    Only `ahead` means ancestor. A patch normally gets `vX.Y.(Z-1)` and a minor
+    the previous `.0` tag. Record it as `PREVIOUS_TAG`; stop if none qualifies.
+
+13. Read the latest release:
+
+    ```shell
+    gh api "repos/${REPO}/releases/latest" --jq .tag_name
+    ```
+
+    Require a canonical stable tag. Set `LATEST_FLAG=--latest` only when the
+    release version is higher, otherwise `LATEST_FLAG=--latest=false`, so a
+    patch to an older stream never replaces it.
+
 ## 3. Confirm the release plan
 
 Print a compact plan containing:
@@ -148,6 +181,7 @@ Print a compact plan containing:
 - branch and full `HEAD_SHA`;
 - release PR number and URL;
 - required CI results;
+- release notes range `PREVIOUS_TAG...TAG` and whether it becomes latest;
 - `upstream` URL;
 - authenticated GitHub login;
 - Quay.io image: `quay.io/kuadrant/console-plugin:${TAG}`;
@@ -160,10 +194,10 @@ confirmation. Stop without changing anything if they do not confirm.
 
 ## 4. Create and push only the signed tag
 
-Immediately after confirmation, fetch main again and repeat the clean-worktree,
-branch synchronization, package-version, remote-tag absence, release absence,
-PR/CI, and Quay.io absence checks. This closes the gap between preflight and
-push.
+Immediately after confirmation, fetch the selected branch again and repeat the
+clean-worktree, branch synchronization, package-version, remote-tag absence, release absence,
+PR/CI, Quay.io absence, start-tag and latest-release checks. This closes the gap
+between preflight and push.
 
 Create a signed annotated tag at the already-recorded commit:
 
@@ -218,7 +252,9 @@ on any mismatch. Create a non-draft GitHub Release from the existing remote tag:
 gh release create "$TAG" \
   --repo "$REPO" \
   --verify-tag \
-  --generate-notes
+  --generate-notes \
+  --notes-start-tag "$PREVIOUS_TAG" \
+  "$LATEST_FLAG"
 ```
 
 Do not pass `--target`; the tag is the source of truth. Read the release back
@@ -235,7 +271,9 @@ matching all of these values, rather than selecting the latest run:
 - commit: `HEAD_SHA`.
 
 `gh run list` supports all four filters. Allow up to two minutes for the event to
-appear, require exactly one matching run, then wait for it:
+appear, require exactly one matching run, then wait for it. The multi-arch build
+takes about 12 minutes: run the watch in the background rather than under a
+short shell timeout, and do not finish until the image is verified.
 
 ```shell
 gh run watch "$RUN_ID" --repo "$REPO" --compact --exit-status
@@ -251,15 +289,26 @@ registry propagation:
 curl -sf "https://quay.io/api/v1/repository/kuadrant/console-plugin/tag/?specificTag=${TAG}"
 ```
 
-Require the `tags` array to be non-empty and contain the expected tag. Report the
-workflow URL and verified image tag.
+Require the expected tag with no `expiration`; release images never expire.
+Record its `manifest_digest` as `DIGEST` and fetch the manifest:
+
+```shell
+curl -sf "https://quay.io/api/v1/repository/kuadrant/console-plugin/manifest/${DIGEST}"
+```
+
+Require `is_manifest_list` to be true and the `os/architecture` pairs in
+`manifest_data` to match the `platforms` in `build-push.yaml` at `HEAD_SHA`.
 
 ## 8. Finish
 
 Report the tag, upstream release branch (created or retained), release URL,
-workflow URL, and verified Quay.io image. Then
-remind the user to run `/bump-dev` to prepare the next development version;
-never make or push that change from this command.
+workflow URL, image digest and platforms, and
+<https://quay.io/repository/kuadrant/console-plugin?tab=tags>.
+
+After a minor release, remind the user to prepare the next development version
+with `/bump-dev minor` or `/bump-dev patch` in a separate PR (see `RELEASE.md`).
+After any release, remind them to update the image references listed in
+`RELEASE.md`. Never make or push those changes from this command.
 
 ## Recovery
 
@@ -267,8 +316,8 @@ An existing tag, release, workflow run, or Quay.io image is never a normal
 preflight success. Stop, inventory the exact state, and consult this section.
 
 - A local-only tag may be reused only if it is signed, annotated, and resolves
-  to the synchronized main `HEAD`. Otherwise, delete only that local tag after
-  the user confirms it was created by the failed attempt.
+  to the synchronized selected branch `HEAD`. Otherwise, delete only that local
+  tag after the user confirms it was created by the failed attempt.
 - Never move, overwrite, force-push, or automatically delete a remote tag.
 - If the correct remote tag exists but the GitHub Release does not, rerun all
   branch, version, PR, CI, and tag verification before asking whether to resume

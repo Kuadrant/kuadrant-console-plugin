@@ -1,6 +1,7 @@
 # Releasing kuadrant-console-plugin
 
-Stable releases are tagged on `main` after a reviewed release PR is merged.
+Minor releases are tagged on `main`; patches are tagged on `release-X.Y`.
+Both require a reviewed release PR merged into the selected branch.
 Version changes go through a pull request and CI; the release step never creates
 commits. It creates the matching `release-X.Y` branch in
 `Kuadrant/kuadrant-console-plugin` at the signed release tag's commit if missing.
@@ -72,6 +73,19 @@ Check that the target branch contains the affected feature and is missing the
 fix before cherry-picking. Review and test each backport against its target
 branch; the streams have different features and test suites.
 
+### Maintenance branches
+
+Every minor release needs a `release-X.Y` branch before preparing the next minor
+on `main`. The release step creates it at the verified tag commit if absent and
+retains any existing branch. See the
+[manual branch creation step](#3-ensure-the-upstream-release-branch-exists).
+Patch release PRs and their backports target this maintenance branch.
+
+The guarded command below handles `main` and `release-X.Y`.
+`release-0.3` and `release-0.4` lack the
+`unit` and `e2e-smoke / e2e-rbac` checks; releasing from them requires a
+separately reviewed release plan.
+
 ## Prerequisites
 
 - Push access to `Kuadrant/kuadrant-console-plugin`
@@ -132,11 +146,11 @@ A minor release is `X.Y.0` with `Y` incremented and patch reset to `0`.
 
 A patch release is `X.Y.Z` where `Z > 0`.
 
-1. Create a release branch from the current `upstream/main`:
+1. Create a release branch from the current `upstream/release-X.Y`:
 
    ```shell
-   git fetch upstream main
-   git checkout -b release/vX.Y.Z upstream/main
+   git fetch upstream release-X.Y
+   git checkout -b release/vX.Y.Z upstream/release-X.Y
    ```
 
 2. Set both version fields in `package.json` to the patch version (e.g.,
@@ -156,11 +170,11 @@ A patch release is `X.Y.Z` where `Z > 0`.
    git push origin release/vX.Y.Z
    ```
 
-5. Open a PR targeting `main`:
+5. Open a PR targeting `release-X.Y`:
 
    ```shell
    gh pr create --repo Kuadrant/kuadrant-console-plugin \
-     --base main --title "vX.Y.Z" --body "Release vX.Y.Z"
+     --base release-X.Y --title "vX.Y.Z" --body "Release vX.Y.Z"
    ```
 
 6. Merge only after all required CI checks pass.
@@ -168,7 +182,7 @@ A patch release is `X.Y.Z` where `Z > 0`.
 ## Command-driven release
 
 After the preparation PR is merged, check out the merge commit at the tip of
-`main` with a clean worktree, then run one of:
+`main` (minor) or `release-X.Y` (patch) with a clean worktree, then run one of:
 
 ```text
 /release minor
@@ -181,12 +195,14 @@ The version is normally derived from `package.json`. Supplying it makes the
 version an additional assertion; the command never edits any file.
 
 Before changing anything, the command checks the branch, upstream
-synchronization, stable versions, release PR, required CI, tag/release absence,
-and Quay.io state. It prints the one tag ref it will push and whether the matching
-`release-X.Y` branch will be created or retained, then asks for confirmation.
-It creates and verifies a signed tag, pushes only that tag, ensures the upstream
-release branch exists, creates the GitHub Release with generated notes, waits
-for the Quay.io image build, and verifies the image exists.
+synchronization, stable versions, release PR, required CI, tag/release absence
+and Quay.io state, and chooses the release notes start tag and whether the
+release becomes latest. It prints the one tag ref it will push and whether the
+matching `release-X.Y` branch will be created or retained, then asks for
+confirmation. It creates and verifies a signed tag, pushes only that tag,
+ensures the upstream release branch exists, creates the GitHub Release with
+generated notes, waits for the Quay.io image build (about 12 minutes), and
+verifies the image tag, its platforms and that it never expires.
 
 ## Equivalent manual release
 
@@ -199,16 +215,21 @@ REPO=Kuadrant/kuadrant-console-plugin
 RELEASE_TYPE=minor
 VERSION=X.Y.Z
 TAG=v${VERSION}
+case "$RELEASE_TYPE" in
+  minor) BRANCH=main ;;
+  patch) BRANCH=release-${VERSION%.*} ;;
+  *) exit 1 ;;
+esac
 HEAD_SHA=$(git rev-parse HEAD)
 ```
 
 ### 1. Preflight
 
-Require a clean, synchronized `main` branch and human `gh` credentials:
+Require a clean, synchronized `$BRANCH` and human `gh` credentials:
 
 ```shell
 test -z "$(git status --porcelain=v1)"
-test "$(git branch --show-current)" = "main"
+test "$(git branch --show-current)" = "$BRANCH"
 test -z "${GH_TOKEN:-}"
 test -z "${GITHUB_TOKEN:-}"
 
@@ -217,8 +238,8 @@ gh auth status --hostname github.com
 gh api user --jq .login
 
 git fetch --no-tags upstream \
-  "refs/heads/main:refs/remotes/upstream/main"
-test "$HEAD_SHA" = "$(git rev-parse "refs/remotes/upstream/main")"
+  "refs/heads/${BRANCH}:refs/remotes/upstream/${BRANCH}"
+test "$HEAD_SHA" = "$(git rev-parse "refs/remotes/upstream/${BRANCH}")"
 ```
 
 Read and compare the two version fields:
@@ -265,7 +286,7 @@ fi
 ```
 
 Find the PR associated with the exact commit. The output must contain exactly
-one merged PR targeting `main`, with `merge_commit_sha` equal to `HEAD_SHA`:
+one merged PR targeting `$BRANCH`, with `merge_commit_sha` equal to `HEAD_SHA`:
 
 ```shell
 gh api "repos/${REPO}/commits/${HEAD_SHA}/pulls" \
@@ -298,10 +319,55 @@ QUAY_TAG_COUNT=$(printf '%s' "$QUAY_RESPONSE" | node -e '
 test "$QUAY_TAG_COUNT" -eq 0
 ```
 
+Choose the release notes start tag: the highest stable tag below `VERSION` that
+is an ancestor of `HEAD_SHA`. GitHub's automatic choice ignores streams; for a
+`release-0.4` patch after v0.4.3 it picks v0.4.2.
+
+```shell
+PREVIOUS_TAG=$(git ls-remote --tags --refs upstream 'refs/tags/v*' |
+  sed 's|.*refs/tags/||' |
+  node -e '
+    const parse = (v) => v.replace(/^v/, "").split(".").map(Number);
+    const cmp = (a, b) => (a[0] - b[0]) || (a[1] - b[1]) || (a[2] - b[2]);
+    const target = parse(process.argv[1]);
+    require("fs").readFileSync(0, "utf8").split("\n")
+      .filter((t) => /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(t))
+      .filter((t) => cmp(parse(t), target) < 0)
+      .sort((a, b) => cmp(parse(b), parse(a)))
+      .forEach((t) => console.log(t));
+  ' "$VERSION" |
+  while read -r CANDIDATE; do
+    STATUS=$(gh api "repos/${REPO}/compare/${CANDIDATE}...${HEAD_SHA}" --jq .status) || exit 1
+    if test "$STATUS" = ahead; then
+      echo "$CANDIDATE"
+      break
+    fi
+  done)
+test -n "$PREVIOUS_TAG"
+```
+
+Mark the release latest only when it is newer than the current latest release,
+so a patch to an older stream never replaces it:
+
+```shell
+LATEST_TAG=$(gh api "repos/${REPO}/releases/latest" --jq .tag_name)
+node -e 'process.exit(/^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(process.argv[1]) ? 0 : 1)' \
+  "$LATEST_TAG"
+if node -e '
+  const [ours, latest] = process.argv.slice(1).map((v) => v.replace(/^v/, "").split(".").map(Number));
+  process.exit(((ours[0] - latest[0]) || (ours[1] - latest[1]) || (ours[2] - latest[2])) > 0 ? 0 : 1);
+' "$VERSION" "$LATEST_TAG"; then
+  LATEST_FLAG=--latest
+else
+  LATEST_FLAG=--latest=false
+fi
+```
+
 ### 2. Sign and push the tag
 
-Fetch and repeat the branch, version, PR/CI, remote-tag, release, and Quay.io
-checks immediately before tagging. Then create the signed annotated tag:
+Fetch and repeat the branch, version, PR/CI, remote-tag, release, Quay.io,
+start-tag and latest-release checks immediately before tagging. Then create the
+signed annotated tag:
 
 ```shell
 git tag -s "$TAG" "$HEAD_SHA" -m "$TAG"
@@ -354,7 +420,8 @@ The existing remote tag is the source of truth. Do not pass `--target`:
 test -z "${GH_TOKEN:-}"
 test -z "${GITHUB_TOKEN:-}"
 gh api user --jq .login
-gh release create "$TAG" --repo "$REPO" --verify-tag --generate-notes
+gh release create "$TAG" --repo "$REPO" --verify-tag --generate-notes \
+  --notes-start-tag "$PREVIOUS_TAG" "$LATEST_FLAG"
 gh release view "$TAG" --repo "$REPO" \
   --json tagName,isDraft,isPrerelease,publishedAt,url
 ```
@@ -373,21 +440,40 @@ gh run list --repo "$REPO" \
   --json databaseId,headBranch,headSha,status,conclusion,url
 ```
 
-Then wait for that exact run:
+Then wait for that exact run. The multi-arch build takes about 12 minutes:
 
 ```shell
 RUN_ID=<databaseId>
 gh run watch "$RUN_ID" --repo "$REPO" --compact --exit-status
 ```
 
-After it succeeds, poll Quay.io for up to five minutes:
+After it succeeds, poll Quay.io for up to five minutes until the tag appears.
+Require no expiry and a manifest list covering the platforms built by
+`build-push.yaml`:
 
 ```shell
-curl -sf \
-  "https://quay.io/api/v1/repository/kuadrant/console-plugin/tag/?specificTag=${TAG}"
+PLATFORMS=$(git show "${HEAD_SHA}:.github/workflows/build-push.yaml" |
+  sed -n 's/^ *platforms: *//p')
+DIGEST=$(curl -sf \
+  "https://quay.io/api/v1/repository/kuadrant/console-plugin/tag/?specificTag=${TAG}" |
+  node -e '
+    const tag = (JSON.parse(require("fs").readFileSync(0, "utf8")).tags || [])
+      .find((t) => t.name === process.argv[1]);
+    if (!tag || tag.expiration) process.exit(1);
+    console.log(tag.manifest_digest);
+  ' "$TAG")
+test -n "$DIGEST"
+curl -sf "https://quay.io/api/v1/repository/kuadrant/console-plugin/manifest/${DIGEST}" |
+  node -e '
+    const data = JSON.parse(require("fs").readFileSync(0, "utf8"));
+    const found = (JSON.parse(data.manifest_data).manifests || [])
+      .map((m) => `${m.platform.os}/${m.platform.architecture}`).sort().join(",");
+    const expected = process.argv[1].split(",").sort().join(",");
+    process.exit(data.is_manifest_list && found === expected ? 0 : 1);
+  ' "$PLATFORMS"
 ```
 
-Require the `tags` array to be non-empty.
+Published tags: <https://quay.io/repository/kuadrant/console-plugin?tab=tags>.
 
 ## Recovery
 
@@ -405,11 +491,11 @@ git fetch --no-tags upstream \
 ```
 
 - If it exists only locally and was created by a failed release attempt, reuse
-  it only when it is signed, annotated, and points to the synchronized `main`
-  tip. Otherwise, after confirming the exact tag name, remove only the local tag
+  it only when it is signed, annotated, and points to the synchronized selected
+  branch tip. Otherwise, after confirming the exact tag name, remove only the local tag
   with `git tag -d $TAG` and rerun the full preflight.
 - If the remote tag is correct but no GitHub Release exists, verify that the tag
-  is signed and points to the synchronized `main` tip, rerun the remaining
+  is signed and points to the synchronized selected branch tip, rerun the remaining
   read-only preflight checks while skipping the tag-absence gate, and resume
   with `gh release create --verify-tag`.
 - If the remote tag points anywhere unexpected, stop. Do not delete or replace
@@ -429,13 +515,23 @@ rerun the failed workflow manually via GitHub Actions. Do not automatically reru
 from the command. If the image already exists at the expected tag, do not rebuild
 — verify and report it.
 
+## Post-release image references
+
+Stable images are pinned by tag. After each release, open a PR to `main`
+updating the README version matrix and operator variable table, and the plugin
+streams table in `docs/versioning.md`. Update the matching
+`RELATED_IMAGE_CONSOLE_PLUGIN_*` value in the Kuadrant operator.
+
 ## Post-release development version
 
-After the release is complete, run `/bump-dev` to prepare the next development
-version. This creates a PR to `main` with the `-dev` suffix added to both
-version fields in `package.json`.
+After the release and maintenance branch are verified, run `/bump-dev minor`
+when `main` moves to the next minor, or `/bump-dev patch` when the next planned
+release on `main` is a patch. This creates a PR to `main` with the `-dev` suffix
+added to both version fields in `package.json`.
 
 Choose the next version deliberately: `X.Y.(Z+1)-dev` is appropriate when the
 next planned release is another patch; `X.(Y+1).0-dev` is appropriate when main
 moves to the next minor. The release command does not make this commit and
-nothing in this process pushes directly to `main`.
+nothing in this process pushes directly to `main`. After a patch from an older
+stream, compare `upstream/main` with the target using semantic version precedence.
+Preserve it if equal or later, including stable versions.
