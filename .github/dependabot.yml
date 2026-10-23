@@ -32,11 +32,16 @@ updates:
     # @patternfly/react-topology is a console federation singleton; the sdk
     # pins its peer to ~6.4.0 and ConsoleRemotePlugin fails the build outside
     # that range. Remove when the sdk widens its peer to include 6.5+.
+    # @openshift-console/dynamic-plugin-sdk-webpack is pinned to the OCP line
+    # the plugin targets (4.22). The SDK is patched via yarn patch:. Never bump
+    # via Dependabot; update manually when the plugin targets a new OCP release.
     ignore:
       - dependency-name: 'react-i18next'
         versions: ['>=16.6.0']
       - dependency-name: '@patternfly/react-topology'
         versions: ['>=6.5.0']
+      - dependency-name: '@openshift-console/dynamic-plugin-sdk-webpack'
+      - dependency-name: '@openshift-console/dynamic-plugin-sdk'
 
   - package-ecosystem: 'github-actions'
     directory: '/'
