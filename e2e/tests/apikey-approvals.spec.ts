@@ -5,6 +5,7 @@ import {
   stopImpersonation,
   navigateToAPIKeyApprovals,
   dismissConsoleTour,
+  spaNavigate,
 } from './helpers';
 
 // test-api-owner: bound to api-owner ClusterRole (get/list/watch apikeyrequests, CRUD apikeyapprovals)
@@ -50,10 +51,7 @@ test.describe('APIKey Approvals - RBAC', () => {
     await impersonateUser(page, 'test-dev');
 
     // SPA navigate to preserve impersonation state (full page.goto clears it in auth-disabled mode)
-    await page.evaluate((path) => {
-      window.history.pushState({}, '', path);
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    }, '/kuadrant/apikey-approvals/ns/kuadrant-test');
+    await spaNavigate(page, '/kuadrant/apikey-approvals/ns/kuadrant-test');
     await page.waitForLoadState('domcontentloaded');
 
     await expect(page.locator('th:has-text("Requester")')).not.toBeVisible({ timeout: 10_000 });

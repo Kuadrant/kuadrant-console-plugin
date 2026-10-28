@@ -5,6 +5,7 @@ import {
   navigateToPolicies,
   navigateToOverview,
   navigateToTopology,
+  spaNavigate,
   waitForPermissionsLoaded,
 } from './helpers';
 
@@ -55,10 +56,7 @@ test.describe('RBAC - test-dev persona', () => {
 
   test('overview shows resources when accessed via kuadrant-test namespace', { tag: '@smoke' }, async ({ page }) => {
     // navigate directly to their accessible namespace
-    await page.evaluate(() => {
-      window.history.pushState({}, '', '/kuadrant/overview/ns/kuadrant-test');
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    });
+    await spaNavigate(page, '/kuadrant/overview/ns/kuadrant-test');
     await page.waitForLoadState('domcontentloaded');
 
     // should stay on this URL (no redirect since they have permissions)
@@ -223,10 +221,7 @@ test.describe('RBAC - test-viewer persona', () => {
 
   test('overview shows resources when accessed via kuadrant-test namespace', { tag: '@nightly' }, async ({ page }) => {
     // navigate directly to their accessible namespace
-    await page.evaluate(() => {
-      window.history.pushState({}, '', '/kuadrant/overview/ns/kuadrant-test');
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    });
+    await spaNavigate(page, '/kuadrant/overview/ns/kuadrant-test');
     await page.waitForLoadState('domcontentloaded');
 
     // should stay on this URL (no redirect since they have permissions)
@@ -318,10 +313,7 @@ test.describe('RBAC - test-devops persona', () => {
 
   test('overview shows resources when accessed via kuadrant-test namespace', { tag: '@nightly' }, async ({ page }) => {
     // navigate directly to their accessible namespace
-    await page.evaluate(() => {
-      window.history.pushState({}, '', '/kuadrant/overview/ns/kuadrant-test');
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    });
+    await spaNavigate(page, '/kuadrant/overview/ns/kuadrant-test');
     await page.waitForLoadState('domcontentloaded');
 
     // should stay on this URL (no redirect since they have permissions)

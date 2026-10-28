@@ -150,24 +150,30 @@ export async function spaNavigate(page: Page, path: string): Promise<void> {
       window.history.pushState({}, '', target);
       window.dispatchEvent(new PopStateEvent('popstate'));
     }, path);
+  const pathname = (url: string) => new URL(url, page.url()).pathname;
   // first path segment, such as search, k8s or kuadrant
-  const area = (url: string) => new URL(url, page.url()).pathname.split('/')[1];
-  const target = area(path);
-  if (area(page.url()) === target) {
+  const area = (url: string) => pathname(url).split('/')[1];
+  const origin = pathname(page.url());
+  if (pathname(path) === origin) {
+    // pushing the current path only re-renders it
     await push();
     return;
   }
 
-  // the console's landing page (/ redirects to /search/all-namespaces) replaces
-  // its URL shortly after mounting, which can drag the router back to /search
-  // after a push. push again until the target's area sticks; redirects within
-  // it, such as a namespace fallback, are left alone.
+  // a page that mounted just before the push can replace its URL a moment later,
+  // which drags the router back: the console's landing page (/ redirects to
+  // /search/all-namespaces) and the projects list that impersonation lands on
+  // (/k8s/cluster/projects) both do. push again until the URL has left the
+  // starting page and stays in the target's area; redirects within it, such as a
+  // namespace fallback, are left alone.
+  const undone = () => area(page.url()) !== area(path) || pathname(page.url()) === origin;
+  await push();
   await expect(async () => {
-    if (area(page.url()) !== target) {
+    if (undone()) {
       await push();
     }
     await page.waitForTimeout(SPA_NAVIGATION_SETTLE_MS);
-    expect(area(page.url()), `navigation to ${path} was undone`).toBe(target);
+    expect(undone(), `navigation to ${path} was undone`).toBe(false);
   }).toPass({ timeout: 15_000 });
 }
 

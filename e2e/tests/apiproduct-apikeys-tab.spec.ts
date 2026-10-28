@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { impersonateUser, stopImpersonation, dismissConsoleTour } from './helpers';
+import { impersonateUser, stopImpersonation, dismissConsoleTour, spaNavigate } from './helpers';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
@@ -133,22 +133,10 @@ async function navigateToAPIProductAPIKeysTab(
     }),
   );
 
-  // Wait for Kuadrant plugin to load
-  await page
-    .getByRole('button', { name: /^(Kuadrant|Connectivity Link)$/, exact: true })
-    .waitFor({ state: 'visible', timeout: 30_000 });
-
   // Navigate using SPA navigation to preserve impersonation
-  await page.evaluate(
-    ({ ns, name }) => {
-      window.history.pushState(
-        {},
-        '',
-        `/k8s/ns/${ns}/devportal.kuadrant.io~v1alpha1~APIProduct/${name}/apikeys`,
-      );
-      window.dispatchEvent(new PopStateEvent('popstate'));
-    },
-    { ns: namespace, name: productName },
+  await spaNavigate(
+    page,
+    `/k8s/ns/${namespace}/devportal.kuadrant.io~v1alpha1~APIProduct/${productName}/apikeys`,
   );
 
   // Wait for the tab content to load - either the table header or empty state
