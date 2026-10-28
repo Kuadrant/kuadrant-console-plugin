@@ -15,25 +15,37 @@ jobs:
     with:
       suite: full
 
-  create-issue:
+  # one open issue per failure type tracks a failing streak on main. later failures
+  # comment on it and the next passing run closes it
+  report-failure:
     needs: e2e
-    if: failure()
+    if: failure() && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    concurrency: nightly-e2e-issues
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # ratchet:actions/checkout@v7.0.1
-
       - name: Ensure labels exist
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           for label in nightly-failure nightly-infrastructure e2e; do
-            gh label create "$label" --force 2>/dev/null || true
+            gh label create "$label" 2>/dev/null || true
           done
 
       - name: Determine failure type
         id: failure
+        env:
+          FAILURE_TYPE: ${{ needs.e2e.outputs.failure-type }}
         run: |
-          echo "type=${{ needs.e2e.outputs.failure-type }}" >> "$GITHUB_OUTPUT"
+          # failures outside the classified steps, such as tool installs or teardown, arrive as none
+          if [[ "$FAILURE_TYPE" == "test" ]]; then
+            echo "type=test" >> "$GITHUB_OUTPUT"
+            echo "label=nightly-failure" >> "$GITHUB_OUTPUT"
+          else
+            echo "type=infrastructure" >> "$GITHUB_OUTPUT"
+            echo "label=nightly-infrastructure" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Download test results
         if: steps.failure.outputs.type == 'test'
@@ -43,85 +55,108 @@ jobs:
           path: ./results
         continue-on-error: true
 
-      - name: Extract failed tests
+      - name: List failed tests
         if: steps.failure.outputs.type == 'test'
+        continue-on-error: true
+        shell: node {0}
         run: |
-          if [[ -f ./results/playwright-results.json ]]; then
-            node -e "
-              const r = require('./results/playwright-results.json');
-              function collectSpecs(suites) {
-                return suites.flatMap(s => [...(s.specs || []), ...collectSpecs(s.suites || [])]);
-              }
-              const failed = collectSpecs(r.suites)
-                .filter(spec => spec.tests?.some(t => t.status === 'unexpected' || t.status === 'flaky'))
-                .map(spec => '- ' + spec.title);
-              require('fs').writeFileSync('/tmp/failed-tests.txt',
-                failed.join('\n') || 'Could not determine individual test names');
-            " 2>/dev/null || echo "Could not parse test results" > /tmp/failed-tests.txt
-          else
-            echo "Test results JSON not available" > /tmp/failed-tests.txt
-          fi
+          const fs = require('fs');
+          const files = fs.existsSync('results')
+            ? fs.readdirSync('results').filter((f) => /^playwright-results.*\.json$/.test(f))
+            : [];
+          const specs = (suites = []) => suites.flatMap((s) => [...(s.specs || []), ...specs(s.suites)]);
+          const entries = files.flatMap((f) => {
+            // inspector journeys write one file per mode, e.g. playwright-results-inspector-auto.json
+            const mode = f.match(/^playwright-results-(.+)\.json$/)?.[1];
+            const report = JSON.parse(fs.readFileSync(`results/${f}`, 'utf8'));
+            return specs(report.suites).map((spec) => ({ spec, mode }));
+          });
+          const list = (status) =>
+            entries
+              .filter(({ spec }) => spec.tests?.some((t) => t.status === status))
+              .map(({ spec, mode }) => `- \`${spec.file}\`: ${spec.title}${mode ? ` (${mode})` : ''}`);
+          const failed = list('unexpected');
+          const flaky = list('flaky');
+          let out = '\n### Failed tests\n\n';
+          out += files.length
+            ? failed.join('\n') || 'No failed Playwright tests in results'
+            : 'Test results JSON not available';
+          if (flaky.length) out += `\n\n### Flaky tests\n\n${flaky.join('\n')}`;
+          fs.writeFileSync('tests.md', `${out}\n`);
 
-      - name: Determine label
-        id: label
-        run: |
-          if [[ "${{ steps.failure.outputs.type }}" == "infrastructure" ]]; then
-            echo "name=nightly-infrastructure" >> "$GITHUB_OUTPUT"
-          else
-            echo "name=nightly-failure" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Check for existing issue
-        id: existing
+      - name: Build report
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILURE_TYPE: ${{ steps.failure.outputs.type }}
         run: |
-          EXISTING=$(gh issue list --label "${{ steps.label.outputs.name }}" --state open --json number --limit 1 -q '.[0].number // empty')
-          echo "number=$EXISTING" >> "$GITHUB_OUTPUT"
+          failed_steps=$(gh run view "$GITHUB_RUN_ID" --json jobs --jq \
+            '[.jobs[] | select(.conclusion == "failure") | .steps[] | select(.conclusion == "failure") | .name] | join(", ")') || true
 
-      - name: Build issue body
-        if: steps.existing.outputs.number == ''
-        run: |
-          FAILURE_TYPE="${{ steps.failure.outputs.type }}"
-          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-
-          cat > /tmp/issue-body.md <<EOF
-          ## Nightly E2E Failure
-
-          **Date:** $(date -u +%Y-%m-%d)
-          **Run:** ${RUN_URL}
-          **Failure type:** ${FAILURE_TYPE}
+          cat > report.md <<EOF
+          - **Date:** $(date -u +%Y-%m-%d)
+          - **Run:** ${RUN_URL}
+          - **Failure type:** ${FAILURE_TYPE}
+          - **Failed steps:** ${failed_steps:-unknown}
           EOF
 
-          if [[ "$FAILURE_TYPE" == "test" ]]; then
-            FAILED_TESTS=$(cat /tmp/failed-tests.txt 2>/dev/null || echo "Unknown")
-            cat >> /tmp/issue-body.md <<EOF
-
-          ### Failed Tests
-
-          ${FAILED_TESTS}
-          EOF
-          elif [[ "$FAILURE_TYPE" == "infrastructure" ]]; then
-            cat >> /tmp/issue-body.md <<EOF
-
-          The e2e test environment failed to set up.
-          This may indicate a problem with the cluster, kuadrant operator, or test fixtures.
-          EOF
+          if [[ -f tests.md ]]; then
+            cat tests.md >> report.md
+          elif [[ "$FAILURE_TYPE" == "test" ]]; then
+            printf '\n### Failed tests\n\nCould not parse test results\n' >> report.md
           fi
 
-          cat >> /tmp/issue-body.md <<EOF
-
-          ---
-          *This issue was automatically created by the nightly e2e workflow.*
-          EOF
-
-      - name: Create issue
-        if: steps.existing.outputs.number == ''
+      - name: Create issue or add comment
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FAILURE_TYPE: ${{ steps.failure.outputs.type }}
+          LABEL: ${{ steps.failure.outputs.label }}
+          PROJECT_TOKEN: ${{ secrets.ADD_ISSUES_TOKEN }}
         run: |
-          gh issue create \
-            --title "Nightly E2E failure — $(date -u +%Y-%m-%d)" \
-            --label "${{ steps.label.outputs.name }}" \
-            --label "e2e" \
-            --body-file /tmp/issue-body.md
+          open=$(gh issue list --label "$LABEL" --state open --limit 1 --json number,createdAt \
+            --jq '.[0] // empty | "\(.number) \(.createdAt)"')
+          last_pass=$(gh run list --workflow "$GITHUB_WORKFLOW" --branch main --status success --limit 1 \
+            --json createdAt --jq '.[0].createdAt // empty')
+          number=${open%% *}
+          stale=""
+
+          # an issue opened before the last passing run belongs to an earlier failing streak
+          if [[ -n "$open" && -n "$last_pass" ]] && (( $(date -d "${open#* }" +%s) < $(date -d "$last_pass" +%s) )); then
+            stale=$number
+            number=""
+          fi
+
+          if [[ -n "$number" ]]; then
+            gh issue comment "$number" --body-file report.md
+          else
+            {
+              echo "Nightly E2E is failing on main. Later failures are added as comments, and this issue closes when a nightly run passes."
+              echo
+              cat report.md
+            } > issue.md
+            url=$(gh issue create --title "Nightly E2E ${FAILURE_TYPE} failures since $(date -u +%Y-%m-%d)" \
+              --label "$LABEL" --label e2e --body-file issue.md)
+            number=${url##*/}
+            if [[ -n "$stale" ]]; then
+              gh issue close "$stale" --comment "Superseded by #${number}: nightly E2E passed after this issue was opened."
+            fi
+          fi
+
+          # issues opened with GITHUB_TOKEN do not trigger issues.yaml, so add them to the project here
+          GH_TOKEN="$PROJECT_TOKEN" gh project item-add 18 --owner Kuadrant --url "${GITHUB_SERVER_URL}/${GH_REPO}/issues/${number}"
+
+  close-issues:
+    needs: e2e
+    if: success() && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency: nightly-e2e-issues
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - name: Close resolved issues
+        run: |
+          for label in nightly-failure nightly-infrastructure; do
+            numbers=$(gh issue list --label "$label" --state open --json number --jq '.[].number')
+            for number in $numbers; do
+              gh issue close "$number" --comment "Nightly E2E passed: ${RUN_URL}"
+            done
+          done
