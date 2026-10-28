@@ -97,8 +97,14 @@ test.describe('Policy Topology', () => {
   });
 
   test('node context menu navigates to the resource details page', { tag: '@smoke' }, async ({ page }) => {
+    await page.getByRole('button', { name: /^Namespace(\s+\d+)?$/ }).click();
+    await page.getByRole('menuitem', { name: 'kuadrant-test', exact: true }).click();
+    await closeFilterMenu(page);
+    await expect(nodeByLabel(page, SECOND_GATEWAY_NODE_LABEL)).toBeHidden();
+    await page.getByRole('button', { name: 'Fit to Screen' }).click();
+
     const gatewayNode = nodeByLabel(page, GATEWAY_NODE_LABEL);
-    await gatewayNode.click({ button: 'right' });
+    await gatewayNode.locator('.kuadrant-topology-node-icon').click({ button: 'right' });
 
     const goToResource = page.getByRole('menuitem', { name: 'Go to Resource' });
     await expect(goToResource).toBeVisible({ timeout: 10_000 });
