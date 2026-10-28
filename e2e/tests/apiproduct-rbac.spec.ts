@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { impersonateUser, stopImpersonation, TEST_NAMESPACE } from './helpers';
+import { impersonateUser, spaNavigate, stopImpersonation, TEST_NAMESPACE } from './helpers';
 
 // Impersonation is stored in Redux (not cookies), so page.goto resets it.
 // The pattern that works:
@@ -17,10 +17,7 @@ async function impersonateAndNavigate(
   await page.waitForLoadState('domcontentloaded');
   await impersonateUser(page, 'test-dev');
   // now on Projects page, impersonated as test-dev
-  await page.evaluate((url: string) => {
-    window.history.pushState({}, '', url);
-    window.dispatchEvent(new PopStateEvent('popstate'));
-  }, targetUrl);
+  await spaNavigate(page, targetUrl);
   await page.waitForLoadState('domcontentloaded');
 }
 
