@@ -545,7 +545,7 @@ Result: All API access revoked, no orphaned resources
 **Current Implementation Status:**
 
 - Controller has RBAC for finalizers (`apiproducts/finalizers,verbs=update`)
-- Controller sets `OwnerReference` on APIKeys ([apikey_controller.go:130-138](https://github.com/Kuadrant/developer-portal-controller/blob/main/internal/controller/apikey_controller.go#L130-L138))
+- Controller sets `OwnerReference` on APIKeysApprovals ([apikeyapproval_controller.go:121-129](https://github.com/Kuadrant/developer-portal-controller/blob/main/internal/controller/apikeyapproval_controller.go#L121-L129))
 - **Missing:** Finalizer add/remove logic in reconcile loop (needs implementation)
 
 **UX Requirements:**
