@@ -138,7 +138,7 @@
   },
   "dependencies": {
     "@babel/core": "^7.29.6",
-    "@babel/preset-env": "^7.25.3",
+    "@babel/preset-env": "^8.0.7",
     "@babel/preset-react": "^7.24.7",
     "@patternfly/react-data-view": "6.7.0",
     "@patternfly/react-table": "^6.7.0",
