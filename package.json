@@ -150,7 +150,7 @@
     "js-yaml": "^4.3.2",
     "nanoid": "3.3.18",
     "pluralize": "^8.0.0",
-    "swagger-ui-react": "5.10.5"
+    "swagger-ui-react": "5.34.0"
   },
   "packageManager": "yarn@4.12.0"
 }
