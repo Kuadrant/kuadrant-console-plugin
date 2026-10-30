@@ -45,3 +45,6 @@ jobs:
         if: steps.changed.outputs.paths != ''
         with:
           paths: ${{ steps.changed.outputs.paths }}
+          # serve from the repo root so ../ links resolve when only one file changed.
+          # must be absolute: linkinator drops a path segment for '.'
+          serverRoot: ${{ github.workspace }}
