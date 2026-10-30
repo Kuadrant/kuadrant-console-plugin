@@ -55,6 +55,29 @@ export interface Secret extends K8sResourceCommon {
   };
 }
 
+// Mirrors the Authorino credential locations for API key authentication. The developer-portal
+// controller copies the block from the AuthPolicy into APIKey.status.authScheme.credentials.
+export interface APIKeyCredentials {
+  authorizationHeader?: {
+    // Scheme placed before the key in the Authorization header. Authorino defaults to "Bearer".
+    prefix?: string;
+  };
+  customHeader?: {
+    name?: string;
+  };
+  queryString?: {
+    name?: string;
+  };
+  cookie?: {
+    name?: string;
+  };
+}
+
+export interface APIKeyAuthScheme {
+  authenticationSpec?: unknown;
+  credentials?: APIKeyCredentials;
+}
+
 export interface APIKey extends K8sResourceCommon {
   spec?: {
     apiProductRef?: {
@@ -76,6 +99,7 @@ export interface APIKey extends K8sResourceCommon {
     limits?: PlanLimits;
     conditions?: Condition[];
     apiHostname?: string;
+    authScheme?: APIKeyAuthScheme;
   };
 }
 
