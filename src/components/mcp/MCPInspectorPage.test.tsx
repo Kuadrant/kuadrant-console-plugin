@@ -82,6 +82,10 @@ const connectToGateway = async () => {
   await waitFor(() => expect(screen.getByText('Connected')).toBeInTheDocument());
 };
 
+// animated pf modals stay mounted until their close transition ends
+const waitForDialogToClose = () =>
+  waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
 const searchItems = (kind: 'Tool' | 'Prompt', search: string) => {
   const toggle = screen.getByRole('button', { name: `${kind} selector` });
   if (toggle.getAttribute('aria-expanded') !== 'true') {
@@ -420,7 +424,7 @@ describe('MCPInspectorPage', () => {
       fireEvent.change(screen.getByLabelText('Bearer token'), { target: { value: 'replacement' } });
       fireEvent.click(screen.getByRole('button', { name: 'Connect with bearer token' }));
       await screen.findByText('Connected', { exact: true });
-      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      await waitForDialogToClose();
       expect(MCPClient).toHaveBeenLastCalledWith(expect.any(String), {
         token: 'replacement',
         protocolMode: 'auto',
@@ -550,6 +554,7 @@ describe('MCPInspectorPage', () => {
     fireEvent.change(screen.getByLabelText('Bearer token'), { target: { value: 'old-token' } });
     fireEvent.click(screen.getByRole('button', { name: 'Connect with bearer token' }));
     await screen.findByText('Connected', { exact: true });
+    await waitForDialogToClose();
     (MCPClient as jest.Mock).mockImplementationOnce(() => ({
       connect: jest.fn().mockRejectedValue(new MCPUnauthorizedError()),
     }));
@@ -757,7 +762,7 @@ describe('MCPInspectorPage', () => {
       '/api/proxy/plugin/kuadrant-console-plugin/backend/api/mcp/v1/mcpgatewayextensions/test-ns/mcp-gateway',
       { token: 'test-token', protocolMode: 'auto' },
     );
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitForDialogToClose();
   });
 
   it('explains when a bearer token is rejected and allows another attempt', async () => {
@@ -791,7 +796,7 @@ describe('MCPInspectorPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Connect with bearer token' }));
 
     await waitFor(() => expect(screen.getByText('Connected')).toBeInTheDocument());
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitForDialogToClose();
   });
 
   it('builds and validates a tool form from its input schema before running it', async () => {
