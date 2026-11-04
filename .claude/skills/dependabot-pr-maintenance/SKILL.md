@@ -48,7 +48,7 @@ Red checks:
 
 - `e2e-smoke / e2e-rbac`: `gh run view RUN_ID -R Kuadrant/kuadrant-console-plugin --json jobs` names the failed step, and `gh run view RUN_ID -R Kuadrant/kuadrant-console-plugin --job JOB_ID --log-failed` gives its `error:` line. These are infrastructure; rerun with `gh run rerun RUN_ID -R Kuadrant/kuadrant-console-plugin --failed` once, then wait once:
   - a failed `Setup cluster`, `Wait for plugin dev server` or `Setup Inspector backend` step;
-  - a `Run live Inspector journeys` failure on a gateway readiness probe in `e2e/test-mcp-inspector.sh`, an error ending `did not become ready (anonymous=..., authenticated=...)` or `demo gateway did not advertise both MCP protocol versions`. The workflow's `Classify failure` step labels these `test`; the error line decides.
+  - a `Run live Inspector journeys` failure on a readiness probe in `e2e/test-mcp-inspector.sh`, an `error:` line containing `did not become ready (`. The workflow's `Classify failure` step labels these `test`; the error line decides.
 
   Any other failed test step is dependency caused unless recent `e2e-nightly.yaml` runs on `main` (`gh run list -R Kuadrant/kuadrant-console-plugin --workflow e2e-nightly.yaml --branch main --limit 5`) fail the same test. Failing on some of those nights is a flake on `main`: rerun once, then wait once. Failing on all of them is pre-existing breakage: report it and defer.
 - `lint`, `build`, `i18n`, `unit`: dependency caused unless the log shows a runner or network error; rerun runner or network failures once, then wait once.

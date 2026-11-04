@@ -12,9 +12,10 @@ kubectl --context=oinc logs -n istio-system deployment/istiod --tail=100 2>&1 ||
 kubectl --context=oinc logs -n metallb-system deployment/controller --tail=100 2>&1 || true
 kubectl --context=oinc logs -n kuadrant-system deployment/kuadrant-operator-controller-manager --all-containers --tail=100 2>&1 || true
 kubectl --context=oinc get authpolicies.kuadrant.io,mcpgatewayextensions.mcp.kuadrant.io,mcpserverregistrations.mcp.kuadrant.io -A -o yaml 2>&1 || true
-# demo gateways, their brokers and the controller behind the inspector journeys
+# demo gateways, their brokers and servers, and the controller behind the inspector journeys
 for workload in gateway-system/mcp-gateway-istio gateway-system/mcp-gateway-auth-istio \
-  mcp-gateway-system/mcp-gateway mcp-gateway-auth-system/mcp-gateway kuadrant-system/mcp-gateway-controller; do
+  mcp-gateway-system/mcp-gateway mcp-gateway-auth-system/mcp-gateway kuadrant-system/mcp-gateway-controller \
+  toystore/mcp-test-server toystore/mcp-test-stateless-server; do
   kubectl --context=oinc logs -n "${workload%%/*}" "deployment/${workload#*/}" --all-containers --tail=200 2>&1 || true
 done
 # fetch failures with no successes mean the gateway is stuck answering 503 wasm_fail_stream
