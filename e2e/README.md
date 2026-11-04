@@ -247,7 +247,7 @@ Every test must be tagged with exactly one of `@smoke` or `@nightly`:
   6. Runs `e2e/setup-mcp-inspector.sh` (`setup-inspector`) to build this checkout's Inspector backend, deploy it through the catalog operator's override, then verify shared Gateway readiness
   7. Runs Playwright tests (see suite router below for how specs are selected)
   8. Runs `e2e/test-mcp-inspector.sh` (`tests-inspector`) for live legacy, stateless, auto-negotiation and bearer authentication journeys in both smoke and full suites, including after an unrelated test failure when Inspector setup succeeded
-  9. Uploads `playwright-report/` and `playwright-results*.json` from the repository root as artifacts, including separate Inspector journey results. Failed runs also capture Gateway conditions, pods, Services, MetalLB address pools, warning events, and controller logs in `e2e-diagnostics.txt` before teardown.
+  9. Uploads `playwright-report/` and `playwright-results*.json` from the repository root as artifacts, including separate Inspector journey results. Failed runs also capture Gateway conditions, pods, Services, MetalLB address pools, warning events, controller logs, AuthPolicy and MCP resource status, demo gateway and broker logs, and the demo gateways' Envoy wasm stats in `e2e-diagnostics.txt` before teardown.
   10. Tears down the cluster
 
   On nightly failures, `e2e-nightly.yaml` automatically opens a GitHub issue with the
