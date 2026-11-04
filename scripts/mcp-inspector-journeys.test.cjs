@@ -4,7 +4,6 @@ const { execFile } = require('node:child_process');
 const { createServer } = require('node:http');
 const {
   copyFileSync,
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -15,7 +14,18 @@ const { tmpdir } = require('node:os');
 const { join } = require('node:path');
 const { promisify } = require('node:util');
 
-async function runJourneys(t, missingDemoGateway = false) {
+// brokerStuck: discovery lacks 2026-07-28 until the broker restarts.
+// staleAfterRestart: discover probes still answered that way after the restart.
+// toolsLateProbes: tools/list probes that omit the stateless tool while discovery is complete.
+async function runJourneys(
+  t,
+  {
+    missingDemoGateway = false,
+    brokerStuck = false,
+    staleAfterRestart = 0,
+    toolsLateProbes = 0,
+  } = {},
+) {
   const dir = mkdtempSync(join(tmpdir(), 'mcp-inspector-journeys-'));
   t.after(() => rmSync(dir, { recursive: true, force: true }));
   mkdirSync(join(dir, 'bin'));
@@ -24,11 +34,39 @@ async function runJourneys(t, missingDemoGateway = false) {
     join(__dirname, '../e2e/test-mcp-inspector.sh'),
     join(dir, 'e2e/test-mcp-inspector.sh'),
   );
-  const fixture = join(dir, 'auth-fixture');
   const log = join(dir, 'journeys');
   writeFileSync(log, '');
+  const restartLog = join(dir, 'restarts');
+  writeFileSync(restartLog, '');
+  const restarts = () => readFileSync(restartLog, 'utf8').split('\n').filter(Boolean).length;
+  let stale = brokerStuck;
+  let staleLeft = staleAfterRestart;
+  let toolsLeft = toolsLateProbes;
+  const brokerReply = (method) => {
+    if (method === 'server/discover') {
+      if (stale && restarts() > 0) {
+        if (staleLeft > 0) {
+          staleLeft -= 1;
+        } else {
+          stale = false;
+        }
+      }
+      return { supportedVersions: stale ? ['2025-11-25'] : ['2025-11-25', '2026-07-28'] };
+    }
+    if (method === 'tools/list') {
+      if (stale) {
+        return { tools: [] };
+      }
+      if (toolsLeft > 0) {
+        toolsLeft -= 1;
+        return { tools: [] };
+      }
+      return { tools: [{ name: 'stateless_hello_world' }] };
+    }
+    return {};
+  };
   const probes = [];
-  const gateway = async (host, token, protectedGateway) => {
+  const gateway = async (host, token) => {
     const server = createServer((request, response) => {
       let body = '';
       request.on('data', (chunk) => {
@@ -41,15 +79,10 @@ async function runJourneys(t, missingDemoGateway = false) {
         response.setHeader('Content-Type', 'application/json');
         if (request.headers.host !== host) {
           response.writeHead(404).end('{}');
-        } else if (
-          (protectedGateway || existsSync(fixture)) &&
-          authorization !== `Bearer ${token}`
-        ) {
+        } else if (token && authorization !== `Bearer ${token}`) {
           response.writeHead(401).end('{}');
         } else {
-          response.end(
-            JSON.stringify({ result: { supportedVersions: ['2025-11-25', '2026-07-28'] } }),
-          );
+          response.end(JSON.stringify({ result: brokerReply(method) }));
         }
       });
     });
@@ -57,8 +90,8 @@ async function runJourneys(t, missingDemoGateway = false) {
     t.after(() => new Promise((resolve) => server.close(resolve)));
     return server.address().port;
   };
-  const openPort = await gateway('mcp.127-0-0-1.sslip.io', 'inspector-e2e-token', false);
-  const authPort = await gateway('mcp-auth.127-0-0-1.sslip.io', 'token', true);
+  const openPort = await gateway('mcp.127-0-0-1.sslip.io');
+  const authPort = await gateway('mcp-auth.127-0-0-1.sslip.io', 'token');
   const stub = (name, script) =>
     writeFileSync(join(dir, 'bin', name), `#!/bin/bash\nset -eu\n${script}\n`, { mode: 0o755 });
   stub(
@@ -76,9 +109,8 @@ case "$*" in
     esac
     echo "Forwarding from 127.0.0.1:$port -> 80"
     exec sleep 30 ;;
-  *'apply -f e2e/manifests/mcp-inspector-auth.yaml') touch "$INSPECTOR_TEST_FIXTURE" ;;
-  *'wait authpolicy/mcp-inspector-e2e '*) test -f "$INSPECTOR_TEST_FIXTURE" ;;
-  *'delete -f e2e/manifests/mcp-inspector-auth.yaml --ignore-not-found') rm -f "$INSPECTOR_TEST_FIXTURE" ;;
+  *'rollout restart deployment/mcp-gateway -n mcp-gateway-system') echo restart >> "$INSPECTOR_TEST_RESTARTS" ;;
+  *'rollout status deployment/mcp-gateway -n mcp-gateway-system --timeout=2m') ;;
   *) exit 1 ;;
 esac`,
   );
@@ -89,7 +121,7 @@ esac`,
   let status = 0;
   let stderr = '';
   try {
-    await promisify(execFile)('bash', [join(dir, 'e2e/test-mcp-inspector.sh')], {
+    ({ stderr } = await promisify(execFile)('bash', [join(dir, 'e2e/test-mcp-inspector.sh')], {
       env: {
         ...process.env,
         PATH: `${join(dir, 'bin')}:${process.env.PATH}`,
@@ -97,11 +129,11 @@ esac`,
         INSPECTOR_TEST_OPEN_PORT: String(openPort),
         INSPECTOR_TEST_AUTH_PORT: String(authPort),
         INSPECTOR_TEST_MISSING_DEMO: String(missingDemoGateway),
-        INSPECTOR_TEST_FIXTURE: fixture,
         INSPECTOR_TEST_LOG: log,
+        INSPECTOR_TEST_RESTARTS: restartLog,
       },
       timeout: 15000,
-    });
+    }));
   } catch (error) {
     status = error.code;
     stderr = error.stderr;
@@ -110,21 +142,23 @@ esac`,
     status,
     stderr,
     probes,
+    restarts: restarts(),
     journeys: readFileSync(log, 'utf8').trim().split('\n'),
-    fixtureExists: existsSync(fixture),
   };
 }
+
+const allJourneys = [
+  'mcp-gateway-system/mcp-gateway-extension anonymous 2025-11-25',
+  'mcp-gateway-system/mcp-gateway-extension anonymous 2026-07-28',
+  'mcp-gateway-system/mcp-gateway-extension anonymous auto',
+  'mcp-gateway-auth-system/mcp-gateway-auth-extension token 2025-11-25',
+];
 
 test('live journeys probe and exercise the authenticated demo as well as the original gateway', async (t) => {
   const result = await runJourneys(t);
   assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(result.journeys, [
-    'mcp-gateway-system/mcp-gateway-extension anonymous 2025-11-25',
-    'mcp-gateway-system/mcp-gateway-extension anonymous 2026-07-28',
-    'mcp-gateway-system/mcp-gateway-extension anonymous auto',
-    'mcp-gateway-system/mcp-gateway-extension inspector-e2e-token 2025-11-25',
-    'mcp-gateway-auth-system/mcp-gateway-auth-extension token 2025-11-25',
-  ]);
+  assert.deepEqual(result.journeys, allJourneys);
+  assert.equal(result.restarts, 0);
   assert.ok(
     result.probes.some(
       (probe) => probe.host === 'mcp-auth.127-0-0-1.sslip.io' && !probe.authorization,
@@ -138,13 +172,27 @@ test('live journeys probe and exercise the authenticated demo as well as the ori
         probe.method === 'initialize',
     ),
   );
-  assert.equal(result.fixtureExists, false);
 });
 
 test('live journeys fail when the authenticated demo gateway is unavailable', async (t) => {
-  const result = await runJourneys(t, true);
+  const result = await runJourneys(t, { missingDemoGateway: true });
   assert.equal(result.status, 1, result.stderr);
   assert.match(result.stderr, /mcp-auth\.127-0-0-1\.sslip\.io authentication did not become ready/);
-  assert.equal(result.journeys.length, 4);
-  assert.equal(result.fixtureExists, false);
+  assert.equal(result.journeys.length, 3);
+});
+
+test('live journeys restart a stuck broker once', async (t) => {
+  const result = await runJourneys(t, { brokerStuck: true, staleAfterRestart: 1 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stderr, /broker advertises \["2025-11-25"\]; restarting it/);
+  assert.equal(result.restarts, 1);
+  assert.deepEqual(result.journeys, allJourneys);
+});
+
+test('live journeys wait for the stateless tools without restarting the broker', async (t) => {
+  const result = await runJourneys(t, { toolsLateProbes: 2 });
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(result.restarts, 0);
+  assert.equal(result.probes.filter((probe) => probe.method === 'tools/list').length, 3);
+  assert.deepEqual(result.journeys, allJourneys);
 });
