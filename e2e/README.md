@@ -194,19 +194,20 @@ operator itself is not replaced, so its MCP and developer portal components matc
 the catalog's CRDs.
 
 `bash e2e/test-mcp-inspector.sh` runs the live tools/prompts journey for legacy,
-stateless, and Auto protocols, followed by a bearer-authentication journey that
-checks rejection and retry. These run explicitly in both smoke and full CI jobs;
-they cannot silently skip when the CI target is missing. The script temporarily
-protects the demo listener using its own AuthPolicy, grants that gateway access
-to Authorino (TCP 50051) and the WASM endpoint (TCP 8082), and removes those
-fixtures on exit. Before the journeys, a discovery check waits for the gateway to
-advertise both expected protocol versions; a data-path check also waits for
-authentication to become ready. A fifth journey targets the separate authenticated
-demo gateway, `mcp-gateway-auth-system/mcp-gateway-auth-extension`, using its
-demo credential `token`. It probes that gateway for anonymous rejection and
-authenticated success before checking invalid-token rejection, a tool call and a
-prompt in the Inspector. Both scripts require the `oinc` context. Local spec invocations still skip
-the live journey unless `MCP_INSPECTOR_E2E_EXTENSION=namespace/name` is provided.
+stateless, and Auto protocols against `mcp-gateway-system/mcp-gateway-extension`,
+then a bearer-authentication journey against the authenticated demo gateway,
+`mcp-gateway-auth-system/mcp-gateway-auth-extension`, with its demo credential
+`token`. These run explicitly in both smoke and full CI jobs; they cannot silently
+skip when the CI target is missing. Before the journeys, a discovery check waits
+for the open gateway to advertise both expected protocol versions. Before the
+bearer journey, a data-path check waits for the authenticated gateway to reject
+anonymous requests and accept the token; the journey then checks invalid-token
+rejection, a tool call and a prompt in the Inspector. The authenticated gateway is
+created with its AuthPolicy: adding a gateway's first policy at runtime races
+Envoy's one-shot fetch of the Kuadrant wasm module, and losing that race leaves the
+gateway answering 503 until its pod restarts. Both scripts require the `oinc`
+context. Local spec invocations still skip the live journey unless
+`MCP_INSPECTOR_E2E_EXTENSION=namespace/name` is provided.
 
 ## Test Tags
 

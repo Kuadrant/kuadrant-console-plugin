@@ -4,7 +4,6 @@ const { execFile } = require('node:child_process');
 const { createServer } = require('node:http');
 const {
   copyFileSync,
-  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -24,11 +23,10 @@ async function runJourneys(t, missingDemoGateway = false) {
     join(__dirname, '../e2e/test-mcp-inspector.sh'),
     join(dir, 'e2e/test-mcp-inspector.sh'),
   );
-  const fixture = join(dir, 'auth-fixture');
   const log = join(dir, 'journeys');
   writeFileSync(log, '');
   const probes = [];
-  const gateway = async (host, token, protectedGateway) => {
+  const gateway = async (host, token) => {
     const server = createServer((request, response) => {
       let body = '';
       request.on('data', (chunk) => {
@@ -41,10 +39,7 @@ async function runJourneys(t, missingDemoGateway = false) {
         response.setHeader('Content-Type', 'application/json');
         if (request.headers.host !== host) {
           response.writeHead(404).end('{}');
-        } else if (
-          (protectedGateway || existsSync(fixture)) &&
-          authorization !== `Bearer ${token}`
-        ) {
+        } else if (token && authorization !== `Bearer ${token}`) {
           response.writeHead(401).end('{}');
         } else {
           response.end(
@@ -57,8 +52,8 @@ async function runJourneys(t, missingDemoGateway = false) {
     t.after(() => new Promise((resolve) => server.close(resolve)));
     return server.address().port;
   };
-  const openPort = await gateway('mcp.127-0-0-1.sslip.io', 'inspector-e2e-token', false);
-  const authPort = await gateway('mcp-auth.127-0-0-1.sslip.io', 'token', true);
+  const openPort = await gateway('mcp.127-0-0-1.sslip.io');
+  const authPort = await gateway('mcp-auth.127-0-0-1.sslip.io', 'token');
   const stub = (name, script) =>
     writeFileSync(join(dir, 'bin', name), `#!/bin/bash\nset -eu\n${script}\n`, { mode: 0o755 });
   stub(
@@ -76,9 +71,6 @@ case "$*" in
     esac
     echo "Forwarding from 127.0.0.1:$port -> 80"
     exec sleep 30 ;;
-  *'apply -f e2e/manifests/mcp-inspector-auth.yaml') touch "$INSPECTOR_TEST_FIXTURE" ;;
-  *'wait authpolicy/mcp-inspector-e2e '*) test -f "$INSPECTOR_TEST_FIXTURE" ;;
-  *'delete -f e2e/manifests/mcp-inspector-auth.yaml --ignore-not-found') rm -f "$INSPECTOR_TEST_FIXTURE" ;;
   *) exit 1 ;;
 esac`,
   );
@@ -97,7 +89,6 @@ esac`,
         INSPECTOR_TEST_OPEN_PORT: String(openPort),
         INSPECTOR_TEST_AUTH_PORT: String(authPort),
         INSPECTOR_TEST_MISSING_DEMO: String(missingDemoGateway),
-        INSPECTOR_TEST_FIXTURE: fixture,
         INSPECTOR_TEST_LOG: log,
       },
       timeout: 15000,
@@ -111,7 +102,6 @@ esac`,
     stderr,
     probes,
     journeys: readFileSync(log, 'utf8').trim().split('\n'),
-    fixtureExists: existsSync(fixture),
   };
 }
 
@@ -122,7 +112,6 @@ test('live journeys probe and exercise the authenticated demo as well as the ori
     'mcp-gateway-system/mcp-gateway-extension anonymous 2025-11-25',
     'mcp-gateway-system/mcp-gateway-extension anonymous 2026-07-28',
     'mcp-gateway-system/mcp-gateway-extension anonymous auto',
-    'mcp-gateway-system/mcp-gateway-extension inspector-e2e-token 2025-11-25',
     'mcp-gateway-auth-system/mcp-gateway-auth-extension token 2025-11-25',
   ]);
   assert.ok(
@@ -138,13 +127,11 @@ test('live journeys probe and exercise the authenticated demo as well as the ori
         probe.method === 'initialize',
     ),
   );
-  assert.equal(result.fixtureExists, false);
 });
 
 test('live journeys fail when the authenticated demo gateway is unavailable', async (t) => {
   const result = await runJourneys(t, true);
   assert.equal(result.status, 1, result.stderr);
   assert.match(result.stderr, /mcp-auth\.127-0-0-1\.sslip\.io authentication did not become ready/);
-  assert.equal(result.journeys.length, 4);
-  assert.equal(result.fixtureExists, false);
+  assert.equal(result.journeys.length, 3);
 });

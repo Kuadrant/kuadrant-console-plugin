@@ -10,7 +10,6 @@ fi
 export MCP_INSPECTOR_E2E_EXTENSION=mcp-gateway-system/mcp-gateway-extension
 
 probe_log=$(mktemp)
-auth_fixture_applied=false
 stop_probe() {
   if [ -n "${probe_pid:-}" ]; then
     kill "${probe_pid}" 2>/dev/null || true
@@ -20,9 +19,6 @@ stop_probe() {
 cleanup() {
   stop_probe
   rm -f "${probe_log}"
-  if [ "${auth_fixture_applied}" = true ]; then
-    kubectl --context=oinc delete -f e2e/manifests/mcp-inspector-auth.yaml --ignore-not-found
-  fi
 }
 trap cleanup EXIT
 
@@ -80,11 +76,6 @@ for protocol in 2026-07-28 auto; do
   MCP_INSPECTOR_E2E_PROMPT_OUTPUT='Please greet Ada warmly' journey "${protocol}"
 done
 
-# This fixture and credential belong only to the disposable E2E gateway.
-auth_fixture_applied=true
-kubectl --context=oinc apply -f e2e/manifests/mcp-inspector-auth.yaml
-kubectl --context=oinc wait authpolicy/mcp-inspector-e2e -n gateway-system --for=condition=Enforced --timeout=2m
-
 wait_for_authentication() {
   local host=$1 token=$2
   local probe_deadline=$((SECONDS + 120))
@@ -113,11 +104,8 @@ wait_for_authentication() {
   done
 }
 
-# enforced can precede auth propagation.
-wait_for_authentication mcp.127-0-0-1.sslip.io inspector-e2e-token
-MCP_INSPECTOR_E2E_PROTOCOL=2025-11-25 \
-MCP_INSPECTOR_E2E_TOKEN=inspector-e2e-token journey bearer
-
+# the demo gateway is created with its policy; adding a gateway's first policy at
+# runtime can leave it answering 503 until its pod restarts.
 start_probe mcp-gateway-auth
 wait_for_authentication mcp-auth.127-0-0-1.sslip.io token
 MCP_INSPECTOR_E2E_EXTENSION=mcp-gateway-auth-system/mcp-gateway-auth-extension \
