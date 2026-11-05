@@ -10681,7 +10681,7 @@ __metadata:
     ts-node: "npm:^10.9.2"
     typescript: "npm:^5.9.3"
     webpack: "npm:^5.112.2"
-    webpack-cli: "npm:7.3.0"
+    webpack-cli: "npm:7.3.1"
     webpack-dev-server: "npm:5.2.6"
   languageName: unknown
   linkType: soft
@@ -15512,15 +15512,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"webpack-cli@npm:7.3.0":
-  version: 7.3.0
-  resolution: "webpack-cli@npm:7.3.0"
+"webpack-cli@npm:7.3.1":
+  version: 7.3.1
+  resolution: "webpack-cli@npm:7.3.1"
   dependencies:
     "@discoveryjs/json-ext": "npm:^1.1.0"
     commander: "npm:^14.0.3"
-    cross-spawn: "npm:^7.0.6"
     envinfo: "npm:^7.21.0"
-    import-local: "npm:^3.2.0"
     interpret: "npm:^3.1.1"
     rechoir: "npm:^1.0.0"
     webpack-merge: "npm:^6.0.1"
@@ -15547,7 +15545,7 @@ __metadata:
       optional: true
   bin:
     webpack-cli: bin/cli.js
-  checksum: 10c0/6711dfcf99ffe82154801b6f354df4a4a2244635332d32937ef802dabcecbc36b3401b2bbf5b1712d71ff6a7498fcb709c0ccb0cfaf0a76b48aa34c2a6acd651
+  checksum: 10c0/97cc3c47d910f8766b9e629ca43ffc255ae6db54ca07fc23378f885ec0e5c9f84be70b175f3eccb382f07e284693b61ca15e9f99e32cd0f7aa8c341110208bed
   languageName: node
   linkType: hard
 
