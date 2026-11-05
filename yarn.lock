@@ -8878,17 +8878,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"i18next@npm:^25.8.0":
-  version: 25.8.0
-  resolution: "i18next@npm:25.8.0"
-  dependencies:
-    "@babel/runtime": "npm:^7.28.4"
+"i18next@npm:^26.7.1":
+  version: 26.7.1
+  resolution: "i18next@npm:26.7.1"
   peerDependencies:
-    typescript: ^5
+    typescript: ^5 || ^6 || ^7
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: 10c0/20451fcaa86584b7395ee0375d2038270cce84e1541ec154bacfa32efbb420a2bafd1c71184242927f0eb8be6ec379ea132850f847b39b2eebcea6a49d746cac
+  checksum: 10c0/742c0d5ea25a68e0380de3be5c4b7d1f2a9ab9da81d5f2a85ea2892a500f60ba1a87a2c1fd6e0cd16588f37175dc88da817d3b26dda1963044f045bd86202960
   languageName: node
   linkType: hard
 
@@ -10659,7 +10657,7 @@ __metadata:
     eslint-plugin-react: "npm:^7.37.5"
     graphlib: "npm:^2.1.8"
     graphlib-dot: "npm:^0.6.4"
-    i18next: "npm:^25.8.0"
+    i18next: "npm:^26.7.1"
     i18next-parser: "npm:^9.4.0"
     jest: "npm:^30.5.2"
     jest-environment-jsdom: "npm:^30.5.2"
