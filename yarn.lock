@@ -6763,7 +6763,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dompurify@npm:^3.4.16":
+"dompurify@npm:^3.4.17":
   version: 3.4.17
   resolution: "dompurify@npm:3.4.17"
   dependencies:
@@ -10675,7 +10675,7 @@ __metadata:
     style-loader: "npm:^3.3.1"
     stylelint: "npm:^15.3.0"
     stylelint-config-standard: "npm:^31.0.0"
-    swagger-ui-react: "npm:5.34.0"
+    swagger-ui-react: "npm:5.34.1"
     ts-jest: "npm:^29.4.15"
     ts-loader: "npm:^9.6.2"
     ts-node: "npm:^10.9.2"
@@ -14305,9 +14305,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"swagger-ui-react@npm:5.34.0":
-  version: 5.34.0
-  resolution: "swagger-ui-react@npm:5.34.0"
+"swagger-ui-react@npm:5.34.1":
+  version: 5.34.1
+  resolution: "swagger-ui-react@npm:5.34.1"
   dependencies:
     "@babel/runtime-corejs3": "npm:^7.27.1"
     "@scarf/scarf": "npm:=1.4.0"
@@ -14317,7 +14317,7 @@ __metadata:
     classnames: "npm:^2.5.1"
     css.escape: "npm:1.5.1"
     deep-extend: "npm:0.6.0"
-    dompurify: "npm:^3.4.16"
+    dompurify: "npm:^3.4.17"
     ieee754: "npm:^1.2.1"
     immutable: "npm:^5.1.9"
     js-file-download: "npm:^0.4.12"
@@ -14346,7 +14346,7 @@ __metadata:
   peerDependencies:
     react: ">=16.8.0 <20"
     react-dom: ">=16.8.0 <20"
-  checksum: 10c0/5c0dfe49f1e6242f51579241c42c1d8adaf7a99e852e75a87a06fd96e214fa4dfe0bceb804d5e931e68a5c5511b64d392eb0c03093ef725cd33e217c7f486e12
+  checksum: 10c0/867f3a4cfd2834d8870a4ce0c854af69a2069a18604356f06504e367d04578bbe8c7eaf96c1a90b33de9419885f98b8f733bdf3e472146c67b66a38a7af4ba1c
   languageName: node
   linkType: hard
 
