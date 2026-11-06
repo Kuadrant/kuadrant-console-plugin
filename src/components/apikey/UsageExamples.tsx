@@ -43,7 +43,11 @@ const UsageExamples: React.FC<UsageExamplesProps> = ({ apiKey }) => {
     const hostname = apiKey.status?.apiHostname || 'api.example.com';
     const placeholderKey = 'YOUR_API_KEY';
 
-    const codeSnippets = generateAuthCodeSnippets(placeholderKey, hostname);
+    // The controller mirrors the AuthPolicy credential location into the APIKey status so the
+    // snippets can show the real header, prefix, query parameter or cookie the gateway expects.
+    const credentials = apiKey.status?.authScheme?.credentials;
+
+    const codeSnippets = generateAuthCodeSnippets(placeholderKey, hostname, credentials);
     setSnippets(codeSnippets);
   }, [apiKey]);
 
