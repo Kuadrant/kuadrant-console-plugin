@@ -46,6 +46,12 @@ updates:
       # URLPattern global. raise this bound when that runtime moves.
       - dependency-name: '@types/node'
         versions: ['>=23.0.0']
+      # eslint-plugin-react 7.37.5 (latest) peers eslint ^9.7 at most, and its
+      # maintainers say it does not support eslint 10 yet
+      # (jsx-eslint/eslint-plugin-react#3977). drop this entry once a release
+      # peers eslint 10.
+      - dependency-name: 'eslint'
+        versions: ['>=10.0.0']
       - dependency-name: '@openshift-console/dynamic-plugin-sdk'
       - dependency-name: '@openshift-console/dynamic-plugin-sdk-webpack'
 
