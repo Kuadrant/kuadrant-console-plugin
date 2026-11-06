@@ -268,7 +268,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
           name: targetRef.kind === 'Gateway' ? targetRef.name : '',
           namespace: targetRef.kind === 'Gateway' ? selectedNamespace : '',
         },
-      } as GatewayResource),
+      }) as GatewayResource,
     [targetRef, selectedNamespace],
   );
 

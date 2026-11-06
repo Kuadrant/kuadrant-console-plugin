@@ -1427,8 +1427,8 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({
                           {gatewayNameTouched && gatewayNameError
                             ? gatewayNameError
                             : !create
-                            ? t('Gateway names cannot be changed after creation.')
-                            : t('A unique name for the gateway within the namespace.')}
+                              ? t('Gateway names cannot be changed after creation.')
+                              : t('A unique name for the gateway within the namespace.')}
                         </HelperTextItem>
                       </HelperText>
                     </FormHelperText>

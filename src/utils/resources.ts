@@ -418,10 +418,13 @@ export const getResourceMetadata = (kind: ResourceKind): ResourceMetadata => {
 // backwards compatibility - export GVK mapping like latest.tsx
 export const resourceGVKMapping: Record<ResourceKind, ResourceGVK> = Object.entries(
   RESOURCES,
-).reduce((acc, [kind, meta]) => {
-  acc[kind as ResourceKind] = meta.gvk;
-  return acc;
-}, {} as Record<ResourceKind, ResourceGVK>);
+).reduce(
+  (acc, [kind, meta]) => {
+    acc[kind as ResourceKind] = meta.gvk;
+    return acc;
+  },
+  {} as Record<ResourceKind, ResourceGVK>,
+);
 
 // policy attachment configuration - which policies can target which resources
 export const RESOURCE_POLICY_MAP: Partial<Record<ResourceKind, ResourceKind[]>> = {

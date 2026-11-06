@@ -647,12 +647,12 @@ const MyAPIKeysPage: React.FC = () => {
                 activeNamespace === '#ALL_NS#'
                   ? t('Select a namespace to request an API Key')
                   : !canCreate
-                  ? t('You do not have permission to request an API Key')
-                  : !usernameLoaded || canCreateLoading
-                  ? t('Loading user information...')
-                  : !username
-                  ? t('Unable to fetch user information. Please try refreshing the page.')
-                  : ''
+                    ? t('You do not have permission to request an API Key')
+                    : !usernameLoaded || canCreateLoading
+                      ? t('Loading user information...')
+                      : !username
+                        ? t('Unable to fetch user information. Please try refreshing the page.')
+                        : ''
               }
             >
               <Button variant="primary" isAriaDisabled>

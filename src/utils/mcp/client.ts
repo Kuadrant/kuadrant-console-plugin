@@ -13,9 +13,7 @@ import {
 export const MCP_PROTOCOL_VERSION = '2026-07-28';
 export const MCP_LEGACY_PROTOCOL_VERSION = '2025-11-25';
 export type MCPProtocolMode =
-  | 'auto'
-  | typeof MCP_PROTOCOL_VERSION
-  | typeof MCP_LEGACY_PROTOCOL_VERSION;
+  'auto' | typeof MCP_PROTOCOL_VERSION | typeof MCP_LEGACY_PROTOCOL_VERSION;
 export interface MCPConnection {
   protocolVersion: string;
   sessionId: string | null;

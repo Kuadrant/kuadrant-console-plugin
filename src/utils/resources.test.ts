@@ -177,7 +177,7 @@ const makeAPIKey = (conditions: { type: string; status: string }[] = []): APIKey
     kind: 'APIKey',
     metadata: { name: 'my-key', namespace: 'default' },
     status: { conditions },
-  } as APIKey);
+  }) as APIKey;
 
 describe('getAPIKeyPhase', () => {
   it('returns Pending when there are no conditions', () => {

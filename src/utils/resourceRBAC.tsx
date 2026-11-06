@@ -28,10 +28,13 @@ function useAccessReviews(resource: Resource[]) {
           }),
         ),
       );
-      const RBACMap = results.reduce((acc, { key, isAllowed }) => {
-        acc[key] = isAllowed;
-        return acc;
-      }, {} as Record<string, boolean>);
+      const RBACMap = results.reduce(
+        (acc, { key, isAllowed }) => {
+          acc[key] = isAllowed;
+          return acc;
+        },
+        {} as Record<string, boolean>,
+      );
       setUserRBAC(RBACMap);
       setLoading(false);
     };

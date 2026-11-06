@@ -506,10 +506,10 @@ const APIProductOverviewTab: React.FC = () => {
                   apiProduct.spec.publishStatus === 'Published'
                     ? 'green'
                     : apiProduct.spec.publishStatus === 'Deprecated'
-                    ? 'orange'
-                    : apiProduct.spec.publishStatus === 'Retired'
-                    ? 'red'
-                    : 'grey'
+                      ? 'orange'
+                      : apiProduct.spec.publishStatus === 'Retired'
+                        ? 'red'
+                        : 'grey'
                 }
               >
                 {apiProduct.spec.publishStatus}

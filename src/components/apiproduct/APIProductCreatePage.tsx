@@ -130,7 +130,7 @@ const APIProductCreatePage: React.FC = () => {
 
     // Use the namespace from the edited resource in edit mode, otherwise use selected namespace
     const resourceNamespace = isEditMode
-      ? existingData?.metadata?.namespace ?? namespaceEdit
+      ? (existingData?.metadata?.namespace ?? namespaceEdit)
       : selectedNamespace;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
