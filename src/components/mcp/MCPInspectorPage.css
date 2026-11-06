@@ -228,7 +228,7 @@
   margin-top: 0;
 }
 
-@media (max-width: 991px) {
+@media (width <= 991px) {
   .kuadrant-mcp-inspector-page__connection-segment {
     min-height: auto;
     padding: var(--pf-t--global--spacer--md, 1rem) 0;
@@ -241,13 +241,13 @@
   }
 }
 
-@media (max-width: 575px) {
+@media (width <= 575px) {
   .kuadrant-mcp-inspector-page__connection-form {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .kuadrant-mcp-inspector-page__metadata-row {
     align-items: stretch;
     flex-direction: column;
