@@ -110,24 +110,20 @@ export const parseMatchesFromYAML = (
         ? (match.method as HTTPRouteMethod)
         : '',
       headers: match.headers
-        ? match.headers.map(
-            (header, headerIndex: number): HTTPRouteHeader => ({
-              id: `header-${Date.now()}-${headerIndex}`,
-              type: (header.type as HTTPRouteHeader['type']) || 'Exact',
-              name: header.name || '',
-              value: header.value || '',
-            }),
-          )
+        ? match.headers.map((header, headerIndex: number): HTTPRouteHeader => ({
+            id: `header-${Date.now()}-${headerIndex}`,
+            type: (header.type as HTTPRouteHeader['type']) || 'Exact',
+            name: header.name || '',
+            value: header.value || '',
+          }))
         : [],
       queryParams: match.queryParams
-        ? match.queryParams.map(
-            (queryParam, queryParamIndex: number): HTTPRouteQueryParam => ({
-              id: `queryparam-${Date.now()}-${queryParamIndex}`,
-              type: (queryParam.type as HTTPRouteQueryParam['type']) || 'Exact',
-              name: queryParam.name || '',
-              value: queryParam.value || '',
-            }),
-          )
+        ? match.queryParams.map((queryParam, queryParamIndex: number): HTTPRouteQueryParam => ({
+            id: `queryparam-${Date.now()}-${queryParamIndex}`,
+            type: (queryParam.type as HTTPRouteQueryParam['type']) || 'Exact',
+            name: queryParam.name || '',
+            value: queryParam.value || '',
+          }))
         : [],
     }));
 };

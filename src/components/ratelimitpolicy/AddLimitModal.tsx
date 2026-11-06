@@ -145,8 +145,8 @@ const AddLimitModal: React.FC<{
                   {isDuplicateName
                     ? t('A limit with this name already exists')
                     : nameFormatError
-                    ? t(nameFormatError)
-                    : t('Unique identifier for this rate limit')}
+                      ? t(nameFormatError)
+                      : t('Unique identifier for this rate limit')}
                 </HelperTextItem>
               </HelperText>
             </FormHelperText>

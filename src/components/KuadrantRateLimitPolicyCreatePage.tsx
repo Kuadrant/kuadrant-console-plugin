@@ -249,16 +249,16 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
       ({
         metadata: {
           name: targetRef.kind === 'Gateway' ? targetRef.name : '',
-          namespace: targetRef.kind === 'Gateway' ? targetRef.namespace ?? '' : '',
+          namespace: targetRef.kind === 'Gateway' ? (targetRef.namespace ?? '') : '',
         },
-      } as GatewayResource),
+      }) as GatewayResource,
     [targetRef],
   );
 
   const selectedRoute = React.useMemo(
     () => ({
       name: targetRef.kind === 'Gateway' ? '' : targetRef.name,
-      namespace: targetRef.kind === 'Gateway' ? '' : targetRef.namespace ?? '',
+      namespace: targetRef.kind === 'Gateway' ? '' : (targetRef.namespace ?? ''),
     }),
     [targetRef],
   );

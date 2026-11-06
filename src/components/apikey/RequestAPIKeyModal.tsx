@@ -583,8 +583,8 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
                   {expirationPreset === 'none'
                     ? t('No expiration')
                     : expirationPreset === 'custom'
-                    ? t('Custom')
-                    : getExpirationPresetLabel(parseInt(expirationPreset, 10))}
+                      ? t('Custom')
+                      : getExpirationPresetLabel(parseInt(expirationPreset, 10))}
                 </MenuToggle>
               )}
             >
@@ -624,8 +624,8 @@ const RequestAPIKeyModal: React.FC<RequestAPIKeyModalProps> = ({ isOpen, onClose
                   {expirationPreset === 'custom' && customExpiryDate && !isCustomDateValid()
                     ? t('Enter a valid date (YYYY-MM-DD) that is today or in the future')
                     : expirationPreset === 'none'
-                    ? t('The key will not expire.')
-                    : t('The key will be automatically revoked on this date.')}
+                      ? t('The key will not expire.')
+                      : t('The key will be automatically revoked on this date.')}
                 </HelperTextItem>
               </HelperText>
             </FormHelperText>

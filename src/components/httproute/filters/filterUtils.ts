@@ -339,7 +339,7 @@ export const isFilterConfigValid = (f: HTTPRouteFilter): boolean => {
       const url = f.urlRewrite || {};
       return Boolean(
         (url.hostname || '').trim?.() ||
-          (url.path?.type && (url.path.replaceFullPath || url.path.replacePrefixMatch)),
+        (url.path?.type && (url.path.replaceFullPath || url.path.replacePrefixMatch)),
       );
     }
     case 'RequestMirror': {

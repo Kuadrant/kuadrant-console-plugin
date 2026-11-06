@@ -465,8 +465,8 @@ const MCPInspectorSession: React.FC<{ activeNamespace: string }> = ({ activeName
                               extensionsError
                                 ? t('Unable to load extensions')
                                 : !extensionsLoaded
-                                ? t('Loading extensions...')
-                                : t('Select an extension...')
+                                  ? t('Loading extensions...')
+                                  : t('Select an extension...')
                             }
                             isPlaceholder
                           />
@@ -532,8 +532,8 @@ const MCPInspectorSession: React.FC<{ activeNamespace: string }> = ({ activeName
                         {connecting
                           ? t('Connecting...')
                           : connected
-                          ? t('Connected')
-                          : t('No connection')}
+                            ? t('Connected')
+                            : t('No connection')}
                       </span>
                       {connected && (
                         <span className="kuadrant-mcp-inspector-page__stat">
@@ -557,8 +557,8 @@ const MCPInspectorSession: React.FC<{ activeNamespace: string }> = ({ activeName
                         {connection.protocolVersion === '2026-07-28'
                           ? t('Stateless')
                           : connection.sessionId
-                          ? t('Session-based')
-                          : t('Sessionless legacy')}
+                            ? t('Session-based')
+                            : t('Sessionless legacy')}
                       </Content>
                     )}
                     {sessionId && connected && (
