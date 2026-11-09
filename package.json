@@ -42,7 +42,7 @@
     "@openshift-console/dynamic-plugin-sdk-webpack": "4.22.0",
     "@patternfly/react-core": "^6.7.0",
     "@patternfly/react-icons": "^6.7.0",
-    "@playwright/test": "^1.64.1",
+    "@playwright/test": "^1.65.0",
     "@testing-library/dom": "^10.4.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
