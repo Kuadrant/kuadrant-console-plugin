@@ -17,7 +17,7 @@ jobs:
     if: github.actor != 'dependabot[bot]' && (github.event.pull_request.head.repo.full_name == github.repository || github.event.issue.number != '')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/add-to-project@5afcf98fcd03f1c2f92c3c83f58ae24323cc57fd # ratchet:actions/add-to-project@v2.0.0
+      - uses: actions/add-to-project@f2c1f1fa649a891be84948ea89b5dfba1526ef05 # ratchet:actions/add-to-project@v2.0.1
         with:
           project-url: https://github.com/orgs/Kuadrant/projects/18
           github-token: ${{ secrets.ADD_ISSUES_TOKEN }}
