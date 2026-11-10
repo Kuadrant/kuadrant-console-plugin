@@ -24,7 +24,8 @@ on:
 
 jobs:
   e2e-rbac:
-    runs-on: ubuntu-latest
+    # playwright 1.58 cannot install chromium on ubuntu 26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 60
     outputs:
       failure-type: ${{ steps.classify.outputs.type }}
