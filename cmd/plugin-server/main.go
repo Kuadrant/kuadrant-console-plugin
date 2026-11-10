@@ -147,6 +147,13 @@ func loadConfig() (config, error) {
 	if err != nil {
 		return config{}, fmt.Errorf("parse MCP_PROXY_REQUEST_TIMEOUT: %w", err)
 	}
+
+	// Get metrics workload suffix and ensure it has a leading dash
+	metricsWorkloadSuffix := env("METRICS_WORKLOAD_SUFFIX", "-openshift-default")
+	if metricsWorkloadSuffix != "" && !strings.HasPrefix(metricsWorkloadSuffix, "-") {
+		metricsWorkloadSuffix = "-" + metricsWorkloadSuffix
+	}
+
 	return config{
 		listenAddress:         env("LISTEN_ADDRESS", ":9443"),
 		staticDirectory:       env("STATIC_DIRECTORY", "/usr/share/kuadrant-console-plugin"),
@@ -162,7 +169,7 @@ func loadConfig() (config, error) {
 		requestTimeout:        requestTimeout,
 		topologyConfigMapName: env("TOPOLOGY_CONFIGMAP_NAME", "topology"),
 		topologyNamespace:     env("TOPOLOGY_CONFIGMAP_NAMESPACE", "kuadrant-system"),
-		metricsWorkloadSuffix: env("METRICS_WORKLOAD_SUFFIX", "-openshift-default"),
+		metricsWorkloadSuffix: metricsWorkloadSuffix,
 	}, nil
 }
 
