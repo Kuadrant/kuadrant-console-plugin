@@ -244,7 +244,7 @@
   position: relative;
 }
 
-@media (max-width: 768px) {
+@media (width <= 768px) {
   .kuadrant-mcp-overview-page .kuadrant-mcp-getting-started-option {
     padding: 0.75rem 0;
   }
