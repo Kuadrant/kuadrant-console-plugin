@@ -5,7 +5,7 @@ const makeRequest = (conditions?: { type: string; status: string }[]): APIKeyReq
   ({
     metadata: { name: 'test', namespace: 'default' },
     ...(conditions !== undefined && { status: { conditions } }),
-  } as APIKeyRequest);
+  }) as APIKeyRequest;
 
 describe('getRequestStatus', () => {
   it('returns Pending when status is undefined', () => {

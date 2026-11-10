@@ -96,8 +96,8 @@ const initialValues = (tool: MCPTool): FieldValues => {
         typeof schema.default === 'boolean'
           ? schema.default
           : typeof schema.default === 'string'
-          ? schema.default
-          : JSON.stringify(schema.default, null, 2);
+            ? schema.default
+            : JSON.stringify(schema.default, null, 2);
     } else {
       values[name] = schemaType(schema) === 'boolean' && required.includes(name) ? false : '';
     }
@@ -212,8 +212,8 @@ const MCPToolWorkspace: React.FC<MCPToolWorkspaceProps> = ({
             parsed === null
               ? nullable
               : type === 'array'
-              ? Array.isArray(parsed)
-              : typeof parsed === 'object' && !Array.isArray(parsed);
+                ? Array.isArray(parsed)
+                : typeof parsed === 'object' && !Array.isArray(parsed);
           if (!valid) {
             throw new Error('wrong JSON type');
           }

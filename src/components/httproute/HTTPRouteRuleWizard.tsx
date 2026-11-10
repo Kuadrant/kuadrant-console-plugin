@@ -829,14 +829,14 @@ export const HTTPRouteRuleWizard: React.FC<HTTPRouteRuleWizardProps> = ({
                   isNextDisabled: !isMatchesValid,
                 }
               : index === 1
-              ? {
-                  isNextDisabled: !isFiltersValid,
-                }
-              : index === 2
-              ? {
-                  isNextDisabled: !isBackendValid,
-                }
-              : {}),
+                ? {
+                    isNextDisabled: !isFiltersValid,
+                  }
+                : index === 2
+                  ? {
+                      isNextDisabled: !isBackendValid,
+                    }
+                  : {}),
           }}
         >
           {step.form}

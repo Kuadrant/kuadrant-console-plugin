@@ -16,11 +16,11 @@ const jsonResponse = (body: unknown, status = 200, statusText = 'OK', sessionId?
         name.toLowerCase() === 'content-type'
           ? 'application/json'
           : name.toLowerCase() === 'mcp-session-id'
-          ? sessionId ?? null
-          : null,
+            ? (sessionId ?? null)
+            : null,
     },
     text: jest.fn().mockResolvedValue(JSON.stringify(body)),
-  } as unknown as Response);
+  }) as unknown as Response;
 
 const sseResponse = (events: unknown[], status = 200) =>
   ({
@@ -35,7 +35,7 @@ const sseResponse = (events: unknown[], status = 200) =>
       .mockResolvedValue(
         events.map((event) => `event: message\ndata: ${JSON.stringify(event)}\n\n`).join(''),
       ),
-  } as unknown as Response);
+  }) as unknown as Response;
 
 describe('MCPClient', () => {
   const sent = () =>

@@ -780,10 +780,10 @@ const MCPOverviewPage: React.FC = () => {
                             isAllNamespaces
                               ? t('Select a namespace to create a resource')
                               : !extensionRBAC.create
-                              ? t('You do not have permission to create a {{policyType}}', {
-                                  policyType: 'MCPGatewayExtension',
-                                })
-                              : t('You do not have permission to list or create Gateways')
+                                ? t('You do not have permission to create a {{policyType}}', {
+                                    policyType: 'MCPGatewayExtension',
+                                  })
+                                : t('You do not have permission to list or create Gateways')
                           }
                         >
                           <Button
@@ -830,10 +830,10 @@ const MCPOverviewPage: React.FC = () => {
                             isAllNamespaces
                               ? t('Select a namespace to create a resource')
                               : !serverRBAC.create
-                              ? t('You do not have permission to create {{policyType}}', {
-                                  policyType: 'MCPServerRegistration',
-                                })
-                              : t('You do not have permission to list or create HTTPRoutes')
+                                ? t('You do not have permission to create {{policyType}}', {
+                                    policyType: 'MCPServerRegistration',
+                                  })
+                                : t('You do not have permission to list or create HTTPRoutes')
                           }
                         >
                           <Button

@@ -200,8 +200,8 @@ const HTTPRouteSelect: React.FC<HTTPRouteSelectProps> = ({
             {isAllNamespaces
               ? t('Select a specific namespace to choose a {{kind}}', { kind })
               : kind === 'GRPCRoute'
-              ? t('GRPCRoute: Reference to a Kubernetes resource that the policy attaches to.')
-              : t('HTTPRoute: Reference to a Kubernetes resource that the policy attaches to.')}
+                ? t('GRPCRoute: Reference to a Kubernetes resource that the policy attaches to.')
+                : t('HTTPRoute: Reference to a Kubernetes resource that the policy attaches to.')}
           </HelperTextItem>
         </HelperText>
       </FormHelperText>

@@ -30,15 +30,7 @@ export interface HTTPRouteResource extends K8sResourceCommon {
           value: string;
         }[];
         method?:
-          | 'GET'
-          | 'HEAD'
-          | 'POST'
-          | 'PUT'
-          | 'DELETE'
-          | 'CONNECT'
-          | 'OPTIONS'
-          | 'TRACE'
-          | 'PATCH';
+          'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'CONNECT' | 'OPTIONS' | 'TRACE' | 'PATCH';
       }[];
       filters?: import('./filters/filterTypes').HTTPRouteFilter[];
       backendRefs?: {
@@ -90,16 +82,7 @@ export interface HTTPRouteQueryParam {
 
 export type HTTPRoutePathType = '' | 'Exact' | 'PathPrefix' | 'RegularExpression';
 export type HTTPRouteMethod =
-  | ''
-  | 'GET'
-  | 'HEAD'
-  | 'POST'
-  | 'PUT'
-  | 'DELETE'
-  | 'CONNECT'
-  | 'OPTIONS'
-  | 'TRACE'
-  | 'PATCH';
+  '' | 'GET' | 'HEAD' | 'POST' | 'PUT' | 'DELETE' | 'CONNECT' | 'OPTIONS' | 'TRACE' | 'PATCH';
 
 export interface HTTPRouteMatch {
   id: string;

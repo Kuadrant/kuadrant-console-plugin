@@ -182,15 +182,15 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
                 touched.extensionName && errors.extensionName
                   ? 'error'
                   : validationError?.field === 'extensionName' && formState.extensionName.trim()
-                  ? 'error'
-                  : 'default'
+                    ? 'error'
+                    : 'default'
               }
             >
               {touched.extensionName && errors.extensionName
                 ? errors.extensionName
                 : validationError?.field === 'extensionName' && formState.extensionName.trim()
-                ? validationMessage
-                : t('A unique name for the MCP gateway extension resource.')}
+                  ? validationMessage
+                  : t('A unique name for the MCP gateway extension resource.')}
             </HelperTextItem>
           </HelperText>
         </FormHelperText>
@@ -220,18 +220,18 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
                   touched.extensionNamespace && errors.extensionNamespace
                     ? 'error'
                     : validationError?.field === 'extensionNamespace' &&
-                      formState.extensionNamespace
-                    ? 'error'
-                    : 'default'
+                        formState.extensionNamespace
+                      ? 'error'
+                      : 'default'
                 }
               >
                 {touched.extensionNamespace && errors.extensionNamespace
                   ? errors.extensionNamespace
                   : validationError?.field === 'extensionNamespace' && formState.extensionNamespace
-                  ? validationMessage
-                  : t(
-                      'The namespace for the extension. If different from the gateway namespace, a ReferenceGrant will be created.',
-                    )}
+                    ? validationMessage
+                    : t(
+                        'The namespace for the extension. If different from the gateway namespace, a ReferenceGrant will be created.',
+                      )}
               </HelperTextItem>
             </HelperText>
           </FormHelperText>
@@ -287,15 +287,15 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
                 touched.targetGateway && errors.targetGateway
                   ? 'error'
                   : validationError?.field === 'targetGateway'
-                  ? 'error'
-                  : 'default'
+                    ? 'error'
+                    : 'default'
               }
             >
               {touched.targetGateway && errors.targetGateway
                 ? errors.targetGateway
                 : validationError?.field === 'targetGateway' && formState.targetGateway.trim()
-                ? validationMessage
-                : t('The name of the gateway this extension targets.')}
+                  ? validationMessage
+                  : t('The name of the gateway this extension targets.')}
             </HelperTextItem>
           </HelperText>
         </FormHelperText>
@@ -350,15 +350,15 @@ const MCPExtensionFormFields: React.FC<MCPExtensionFormFieldsProps> = ({
                 touched.sectionName && errors.sectionName
                   ? 'error'
                   : validationError?.field === 'sectionName' && formState.sectionName.trim()
-                  ? 'error'
-                  : 'default'
+                    ? 'error'
+                    : 'default'
               }
             >
               {touched.sectionName && errors.sectionName
                 ? errors.sectionName
                 : validationError?.field === 'sectionName' && formState.sectionName.trim()
-                ? validationMessage
-                : t('The name of the gateway listener to use for MCP traffic.')}
+                  ? validationMessage
+                  : t('The name of the gateway listener to use for MCP traffic.')}
             </HelperTextItem>
           </HelperText>
         </FormHelperText>
