@@ -337,3 +337,52 @@ func TestUpstreamCustomCA(t *testing.T) {
 		t.Fatal("invalid CA configuration should fail at startup")
 	}
 }
+
+func TestMetricsWorkloadSuffixDefensiveDash(t *testing.T) {
+	tests := []struct {
+		name     string
+		envValue string
+		want     string
+	}{
+		{
+			name:     "no env var uses default with dash",
+			envValue: "",
+			want:     "-openshift-default",
+		},
+		{
+			name:     "value with dash is preserved",
+			envValue: "-openshift-default",
+			want:     "-openshift-default",
+		},
+		{
+			name:     "value without dash gets dash prepended",
+			envValue: "openshift-default",
+			want:     "-openshift-default",
+		},
+		{
+			name:     "custom value without dash gets dash prepended",
+			envValue: "istio",
+			want:     "-istio",
+		},
+		{
+			name:     "custom value with dash is preserved",
+			envValue: "-custom-suffix",
+			want:     "-custom-suffix",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.envValue != "" {
+				t.Setenv("METRICS_WORKLOAD_SUFFIX", tt.envValue)
+			}
+			cfg, err := loadConfig()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.metricsWorkloadSuffix != tt.want {
+				t.Errorf("metricsWorkloadSuffix = %q, want %q", cfg.metricsWorkloadSuffix, tt.want)
+			}
+		})
+	}
+}
