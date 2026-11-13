@@ -43,6 +43,7 @@ import {
   useK8sModel,
 } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
+import { stringEntries, stringOr } from '../../utils/yamlDraft';
 import KuadrantCreateUpdate from '../KuadrantCreateUpdate';
 import { useLocation, useNavigate } from 'react-router';
 import { GatewayResource } from './types';
@@ -557,59 +558,54 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({
   const populateFormFromGateway = (gateway: unknown) => {
     try {
       const g = gateway as Partial<GatewayResource>;
-      if (g.metadata?.name) {
+      if (typeof g.metadata?.name === 'string' && g.metadata.name) {
         setGatewayName(g.metadata.name);
       }
 
-      if (g.spec?.gatewayClassName) {
+      if (typeof g.spec?.gatewayClassName === 'string' && g.spec.gatewayClassName) {
         setGatewayClassName(g.spec.gatewayClassName);
       }
 
       if (g.spec?.listeners) {
         const formattedListeners: ListenerUI[] = g.spec.listeners.map(
           (listener: ApiListener, index: number) => ({
-            name: listener.name || '',
+            name: stringOr(listener.name, ''),
             port: listener.port || 80,
-            protocol: (listener.protocol as ListenerUI['protocol']) || 'HTTP',
-            hostname: listener.hostname || '',
-            tlsMode: (listener.tls?.mode as ListenerUI['tlsMode']) || 'Terminate',
-            tlsOptions: listener.tls?.options
-              ? (Object.entries(listener.tls.options) as Array<[string, string]>).map(
-                  ([key, value], idx) => ({
-                    id: generateUniqueId(`tls_${index}_${idx}`),
-                    key,
-                    value,
-                  }),
-                )
-              : [],
+            protocol: stringOr(listener.protocol, 'HTTP') as ListenerUI['protocol'],
+            hostname: stringOr(listener.hostname, ''),
+            tlsMode: stringOr(listener.tls?.mode, 'Terminate') as ListenerUI['tlsMode'],
+            tlsOptions: stringEntries(listener.tls?.options).map(([key, value], idx) => ({
+              id: generateUniqueId(`tls_${index}_${idx}`),
+              key,
+              value,
+            })),
             certificateRefs: listener.tls?.certificateRefs
               ? listener.tls.certificateRefs.map((ref, idx: number) => ({
                   id: generateUniqueId(`cert_${index}_${idx}`),
-                  name: ref.name || '',
-                  namespace: ref.namespace || '',
-                  kind: (ref.kind as CertificateRefRow['kind']) || 'Secret',
+                  name: stringOr(ref.name, ''),
+                  namespace: stringOr(ref.namespace, ''),
+                  kind: stringOr(ref.kind, 'Secret') as CertificateRefRow['kind'],
                 }))
               : [],
             allowedRoutes: {
               namespaces: {
-                from:
-                  (listener.allowedRoutes?.namespaces
-                    ?.from as AllowedRoutesUI['namespaces']['from']) || 'Same',
-                selectorLabels: listener.allowedRoutes?.namespaces?.selector?.matchLabels
-                  ? Object.entries(listener.allowedRoutes.namespaces.selector.matchLabels).map(
-                      ([key, value], idx) => ({
-                        id: generateUniqueId(`label_${index}_${idx}`),
-                        key,
-                        value: value as string,
-                      }),
-                    )
-                  : [],
+                from: stringOr(
+                  listener.allowedRoutes?.namespaces?.from,
+                  'Same',
+                ) as AllowedRoutesUI['namespaces']['from'],
+                selectorLabels: stringEntries(
+                  listener.allowedRoutes?.namespaces?.selector?.matchLabels,
+                ).map(([key, value], idx) => ({
+                  id: generateUniqueId(`label_${index}_${idx}`),
+                  key,
+                  value,
+                })),
               },
               kinds: listener.allowedRoutes?.kinds
                 ? listener.allowedRoutes.kinds.map((kind, idx: number) => ({
                     id: generateUniqueId(`route_${index}_${idx}`),
-                    kind: kind.kind || 'HTTPRoute',
-                    group: kind.group || 'gateway.networking.k8s.io',
+                    kind: stringOr(kind.kind, 'HTTPRoute'),
+                    group: stringOr(kind.group, 'gateway.networking.k8s.io'),
                   }))
                 : [],
             },
@@ -622,8 +618,8 @@ const GatewayCreatePage: React.FC<GatewayCreatePageProps> = ({
         const formattedAddresses: AddressRow[] = g.spec.addresses.map(
           (address: ApiAddress, index: number) => ({
             id: generateUniqueId(`addr_${index}`),
-            type: (address.type as AddressRow['type']) || 'IPAddress',
-            value: address.value || '',
+            type: stringOr(address.type, 'IPAddress') as AddressRow['type'],
+            value: stringOr(address.value, ''),
           }),
         );
         setAddresses(formattedAddresses);

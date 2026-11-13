@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Tabs, Tab, TabTitleText } from '@patternfly/react-core';
 import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
+import { stringOr } from '../../../utils/yamlDraft';
 import { MCPServerFormState } from '../types';
 import MCPServerRegistrationFormFields from '../MCPServerRegistrationFormFields';
 import { buildMCPServerRegistration } from '../mcpResourceUtils';
@@ -65,16 +66,16 @@ const RegisterServerStep: React.FC<RegisterServerStepProps> = ({
       const parsed = yaml.load(yamlInput) as Record<string, unknown>;
       if (!parsed || typeof parsed !== 'object') return;
 
-      const metadata = parsed.metadata as Record<string, string> | undefined;
+      const metadata = parsed.metadata as Record<string, unknown> | undefined;
       const spec = parsed.spec as Record<string, unknown> | undefined;
-      const targetRef = spec?.targetRef as Record<string, string> | undefined;
+      const targetRef = spec?.targetRef as Record<string, unknown> | undefined;
 
       onChange({
-        registrationName: metadata?.name || '',
-        namespace: credentialNamespace || metadata?.namespace || '',
+        registrationName: stringOr(metadata?.name, ''),
+        namespace: credentialNamespace || stringOr(metadata?.namespace, ''),
         // When the wizard configured a route, keep it aligned — a YAML edit must not
         // retarget the registration at a route the wizard did not set up.
-        targetHTTPRouteName: routeName || targetRef?.name || '',
+        targetHTTPRouteName: routeName || stringOr(targetRef?.name, ''),
         toolPrefix: typeof spec?.prefix === 'string' ? spec.prefix : '',
       });
     } catch {

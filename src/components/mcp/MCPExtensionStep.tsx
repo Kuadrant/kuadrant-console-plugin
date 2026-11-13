@@ -3,6 +3,7 @@ import { Title, Content, Tabs, Tab, TabTitleText } from '@patternfly/react-core'
 import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import { useTranslation } from 'react-i18next';
 import * as yaml from 'js-yaml';
+import { stringArray, stringOr } from '../../utils/yamlDraft';
 import { MCPWizardFormState, MCPGatewayExtension } from './types';
 import { buildMCPGatewayExtension, MCPGatewayExtensionValidationError } from './mcpResourceUtils';
 import MCPExtensionFormFields from './MCPExtensionFormFields';
@@ -44,19 +45,20 @@ const MCPExtensionStep: React.FC<MCPExtensionStepProps> = ({
         const hasOauth = !!parsed.spec?.oauthProtectedResource?.authorizationServers?.length;
 
         updateFormState({
-          extensionName: parsed.metadata?.name || '',
-          extensionNamespace: parsed.metadata?.namespace || selectedNamespace,
-          targetGateway: parsed.spec?.targetRef?.name || '',
-          sectionName: parsed.spec?.targetRef?.sectionName || '',
+          extensionName: stringOr(parsed.metadata?.name, ''),
+          extensionNamespace: stringOr(parsed.metadata?.namespace, selectedNamespace),
+          targetGateway: stringOr(parsed.spec?.targetRef?.name, ''),
+          sectionName: stringOr(parsed.spec?.targetRef?.sectionName, ''),
           overrideHostnames: hasPublicHost || hasPrivateHost,
-          publicHost: parsed.spec?.publicHost || '',
-          privateHost: parsed.spec?.privateHost || '',
+          publicHost: stringOr(parsed.spec?.publicHost, ''),
+          privateHost: stringOr(parsed.spec?.privateHost, ''),
           sessionStorageEnabled: hasSessionStore,
-          sessionStoreSecretName: parsed.spec?.sessionStore?.secretName || '',
+          sessionStoreSecretName: stringOr(parsed.spec?.sessionStore?.secretName, ''),
           oauthEnabled: hasOauth,
-          oauthAuthorizationServers:
-            parsed.spec?.oauthProtectedResource?.authorizationServers?.join(', ') || '',
-          oauthResourceName: parsed.spec?.oauthProtectedResource?.resourceName || '',
+          oauthAuthorizationServers: stringArray(
+            parsed.spec?.oauthProtectedResource?.authorizationServers,
+          ).join(', '),
+          oauthResourceName: stringOr(parsed.spec?.oauthProtectedResource?.resourceName, ''),
           httpRouteManagementEnabled: parsed.spec?.httpRouteManagement !== 'Disabled',
         });
       }
