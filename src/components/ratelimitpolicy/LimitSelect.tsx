@@ -1,7 +1,8 @@
 import { FormGroup, Title, Button, Label, LabelGroup } from '@patternfly/react-core';
 import * as React from 'react';
 import AddLimitModal from './AddLimitModal';
-import { LimitConfig } from './types';
+import { Counter, LimitConfig, Predicate, Rate } from './types';
+import { asRecord, isRecord, recordArray } from '../../utils/yamlDraft';
 import { useTranslation } from 'react-i18next';
 
 interface LimitSelectProps {
@@ -15,25 +16,31 @@ const emptyLimit = (): LimitConfig => ({
   when: [],
 });
 
-const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
+const LimitSelect: React.FC<LimitSelectProps> = ({ limits: typedLimits, setLimits }) => {
   const { t } = useTranslation('plugin__kuadrant-console-plugin');
+  // limits typed in the yaml view can hold any value, so this lists the parts it can read
+  const limits = isRecord(typedLimits) ? typedLimits : {};
   const [isAddLimitModalOpen, setIsAddLimitModalOpen] = React.useState(false);
   const [newLimit, setNewLimit] = React.useState<LimitConfig>(emptyLimit());
   const [rateName, setRateName] = React.useState<string>('');
 
   const formatLimitLabel = React.useCallback(
     (limitConfig: LimitConfig): string => {
-      const rateText = (limitConfig.rates || []).map((r) => `${r.limit}/${r.window}`).join(', ');
+      const limit = asRecord(limitConfig);
+      const rates = recordArray<Rate>(limit.rates);
+      const counters = recordArray<Counter>(limit.counters);
+      const when = recordArray<Predicate>(limit.when);
+      const rateText = rates.map((r) => `${r.limit}/${r.window}`).join(', ');
       const counterText =
-        limitConfig.counters && limitConfig.counters.length > 0
+        counters.length > 0
           ? ` · ${t('counters: {{expressions}}', {
-              expressions: limitConfig.counters.map((c) => c.expression).join(', '),
+              expressions: counters.map((c) => c.expression).join(', '),
             })}`
           : '';
       const whenText =
-        limitConfig.when && limitConfig.when.length > 0
+        when.length > 0
           ? ` · ${t('when: {{predicates}}', {
-              predicates: limitConfig.when.map((w) => w.predicate).join(', '),
+              predicates: when.map((w) => w.predicate).join(', '),
             })}`
           : '';
       return `${rateText}${counterText}${whenText}`;
@@ -64,7 +71,7 @@ const LimitSelect: React.FC<LimitSelectProps> = ({ limits, setLimits }) => {
     };
 
     setLimits((prevLimits) => ({
-      ...prevLimits,
+      ...(isRecord(prevLimits) ? prevLimits : {}),
       [rateName]: cleaned,
     }));
 

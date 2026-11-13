@@ -8,6 +8,7 @@ import type {
   HeaderKV,
   HeaderNameOnly,
 } from './filterTypes';
+import { isRecord, stringOr } from '../../../utils/yamlDraft';
 
 type HeaderModifierContent = {
   add?: HeaderKV[];
@@ -214,14 +215,14 @@ const addHeaderIds = (items: HeaderKV[] | undefined, prefix: string, filterIndex
   Array.isArray(items)
     ? items.map((i, idx) => ({
         id: i.id || `${prefix}-${filterIndex}-${idx}-${Date.now()}`,
-        name: i.name || '',
-        value: i.value || '',
+        name: stringOr(i.name, ''),
+        value: stringOr(i.value, ''),
       }))
     : [];
 
 const addRemoveIds = (items: Array<string | HeaderNameOnly> | undefined) =>
   Array.isArray(items)
-    ? items.map((e) => (typeof e === 'string' ? e : e?.name || '')).filter((s) => s.trim())
+    ? items.map((e) => (typeof e === 'string' ? e : stringOr(e?.name, ''))).filter((s) => s.trim())
     : [];
 
 // Helper: Parse header modifier from YAML (shared by Request/Response)
@@ -238,17 +239,24 @@ const parsePath = (path: PathReplacement | undefined): PathReplacement | undefin
   }
 
   if (path.type === 'ReplaceFullPath') {
-    return { type: 'ReplaceFullPath' as const, replaceFullPath: path.replaceFullPath || '' };
+    return {
+      type: 'ReplaceFullPath' as const,
+      replaceFullPath: stringOr(path.replaceFullPath, ''),
+    };
   }
 
-  return { type: 'ReplacePrefixMatch' as const, replacePrefixMatch: path.replacePrefixMatch || '' };
+  return {
+    type: 'ReplacePrefixMatch' as const,
+    replacePrefixMatch: stringOr(path.replacePrefixMatch, ''),
+  };
 };
 
 export const parseFiltersFromYAML = (filters: HTTPRouteFilter[] | undefined): HTTPRouteFilter[] => {
   if (!Array.isArray(filters) || filters.length === 0) return [];
 
-  return filters.map((f, fi) => {
-    if (!f || !('type' in f)) return f as HTTPRouteFilter;
+  // skips half-typed items such as a bare `-`
+  return filters.filter(isRecord).map((f, fi) => {
+    if (!('type' in f)) return f;
 
     switch (f.type) {
       case 'RequestHeaderModifier': {
@@ -297,7 +305,7 @@ export const parseFiltersFromYAML = (filters: HTTPRouteFilter[] | undefined): HT
         const backendRef = rm.backendRef || { name: '' };
         const next: RequestMirrorFilter = {
           type: 'RequestMirror',
-          requestMirror: { backendRef: { name: backendRef.name || '' } },
+          requestMirror: { backendRef: { name: stringOr(backendRef.name, '') } },
         };
         if (typeof backendRef.port === 'number') {
           next.requestMirror.backendRef.port = backendRef.port;

@@ -36,6 +36,7 @@ import HealthCheckField from './dnspolicy/HealthCheckField';
 import { GatewayResource } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
 import * as yaml from 'js-yaml';
+import { recordArray, stringOr } from '../utils/yamlDraft';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
 import { resourceGVKMapping } from '../utils/resources';
@@ -273,28 +274,24 @@ const KuadrantDNSPolicyCreatePage: React.FC = () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
-      setPolicyName(parsedYaml.metadata?.name || '');
+      setPolicyName(stringOr(parsedYaml.metadata?.name, ''));
       setSelectedGateway({
         metadata: {
-          name: parsedYaml.spec?.targetRef?.name || '',
-          namespace: parsedYaml.metadata?.namespace ?? '',
+          name: stringOr(parsedYaml.spec?.targetRef?.name, ''),
+          namespace: stringOr(parsedYaml.metadata?.namespace, ''),
         },
       } as GatewayResource);
       setHealthCheck({
-        path: parsedYaml.spec?.healthCheck?.path || '',
+        path: stringOr(parsedYaml.spec?.healthCheck?.path, ''),
         failureThreshold: parsedYaml.spec?.healthCheck?.failureThreshold,
         port: parsedYaml.spec?.healthCheck?.port || '',
-        protocol: parsedYaml.spec?.healthCheck?.protocol || '',
+        protocol: stringOr(parsedYaml.spec?.healthCheck?.protocol, '') as HealthCheck['protocol'],
       });
-      const providerRef =
-        Array.isArray(parsedYaml.spec?.providerRefs) && parsedYaml.spec.providerRefs.length > 0
-          ? parsedYaml.spec.providerRefs[0]
-          : { name: '' };
-
-      setProviderRefs([providerRef]);
+      const providerRef = recordArray(parsedYaml.spec?.providerRefs)[0];
+      setProviderRefs([{ ...providerRef, name: stringOr(providerRef?.name, '') }]);
 
       setLoadBalancing({
-        geo: parsedYaml.spec?.loadBalancing?.geo || '',
+        geo: stringOr(parsedYaml.spec?.loadBalancing?.geo, ''),
         weight: parsedYaml.spec?.loadBalancing?.weight ?? DEFAULT_LOAD_BALANCING_WEIGHT,
         defaultGeo:
           parsedYaml.spec?.loadBalancing?.defaultGeo !== undefined
