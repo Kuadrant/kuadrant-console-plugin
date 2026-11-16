@@ -34,6 +34,7 @@ import { GatewayResource } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
 import HTTPRouteSelect, { RouteKind } from './httproute/HTTPRouteSelect';
 import * as yaml from 'js-yaml';
+import { stringOr } from '../utils/yamlDraft';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
 import {
@@ -194,7 +195,7 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
-      setPolicyName(parsedYaml.metadata?.name || '');
+      setPolicyName(stringOr(parsedYaml.metadata?.name, ''));
       const parsedTargetRef = parsedYaml.spec?.targetRef;
       if (
         isSupportedTargetRef(
@@ -208,15 +209,15 @@ const KuadrantOIDCPolicyCreatePage: React.FC = () => {
         setTargetRef({
           group: parsedTargetRef.group,
           kind: parsedTargetRef.kind as TargetRef['kind'],
-          name: parsedTargetRef?.name || '',
+          name: stringOr(parsedTargetRef?.name, ''),
         });
       } else {
         // unsupported group/kind - keep the target empty so the form stays
         // invalid rather than silently submitting a reference the CRD rejects
         setTargetRef({ group: GATEWAY_API_GROUP, kind: 'Gateway', name: '' });
       }
-      setClientID(parsedYaml.spec?.provider?.clientID || '');
-      setIssuerURL(parsedYaml.spec?.provider?.issuerURL || '');
+      setClientID(stringOr(parsedYaml.spec?.provider?.clientID, ''));
+      setIssuerURL(stringOr(parsedYaml.spec?.provider?.issuerURL, ''));
     } catch (e) {
       console.error(t('Error parsing YAML:'), e);
     }

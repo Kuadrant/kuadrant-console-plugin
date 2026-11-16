@@ -31,6 +31,7 @@ import {
 } from '@openshift-console/dynamic-plugin-sdk';
 import { useLocation, useNavigate } from 'react-router';
 import * as yaml from 'js-yaml';
+import { stringArray, stringOr } from '../../utils/yamlDraft';
 import ParentReferencesSelect, {
   GatewayForSelect,
   RequiredParentReference,
@@ -274,10 +275,11 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
   const populateFormFromHTTPRoute = (httpRoute: unknown) => {
     try {
       const hr = httpRoute as Partial<HTTPRouteResource>;
-      if (hr.metadata?.name && hr.metadata.name !== routeName) setRouteName(hr.metadata.name);
+      const name = stringOr(hr.metadata?.name, '');
+      if (name && name !== routeName) setRouteName(name);
 
-      if (hr.spec?.hostnames) {
-        const newHostnames = hr.spec.hostnames;
+      if (Array.isArray(hr.spec?.hostnames)) {
+        const newHostnames = stringArray(hr.spec.hostnames);
         if (JSON.stringify(newHostnames) !== JSON.stringify(hostnames)) setHostnames(newHostnames);
       }
 
@@ -285,9 +287,9 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
         const formattedParentRefs: ParentReference[] = hr.spec.parentRefs.map(
           (ref, index: number) => ({
             id: `parent-${Date.now()}-${index}`,
-            gatewayName: ref.name || '',
-            gatewayNamespace: ref.namespace || selectedNamespace,
-            sectionName: ref.sectionName || '',
+            gatewayName: stringOr(ref.name, ''),
+            gatewayNamespace: stringOr(ref.namespace, selectedNamespace),
+            sectionName: stringOr(ref.sectionName, ''),
             port: ref.port || 0,
           }),
         );
@@ -306,7 +308,7 @@ const HTTPRouteCreatePage: React.FC<HTTPRouteCreatePageProps> = ({
           id: rules[index]?.id || `rule-${index + 1}`,
           matches: parseMatchesFromYAML(rule.matches),
           filters: parseFiltersFromYAML(rule.filters),
-          serviceName: rule.backendRefs?.[0]?.name || '',
+          serviceName: stringOr(rule.backendRefs?.[0]?.name, ''),
           servicePort: rule.backendRefs?.[0]?.port || 80,
         }));
         if (JSON.stringify(formattedRules) !== JSON.stringify(rules)) setRules(formattedRules);

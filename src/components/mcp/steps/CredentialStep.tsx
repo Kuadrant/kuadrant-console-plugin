@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Tabs, Tab, TabTitleText } from '@patternfly/react-core';
 import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
+import { stringOr } from '../../../utils/yamlDraft';
 import { CredentialFormState } from '../types';
 import CredentialFormFields from '../CredentialFormFields';
 import {
@@ -43,14 +44,14 @@ const CredentialStep: React.FC<CredentialStepProps> = ({
       const parsed = yaml.load(yamlInput) as Record<string, unknown>;
       if (!parsed || typeof parsed !== 'object') return;
 
-      const metadata = parsed.metadata as Record<string, string> | undefined;
-      const stringData = parsed.stringData as Record<string, string> | undefined;
+      const metadata = parsed.metadata as Record<string, unknown> | undefined;
+      const stringData = parsed.stringData as Record<string, unknown> | undefined;
 
       const nextState = {
-        credentialName: metadata?.name || '',
-        namespace: metadata?.namespace || '',
-        type: (parsed.type as string) || 'Opaque',
-        tokenString: stringData?.[CREDENTIAL_SECRET_KEY] || '',
+        credentialName: stringOr(metadata?.name, ''),
+        namespace: stringOr(metadata?.namespace, ''),
+        type: stringOr(parsed.type, 'Opaque'),
+        tokenString: stringOr(stringData?.[CREDENTIAL_SECRET_KEY], ''),
       };
       onChange(nextState);
       onValidationChange?.(isCredentialValid(nextState));

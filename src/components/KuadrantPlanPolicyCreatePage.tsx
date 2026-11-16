@@ -36,6 +36,7 @@ import { GatewayResource } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
 import HTTPRouteSelect, { RouteKind } from './httproute/HTTPRouteSelect';
 import * as yaml from 'js-yaml';
+import { asRecord, recordArray, stringOr } from '../utils/yamlDraft';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
 import {
@@ -243,7 +244,7 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
-      setPolicyName(parsedYaml.metadata?.name || '');
+      setPolicyName(stringOr(parsedYaml.metadata?.name, ''));
       const parsedTargetRef = parsedYaml.spec?.targetRef;
       if (
         isSupportedTargetRef(
@@ -257,14 +258,26 @@ const KuadrantPlanPolicyCreatePage: React.FC = () => {
         setTargetRef({
           group: parsedTargetRef.group,
           kind: parsedTargetRef.kind as TargetRef['kind'],
-          name: parsedTargetRef?.name || '',
+          name: stringOr(parsedTargetRef?.name, ''),
         });
       } else {
         // unsupported group/kind - keep the target empty so the form stays
         // invalid rather than silently submitting a reference the CRD rejects
         setTargetRef({ group: GATEWAY_API_GROUP, kind: 'HTTPRoute', name: '' });
       }
-      setPlans(parsedYaml.spec?.plans || [{ tier: '', predicate: '', limits: { daily: null } }]);
+      setPlans(
+        Array.isArray(parsedYaml.spec?.plans)
+          ? recordArray(parsedYaml.spec.plans).map((plan): Plan => {
+              const limits = asRecord(plan.limits);
+              return {
+                tier: stringOr(plan.tier, ''),
+                predicate: stringOr(plan.predicate, ''),
+                // limit values pass through as typed, for the API to check
+                limits: { ...limits, custom: recordArray(limits.custom) },
+              };
+            })
+          : [{ tier: '', predicate: '', limits: { daily: null } }],
+      );
     } catch (e) {
       console.error(t('Error parsing YAML:'), e);
     }

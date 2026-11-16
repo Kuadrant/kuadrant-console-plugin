@@ -30,6 +30,7 @@ import './css/gateway-api-plugin.css';
 import { handleCancel } from '../utils/cancel';
 import { useNavigate, useLocation } from 'react-router';
 import * as yaml from 'js-yaml';
+import { stringOr } from '../utils/yamlDraft';
 import { useTranslation } from 'react-i18next';
 import ClusterIssuerSelect from './issuer/clusterIssuerSelect';
 import IssuerSelect from './issuer/issuerSelect';
@@ -203,21 +204,21 @@ const KuadrantTLSCreatePage: React.FC = () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
-      setPolicyName(parsedYaml.metadata?.name || '');
+      setPolicyName(stringOr(parsedYaml.metadata?.name, ''));
       setSelectedGateway({
         metadata: {
-          name: parsedYaml.spec?.targetRef?.name || '',
-          namespace: parsedYaml.metadata?.namespace ?? '',
+          name: stringOr(parsedYaml.spec?.targetRef?.name, ''),
+          namespace: stringOr(parsedYaml.metadata?.namespace, ''),
         },
       } as GatewayResource);
       if (parsedYaml.spec?.issuerRef?.kind === 'ClusterIssuer') {
         setCertIssuerType('clusterissuer');
-        setSelectedClusterIssuers({ name: parsedYaml.spec?.issuerRef?.name || '' });
+        setSelectedClusterIssuers({ name: stringOr(parsedYaml.spec?.issuerRef?.name, '') });
       } else if (parsedYaml.spec?.issuerRef?.kind === 'Issuer') {
         setCertIssuerType('issuer');
         setSelectedIssuers({
-          name: parsedYaml.spec?.issuerRef?.name || '',
-          namespace: parsedYaml.metadata?.namespace || '',
+          name: stringOr(parsedYaml.spec?.issuerRef?.name, ''),
+          namespace: stringOr(parsedYaml.metadata?.namespace, ''),
         });
       }
     } catch (e) {

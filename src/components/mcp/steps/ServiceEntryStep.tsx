@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Tabs, Tab, TabTitleText } from '@patternfly/react-core';
 import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
+import { recordArray, stringArray, stringOr } from '../../../utils/yamlDraft';
 import { ServiceEntryFormState } from '../types';
 import ServiceEntryFormFields from '../ServiceEntryFormFields';
 import { buildServiceEntry, isServiceEntryValid } from '../mcpResourceUtils';
@@ -39,17 +40,16 @@ const ServiceEntryStep: React.FC<ServiceEntryStepProps> = ({
       const parsed = yaml.load(yamlInput) as Record<string, unknown>;
       if (!parsed || typeof parsed !== 'object') return;
 
-      const metadata = parsed.metadata as Record<string, string> | undefined;
+      const metadata = parsed.metadata as Record<string, unknown> | undefined;
       const spec = parsed.spec as Record<string, unknown> | undefined;
-      const ports = spec?.ports as Array<{ number: number; protocol: string }> | undefined;
-      const hosts = spec?.hosts as string[] | undefined;
+      const port = recordArray(spec?.ports)[0];
 
       const nextState = {
-        serviceName: metadata?.name || '',
-        namespace: metadata?.namespace || '',
-        hosts: hosts?.length ? hosts.join(', ') : '',
-        port: ports?.length ? String(ports[0].number) : '',
-        protocol: ports?.length ? ports[0].protocol : 'HTTPS',
+        serviceName: stringOr(metadata?.name, ''),
+        namespace: stringOr(metadata?.namespace, ''),
+        hosts: stringArray(spec?.hosts).join(', '),
+        port: typeof port?.number === 'number' ? String(port.number) : '',
+        protocol: stringOr(port?.protocol, 'HTTPS'),
         location: typeof spec?.location === 'string' ? spec.location : 'MESH_EXTERNAL',
         resolution: typeof spec?.resolution === 'string' ? spec.resolution : 'DNS',
       };

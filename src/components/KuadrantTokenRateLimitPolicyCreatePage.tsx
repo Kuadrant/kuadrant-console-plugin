@@ -39,6 +39,7 @@ import { GatewayResource } from './gateway/types';
 import GatewaySelect from './gateway/GatewaySelect';
 import HTTPRouteSelect, { RouteKind } from './httproute/HTTPRouteSelect';
 import * as yaml from 'js-yaml';
+import { asRecord, isRecord, recordArray, stringOr } from '../utils/yamlDraft';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
 import {
@@ -214,7 +215,7 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedYaml = yaml.load(yamlInput) as Record<string, any>;
-      setPolicyName(parsedYaml.metadata?.name || '');
+      setPolicyName(stringOr(parsedYaml.metadata?.name, ''));
       const parsedTargetRef = parsedYaml.spec?.targetRef;
       if (
         isSupportedTargetRef(
@@ -228,13 +229,14 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
         setTargetRef({
           group: parsedTargetRef.group,
           kind: parsedTargetRef.kind as TargetRef['kind'],
-          name: parsedTargetRef?.name || '',
+          name: stringOr(parsedTargetRef?.name, ''),
         });
       } else {
         // unsupported group/kind - keep the target empty so the form stays
         // invalid rather than silently submitting a reference the CRD rejects
         setTargetRef({ group: GATEWAY_API_GROUP, kind: 'Gateway', name: '' });
       }
+      // limits stay as typed for the API to check; the form shows what it can read of them
       setLimits(parsedYaml.spec?.limits || {});
     } catch (e) {
       console.error(t('Error parsing YAML:'), e);
@@ -312,14 +314,15 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
   const handleSaveLimit = () => {
     if (newLimitName && modalRates.length > 0 && !isDuplicateName) {
       setLimits((prevLimits) => ({
-        ...prevLimits,
+        ...(isRecord(prevLimits) ? prevLimits : {}),
         [newLimitName]: { rates: modalRates },
       }));
       setIsAddLimitOpen(false);
     }
   };
 
-  const isDuplicateName = newLimitName !== '' && !!limits[newLimitName];
+  const shownLimits = asRecord(limits);
+  const isDuplicateName = newLimitName !== '' && !!shownLimits[newLimitName];
   const isValidWindow = newLimitWindow === '' || windowPattern.test(newLimitWindow);
 
   const isAddLimitSaveDisabled = !newLimitName || modalRates.length === 0 || isDuplicateName;
@@ -446,11 +449,11 @@ const KuadrantTokenRateLimitPolicyCreatePage: React.FC = () => {
                     {t('Configured Limits')}
                   </Title>
                   <LabelGroup numLabels={5}>
-                    {Object.keys(limits).length > 0 ? (
-                      Object.entries(limits).map(([name, limitConfig], index) => (
+                    {Object.keys(shownLimits).length > 0 ? (
+                      Object.entries(shownLimits).map(([name, limitConfig], index) => (
                         <Label key={index} color="blue" onClose={() => handleRemoveLimit(name)}>
                           <strong>{name}</strong>:{' '}
-                          {limitConfig.rates.map((r, i) => (
+                          {recordArray<TokenRate>(asRecord(limitConfig).rates).map((r, i) => (
                             <span key={i}>
                               {i > 0 ? ', ' : ''}
                               {t('{{limit}} per {{window}}', { limit: r.limit, window: r.window })}

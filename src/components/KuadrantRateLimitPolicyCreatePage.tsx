@@ -35,6 +35,7 @@ import HTTPRouteSelect, { RouteKind } from './httproute/HTTPRouteSelect';
 import LimitSelect from './ratelimitpolicy/LimitSelect';
 import { LimitConfig, TargetRef } from './ratelimitpolicy/types';
 import * as yaml from 'js-yaml';
+import { stringOr } from '../utils/yamlDraft';
 import KuadrantCreateUpdate from './KuadrantCreateUpdate';
 import { handleCancel } from '../utils/cancel';
 import { resourceGVKMapping, RESOURCES, isSupportedTargetRef } from '../utils/resources';
@@ -177,7 +178,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsedYaml = yaml.load(yamlInputStr) as Record<string, any>;
-      setPolicyName(parsedYaml.metadata?.name || '');
+      setPolicyName(stringOr(parsedYaml.metadata?.name, ''));
       // Set targetRef atomically from parsed YAML so kind/name stay in sync.
       const parsedTargetRef = parsedYaml.spec?.targetRef;
       if (
@@ -192,7 +193,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
         setTargetRef({
           group: parsedTargetRef.group,
           kind: parsedTargetRef.kind as TargetRef['kind'],
-          name: parsedTargetRef?.name || '',
+          name: stringOr(parsedTargetRef?.name, ''),
           ...(parsedTargetRef?.namespace ? { namespace: parsedTargetRef.namespace } : {}),
         });
       } else {
@@ -200,6 +201,7 @@ const KuadrantRateLimitPolicyCreatePage: React.FC = () => {
         // invalid rather than silently submitting a reference the CRD rejects
         setTargetRef({ group: GATEWAY_API_GROUP, kind: 'Gateway', name: '' });
       }
+      // limits stay as typed for the API to check; LimitSelect shows what it can read of them
       setLimits(parsedYaml.spec?.limits || {});
     } catch (e) {
       console.error(t('Error parsing YAML:'), e);

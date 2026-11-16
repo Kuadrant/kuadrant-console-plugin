@@ -1,6 +1,7 @@
 import * as React from 'react';
 import Helmet from 'react-helmet';
 import * as yaml from 'js-yaml';
+import { stringArray, stringOr } from '../../utils/yamlDraft';
 import {
   PageSection,
   Title,
@@ -206,22 +207,23 @@ const APIProductCreatePage: React.FC = () => {
         return;
       }
 
-      const resourceName = parsed.metadata?.name || '';
+      const resourceName = stringOr(parsed.metadata?.name, '');
+      const routeName = stringOr(parsed.spec?.targetRef?.name, '');
 
       setFormData({
-        displayName: parsed.spec?.displayName || '',
+        displayName: stringOr(parsed.spec?.displayName, ''),
         resourceName,
-        version: parsed.spec?.version || '',
-        description: parsed.spec?.description || '',
-        tags: parsed.spec?.tags || [],
-        publishStatus: parsed.spec?.publishStatus || 'Draft',
-        approvalMode: parsed.spec?.approvalMode || 'manual',
-        openAPISpecURL: parsed.spec?.documentation?.openAPISpecURL || '',
-        docsURL: parsed.spec?.documentation?.docsURL || '',
-        httpRoute: parsed.spec?.targetRef?.name
+        version: stringOr(parsed.spec?.version, ''),
+        description: stringOr(parsed.spec?.description, ''),
+        tags: stringArray(parsed.spec?.tags),
+        publishStatus: stringOr(parsed.spec?.publishStatus, 'Draft'),
+        approvalMode: stringOr(parsed.spec?.approvalMode, 'manual'),
+        openAPISpecURL: stringOr(parsed.spec?.documentation?.openAPISpecURL, ''),
+        docsURL: stringOr(parsed.spec?.documentation?.docsURL, ''),
+        httpRoute: routeName
           ? {
-              name: parsed.spec.targetRef.name,
-              namespace: parsed.spec.targetRef.namespace || selectedNamespace,
+              name: routeName,
+              namespace: stringOr(parsed.spec.targetRef.namespace, selectedNamespace),
             }
           : null,
       });

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Tabs, Tab, TabTitleText } from '@patternfly/react-core';
 import { ResourceYAMLEditor } from '@openshift-console/dynamic-plugin-sdk';
 import * as yaml from 'js-yaml';
+import { stringOr } from '../../../utils/yamlDraft';
 import { DestinationRuleFormState } from '../types';
 import DestinationRuleFormFields from '../DestinationRuleFormFields';
 import { buildDestinationRule, isDestinationRuleValid } from '../mcpResourceUtils';
@@ -39,17 +40,17 @@ const DestinationRuleStep: React.FC<DestinationRuleStepProps> = ({
       const parsed = yaml.load(yamlInput) as Record<string, unknown>;
       if (!parsed || typeof parsed !== 'object') return;
 
-      const metadata = parsed.metadata as Record<string, string> | undefined;
+      const metadata = parsed.metadata as Record<string, unknown> | undefined;
       const spec = parsed.spec as Record<string, unknown> | undefined;
       const trafficPolicy = spec?.trafficPolicy as Record<string, unknown> | undefined;
-      const tls = trafficPolicy?.tls as Record<string, string> | undefined;
+      const tls = trafficPolicy?.tls as Record<string, unknown> | undefined;
 
       const nextState = {
-        destinationName: metadata?.name || '',
-        namespace: metadata?.namespace || '',
+        destinationName: stringOr(metadata?.name, ''),
+        namespace: stringOr(metadata?.namespace, ''),
         host: typeof spec?.host === 'string' ? spec.host : '',
-        tlsMode: tls?.mode || 'SIMPLE',
-        tlsSni: tls?.sni || '',
+        tlsMode: stringOr(tls?.mode, 'SIMPLE'),
+        tlsSni: stringOr(tls?.sni, ''),
       };
       onChange(nextState);
       onValidationChange?.(isDestinationRuleValid(nextState));
