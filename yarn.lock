@@ -3188,15 +3188,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@testing-library/user-event@npm:^14.6.8":
-  version: 14.6.8
-  resolution: "@testing-library/user-event@npm:14.6.8"
-  peerDependencies:
-    "@testing-library/dom": ">=7.21.4"
-  checksum: 10c0/374bbf9f477fdc278f4bf56d6a27f88b1801c90cce9dffc414777dbf33fb1e421efc7341ee169cb286435bb742076a7899bb463c9927d2acca95aafaa5324820
-  languageName: node
-  linkType: hard
-
 "@tree-sitter-grammars/tree-sitter-yaml@npm:=0.7.1":
   version: 0.7.1
   resolution: "@tree-sitter-grammars/tree-sitter-yaml@npm:0.7.1"
@@ -10288,7 +10279,6 @@ __metadata:
     "@testing-library/dom": "npm:^10.4.0"
     "@testing-library/jest-dom": "npm:^7.0.1"
     "@testing-library/react": "npm:^16.3.3"
-    "@testing-library/user-event": "npm:^14.6.8"
     "@types/jest": "npm:^30.0.0"
     "@types/node": "npm:^22.20.5"
     "@types/react": "npm:^18.0.0"
