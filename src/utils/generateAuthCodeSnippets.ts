@@ -45,16 +45,31 @@ export const resolveCredentialLocation = (
   };
 };
 
+// The prefix and credential names come from the AuthPolicy, so they are quoted for each
+// language before being embedded; a quote or backslash in them must not break the snippet.
+
+// Keep the usual double quotes unless the shell would interpret something inside them, then
+// fall back to single quotes, which turn off every expansion.
+const shellString = (s: string): string =>
+  /["$`\\!]/.test(s) ? `'${s.replace(/'/g, `'\\''`)}'` : `"${s}"`;
+
+const jsString = (s: string): string => `'${s.replace(/[\\']/g, '\\$&')}'`;
+
+// A JSON string is also a valid double-quoted Python and Go string literal.
+const quotedString = (s: string): string => JSON.stringify(s);
+
 const curlSnippet = (url: string, location: CredentialLocation): string => {
   switch (location.in) {
     case 'query':
-      return `curl -X GET "${url}?${location.name}=${location.value}"`;
+      // curl encodes the value (the pasted key) but expects the name to be encoded already.
+      return `curl -G "${url}" \\
+  --data-urlencode ${shellString(`${encodeURIComponent(location.name)}=${location.value}`)}`;
     case 'cookie':
-      return `curl -X GET "${url}" \
-  --cookie "${location.name}=${location.value}"`;
+      return `curl -X GET "${url}" \\
+  --cookie ${shellString(`${location.name}=${location.value}`)}`;
     default:
-      return `curl -X GET "${url}" \
-  -H "${location.name}: ${location.value}"`;
+      return `curl -X GET "${url}" \\
+  -H ${shellString(`${location.name}: ${location.value}`)}`;
   }
 };
 
@@ -63,17 +78,17 @@ const nodejsSnippet = (url: string, location: CredentialLocation): string => {
   switch (location.in) {
     case 'query':
       options = `  params: {
-    '${location.name}': '${location.value}'
+    ${jsString(location.name)}: ${jsString(location.value)}
   }`;
       break;
     case 'cookie':
       options = `  headers: {
-    'Cookie': '${location.name}=${location.value}'
+    'Cookie': ${jsString(`${location.name}=${location.value}`)}
   }`;
       break;
     default:
       options = `  headers: {
-    '${location.name}': '${location.value}'
+    ${jsString(location.name)}: ${jsString(location.value)}
   }`;
   }
 
@@ -96,19 +111,19 @@ const pythonSnippet = (url: string, location: CredentialLocation): string => {
   switch (location.in) {
     case 'query':
       setup = `params = {
-    "${location.name}": "${location.value}"
+    ${quotedString(location.name)}: ${quotedString(location.value)}
 }`;
       call = 'requests.get(url, params=params)';
       break;
     case 'cookie':
       setup = `cookies = {
-    "${location.name}": "${location.value}"
+    ${quotedString(location.name)}: ${quotedString(location.value)}
 }`;
       call = 'requests.get(url, cookies=cookies)';
       break;
     default:
       setup = `headers = {
-    "${location.name}": "${location.value}"
+    ${quotedString(location.name)}: ${quotedString(location.value)}
 }`;
       call = 'requests.get(url, headers=headers)';
   }
@@ -123,18 +138,24 @@ print(response.json())`;
 };
 
 const goSnippet = (url: string, location: CredentialLocation): string => {
-  const requestUrl = location.in === 'query' ? `${url}?${location.name}=${location.value}` : url;
+  const name = quotedString(location.name);
+  const value = quotedString(location.value);
   let attach = '';
   switch (location.in) {
     case 'query':
+      // req.URL.Query() is a url.Values, so Encode() escapes the name and the pasted key.
+      attach = `
+    query := req.URL.Query()
+    query.Set(${name}, ${value})
+    req.URL.RawQuery = query.Encode()`;
       break;
     case 'cookie':
       attach = `
-    req.AddCookie(&http.Cookie{Name: "${location.name}", Value: "${location.value}"})`;
+    req.AddCookie(&http.Cookie{Name: ${name}, Value: ${value}})`;
       break;
     default:
       attach = `
-    req.Header.Add("${location.name}", "${location.value}")`;
+    req.Header.Add(${name}, ${value})`;
   }
 
   return `package main
@@ -146,7 +167,7 @@ import (
 )
 
 func main() {
-    url := "${requestUrl}"
+    url := "${url}"
 
     req, _ := http.NewRequest("GET", url, nil)${attach}
 

@@ -110,15 +110,39 @@ describe('generateAuthCodeSnippets', () => {
   it('renders a query string parameter instead of a header', () => {
     const snippets = generateAuthCodeSnippets(KEY, HOST, { queryString: { name: 'api_key' } });
 
-    expect(snippets.curl).toBe(`curl -X GET "${URL}?api_key=${KEY}"`);
+    expect(snippets.curl).toBe(`curl -G "${URL}" \\\n  --data-urlencode "api_key=${KEY}"`);
     expect(snippets.nodejs).toContain(`params: {\n    'api_key': '${KEY}'\n  }`);
     expect(snippets.python).toContain(`params = {\n    "api_key": "${KEY}"\n}`);
     expect(snippets.python).toContain('requests.get(url, params=params)');
-    expect(snippets.go).toContain(`url := "${URL}?api_key=${KEY}"`);
+    expect(snippets.go).toContain(`url := "${URL}"`);
+    expect(snippets.go).toContain(`query.Set("api_key", "${KEY}")`);
+    expect(snippets.go).toContain('req.URL.RawQuery = query.Encode()');
     expect(snippets.go).not.toContain('req.Header.Add');
     for (const snippet of Object.values(snippets)) {
       expect(snippet).not.toContain('Authorization');
     }
+  });
+
+  it('URL-encodes a query parameter name with reserved characters', () => {
+    const snippets = generateAuthCodeSnippets(KEY, HOST, { queryString: { name: 'api&key+id' } });
+
+    // curl --data-urlencode encodes only the value, so the name has to arrive encoded.
+    expect(snippets.curl).toContain(`--data-urlencode "api%26key%2Bid=${KEY}"`);
+    // url.Values.Encode() encodes the name and the value when the Go program runs.
+    expect(snippets.go).toContain(`query.Set("api&key+id", "${KEY}")`);
+  });
+
+  it('escapes quotes and backslashes from the AuthPolicy in every language', () => {
+    const snippets = generateAuthCodeSnippets(KEY, HOST, {
+      authorizationHeader: { prefix: String.raw`A"B'C\D` },
+    });
+
+    expect(snippets.curl).toContain(String.raw`-H 'Authorization: A"B'\''C\D YOUR_API_KEY'`);
+    expect(snippets.nodejs).toContain(String.raw`'Authorization': 'A"B\'C\\D YOUR_API_KEY'`);
+    expect(snippets.python).toContain(String.raw`"Authorization": "A\"B'C\\D YOUR_API_KEY"`);
+    expect(snippets.go).toContain(
+      String.raw`req.Header.Add("Authorization", "A\"B'C\\D YOUR_API_KEY")`,
+    );
   });
 
   it('renders a cookie instead of a header', () => {
