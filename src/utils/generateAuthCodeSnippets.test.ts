@@ -145,6 +145,14 @@ describe('generateAuthCodeSnippets', () => {
     );
   });
 
+  it('escapes line breaks so the string literals stay on one line', () => {
+    const snippets = generateAuthCodeSnippets(KEY, HOST, { queryString: { name: 'api\r\nkey' } });
+
+    expect(snippets.nodejs).toContain(String.raw`'api\r\nkey': 'YOUR_API_KEY'`);
+    expect(snippets.python).toContain(String.raw`"api\r\nkey": "YOUR_API_KEY"`);
+    expect(snippets.go).toContain(String.raw`query.Set("api\r\nkey", "YOUR_API_KEY")`);
+  });
+
   it('renders a cookie instead of a header', () => {
     const snippets = generateAuthCodeSnippets(KEY, HOST, { cookie: { name: 'session' } });
 

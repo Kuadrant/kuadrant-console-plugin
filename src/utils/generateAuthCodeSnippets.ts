@@ -53,7 +53,8 @@ export const resolveCredentialLocation = (
 const shellString = (s: string): string =>
   /["$`\\!]/.test(s) ? `'${s.replace(/'/g, `'\\''`)}'` : `"${s}"`;
 
-const jsString = (s: string): string => `'${s.replace(/[\\']/g, '\\$&')}'`;
+const jsString = (s: string): string =>
+  `'${s.replace(/[\\']/g, '\\$&').replace(/\n/g, '\\n').replace(/\r/g, '\\r')}'`;
 
 // A JSON string is also a valid double-quoted Python and Go string literal.
 const quotedString = (s: string): string => JSON.stringify(s);
