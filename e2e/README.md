@@ -73,7 +73,7 @@ unowned fixture set.
 
 ## Prerequisites
 
-1. **oinc v0.5.3 or newer** (OpenShift in a Container) - creates local OpenShift cluster with console
+1. **oinc v0.7.2 or newer** (OpenShift in a Container) - creates local OpenShift cluster with console
 2. **Playwright browsers** - for running the tests
 3. **Kuadrant controller** - for API key approval and status updates
 
@@ -84,17 +84,18 @@ unowned fixture set.
 > **Note:** Replace `oinc-linux-amd64` with your platform (e.g., `oinc-darwin-arm64` for Apple Silicon).
 
 ```bash
-OINC_VERSION="v0.6.1"
+OINC_VERSION="v0.7.2"
 curl -fL -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
 chmod +x oinc
 ./oinc version
 sudo mv oinc /usr/local/bin/
 ```
 
-Cluster setup requires v0.5.3 or newer so the `mcp-gateway` addon reuses
-Kuadrant-managed MCP components without a CRD ownership conflict and keeps Helm
-registry messages out of rendered manifests. Version 0.5.3 also fixes the addon's
-Gateway address assignment. Demo and test Gateways use infrastructure ConfigMaps
+Cluster setup requires v0.7.2 or newer, which serves the Prometheus Operator
+CRDs the latest Kuadrant operator needs to start. From v0.5.3 the `mcp-gateway`
+addon reuses Kuadrant-managed MCP components without a CRD ownership conflict and
+keeps Helm registry messages out of rendered manifests. Version 0.5.3 also fixes
+the addon's Gateway address assignment. Demo and test Gateways use infrastructure ConfigMaps
 to set `oinc.io/metallb` on their generated Services, and setup waits for the
 Gateways to be programmed before starting tests. See the
 [local setup notes](../README.md#option-2-oinc-no-cluster-required) for version

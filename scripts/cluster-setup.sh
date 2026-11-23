@@ -20,19 +20,20 @@ KUADRANT_VERSION="${KUADRANT_VERSION:-latest}"
 # default to 4.22; override with OCP_VERSION to pin to a different version
 OCP_VERSION="${OCP_VERSION:-4.22}"
 
-check_command oinc "Install v0.5.3 or newer from https://github.com/jasonmadigan/oinc/releases"
+check_command oinc "Install v0.7.2 or newer from https://github.com/jasonmadigan/oinc/releases"
 check_command kubectl "Install from https://kubernetes.io/docs/tasks/tools/"
 
-# Require MCP controller reuse, clean Helm output, and scoped MetalLB
-# Gateway support before creating or changing any cluster resources.
+# Require the monitoring CRDs the Kuadrant operator needs, MCP controller reuse,
+# clean Helm output, and scoped MetalLB Gateway support before creating or
+# changing any cluster resources.
 if ! OINC_VERSION_OUTPUT=$(oinc version); then
   echo "error: could not determine oinc version" >&2
   exit 1
 fi
 if [[ ! "${OINC_VERSION_OUTPUT}" =~ oinc[[:space:]]v([0-9]+)\.([0-9]+)\.([0-9]+)([[:space:]]|$) ]] ||
-  (( 10#${BASH_REMATCH[1]} == 0 && (10#${BASH_REMATCH[2]} < 5 ||
-    (10#${BASH_REMATCH[2]} == 5 && 10#${BASH_REMATCH[3]} < 3)) )); then
-  echo "error: oinc v0.5.3 or newer is required for Kuadrant-managed MCP Gateway support, the Helm registry output fix, and scoped MetalLB address assignment. Upgrade from https://github.com/jasonmadigan/oinc/releases" >&2
+  (( 10#${BASH_REMATCH[1]} == 0 && (10#${BASH_REMATCH[2]} < 7 ||
+    (10#${BASH_REMATCH[2]} == 7 && 10#${BASH_REMATCH[3]} < 2)) )); then
+  echo "error: oinc v0.7.2 or newer is required for the monitoring CRDs the latest Kuadrant operator needs, Kuadrant-managed MCP Gateway support, the Helm registry output fix, and scoped MetalLB address assignment. Upgrade from https://github.com/jasonmadigan/oinc/releases" >&2
   exit 1
 fi
 

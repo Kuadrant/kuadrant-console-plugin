@@ -47,7 +47,7 @@ Navigate to <http://localhost:9000> and click "Kuadrant" in the left sidebar men
 
 [oinc](https://github.com/jasonmadigan/oinc) (OKD in a container) provides a lightweight OpenShift-compatible cluster locally with the console built in. This sets up a full environment with Kuadrant, Istio, cert-manager, and the OpenShift console, with hot reloading for plugin development.
 
-Prerequisites: [oinc v0.5.3 or newer](https://github.com/jasonmadigan/oinc/releases/tag/v0.5.3), [kubectl](https://kubernetes.io/docs/tasks/tools/), [jq](https://jqlang.org/download/), Docker or podman, Node.js.
+Prerequisites: [oinc v0.7.2 or newer](https://github.com/jasonmadigan/oinc/releases/tag/v0.7.2), [kubectl](https://kubernetes.io/docs/tasks/tools/), [jq](https://jqlang.org/download/), Docker or podman, Node.js.
 
 ```bash
 make oinc                   # create cluster + start plugin dev server with hot reload
