@@ -11,6 +11,7 @@ REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${SCRIPT_DIR}/lib.sh"
 
 PLUGIN_PORT="${PLUGIN_PORT:-9001}"
+OCP_VERSION="${OCP_VERSION:-4.21}"
 
 check_command oinc "Install from https://github.com/jasonmadigan/oinc"
 check_command kubectl "Install from https://kubernetes.io/docs/tasks/tools/"
@@ -24,6 +25,7 @@ PLUGIN_NAME=$(node -p "require('${REPO_DIR}/package.json').consolePlugin.name")
 
 log "creating oinc cluster with addons..."
 oinc create \
+	--version "${OCP_VERSION}" \
 	--addons gateway-api,cert-manager,metallb,istio,kuadrant@latest \
 	--console-plugin "${PLUGIN_NAME}=http://${HOST}:${PLUGIN_PORT}"
 

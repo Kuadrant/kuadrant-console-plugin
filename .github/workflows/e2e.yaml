@@ -29,9 +29,11 @@ jobs:
 
       - name: Install oinc
         run: |
-          OINC_VERSION="${OINC_VERSION:-v0.1.2}"
-          curl -L -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
+          OINC_VERSION="${OINC_VERSION:-v0.7.3}"
+          curl -fL --retry 3 --retry-delay 5 --retry-all-errors -o oinc "https://github.com/jasonmadigan/oinc/releases/download/${OINC_VERSION}/oinc-linux-amd64"
           chmod +x oinc
+          file oinc | grep -q ELF || { echo "downloaded file is not a valid binary"; exit 1; }
+          ./oinc version
           sudo mv oinc /usr/local/bin/
 
       - name: Install Helm
@@ -64,7 +66,7 @@ jobs:
           exit 1
 
       - name: Run E2E tests
-        run: npx playwright test --config=e2e/playwright.config.ts
+        run: npx playwright test --config=e2e/playwright.config.ts --reporter=list,html,github --max-failures=5
 
       - name: Upload test results
         if: always()
