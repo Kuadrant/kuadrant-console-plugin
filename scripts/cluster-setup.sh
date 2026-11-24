@@ -11,7 +11,7 @@ REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 source "${SCRIPT_DIR}/lib.sh"
 
 PLUGIN_PORT="${PLUGIN_PORT:-9001}"
-OCP_VERSION="${OCP_VERSION:-4.20}"
+OCP_VERSION="${OCP_VERSION:-4.21}"
 
 check_command oinc "Install from https://github.com/jasonmadigan/oinc"
 check_command kubectl "Install from https://kubernetes.io/docs/tasks/tools/"
