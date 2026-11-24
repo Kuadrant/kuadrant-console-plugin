@@ -138,11 +138,11 @@
     "@patternfly/react-topology": "~6.4.0",
     "graphlib": "^2.1.8",
     "graphlib-dot": "^0.6.4",
-    "i18next": "^27.1.2",
+    "i18next": "^27.2.2",
     "i18next-parser": "^9.4.0",
     "js-yaml": "^5.5.0",
     "pluralize": "^8.0.0",
-    "swagger-ui-react": "5.35.0"
+    "swagger-ui-react": "5.35.1"
   },
   "packageManager": "yarn@4.12.0"
 }
