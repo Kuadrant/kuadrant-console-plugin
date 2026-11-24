@@ -66,7 +66,7 @@ jobs:
           exit 1
 
       - name: Run E2E tests
-        run: npx playwright test --config=e2e/playwright.config.ts
+        run: npx playwright test --config=e2e/playwright.config.ts --reporter=list,html,github --max-failures=5
 
       - name: Upload test results
         if: always()
