@@ -8593,15 +8593,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"i18next@npm:^27.2.2":
-  version: 27.2.2
-  resolution: "i18next@npm:27.2.2"
+"i18next@npm:^27.2.4":
+  version: 27.2.4
+  resolution: "i18next@npm:27.2.4"
   peerDependencies:
     typescript: ^5 || ^6 || ^7
   peerDependenciesMeta:
     typescript:
       optional: true
-  checksum: 10c0/97cb1992b8cba47b428f7065c5bdde71a7bcf63667b648ff147ccac175b10a6860d4a3f2d3e605040e7c18432e9cf6867aaa649671c42526b6e7e2761acc6e75
+  checksum: 10c0/12189e0dbba2bab964ef6a2a475c85bbcf977139fa9cf1b6e2fb2dcc560b103d07e38da9920a25952972ce08c2645d3adb4ded1e82a23b523c279a078784641b
   languageName: node
   linkType: hard
 
@@ -10332,7 +10332,7 @@ __metadata:
     eslint-plugin-react: "npm:^7.37.5"
     graphlib: "npm:^2.1.8"
     graphlib-dot: "npm:^0.6.4"
-    i18next: "npm:^27.2.2"
+    i18next: "npm:^27.2.4"
     i18next-parser: "npm:^9.4.0"
     jest: "npm:^30.5.2"
     jest-environment-jsdom: "npm:^30.5.2"
@@ -10347,7 +10347,7 @@ __metadata:
     style-loader: "npm:^4.0.0"
     stylelint: "npm:^18.0.0"
     stylelint-config-standard: "npm:^41.0.0"
-    swagger-ui-react: "npm:5.35.1"
+    swagger-ui-react: "npm:5.36.0"
     ts-jest: "npm:^29.4.15"
     ts-loader: "npm:^9.6.2"
     ts-node: "npm:^10.9.2"
@@ -13728,9 +13728,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"swagger-ui-react@npm:5.35.1":
-  version: 5.35.1
-  resolution: "swagger-ui-react@npm:5.35.1"
+"swagger-ui-react@npm:5.36.0":
+  version: 5.36.0
+  resolution: "swagger-ui-react@npm:5.36.0"
   dependencies:
     "@babel/runtime-corejs3": "npm:^7.27.1"
     "@scarf/scarf": "npm:=1.4.0"
@@ -13769,7 +13769,7 @@ __metadata:
   peerDependencies:
     react: ">=16.8.0 <20"
     react-dom: ">=16.8.0 <20"
-  checksum: 10c0/9c94b487ce95a5430b521042594bf1b6cac5b8443a5cb31fa84f06f355726baa9a46021163b5924bdc4240e69bd46bd061a51072391af7c7fd3da32dc44e2b7c
+  checksum: 10c0/cb07ac5229ae8ea7228dbab0a93ad30a77b1dbeff3d366c9ca5c3eae2e33475c51f699c7cf75b882a128958b8885908f47f3e12158977062df91be7a3caf7374
   languageName: node
   linkType: hard
 
